@@ -2,8 +2,9 @@
 
 **Status:** Canonical admission rebuild committed as `47af2c618`; Phase 3 URL projection and
 the application-wide canonical Place cutover are implemented on the feature branch. Edward's
-2026-10-26 direction retires legacy geography paths without redirects or aliases. Cutover changes
-and migrations through 0194 remain uncommitted; Phase 4 database release remains unauthorized.
+2026-10-27 pre-launch direction retires legacy geography paths without redirects, aliases or
+fallbacks. The cutover and migrations through 0197 are authored in the feature branch; Phase 4
+database release remains unauthorized.
 **Founder confirmation:** Edward, 2026-10-23, confirmed the 13/48/2 disposition and the
 refined 351-edge evidence set.
 **Branch:** `feat/suburb-first-search-ux-20261022`
@@ -355,7 +356,7 @@ admitted data, through governed artifacts rather than edits to committed data:
 
 ### Phase 3 — Projection and URL handling
 
-The founder's 2026-10-26 direction supersedes the earlier redirect/alias recommendation: this is
+The founder's 2026-10-27 pre-launch direction supersedes the earlier redirect/alias recommendation: this is
 pre-launch, and the app uses one path generated from the admitted Place Authority. Former paths
 are retired without redirects or aliases. The 13 retained city routes remain unchanged.
 

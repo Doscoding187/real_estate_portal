@@ -45,7 +45,6 @@ import {
   developmentSupersessions,
   managerialAuditLogs,
   leads,
-  locations,
   distributionPrograms,
 } from '../../drizzle/schema';
 import { safeErrorSummary } from '../_core/safeError';
@@ -741,7 +740,9 @@ function rejectRetiredDevelopmentGeography(input: Record<string, unknown>) {
     ? input.location as Record<string, unknown>
     : {};
   const supplied = retiredFields.filter(
-    field => Object.hasOwn(input, field) || Object.hasOwn(location, field),
+    field =>
+      Object.prototype.hasOwnProperty.call(input, field) ||
+      Object.prototype.hasOwnProperty.call(location, field),
   );
   if (supplied.length) {
     throw new TRPCError({

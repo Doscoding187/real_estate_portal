@@ -19,6 +19,13 @@ vi.mock('../../../../db', () => ({
   })),
 }));
 
+vi.mock('../../../../services/canonicalPlaceSearchService', () => ({
+  loadCanonicalPlaceSearchProjection: vi.fn(async () => ({
+    executions: new Map([['pl-place-01-000000000000000000000007', {}]]),
+    labels: new Map([['pl-place-01-000000000000000000000007', { label: 'Sandton' }]]),
+  })),
+}));
+
 describe('discoveryFeedSource', () => {
   beforeEach(() => {
     dbSelectChainMock.from.mockReturnValue(dbSelectChainMock);
@@ -65,14 +72,10 @@ describe('discoveryFeedSource', () => {
   it('builds area candidates from discovery-owned queries', async () => {
     dbSelectChainMock.offset.mockResolvedValue([
       {
-        content: {
-          id: 31,
-          canonicalPlaceId: 'pl-place-01-000000000000000000000007',
-          title: 'Sandton update',
-          thumbnailUrl: 'https://example.com/sandton.jpg',
-        },
+        id: 31,
         canonicalPlaceId: 'pl-place-01-000000000000000000000007',
-        placeLabel: 'Sandton',
+        title: 'Sandton update',
+        thumbnailUrl: 'https://example.com/sandton.jpg',
       },
     ]);
 
@@ -87,7 +90,6 @@ describe('discoveryFeedSource', () => {
       expect.objectContaining({
         id: 31,
         canonicalPlaceId: 'pl-place-01-000000000000000000000007',
-        location: { name: 'Sandton' },
         primaryMediaUrl: 'https://example.com/sandton.jpg',
       }),
     );

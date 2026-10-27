@@ -44,6 +44,7 @@ import {
   type PublicSupplyOrigin,
 } from './publicLeadCustodyService';
 import { evaluatePublicDevelopmentEligibility } from './publicDevelopmentEligibility';
+import { getDevelopmentPlaceGeography } from './developmentPlaceAssignmentService';
 import { getDeveloperPublicationAccess } from './developerPublicationAccess';
 import { EmailService } from '../_core/emailService';
 import { isPaidMvpLaunchAccessSubscriptionEntitled } from './planAccessService';
@@ -55,7 +56,6 @@ import {
   COMMERCIAL_CANONICAL_ASSIGNMENT_BLOCKER,
 } from '../../shared/commercial-domain';
 import { LAND_CANONICAL_ASSIGNMENT_BLOCKER } from '../../shared/land-domain';
-import { PUBLIC_DEVELOPMENT_CANONICAL_ASSIGNMENT_BLOCKER } from '../../shared/publicDevelopmentSearch';
 import { SHARED_LIVING_CANONICAL_ASSIGNMENT_BLOCKER } from '../../shared/sharedLivingDomain';
 import { safeErrorSummary } from '../_core/safeError';
 
@@ -288,13 +288,6 @@ function assertCanonicalLeadTarget(input: PublicLeadCaptureInput): void {
     throw new TRPCError({
       code: 'PRECONDITION_FAILED',
       message: SHARED_LIVING_CANONICAL_ASSIGNMENT_BLOCKER,
-    });
-  }
-
-  if (positiveId(input.developmentId)) {
-    throw new TRPCError({
-      code: 'PRECONDITION_FAILED',
-      message: PUBLIC_DEVELOPMENT_CANONICAL_ASSIGNMENT_BLOCKER,
     });
   }
 
@@ -1054,6 +1047,9 @@ export async function resolveLeadOwnership(
   }
 
   if (targetKind === 'development') {
+    const assignedGeography = positiveId(development?.id)
+      ? await getDevelopmentPlaceGeography(positiveId(development?.id)!)
+      : null;
     const developerIds = [positiveId(brand?.developerOrganisationId)].filter(
       (id): id is number => id !== undefined,
     );
@@ -1073,6 +1069,7 @@ export async function resolveLeadOwnership(
         approvalStatus: development?.approvalStatus || null,
       },
       publisher: brand,
+      canonicalPlaceId: assignedGeography?.canonicalPlaceId ?? null,
       organisation: developerId ? developerMap.get(developerId) : null,
       unitTypes: [],
       activeUnitTypeCount: Number(development?.activeUnitTypeCount || 0),

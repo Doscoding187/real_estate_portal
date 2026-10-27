@@ -101,13 +101,13 @@ describe('consumer journey router', () => {
       {
         intent: 'buy' as const,
         journey: 'land' as const,
-        searchScope: { kind: 'search_area' as const, searchAreaId: 'area-1' },
+        searchScope: { kind: 'search_area', searchAreaId: 'area-1' } as never,
       },
       {
         intent: 'buy' as const,
         journey: 'land' as const,
         selectedLocations: [sandton],
-        searchScope: { kind: 'search_area' as const, searchAreaId: 'area-1' },
+        searchScope: { kind: 'search_area', searchAreaId: 'area-1' } as never,
       },
     ];
 
@@ -126,7 +126,9 @@ describe('consumer journey router', () => {
       'pl-place-01-000000000000000000000004',
     ]);
     expect(siblings.searchParams.has('city')).toBe(false);
-    expect(buildConsumerJourneyUrl(requests[4])).toBe('/plots-and-land?searchAreaId=area-1');
+    expect(buildConsumerJourneyUrl(requests[4])).toBe(
+      '/plots-and-land?searchError=unsupported-location-scope',
+    );
     expect(buildConsumerJourneyUrl(requests[5])).toBe(
       '/plots-and-land?searchError=unsupported-location-scope',
     );
@@ -197,7 +199,7 @@ describe('consumer journey router', () => {
         intent: 'rent',
         journey: 'commercial',
         selectedLocations: [sandton],
-        searchScope: { kind: 'search_area', searchAreaId: 'area-1' },
+        searchScope: { kind: 'search_area', searchAreaId: 'area-1' } as never,
       }),
     ).toContain('searchError=unsupported-location-scope');
   });

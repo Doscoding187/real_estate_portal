@@ -28,6 +28,13 @@ vi.mock('../../db', () => ({
   db: mockDb,
 }));
 
+vi.mock('../canonicalPlaceSearchService', () => ({
+  loadCanonicalPlaceSearchProjection: vi.fn(async () => ({
+    executions: new Map([['pl-place-01-000000000000000000000007', {}]]),
+    labels: new Map([['pl-place-01-000000000000000000000007', { label: 'Test Place' }]]),
+  })),
+}));
+
 vi.mock('../../lib/cache', () => ({
   cache: {
     get: mockCacheGet,

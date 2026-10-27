@@ -159,6 +159,12 @@ export function buildConsumerJourneyUrl(input: ConsumerJourneySearchInput): stri
   // never silently widen the request into Homes.
   if (!definition) return input.journey === 'land' ? '/plots-and-land' : '/';
 
+  // Consumer routes accept selected Place identities only. A second scope
+  // object is rejected so these journeys cannot combine geography authorities.
+  if (input.searchScope !== undefined) {
+    return `${definition.destination}?searchError=unsupported-location-scope`;
+  }
+
   if (input.journey === 'residential') {
     return input.intent === 'buy' ? buildBuySearchUrl(input) : buildPropertySearchUrl({ ...input, transactionType: 'to-rent' });
   }

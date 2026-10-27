@@ -6,63 +6,30 @@ import {
   type CanonicalPlaceSearchProjection,
 } from './canonicalPlaceSearchService';
 import {
-  blendPublicSearchResults,
-  type PublicSearchBlendSortOption,
-} from '../../shared/publicSearchBlend';
+  type SearchResultSortOption,
+} from '../../shared/transactionalSearchState';
 import {
   canAdvancePublicSearchPage,
+  normalizePublicSearchPageForTotal,
   normalizePublicSearchPageIndex,
   normalizePublicSearchPageSize,
-  normalizePublicSearchPageForTotal,
 } from '../../shared/publicSearchPagination';
 import type { PropertyFilters, SearchCardResult, SortOption } from '../../shared/types';
+import { isCanonicalPlaceId } from '../../shared/placeAuthority';
 import { validatePublicSearchInput } from '../../shared/publicSearchValidation';
 import {
   BUY_PUBLIC_PROPERTY_TYPES,
   RENT_PUBLIC_PROPERTY_TYPES,
 } from '../../shared/property-taxonomy';
-import type { SearchAreaSummary } from '../../shared/searchScope';
-import {
-  parseCanonicalLocationId,
-  encodeCanonicalLocationId,
-} from '../../shared/locationAuthority';
-import {
-  DEFAULT_SEARCH_RESULT_SORT,
-  isSearchResultSortOption,
-} from '../../shared/transactionalSearchState';
 import {
   COMMERCIAL_PUBLIC_JOURNEY_HANDOFF_MESSAGE,
   isCommercialMarketingPropertyType,
 } from '../../shared/commercial-domain';
 import { developmentDerivedListingService } from './developmentDerivedListingService';
-import { locationResolver, type ResolvedLocation } from './locationResolverService';
 import { propertySearchService } from './propertySearchService';
-import {
-  searchAreaAuthority,
-  type SearchAreaResolution,
-  type SearchAreaFailureReason,
-  type ResolveSearchAreaOptions,
-} from './searchAreaAuthority';
-import {
-  buildSearchAreaQueryBoundary,
-  buildCanonicalLocationQueryBoundary,
-  combineSearchAreaQueryBoundaries,
-  narrowSearchAreaQueryBoundary,
-  type PublicSearchQueryBoundary,
-} from './searchAreaQueryBoundary';
-import { searchDiscoveryService } from './searchDiscoveryService';
 
 export interface PublicSearchInventoryInput {
   canonicalPlaceId?: string;
-  province?: string;
-  city?: string;
-  suburb?: string[];
-  locations?: string[];
-  locationId?: string;
-  factualLocationId?: string;
-  locationIds?: string[];
-  searchAreaId?: string;
-  searchAreaIds?: string[];
   propertyType?: string;
   listingType?: 'sale' | 'rent';
   listingSource?: 'manual' | 'development';
@@ -84,7 +51,7 @@ export interface PublicSearchInventoryInput {
   maxLat?: number;
   minLng?: number;
   maxLng?: number;
-  sortOption?: PublicSearchBlendSortOption;
+  sortOption?: SearchResultSortOption;
   page?: number;
   pageSize?: number;
 }
@@ -96,38 +63,6 @@ export interface PublicSearchInventoryResult {
   pageSize: number;
   hasMore: boolean;
   canonicalPlaceContext?: CanonicalPlaceSearchLabel & { scopePolicy: string };
-  locationContext?: {
-    type: 'province' | 'city' | 'suburb';
-    name: string;
-    slug: string;
-    confidence: 'exact';
-    fallbackLevel: 'none';
-    originalIntent: string;
-    hierarchy: {
-      province: string;
-      city?: string;
-      suburb?: string;
-    };
-    ids: {
-      provinceId: number;
-      cityId?: number;
-      suburbId?: number;
-    };
-  };
-  searchAreaContext?: SearchAreaSummary;
-  searchAreaContexts?: SearchAreaSummary[];
-  multiLocationContext?: {
-    kind: 'multi_location';
-    level: 'province' | 'city' | 'suburb';
-    parentName?: string;
-    locations: Array<{
-      canonicalLocationId: string;
-      name: string;
-      slug: string;
-      type: 'province' | 'city' | 'suburb';
-      parentCanonicalLocationId?: string;
-    }>;
-  };
   locationState: 'not_requested' | 'resolved' | 'unresolved' | 'ambiguous' | 'unavailable';
   locationMessage?: string;
   sourceCounts: {
@@ -136,149 +71,22 @@ export interface PublicSearchInventoryResult {
   };
 }
 
-function hasLocationIntent(input: PublicSearchInventoryInput): boolean {
-  return Boolean(
-    input.canonicalPlaceId ||
-    input.locationId ||
-    input.factualLocationId ||
-    input.locationIds?.length ||
-    input.searchAreaId ||
-    input.searchAreaIds?.length ||
-    input.province ||
-    input.city ||
-    input.suburb?.length ||
-    input.locations?.length,
-  );
-}
-
-function canonicalizeCanonicalLocationIds(locationIds: readonly string[]): string[] {
-  return Array.from(
-    new Set(
-      locationIds
-        .map(locationId => parseCanonicalLocationId(locationId))
-        .filter((value): value is NonNullable<typeof value> => Boolean(value))
-        .map(value => encodeCanonicalLocationId(value.level, value.id)),
-    ),
-  ).sort();
-}
-
-function canonicalizeSearchAreaIds(searchAreaIds: readonly string[]): string[] {
-  return Array.from(new Set(searchAreaIds.map(value => value.trim()).filter(Boolean))).sort();
-}
-
-function toMultiLocationContext(
-  locations: readonly ResolvedLocation[],
-  canonicalLocationIds: readonly string[],
-): NonNullable<PublicSearchInventoryResult['multiLocationContext']> | undefined {
-  if (locations.length === 0 || locations.length !== canonicalLocationIds.length) return undefined;
-  const first = locations[0];
-  const level = first.level;
-  const mapped = locations.map((location, index) => {
-    const selected = location.suburb || location.city || location.province;
-    const parentCanonicalLocationId =
-      location.level === 'city'
-        ? encodeCanonicalLocationId('province', location.province.id)
-        : location.level === 'suburb' && location.city
-          ? encodeCanonicalLocationId('city', location.city.id)
-          : undefined;
-    return {
-      canonicalLocationId: canonicalLocationIds[index],
-      name: selected.name,
-      slug: selected.slug,
-      type: location.level,
-      parentCanonicalLocationId,
-    };
-  });
-
-  return {
-    kind: 'multi_location',
-    level,
-    parentName:
-      level === 'city' ? first.province.name : level === 'suburb' ? first.city?.name : undefined,
-    locations: mapped.sort((a, b) => a.canonicalLocationId.localeCompare(b.canonicalLocationId)),
-  };
-}
-
-function toLocationContext(
-  location: ResolvedLocation,
-): NonNullable<PublicSearchInventoryResult['locationContext']> {
-  const selected = location.suburb || location.city || location.province;
-  return {
-    type: location.level,
-    name: selected.name,
-    slug: selected.slug,
-    confidence: 'exact',
-    fallbackLevel: 'none',
-    originalIntent: location.originalIntent,
-    hierarchy: {
-      province: location.province.name,
-      city: location.city?.name,
-      suburb: location.suburb?.name,
-    },
-    ids: {
-      provinceId: location.province.id,
-      cityId: location.city?.id,
-      suburbId: location.suburb?.id,
-    },
-  };
-}
-
 function emptyLocationResult(
   input: PublicSearchInventoryInput,
   status: 'unresolved' | 'ambiguous' | 'unavailable',
   message: string,
-) {
+): PublicSearchInventoryResult {
   const pageSize = normalizePublicSearchPageSize(input.pageSize);
-  const page = normalizePublicSearchPageForTotal(input.page, 0, pageSize);
   return {
     cards: [],
     total: 0,
-    page,
+    page: 0,
     pageSize,
     hasMore: false,
     locationState: status,
     locationMessage: message,
     sourceCounts: { manual: 0, development: 0 },
-  } satisfies PublicSearchInventoryResult;
-}
-
-function searchAreaFailureMessage(reason: SearchAreaFailureReason): string {
-  if (reason === 'unsupported_journey') {
-    return 'This Search Area does not support the selected journey.';
-  }
-
-  if (reason === 'preview_only') {
-    return 'This Search Area is only available in preview and cannot be searched yet.';
-  }
-
-  return 'This Search Area is unavailable for search.';
-}
-
-export interface SearchAreaResolver {
-  resolveSearchArea: (
-    searchAreaId: string,
-    options?: ResolveSearchAreaOptions,
-  ) => Promise<SearchAreaResolution>;
-}
-
-export type PublicSearchExecutionMode = 'public' | 'controlled_acceptance';
-
-export interface PublicSearchServiceOptions {
-  /**
-   * Controlled server-side acceptance may execute candidate Search Areas while
-   * they remain preview lifecycle. This is deliberately not part of the public
-   * request contract and is disabled in production environments.
-   */
-  executionMode?: PublicSearchExecutionMode;
-}
-
-export interface PublicLocationResolver {
-  resolvePublicLocation: (opts: {
-    locationId?: string;
-    provinceSlug?: string;
-    citySlug?: string;
-    suburbSlug?: string;
-  }) => Promise<Awaited<ReturnType<typeof locationResolver.resolvePublicLocation>>>;
+  };
 }
 
 function buildSearchBounds(input: PublicSearchInventoryInput) {
@@ -290,7 +98,6 @@ function buildSearchBounds(input: PublicSearchInventoryInput) {
   ) {
     return undefined;
   }
-
   return {
     south: input.minLat,
     north: input.maxLat,
@@ -299,18 +106,10 @@ function buildSearchBounds(input: PublicSearchInventoryInput) {
   };
 }
 
-/**
- * The generic Buy/Rent spine has an explicit public universe. Commercial
- * leasing has its own Asset → Space → Availability authority and must never
- * re-enter generic cards merely because an older projection is still stored.
- */
 function genericJourneyPropertyTypes(
   listingType: 'sale' | 'rent',
   requestedPropertyType?: string,
 ): NonNullable<PropertyFilters['propertyType']> {
-  // Keep the lower-level adapter fail-closed even if a future caller bypasses
-  // the public service boundary. Commercial identity belongs to the dedicated
-  // Asset → Space → Availability journey, never to generic source filters.
   if (isCommercialMarketingPropertyType(requestedPropertyType)) {
     throw new Error(COMMERCIAL_PUBLIC_JOURNEY_HANDOFF_MESSAGE);
   }
@@ -322,19 +121,10 @@ function genericJourneyPropertyTypes(
 
 function buildPublicFilters(
   input: PublicSearchInventoryInput,
-  location: ResolvedLocation | null,
+  placeMemberIds?: string[],
 ): PropertyFilters {
   return {
-    province: location?.province.slug || input.province,
-    city: location?.city?.slug || input.city,
-    suburb: location?.suburb ? [location.suburb.slug] : input.suburb,
-    canonicalLocation: location
-      ? {
-          provinceId: location.province.id,
-          cityId: location.city?.id,
-          suburbId: location.suburb?.id,
-        }
-      : undefined,
+    canonicalPlaceIds: placeMemberIds,
     propertyType: genericJourneyPropertyTypes(input.listingType!, input.propertyType),
     listingType: input.listingType,
     minPrice: input.minPrice,
@@ -342,10 +132,6 @@ function buildPublicFilters(
     minBedrooms: input.minBedrooms,
     maxBedrooms: input.maxBedrooms,
     minBathrooms: input.minBathrooms,
-    maxBathrooms: input.maxBathrooms,
-    // `minArea` remains the legacy/current UI contract for internal/floor
-    // area. Explicit fields prevent an internal-area filter from silently
-    // becoming an erf or farm-land filter.
     minErfSize: input.minErfSize,
     maxErfSize: input.maxErfSize,
     minFloorSize: input.minFloorSize ?? input.minArea,
@@ -366,49 +152,77 @@ function buildDevelopmentFilters(input: PublicSearchInventoryInput & { canonical
     minBedrooms: input.minBedrooms,
     maxBedrooms: input.maxBedrooms,
     minBathrooms: input.minBathrooms,
-    maxBathrooms: input.maxBathrooms,
     minArea: input.minArea,
     maxArea: input.maxArea,
     bounds: buildSearchBounds(input),
   };
 }
 
-function sourceSort(sortOption: PublicSearchBlendSortOption): SortOption {
+type SearchSource = 'property' | 'development';
+type SearchSourceResult = { kind: SearchSource; value: SearchCardResult };
+
+function sourcePrice(item: SearchSourceResult): number {
+  return Number(item.value.price ?? 0);
+}
+
+function sourceDate(item: SearchSourceResult): number {
+  const value = item.value as SearchCardResult & { listedDate?: string | Date; createdAt?: string | Date };
+  return new Date(value.listedDate ?? value.createdAt ?? 0).getTime();
+}
+
+/** Mix the two canonical inventory sources without inspecting geography labels. */
+function blendSearchSources(
+  properties: SearchCardResult[],
+  developments: SearchCardResult[],
+  sortOption: SearchResultSortOption,
+): SearchCardResult[] {
+  if (!properties.length) return developments;
+  if (!developments.length) return properties;
+
+  const combined: SearchSourceResult[] = [
+    ...properties.map(value => ({ kind: 'property' as const, value })),
+    ...developments.map(value => ({ kind: 'development' as const, value })),
+  ];
+  if (sortOption === 'price_asc' || sortOption === 'price_desc') {
+    return combined
+      .sort((left, right) => {
+        const delta = sourcePrice(left) - sourcePrice(right);
+        return (sortOption === 'price_asc' ? delta : -delta) || Number(left.kind === 'development') - Number(right.kind === 'development');
+      })
+      .map(item => item.value);
+  }
+  if (sortOption === 'date_asc' || sortOption === 'date_desc') {
+    return combined
+      .sort((left, right) => {
+        const delta = sourceDate(left) - sourceDate(right);
+        return (sortOption === 'date_asc' ? delta : -delta) || Number(left.kind === 'development') - Number(right.kind === 'development');
+      })
+      .map(item => item.value);
+  }
+
+  const mixed: SearchCardResult[] = [];
+  let propertyIndex = 0;
+  let developmentIndex = 0;
+  while (propertyIndex < properties.length || developmentIndex < developments.length) {
+    mixed.push(...properties.slice(propertyIndex, propertyIndex + 3));
+    propertyIndex += 3;
+    if (developmentIndex < developments.length) mixed.push(developments[developmentIndex++]);
+  }
+  return mixed;
+}
+
+function sourceSort(sortOption: SearchResultSortOption): SortOption {
   return sortOption === 'relevance' ? 'date_desc' : sortOption;
 }
 
 export class PublicSearchService {
-  private readonly executionMode: PublicSearchExecutionMode;
-
-  constructor(
-    private readonly searchAreaResolver: SearchAreaResolver = searchAreaAuthority,
-    private readonly publicLocationResolver: PublicLocationResolver = locationResolver,
-    options: PublicSearchServiceOptions = {},
-  ) {
-    const productionRuntime =
-      process.env.NODE_ENV === 'production' || process.env.APP_ENV === 'production';
-    this.executionMode =
-      options.executionMode === 'controlled_acceptance' && !productionRuntime
-        ? 'controlled_acceptance'
-        : 'public';
-  }
-
-  private searchAreaResolutionOptions(journey: 'buy' | 'rent'): ResolveSearchAreaOptions {
-    return {
-      journey,
-      ...(this.executionMode === 'controlled_acceptance' ? { includePreview: true } : {}),
-    };
-  }
-
   async searchInventory(input: PublicSearchInventoryInput): Promise<PublicSearchInventoryResult> {
     if (isCommercialMarketingPropertyType(input.propertyType)) {
       throw new Error(COMMERCIAL_PUBLIC_JOURNEY_HANDOFF_MESSAGE);
     }
 
     const validationIssue = validatePublicSearchInput(input);
-    if (validationIssue) {
-      throw new Error(validationIssue.message);
-    }
+    if (validationIssue) throw new Error(validationIssue.message);
 
     if (!input.listingType) {
       return emptyLocationResult(
@@ -428,320 +242,74 @@ export class PublicSearchService {
 
     const page = normalizePublicSearchPageIndex(input.page);
     const pageSize = normalizePublicSearchPageSize(input.pageSize);
-    const sortOption: PublicSearchBlendSortOption = isSearchResultSortOption(input.sortOption)
-      ? input.sortOption
-      : DEFAULT_SEARCH_RESULT_SORT;
+    const sortOption: SearchResultSortOption =
+      input.sortOption === 'relevance' ||
+      input.sortOption === 'price_asc' ||
+      input.sortOption === 'price_desc' ||
+      input.sortOption === 'date_desc' ||
+      input.sortOption === 'date_asc'
+        ? input.sortOption
+        : 'relevance';
     const sourceSortOption = sourceSort(sortOption);
 
-    let effectiveLocationId = input.locationId;
-    if (input.factualLocationId) {
-      const factualResolution = await searchDiscoveryService.resolveSelection(
-        {
-          kind: 'canonical_location',
-          canonicalLocationId: input.locationId || '',
-          factualLocationId: input.factualLocationId,
-        },
-        { journey: input.listingType === 'sale' ? 'buy' : 'rent' },
-      );
-
-      if (factualResolution.status !== 'resolved') {
-        return emptyLocationResult(input, 'unavailable', factualResolution.message);
-      }
-
-      if (
-        factualResolution.scope.kind === 'search_area' ||
-        factualResolution.scope.kind === 'multi_location'
-      ) {
-        return emptyLocationResult(
-          input,
-          'unavailable',
-          'The selected factual identity did not resolve to a canonical location scope.',
-        );
-      }
-
-      const resolvedLocationId = factualResolution.scope.canonicalLocationId;
-      if (input.locationId && input.locationId !== resolvedLocationId) {
-        return emptyLocationResult(
-          input,
-          'unavailable',
-          'The factual identity does not match its canonical runtime handle.',
-        );
-      }
-      effectiveLocationId = resolvedLocationId;
-    }
-
     let placeProjection: CanonicalPlaceSearchProjection | undefined;
-    let placeContext: PublicSearchInventoryResult['canonicalPlaceContext'];
+    let canonicalPlaceContext: PublicSearchInventoryResult['canonicalPlaceContext'];
     let placeMemberIds: string[] | undefined;
     let provincePlaceId: string | undefined;
-    let location: ResolvedLocation | null = null;
-    let queryBoundary: PublicSearchQueryBoundary | undefined;
-    let searchAreaContext: PublicSearchInventoryResult['searchAreaContext'];
-    let searchAreaContexts: PublicSearchInventoryResult['searchAreaContexts'];
-    let multiLocationContext: PublicSearchInventoryResult['multiLocationContext'];
-    let locationState: PublicSearchInventoryResult['locationState'] = 'not_requested';
-    let locationMessage: string | undefined;
 
-    if (input.canonicalPlaceId) {
-      const projection = await loadCanonicalPlaceSearchProjection(undefined, {
+    if (input.canonicalPlaceId !== undefined) {
+      if (!isCanonicalPlaceId(input.canonicalPlaceId)) {
+        return emptyLocationResult(
+          input,
+          'unavailable',
+          'Choose a valid canonical Place identity.',
+        );
+      }
+      placeProjection = await loadCanonicalPlaceSearchProjection(undefined, {
         placeIds: [input.canonicalPlaceId],
       });
-      placeProjection = projection;
-      const execution = projection.executions.get(input.canonicalPlaceId);
-      const labels = projection.labels.get(input.canonicalPlaceId);
-      if (!execution || !labels)
+      const execution = placeProjection.executions.get(input.canonicalPlaceId);
+      const label = placeProjection.labels.get(input.canonicalPlaceId);
+      if (!execution || !label) {
         return emptyLocationResult(
           input,
           'unavailable',
-          'The selected location cannot currently be searched. Choose another approved location.',
+          'The selected Place cannot currently be searched. Choose another approved Place.',
         );
+      }
       if (execution.scope === 'province') {
-        // Validate membership only for identities used by matching inventory.
-        // Empty Places cannot contribute a search result or its count.
         provincePlaceId = execution.placeId;
       } else {
-        placeMemberIds = canonicalPlaceSearchMembers(execution, projection);
+        placeMemberIds = canonicalPlaceSearchMembers(execution, placeProjection);
       }
-      placeContext = { ...labels, scopePolicy: PLACE_INVENTORY_SCOPE_POLICY };
-      locationState = 'resolved';
-    } else if (input.searchAreaId) {
-      if (!input.listingType) {
-        return emptyLocationResult(
-          input,
-          'unavailable',
-          'Choose Buy or Rent before searching within a Search Area.',
-        );
-      }
-
-      const searchAreaJourney = input.listingType === 'sale' ? 'buy' : 'rent';
-      const resolution = await this.searchAreaResolver.resolveSearchArea(
-        input.searchAreaId,
-        this.searchAreaResolutionOptions(searchAreaJourney),
-      );
-
-      if (resolution.status === 'preview' && this.executionMode !== 'controlled_acceptance') {
-        return emptyLocationResult(input, 'unavailable', searchAreaFailureMessage('preview_only'));
-      }
-
-      if (resolution.status === 'unavailable') {
-        return emptyLocationResult(
-          input,
-          'unavailable',
-          searchAreaFailureMessage(resolution.reason),
-        );
-      }
-
-      queryBoundary = buildSearchAreaQueryBoundary(resolution) ?? undefined;
-      if (!queryBoundary) {
-        return emptyLocationResult(
-          input,
-          'unavailable',
-          'This Search Area has no safe canonical query boundary.',
-        );
-      }
-
-      searchAreaContext = resolution.summary;
-      locationState = 'resolved';
-
-      if (input.locationId) {
-        const refinement = await this.publicLocationResolver.resolvePublicLocation({
-          locationId: input.locationId,
-        });
-
-        if (refinement.status !== 'resolved' || !refinement.location) {
-          return emptyLocationResult(
-            input,
-            refinement.status === 'ambiguous' ? 'ambiguous' : 'unresolved',
-            refinement.message ||
-              'That locality could not be resolved within the selected Search Area.',
-          );
-        }
-
-        if (refinement.location.level !== 'suburb') {
-          return emptyLocationResult(
-            input,
-            'unavailable',
-            'A Search Area can only be refined by a canonical locality.',
-          );
-        }
-
-        const narrowedBoundary = narrowSearchAreaQueryBoundary(queryBoundary, input.locationId);
-        if (!narrowedBoundary) {
-          return emptyLocationResult(
-            input,
-            'unavailable',
-            'That locality is not an approved member of the selected Search Area.',
-          );
-        }
-
-        queryBoundary = narrowedBoundary;
-        location = refinement.location;
-        locationMessage = refinement.message;
-      }
-    } else if (input.searchAreaIds?.length) {
-      const searchAreaJourney = input.listingType === 'sale' ? 'buy' : 'rent';
-      const searchAreaIds = canonicalizeSearchAreaIds(input.searchAreaIds);
-      const resolutions = await Promise.all(
-        searchAreaIds.map(searchAreaId =>
-          this.searchAreaResolver.resolveSearchArea(
-            searchAreaId,
-            this.searchAreaResolutionOptions(searchAreaJourney),
-          ),
-        ),
-      );
-
-      const unavailableResolution = resolutions.find(
-        resolution =>
-          resolution.status === 'unavailable' ||
-          (resolution.status === 'preview' && this.executionMode !== 'controlled_acceptance'),
-      );
-      if (unavailableResolution?.status === 'preview') {
-        return emptyLocationResult(input, 'unavailable', searchAreaFailureMessage('preview_only'));
-      }
-      if (unavailableResolution?.status === 'unavailable') {
-        return emptyLocationResult(
-          input,
-          'unavailable',
-          searchAreaFailureMessage(unavailableResolution.reason),
-        );
-      }
-
-      const boundaries = resolutions
-        .map(resolution =>
-          resolution.status === 'available' || resolution.status === 'preview'
-            ? buildSearchAreaQueryBoundary(resolution)
-            : null,
-        )
-        .filter((boundary): boundary is NonNullable<typeof boundary> => Boolean(boundary));
-      queryBoundary = combineSearchAreaQueryBoundaries(boundaries) ?? undefined;
-      if (!queryBoundary) {
-        return emptyLocationResult(
-          input,
-          'unavailable',
-          'The selected Search Areas do not share one safe canonical parent boundary.',
-        );
-      }
-
-      const availableResolutions = resolutions.filter(
-        (
-          resolution,
-        ): resolution is Extract<SearchAreaResolution, { status: 'available' | 'preview' }> & {
-          status: 'available' | 'preview';
-        } => resolution.status === 'available' || resolution.status === 'preview',
-      );
-      searchAreaContexts = availableResolutions.map(resolution => resolution.summary);
-      searchAreaContext = searchAreaContexts.length === 1 ? searchAreaContexts[0] : undefined;
-      locationState = 'resolved';
-    } else if (input.locationIds?.length) {
-      const canonicalLocationIds = canonicalizeCanonicalLocationIds(input.locationIds);
-      const resolutions = await Promise.all(
-        canonicalLocationIds.map(locationId =>
-          this.publicLocationResolver.resolvePublicLocation({ locationId }),
-        ),
-      );
-      const unresolvedResolution = resolutions.find(
-        resolution => resolution.status !== 'resolved' || !resolution.location,
-      );
-      if (unresolvedResolution) {
-        return emptyLocationResult(
-          input,
-          unresolvedResolution.status === 'ambiguous' ? 'ambiguous' : 'unresolved',
-          unresolvedResolution.message ||
-            'One or more selected locations could not be resolved canonically.',
-        );
-      }
-
-      const resolvedLocations = resolutions.map(resolution => resolution.location!);
-      queryBoundary =
-        buildCanonicalLocationQueryBoundary(resolvedLocations, canonicalLocationIds) ?? undefined;
-      if (!queryBoundary) {
-        return emptyLocationResult(
-          input,
-          'unavailable',
-          'Selected locations must be canonical siblings at one geographic level.',
-        );
-      }
-
-      multiLocationContext = toMultiLocationContext(resolvedLocations, canonicalLocationIds);
-      locationState = 'resolved';
-    } else if (hasLocationIntent(input)) {
-      if (
-        !input.province &&
-        !input.city &&
-        !input.suburb?.length &&
-        !effectiveLocationId &&
-        (input.locations?.length || 0) > 1
-      ) {
-        return emptyLocationResult(
-          input,
-          'ambiguous',
-          'Choose one canonical province, city, or suburb before searching.',
-        );
-      }
-
-      const resolution = await this.publicLocationResolver.resolvePublicLocation({
-        locationId: effectiveLocationId,
-        provinceSlug: input.province,
-        citySlug:
-          input.city ||
-          (!input.province && !input.suburb?.length ? input.locations?.[0] : undefined),
-        suburbSlug: input.suburb?.[0],
-      });
-
-      if (resolution.status !== 'resolved' || !resolution.location) {
-        return emptyLocationResult(
-          input,
-          resolution.status === 'ambiguous' ? 'ambiguous' : 'unresolved',
-          resolution.message ||
-            'We could not match that location. Choose a canonical result and try again.',
-        );
-      }
-
-      location = resolution.location;
-      locationState = 'resolved';
-      locationMessage = resolution.message;
+      canonicalPlaceContext = { ...label, scopePolicy: PLACE_INVENTORY_SCOPE_POLICY };
     }
 
-    const filters = buildPublicFilters(input, location);
-    filters.canonicalPlaceIds = placeMemberIds;
+    const filters = buildPublicFilters(input, placeMemberIds);
     const manualEnabled = input.listingSource !== 'development';
-    // Development inventory executes only against one reviewed Place identity.
     const developmentEnabled = input.listingSource !== 'manual' && Boolean(input.canonicalPlaceId);
-    const developmentFilters = input.canonicalPlaceId
-      ? buildDevelopmentFilters({ ...input, canonicalPlaceId: input.canonicalPlaceId })
-      : undefined;
-    const fetchSourceResults = async (requestedPage: number) => {
-      const sourcePageSize =
-        manualEnabled && developmentEnabled ? (requestedPage + 1) * pageSize : pageSize;
-      const sourcePage = manualEnabled && developmentEnabled ? 1 : requestedPage + 1;
+    const developmentFilters =
+      input.canonicalPlaceId && developmentEnabled
+        ? buildDevelopmentFilters({ ...input, canonicalPlaceId: input.canonicalPlaceId })
+        : undefined;
 
+    const fetchSourceResults = async (requestedPage: number) => {
+      const combined = manualEnabled && developmentEnabled;
+      const sourcePageSize = combined ? (requestedPage + 1) * pageSize : pageSize;
+      const sourcePage = combined ? 1 : requestedPage + 1;
       return Promise.all([
         manualEnabled
-          ? queryBoundary
-            ? propertySearchService.searchProperties(
-                filters,
-                sourceSortOption,
-                sourcePage,
-                sourcePageSize,
-                queryBoundary,
-                {
-                  publicOnly: true,
-                  ...(placeProjection ? { placeProjection } : {}),
-                  provincePlaceId,
-                },
-              )
-            : propertySearchService.searchProperties(
-                filters,
-                sourceSortOption,
-                sourcePage,
-                sourcePageSize,
-                undefined,
-                {
-                  publicOnly: true,
-                  ...(placeProjection ? { placeProjection } : {}),
-                  provincePlaceId,
-                },
-              )
+          ? propertySearchService.searchProperties(
+              filters,
+              sourceSortOption,
+              sourcePage,
+              sourcePageSize,
+              {
+                publicOnly: true,
+                ...(placeProjection ? { placeProjection } : {}),
+                provincePlaceId,
+              },
+            )
           : null,
         developmentEnabled
           ? developmentDerivedListingService.searchListings(
@@ -769,18 +337,9 @@ export class PublicSearchService {
 
     const manualCards = (manualResults?.cards || []) as SearchCardResult[];
     const developmentCards = (developmentResults?.cards || []) as SearchCardResult[];
-    const policyFilters = {
-      ...input,
-      suburb: input.suburb?.[0],
-    };
     const blended =
       manualEnabled && developmentEnabled
-        ? (blendPublicSearchResults(
-            manualCards.map(value => ({ kind: 'property' as const, value })),
-            developmentCards.map(value => ({ kind: 'development' as const, value })),
-            sortOption,
-            policyFilters,
-          ).map(item => item.value) as SearchCardResult[])
+        ? blendSearchSources(manualCards, developmentCards, sortOption)
         : manualEnabled
           ? manualCards
           : developmentCards;
@@ -788,21 +347,15 @@ export class PublicSearchService {
       manualEnabled && developmentEnabled
         ? blended.slice(canonicalPage * pageSize, canonicalPage * pageSize + pageSize)
         : blended;
-    const locationContext = location ? toLocationContext(location) : undefined;
 
     return {
       cards,
       total,
       page: canonicalPage,
       pageSize,
-      hasMore: canAdvancePublicSearchPage(page, total, pageSize),
-      locationContext,
-      canonicalPlaceContext: placeContext,
-      searchAreaContext,
-      searchAreaContexts,
-      multiLocationContext,
-      locationState,
-      locationMessage,
+      hasMore: canAdvancePublicSearchPage(canonicalPage, total, pageSize),
+      canonicalPlaceContext,
+      locationState: input.canonicalPlaceId ? 'resolved' : 'not_requested',
       sourceCounts: {
         manual: manualTotal,
         development: developmentTotal,

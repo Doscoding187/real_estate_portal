@@ -4,19 +4,6 @@ import { describe, expect, it } from 'vitest';
 import { authorizeDatabaseOperation } from '../authorization';
 import { resolveDatabaseAuthority } from '../context';
 import {
-  CANONICAL_GEOGRAPHY_DIGEST,
-  CANONICAL_GEOGRAPHY_EXPECTED_ROWS,
-  canonicalGeographyIdFromRow,
-  GOVERNED_RUNTIME_GEOGRAPHY_EXPECTED_ROWS,
-  GOVERNED_RUNTIME_REFERENCE_DIGEST,
-  prepareCanonicalGeography,
-  verifyCanonicalGeography,
-} from '../dataAdapters/canonicalGeography';
-import {
-  GOVERNED_RUNTIME_REFERENCE_ROWS,
-  GOVERNED_RUNTIME_REFERENCE_VERSION,
-} from '../dataAdapters/governedRuntimeGeography';
-import {
   buildScenarioInsertStatement,
   prepareSearchToLeadScenario,
   SEARCH_TO_LEAD_SCENARIO_DIGEST,
@@ -163,41 +150,8 @@ class UnexpectedConnection implements AuthoritySqlConnection {
 }
 
 describe('bounded Database Authority data adapters', () => {
-  it('reads canonical geography IDs from direct and aliased verifier columns', () => {
-    expect(canonicalGeographyIdFromRow({ id: 7 }, 'province')).toBe(7);
-    expect(canonicalGeographyIdFromRow({ province_id: 11 }, 'gauteng', 'province_id')).toBe(11);
-    expect(canonicalGeographyIdFromRow({ city_id: 23 }, 'gauteng/johannesburg', 'city_id')).toBe(
-      23,
-    );
-    expect(() => canonicalGeographyIdFromRow({ province_id: 0 }, 'gauteng', 'province_id')).toThrow(
-      'invalid ID',
-    );
-  });
-
-  it('publishes deterministic versions and the required geography minimum', () => {
-    expect(CANONICAL_GEOGRAPHY_DIGEST).toMatch(/^[a-f0-9]{64}$/);
-    expect(CANONICAL_GEOGRAPHY_EXPECTED_ROWS).toEqual({
-      provinces: 9,
-      cities: 10,
-      suburbs: 10,
-    });
-    expect(GOVERNED_RUNTIME_REFERENCE_VERSION).toBe(
-      'property-listify-location-authority-catalog-v0.1',
-    );
-    expect(GOVERNED_RUNTIME_REFERENCE_DIGEST).toMatch(/^[a-f0-9]{64}$/);
-    expect(GOVERNED_RUNTIME_REFERENCE_ROWS).toHaveLength(1414);
-    expect(GOVERNED_RUNTIME_GEOGRAPHY_EXPECTED_ROWS).toEqual({
-      provinces: 9,
-      cities: 340,
-      suburbs: 1089,
-    });
-    expect(
-      GOVERNED_RUNTIME_REFERENCE_ROWS.every(
-        row =>
-          !('runtimeCompatibilityIds' in row) && !('environmentRuntimeCompatibilityIds' in row),
-      ),
-    ).toBe(true);
-    expect(SEARCH_TO_LEAD_SCENARIO_VERSION).toBe('search-to-lead-v6');
+  it('publishes deterministic versions for active reference and scenario adapters', () => {
+    expect(SEARCH_TO_LEAD_SCENARIO_VERSION).toBe('search-to-lead-v7');
     expect(SEARCH_TO_LEAD_SCENARIO_DIGEST).toMatch(/^[a-f0-9]{64}$/);
     expect(CANONICAL_FOUNDATION_VERSION).toBe('canonical-launch-foundation-v1');
     expect(CANONICAL_FOUNDATION_DIGEST).toMatch(/^[a-f0-9]{64}$/);
@@ -232,7 +186,7 @@ describe('bounded Database Authority data adapters', () => {
     const target = authority(url, operation);
     const connection = new UnexpectedConnection();
     await expect(
-      verifyCanonicalGeography({
+      verifyCanonicalCommercialReference({
         authority: target,
         decision: decision('verification'),
         connection,
@@ -258,14 +212,6 @@ describe('bounded Database Authority data adapters', () => {
     });
 
     const prepareConnection = new UnexpectedConnection();
-    await expect(
-      prepareCanonicalGeography({
-        authority: prepareTarget,
-        decision: decision('reference-seed'),
-        connection: prepareConnection,
-      }),
-    ).rejects.toThrow('connection must not be reached');
-
     await expect(
       prepareCanonicalCommercialReferenceData({
         authority: prepareTarget,
@@ -295,14 +241,6 @@ describe('bounded Database Authority data adapters', () => {
 
     const verifyTarget = disposableTestAuthority('verification');
     const verifyConnection = new UnexpectedConnection();
-    await expect(
-      verifyCanonicalGeography({
-        authority: verifyTarget,
-        decision: decision('verification'),
-        connection: verifyConnection,
-      }),
-    ).rejects.toThrow('connection must not be reached');
-
     await expect(
       verifyCanonicalCommercialReference({
         authority: verifyTarget,
@@ -405,7 +343,7 @@ describe('bounded Database Authority data adapters', () => {
     ]);
     expect(plan.products.every(product => product.state === 'missing')).toBe(true);
     expect(plan.pending.filter(item => item.action === 'insert_plan')).toHaveLength(3);
-    expect(plan.migrationHead).toBe('0157_developments_canonical_place_only.sql');
+    expect(plan.migrationHead).toBe('0197_drop_seller_prospects_province.sql');
   });
 
   it('fails closed when a protected commercial row conflicts with canonical authority', async () => {
@@ -423,17 +361,11 @@ describe('bounded Database Authority data adapters', () => {
     ).rejects.toThrow('conflicts with approved reference data');
   });
 
-  it('keeps legacy locations out of geography authority and contains delivery providers', () => {
-    const geography = readFileSync(
-      join(ROOT, 'server/_core/databaseAuthority/dataAdapters/canonicalGeography.ts'),
-      'utf8',
-    );
+  it('contains delivery providers in the active scenario adapter', () => {
     const scenario = readFileSync(
       join(ROOT, 'server/_core/databaseAuthority/dataAdapters/searchToLeadScenario.ts'),
       'utf8',
     );
-    expect(geography).not.toMatch(/INSERT\s+INTO\s+locations/i);
-    expect(geography).not.toMatch(/UPDATE\s+locations/i);
     expect(scenario).toContain("deliveryMethod !== 'crm_export'");
     expect(scenario).toContain("RESEND_API_KEY: ''");
     expect(scenario).toContain("WHATSAPP_ACCESS_TOKEN: ''");

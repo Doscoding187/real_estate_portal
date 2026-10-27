@@ -36,12 +36,8 @@ const BLOCKER_LABELS: Record<string, string> = {
   subscription_ineligible: 'Subscription is not trial or active',
 };
 
-function coverageLabel(area: {
-  province: string | null;
-  city: string | null;
-  suburb: string | null;
-}): string {
-  return [area.suburb, area.city, area.province].filter(Boolean).join(', ') || 'Unspecified';
+function coverageLabel(area: { canonicalPlaceId: string; label: string }): string {
+  return area.label || 'Unspecified';
 }
 
 /**

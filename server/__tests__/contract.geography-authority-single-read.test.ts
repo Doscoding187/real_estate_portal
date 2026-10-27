@@ -66,6 +66,10 @@ describe('single geography authority boundary', () => {
   it('retires the old runtime resolvers and provider locality writer', () => {
     for (const relativePath of [
       'server/services/locationResolverService.ts',
+      'server/services/globalSearchService.ts',
+      'server/services/locationAnalyticsService.ts',
+      'server/services/priceInsightsService.ts',
+      'server/services/__tests__/searchIntegration.property.test.ts',
       'server/services/runtimeGeographyResolverService.ts',
       'server/services/listingLocationResolver.ts',
       'server/services/locationAutoPopulation.ts',

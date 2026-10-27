@@ -149,11 +149,7 @@ export default function ServiceProviderProfilePage() {
     journeyContext,
   );
   const primaryLocation = profile.locations[0];
-  const locationLine = primaryLocation
-    ? [primaryLocation.suburb, primaryLocation.city, primaryLocation.province]
-        .filter(Boolean)
-        .join(', ')
-    : 'Coverage on request';
+  const locationLine = primaryLocation?.label || 'Coverage on request';
 
   // Only facts the platform actually holds may be presented as trust signals.
   const trustFacts = [
@@ -471,22 +467,17 @@ export default function ServiceProviderProfilePage() {
                 </p>
                 <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {profile.locations.map(location => {
-                    const primary = location.suburb || location.city || 'Unspecified';
-                    const secondary = [location.city, location.province].filter(Boolean).join(', ');
                     return (
                       <li
-                        key={`${location.id}-${location.city}-${location.suburb}`}
+                        key={`${location.id}-${location.canonicalPlaceId}`}
                         className={`${servicesUi.surface} p-5`}
                       >
                         <p className="flex items-center gap-2 text-[14px] font-semibold text-[#0B1B2A]">
                           <MapPin className="h-4 w-4 shrink-0 text-[#168363]" aria-hidden="true" />
-                          {primary}
+                          {location.label || 'Selected Place unavailable'}
                         </p>
-                        {secondary && (
-                          <p className="mt-1.5 pl-6 text-[12px] text-[#4B5C6B]">{secondary}</p>
-                        )}
                         <p className="mt-1.5 pl-6 text-[12px] text-[#8A99A6]">
-                          Coverage label supplied by the provider
+                          Exact Place coverage
                         </p>
                       </li>
                     );

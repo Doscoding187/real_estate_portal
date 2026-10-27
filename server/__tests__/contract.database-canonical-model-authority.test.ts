@@ -59,7 +59,7 @@ describe('database canonical model authority', () => {
     }
   });
 
-  it('retires inactive analytics and affordability models while preserving recent searches', () => {
+  it('retires inactive analytics, recent searches and affordability models', () => {
     const analyticsSchema = readRepoFile('drizzle/schema/analytics.ts');
     const referralSchema = readRepoFile('drizzle/schema/referrals.ts');
     const demandScoringService = readRepoFile('server/services/demandScoringService.ts');
@@ -71,7 +71,8 @@ describe('database canonical model authority', () => {
     expect(referralSchema).not.toContain('export const affordabilityConfig');
     expect(referralSchema).not.toContain('AFFORDABILITY_CONFIG_VALUE_TYPE_VALUES');
 
-    expect(countPhysicalTableDefinitions(analyticsSchema, 'recent_searches')).toBe(1);
+    expect(analyticsSchema).not.toContain('recent_searches');
+    expect(countPhysicalTableDefinitions(analyticsSchema, 'recent_searches')).toBe(0);
 
     expect(demandScoringService).not.toContain('locationAnalyticsEvents');
   });
@@ -101,9 +102,9 @@ describe('database canonical model authority', () => {
       match => String(match[1]),
     ).sort();
 
-    expect(inventory.tableCount).toBe(239);
-    expect(inventory.tables).toHaveLength(239);
-    expect(new Set(inventory.tables).size).toBe(239);
+    expect(inventory.tableCount).toBe(225);
+    expect(inventory.tables).toHaveLength(225);
+    expect(new Set(inventory.tables).size).toBe(225);
     expect([...inventory.tables].sort()).toEqual(inventory.tables);
     expect(modelTables).toEqual(inventory.tables);
 

@@ -1,7 +1,9 @@
 import type { FeedType } from '../../../../shared/types';
 import { getDb } from '../../../db';
-import { exploreContent, listings } from '../../../../drizzle/schema';
+import { exploreContent } from '../../../../drizzle/schema';
 import { and, desc, eq, sql } from 'drizzle-orm';
+import { isCanonicalPlaceId } from '../../../../shared/placeAuthority';
+import { loadCanonicalPlaceSearchProjection } from '../../../services/canonicalPlaceSearchService';
 
 interface CategoryCandidatesOptions {
   category: string;
@@ -10,7 +12,7 @@ interface CategoryCandidatesOptions {
 }
 
 interface AreaCandidatesOptions {
-  location: string;
+  canonicalPlaceId: string;
   limit: number;
   offset: number;
 }
@@ -62,7 +64,7 @@ function normalizeCandidateRow(row: any) {
   };
 }
 
-class DiscoveryLegacyFeedSource {
+class DiscoveryFeedSource {
   async getCategoryCandidates(options: CategoryCandidatesOptions): Promise<DiscoveryCandidateResult> {
     const { category, limit, offset } = options;
     const db = await getDb();
@@ -99,31 +101,48 @@ class DiscoveryLegacyFeedSource {
   }
 
   async getAreaCandidates(options: AreaCandidatesOptions): Promise<DiscoveryCandidateResult> {
-    const { location, limit, offset } = options;
+    const { canonicalPlaceId, limit, offset } = options;
+    if (!isCanonicalPlaceId(canonicalPlaceId)) {
+      return {
+        items: [],
+        shorts: [],
+        feedType: 'area',
+        hasMore: false,
+        offset,
+        metadata: { scopeAvailable: false },
+      };
+    }
     const db = await getDb();
-    const loc = location.toLowerCase();
+    const projection = await loadCanonicalPlaceSearchProjection(db as never, {
+      placeIds: [canonicalPlaceId],
+    });
+    if (!projection.executions.has(canonicalPlaceId) || !projection.labels.has(canonicalPlaceId)) {
+      return {
+        items: [],
+        shorts: [],
+        feedType: 'area',
+        hasMore: false,
+        offset,
+        metadata: { canonicalPlaceId, scopeAvailable: false },
+      };
+    }
 
     const rows = await db
-      .select({ content: exploreContent })
+      .select()
       .from(exploreContent)
-      .leftJoin(listings, eq(exploreContent.referenceId, listings.id))
       .where(
         and(
           eq(exploreContent.contentType, 'video'),
           eq(exploreContent.isActive, 1),
           hasPlayableMedia,
-          sql`(
-            LOWER(COALESCE(${listings.city}, '')) LIKE ${`%${loc}%`}
-            OR LOWER(COALESCE(${listings.suburb}, '')) LIKE ${`%${loc}%`}
-            OR LOWER(COALESCE(${listings.province}, '')) LIKE ${`%${loc}%`}
-          )`,
+          eq(exploreContent.canonicalPlaceId, canonicalPlaceId),
         ),
       )
       .orderBy(desc(exploreContent.createdAt))
       .limit(limit)
       .offset(offset);
 
-    const items = rows.map((row: any) => normalizeCandidateRow(row.content));
+    const items = rows.map((row: any) => normalizeCandidateRow(row));
 
     return {
       items,
@@ -131,7 +150,7 @@ class DiscoveryLegacyFeedSource {
       feedType: 'area',
       hasMore: rows.length === limit,
       offset: offset + rows.length,
-      metadata: { location },
+      metadata: { canonicalPlaceId },
     };
   }
 
@@ -185,4 +204,4 @@ class DiscoveryLegacyFeedSource {
   }
 }
 
-export const discoveryLegacyFeedSource = new DiscoveryLegacyFeedSource();
+export const discoveryFeedSource = new DiscoveryFeedSource();

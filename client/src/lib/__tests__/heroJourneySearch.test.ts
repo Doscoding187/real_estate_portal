@@ -106,7 +106,7 @@ describe('canonical transactional search navigation', () => {
 
     expect(resolveCanonicalLocationSelection([LOCALITY], nextPlace, 1)).toEqual({
       locations: [nextPlace],
-      outcome: 'replaced',
+      outcome: 'replaced-incompatible',
     });
   });
 
@@ -156,7 +156,7 @@ describe('canonical transactional search navigation', () => {
 describe('development and navbar Place handoffs', () => {
   it('requires exactly one canonical Place for the gated developments route', () => {
     const url = buildDevelopmentsSearchUrl({
-      selectedLocations: [CITY],
+      canonicalPlaceId: PLACE_ID,
       developmentType: 'residential',
       minPrice: 500000,
     });
@@ -165,8 +165,8 @@ describe('development and navbar Place handoffs', () => {
     expect(parsed.pathname).toBe('/new-developments');
     expect(parsed.searchParams.get('canonicalPlaceId')).toBe(PLACE_ID);
     expect(parsed.searchParams.has('city')).toBe(false);
-    expect(buildDevelopmentsSearchUrl({ selectedLocations: [CITY, LOCALITY] })).toBe(
-      '/new-developments?searchError=invalid-place-authority',
+    expect(buildDevelopmentsSearchUrl({ canonicalPlaceId: 'ChIJgoogle-place-id' })).toBe(
+      '/new-developments?searchError=canonical-place-required',
     );
   });
 

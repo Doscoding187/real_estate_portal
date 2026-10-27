@@ -1,5 +1,5 @@
 {
-  "version": 11,
+  "version": 12,
   "canonicalAuthority": {
     "productionCommand": "pnpm db:release:apply",
     "testCommand": "pnpm db:migrate:test",
@@ -252,7 +252,6 @@
     "approvedReferenceAndScenarioAdapters": [
       "server/_core/databaseAuthority/dataAdapters/canonicalCommercial.ts",
       "server/_core/databaseAuthority/dataAdapters/canonicalFoundation.ts",
-      "server/_core/databaseAuthority/dataAdapters/canonicalGeography.ts",
       "server/_core/databaseAuthority/dataAdapters/dataRoleManifest.ts",
       "server/_core/databaseAuthority/dataAdapters/homepageJourneyPreviewFixture.ts",
       "server/_core/databaseAuthority/dataAdapters/listingPreviewFixture.ts",
@@ -1450,104 +1449,6 @@
       "purpose": "Persists the requested sale or rent mode, Developer projection revision, and immutable Distribution terms snapshot on each new referral."
     },
     {
-      "path": "server/migrations/_archived/**",
-      "classification": "archived historical",
-      "purpose": "Historical evidence only; the runner must never discover it.",
-      "approvedFiles": [
-        "server/migrations/_archived/add-residential-auction-workflow-v1.sql",
-        "server/migrations/_archived/add-residential-rental-flow-v1.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0001_add_ownership_columns.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0002_add_brand_status_tracking.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0003_create_audit_logs.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0004_configure_cascades.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0005_fix_production_schema_drift.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0006_add_agent_os_inventory_bridge.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0037_create_distribution_core_tables.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0038_create_distribution_program_workflow_engine.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0039_add_distribution_dual_commission_tracks.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0040_create_distribution_access_layer.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0040_harden_distribution_commission_snapshots.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0041_add_distribution_schema_readiness_items.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0042_create_services_engine.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0043_expand_service_lead_event_types.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0044_add_users_trial_columns.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0045_create_distribution_referral_accelerator.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0046_distribution_referral_assessment_locking.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0047_create_development_required_documents.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0047_create_distribution_execution_tables.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0048_allow_multiple_custom_required_documents.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0049_harden_development_required_documents_schema.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0050_add_brand_onboarding_defaults.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0051_add_development_required_document_categories.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0051_add_service_provider_role.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0052_add_unit_context_to_leads.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0052_add_user_onboarding_state.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0052_create_distribution_deal_documents.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0052_distribution_document_workflow_files.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0052_reconcile_showings_schema.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0053_add_consumer_dashboard_preferences.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0054_create_platform_team_registrations_and_analytics_events.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0054_reconcile_agent_profile_schema.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0055_add_distribution_brand_partnership_onboarding_defaults_json.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0055_create_distribution_identity_and_team_tables.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0056_reconcile_saved_search_scheduler_schema.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0057_create_analytics_events.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0058_create_distribution_docs_v2_tables.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0059_reconcile_distribution_deal_events.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0060_add_distribution_brochure_config.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0061_reconcile_agency_workspace_schema.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0062_create_provider_independent_billing.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0063_extend_showings_lifecycle.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0064_add_showings_creator.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0065_create_agency_deal_engine.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0066_create_agency_canvassing_mvp.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0067_close_seller_acquisition_loop.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0068_close_buyer_lead_loop.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0069_create_agency_mandate_operations_mvp.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0070_create_agency_commission_reconciliation_mvp.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0071_create_agency_listing_performance_mvp.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0072_add_listing_performance_contact_date.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0073_create_prospect_journey_tracker_mvp.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0074_activate_development_approval_queue.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0075_create_agency_agent_memberships.sql"
-      ]
-    },
-    {
-      "path": "server/migrations/_archived/rejected-zero-statement/0001_public_search_to_lead_reliability.sql",
-      "classification": "archived historical",
-      "purpose": "Preserves the unchanged checksum evidence for the TiDB-incompatible same-ALTER unique-index migration rejected after a zero-statement production attempt; it is never executable authority."
-    },
-    {
-      "path": "server/migrations/_archived/rejected-zero-statement/0019_catalogue_publisher_authority_immutability.sql",
-      "classification": "archived historical",
-      "purpose": "Preserves the unchanged checksum evidence for the TiDB-incompatible trigger migration rejected after a zero-statement local attempt; it is never executable authority."
-    },
-    {
-      "path": "server/migrations/_archived/rejected-zero-statement/0046_commercial_office_quote_terms.sql",
-      "classification": "archived historical",
-      "purpose": "Preserves the unchanged checksum evidence for the TiDB-incompatible same-ALTER quote-terms migration rejected after a zero-statement production attempt; it is never executable authority."
-    },
-    {
-      "path": "server/migrations/migrationManifest.ts",
-      "classification": "canonical supporting",
-      "purpose": "Validates canonical migration membership, lineage, statement policy, and TiDB-safe additive DDL sequencing before any plan or apply operation."
-    },
-    {
-      "path": "server/migrations/recoverRejectedReleaseCommercialQuoteTermsMigration.ts",
-      "classification": "canonical supporting",
-      "purpose": "Provides the bounded protected release recovery for the reviewed zero-statement TiDB 0046 quote-terms failure; it changes only durable review evidence and never executes rejected SQL."
-    },
-    {
-      "path": "server/migrations/recoverTidbCheckConstraintConvergence.ts",
-      "classification": "canonical supporting",
-      "purpose": "Provides the one reviewed protected TiDB CHECK-constraint convergence: it verifies the canonical head and violation-free physical state, enables TiDB CHECK enforcement, and adds only the 22 canonical checks under the migration lock with durable evidence."
-    },
-    {
-      "path": "server/routes/SELECT id, name, userId.sql",
-      "classification": "documentation/example",
-      "purpose": "SQL query example, not a migration file."
-    },
-    {
       "path": "server/migrations/0133_distribution_application_requirement_document_fk_drop.sql",
       "classification": "canonical active",
       "purpose": "Drops the obsolete foreign key from Distribution application requirements to Developer-owned sales collateral.",
@@ -1636,11 +1537,6 @@
       ]
     },
     {
-      "path": "server/migrations/_archived/rejected-zero-statement/0142_distribution_deal_document_deliveries.sql",
-      "classification": "archived historical",
-      "purpose": "Preserves the unchanged checksum evidence for the local zero-statement delivery-table migration rejected because a foreign-key constraint name exceeded MySQL's 64-character identifier limit; it is never executable authority."
-    },
-    {
       "path": "server/migrations/0144_distribution_prospect_check_fits.sql",
       "classification": "canonical active",
       "purpose": "Records a referrer-owned prospect check fit under the approved purchase assumptions.",
@@ -1697,11 +1593,6 @@
       ]
     },
     {
-      "path": "server/migrations/_archived/rejected-zero-statement/0151_service_provider_review_reports.sql",
-      "classification": "archived historical",
-      "purpose": "Preserves the unchanged checksum evidence for the rejected review-reports table migration whose foreign-key identifier exceeded MySQL's 64-character limit; it is never executable authority."
-    },
-    {
       "path": "server/migrations/0151_service_provider_review_reports_sequenced.sql",
       "classification": "canonical active",
       "purpose": "Adds provider review reports with reasons, reporter identity, resolution state, lookup indexes, and bounded foreign-key identifiers.",
@@ -1756,6 +1647,434 @@
       "approvedFiles": [
         "server/migrations/0157_developments_canonical_place_only.sql"
       ]
+    },
+    {
+      "path": "server/migrations/0158_explore_content_canonical_place_column.sql",
+      "classification": "canonical active",
+      "purpose": "Adds explicit canonical Place assignment to Explore content without text-based backfill.",
+      "approvedFiles": [
+        "server/migrations/0158_explore_content_canonical_place_column.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0159_explore_content_canonical_place_index.sql",
+      "classification": "canonical active",
+      "purpose": "Indexes Explore content by its one exact canonical Place assignment.",
+      "approvedFiles": [
+        "server/migrations/0159_explore_content_canonical_place_index.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0160_explore_content_canonical_place_fk.sql",
+      "classification": "canonical active",
+      "purpose": "Constrains Explore assignments to admitted Place identities.",
+      "approvedFiles": [
+        "server/migrations/0160_explore_content_canonical_place_fk.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0161_listings_retire_numeric_geography.sql",
+      "classification": "canonical active",
+      "purpose": "Removes numeric province, city, suburb and generic location assignments from authored listings.",
+      "approvedFiles": [
+        "server/migrations/0161_listings_retire_numeric_geography.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0162_properties_retire_numeric_geography.sql",
+      "classification": "canonical active",
+      "purpose": "Removes numeric hierarchy assignments from public property projections.",
+      "approvedFiles": [
+        "server/migrations/0162_properties_retire_numeric_geography.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0163_land_parcels_canonical_place_column.sql",
+      "classification": "canonical active",
+      "purpose": "Removes legacy hierarchy assignments and adds the Land parcel canonical Place column.",
+      "approvedFiles": [
+        "server/migrations/0163_land_parcels_canonical_place_column.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0164_land_parcels_canonical_place_index.sql",
+      "classification": "canonical active",
+      "purpose": "Indexes the Land parcel canonical Place column.",
+      "approvedFiles": [
+        "server/migrations/0164_land_parcels_canonical_place_index.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0165_land_parcels_canonical_place_fk.sql",
+      "classification": "canonical active",
+      "purpose": "Constrains Land parcel assignments to admitted Place identities.",
+      "approvedFiles": [
+        "server/migrations/0165_land_parcels_canonical_place_fk.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0166_commercial_assets_canonical_place_column.sql",
+      "classification": "canonical active",
+      "purpose": "Removes legacy hierarchy assignments and adds the Commercial asset canonical Place column.",
+      "approvedFiles": [
+        "server/migrations/0166_commercial_assets_canonical_place_column.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0167_commercial_assets_canonical_place_index.sql",
+      "classification": "canonical active",
+      "purpose": "Indexes the Commercial asset canonical Place column.",
+      "approvedFiles": [
+        "server/migrations/0167_commercial_assets_canonical_place_index.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0168_commercial_assets_canonical_place_fk.sql",
+      "classification": "canonical active",
+      "purpose": "Constrains Commercial asset assignments to admitted Place identities.",
+      "approvedFiles": [
+        "server/migrations/0168_commercial_assets_canonical_place_fk.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0169_shared_living_places_canonical_place_column.sql",
+      "classification": "canonical active",
+      "purpose": "Removes legacy hierarchy assignments and adds the Shared Living canonical Place column.",
+      "approvedFiles": [
+        "server/migrations/0169_shared_living_places_canonical_place_column.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0170_shared_living_places_canonical_place_index.sql",
+      "classification": "canonical active",
+      "purpose": "Indexes the Shared Living canonical Place column.",
+      "approvedFiles": [
+        "server/migrations/0170_shared_living_places_canonical_place_index.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0171_shared_living_places_canonical_place_fk.sql",
+      "classification": "canonical active",
+      "purpose": "Constrains Shared Living assignments to admitted Place identities.",
+      "approvedFiles": [
+        "server/migrations/0171_shared_living_places_canonical_place_fk.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0172_drop_location_analytics_tables.sql",
+      "classification": "canonical active",
+      "purpose": "Drops unused analytics and saved-search tables keyed by legacy location IDs.",
+      "approvedFiles": [
+        "server/migrations/0172_drop_location_analytics_tables.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0173_drop_location_provider_mappings.sql",
+      "classification": "canonical active",
+      "purpose": "Drops provider mappings that target the retired province/city/suburb hierarchy.",
+      "approvedFiles": [
+        "server/migrations/0173_drop_location_provider_mappings.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0174_drop_legacy_location_support_tables.sql",
+      "classification": "canonical active",
+      "purpose": "Drops unused amenity and text location-cache tables tied to the retired hierarchy.",
+      "approvedFiles": [
+        "server/migrations/0174_drop_legacy_location_support_tables.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0175_drop_suburbs_table.sql",
+      "classification": "canonical active",
+      "purpose": "Drops the retired suburb authority table after dependent assignments are removed.",
+      "approvedFiles": [
+        "server/migrations/0175_drop_suburbs_table.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0176_drop_cities_table.sql",
+      "classification": "canonical active",
+      "purpose": "Drops the retired city authority table after dependent assignments are removed.",
+      "approvedFiles": [
+        "server/migrations/0176_drop_cities_table.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0177_drop_provinces_table.sql",
+      "classification": "canonical active",
+      "purpose": "Drops the retired province authority table after dependent assignments are removed.",
+      "approvedFiles": [
+        "server/migrations/0177_drop_provinces_table.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0178_drop_locations_table.sql",
+      "classification": "canonical active",
+      "purpose": "Drops the retired generic location authority table after dependent assignments are removed.",
+      "approvedFiles": [
+        "server/migrations/0178_drop_locations_table.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0179_services_canonical_place_columns.sql",
+      "classification": "canonical active",
+      "purpose": "Replaces provider free-text geography and radius with a nullable canonical Place assignment.",
+      "approvedFiles": [
+        "server/migrations/0179_services_canonical_place_columns.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0180_service_provider_locations_canonical_place_index.sql",
+      "classification": "canonical active",
+      "purpose": "Indexes provider coverage by canonical Place identity.",
+      "approvedFiles": [
+        "server/migrations/0180_service_provider_locations_canonical_place_index.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0181_service_provider_locations_canonical_place_fk.sql",
+      "classification": "canonical active",
+      "purpose": "Constrains provider coverage assignments to admitted Place identities.",
+      "approvedFiles": [
+        "server/migrations/0181_service_provider_locations_canonical_place_fk.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0182_service_leads_canonical_place_column.sql",
+      "classification": "canonical active",
+      "purpose": "Replaces service lead free-text geography with a nullable canonical Place reference.",
+      "approvedFiles": [
+        "server/migrations/0182_service_leads_canonical_place_column.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0183_service_leads_canonical_place_index.sql",
+      "classification": "canonical active",
+      "purpose": "Indexes service leads by canonical Place identity.",
+      "approvedFiles": [
+        "server/migrations/0183_service_leads_canonical_place_index.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0184_service_leads_canonical_place_fk.sql",
+      "classification": "canonical active",
+      "purpose": "Constrains service lead geography to admitted Place identities.",
+      "approvedFiles": [
+        "server/migrations/0184_service_leads_canonical_place_fk.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0185_demand_campaign_canonical_place_column.sql",
+      "classification": "canonical active",
+      "purpose": "Adds nullable canonical Place identity to demand campaigns; existing unassigned campaigns fail closed.",
+      "approvedFiles": [
+        "server/migrations/0185_demand_campaign_canonical_place_column.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0186_demand_campaign_canonical_place_index.sql",
+      "classification": "canonical active",
+      "purpose": "Indexes demand campaign geography by canonical Place identity.",
+      "approvedFiles": [
+        "server/migrations/0186_demand_campaign_canonical_place_index.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0187_demand_campaign_canonical_place_fk.sql",
+      "classification": "canonical active",
+      "purpose": "Constrains demand campaign geography to admitted Place identities.",
+      "approvedFiles": [
+        "server/migrations/0187_demand_campaign_canonical_place_fk.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0188_drop_demand_campaign_city.sql",
+      "classification": "canonical active",
+      "purpose": "Drops demand campaign city text geography after canonical Place assignment is introduced.",
+      "approvedFiles": [
+        "server/migrations/0188_drop_demand_campaign_city.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0189_drop_demand_campaign_suburb.sql",
+      "classification": "canonical active",
+      "purpose": "Drops demand campaign suburb text geography after canonical Place assignment is introduced.",
+      "approvedFiles": [
+        "server/migrations/0189_drop_demand_campaign_suburb.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0190_drop_demand_campaign_province.sql",
+      "classification": "canonical active",
+      "purpose": "Drops demand campaign province text geography after canonical Place assignment is introduced.",
+      "approvedFiles": [
+        "server/migrations/0190_drop_demand_campaign_province.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0191_seller_prospects_canonical_place_column.sql",
+      "classification": "canonical active",
+      "purpose": "Adds nullable canonical Place identity to private seller prospects; unassigned historical prospects have no area match.",
+      "approvedFiles": [
+        "server/migrations/0191_seller_prospects_canonical_place_column.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0192_seller_prospects_canonical_place_index.sql",
+      "classification": "canonical active",
+      "purpose": "Indexes seller prospect records by agency and canonical Place identity.",
+      "approvedFiles": [
+        "server/migrations/0192_seller_prospects_canonical_place_index.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0193_seller_prospects_canonical_place_fk.sql",
+      "classification": "canonical active",
+      "purpose": "Constrains seller prospect geography to admitted Place identities.",
+      "approvedFiles": [
+        "server/migrations/0193_seller_prospects_canonical_place_fk.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0194_drop_seller_prospects_legacy_area_index.sql",
+      "classification": "canonical active",
+      "purpose": "Drops the index for typed city and suburb filtering.",
+      "approvedFiles": [
+        "server/migrations/0194_drop_seller_prospects_legacy_area_index.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0195_drop_seller_prospects_suburb.sql",
+      "classification": "canonical active",
+      "purpose": "Drops seller prospect suburb text geography after canonical Place assignment is introduced.",
+      "approvedFiles": [
+        "server/migrations/0195_drop_seller_prospects_suburb.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0196_drop_seller_prospects_city.sql",
+      "classification": "canonical active",
+      "purpose": "Drops seller prospect city text geography after canonical Place assignment is introduced.",
+      "approvedFiles": [
+        "server/migrations/0196_drop_seller_prospects_city.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0197_drop_seller_prospects_province.sql",
+      "classification": "canonical active",
+      "purpose": "Drops seller prospect province text geography after canonical Place assignment is introduced.",
+      "approvedFiles": [
+        "server/migrations/0197_drop_seller_prospects_province.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/_archived/**",
+      "classification": "archived historical",
+      "purpose": "Historical evidence only; the runner must never discover it.",
+      "approvedFiles": [
+        "server/migrations/_archived/add-residential-auction-workflow-v1.sql",
+        "server/migrations/_archived/add-residential-rental-flow-v1.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0001_add_ownership_columns.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0002_add_brand_status_tracking.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0003_create_audit_logs.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0004_configure_cascades.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0005_fix_production_schema_drift.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0006_add_agent_os_inventory_bridge.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0037_create_distribution_core_tables.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0038_create_distribution_program_workflow_engine.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0039_add_distribution_dual_commission_tracks.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0040_create_distribution_access_layer.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0040_harden_distribution_commission_snapshots.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0041_add_distribution_schema_readiness_items.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0042_create_services_engine.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0043_expand_service_lead_event_types.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0044_add_users_trial_columns.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0045_create_distribution_referral_accelerator.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0046_distribution_referral_assessment_locking.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0047_create_development_required_documents.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0047_create_distribution_execution_tables.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0048_allow_multiple_custom_required_documents.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0049_harden_development_required_documents_schema.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0050_add_brand_onboarding_defaults.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0051_add_development_required_document_categories.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0051_add_service_provider_role.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0052_add_unit_context_to_leads.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0052_add_user_onboarding_state.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0052_create_distribution_deal_documents.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0052_distribution_document_workflow_files.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0052_reconcile_showings_schema.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0053_add_consumer_dashboard_preferences.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0054_create_platform_team_registrations_and_analytics_events.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0054_reconcile_agent_profile_schema.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0055_add_distribution_brand_partnership_onboarding_defaults_json.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0055_create_distribution_identity_and_team_tables.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0056_reconcile_saved_search_scheduler_schema.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0057_create_analytics_events.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0058_create_distribution_docs_v2_tables.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0059_reconcile_distribution_deal_events.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0060_add_distribution_brochure_config.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0061_reconcile_agency_workspace_schema.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0062_create_provider_independent_billing.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0063_extend_showings_lifecycle.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0064_add_showings_creator.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0065_create_agency_deal_engine.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0066_create_agency_canvassing_mvp.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0067_close_seller_acquisition_loop.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0068_close_buyer_lead_loop.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0069_create_agency_mandate_operations_mvp.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0070_create_agency_commission_reconciliation_mvp.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0071_create_agency_listing_performance_mvp.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0072_add_listing_performance_contact_date.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0073_create_prospect_journey_tracker_mvp.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0074_activate_development_approval_queue.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0075_create_agency_agent_memberships.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/_archived/rejected-zero-statement/0001_public_search_to_lead_reliability.sql",
+      "classification": "archived historical",
+      "purpose": "Preserves the unchanged checksum evidence for the TiDB-incompatible same-ALTER unique-index migration rejected after a zero-statement production attempt; it is never executable authority."
+    },
+    {
+      "path": "server/migrations/_archived/rejected-zero-statement/0019_catalogue_publisher_authority_immutability.sql",
+      "classification": "archived historical",
+      "purpose": "Preserves the unchanged checksum evidence for the TiDB-incompatible trigger migration rejected after a zero-statement local attempt; it is never executable authority."
+    },
+    {
+      "path": "server/migrations/_archived/rejected-zero-statement/0046_commercial_office_quote_terms.sql",
+      "classification": "archived historical",
+      "purpose": "Preserves the unchanged checksum evidence for the TiDB-incompatible same-ALTER quote-terms migration rejected after a zero-statement production attempt; it is never executable authority."
+    },
+    {
+      "path": "server/migrations/_archived/rejected-zero-statement/0142_distribution_deal_document_deliveries.sql",
+      "classification": "archived historical",
+      "purpose": "Preserves the unchanged checksum evidence for the local zero-statement delivery-table migration rejected because a foreign-key constraint name exceeded MySQL's 64-character identifier limit; it is never executable authority."
+    },
+    {
+      "path": "server/migrations/_archived/rejected-zero-statement/0151_service_provider_review_reports.sql",
+      "classification": "archived historical",
+      "purpose": "Preserves the unchanged checksum evidence for the rejected review-reports table migration whose foreign-key identifier exceeded MySQL's 64-character limit; it is never executable authority."
+    },
+    {
+      "path": "server/migrations/migrationManifest.ts",
+      "classification": "canonical supporting",
+      "purpose": "Validates canonical migration membership, lineage, statement policy, and TiDB-safe additive DDL sequencing before any plan or apply operation."
+    },
+    {
+      "path": "server/migrations/recoverRejectedReleaseCommercialQuoteTermsMigration.ts",
+      "classification": "canonical supporting",
+      "purpose": "Provides the bounded protected release recovery for the reviewed zero-statement TiDB 0046 quote-terms failure; it changes only durable review evidence and never executes rejected SQL."
+    },
+    {
+      "path": "server/migrations/recoverTidbCheckConstraintConvergence.ts",
+      "classification": "canonical supporting",
+      "purpose": "Provides the one reviewed protected TiDB CHECK-constraint convergence: it verifies the canonical head and violation-free physical state, enables TiDB CHECK enforcement, and adds only the 22 canonical checks under the migration lock with durable evidence."
+    },
+    {
+      "path": "server/routes/SELECT id, name, userId.sql",
+      "classification": "documentation/example",
+      "purpose": "SQL query example, not a migration file."
     }
   ],
   "prohibitedPaths": [

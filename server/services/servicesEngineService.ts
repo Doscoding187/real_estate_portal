@@ -27,6 +27,8 @@ import {
 } from '../../drizzle/schema';
 import { getDb } from '../db';
 import { AuditActions } from '../_core/auditLog';
+import { isCanonicalPlaceId } from '../../shared/placeAuthority';
+import { loadCanonicalPlaceSearchProjection } from './canonicalPlaceSearchService';
 
 export type ServiceCategory = (typeof SERVICE_CATEGORY_VALUES)[number];
 export type ServiceIntentStage = (typeof SERVICE_INTENT_STAGE_VALUES)[number];
@@ -135,9 +137,8 @@ export type ServiceProviderPublicationQueueEntry = ServiceProviderPublicationRea
     currency: string;
   }>;
   coverageAreas: Array<{
-    province: string | null;
-    city: string | null;
-    suburb: string | null;
+    canonicalPlaceId: string;
+    label: string;
   }>;
   createdAt: string | null;
 };
@@ -181,10 +182,9 @@ type ProviderDirectoryRecord = {
     maxPrice: number | null;
   }>;
   locations: Array<{
-    province: string | null;
-    city: string | null;
-    suburb: string | null;
-    radiusKm: number;
+    canonicalPlaceId: string;
+    label: string;
+    isPrimary: boolean;
   }>;
 };
 
@@ -192,7 +192,7 @@ type PublicProviderDirectoryRecord = Omit<
   ProviderDirectoryRecord,
   'trustScore' | 'moderationTier' | 'subscriptionTier' | 'locations'
 > & {
-  locations: Array<Omit<ProviderDirectoryRecord['locations'][number], 'radiusKm'>>;
+  locations: Array<Omit<ProviderDirectoryRecord['locations'][number], 'isPrimary'>>;
 };
 
 type ProviderProfileResult = {
@@ -231,12 +231,8 @@ type ProviderProfileResult = {
   }>;
   locations: Array<{
     id: number;
-    countryCode: string;
-    province: string | null;
-    city: string | null;
-    suburb: string | null;
-    postalCode: string | null;
-    radiusKm: number;
+    canonicalPlaceId: string;
+    label: string;
     isPrimary: boolean;
   }>;
   reviews: Array<{
@@ -263,17 +259,13 @@ type PublicProviderProfileResult = Omit<
   | 'locations'
 > & {
   services: Array<Omit<ProviderProfileResult['services'][number], 'isActive'>>;
-  locations: Array<Omit<ProviderProfileResult['locations'][number], 'radiusKm'>>;
+  locations: ProviderProfileResult['locations'];
 };
 
 function normalizeText(value: string | null | undefined): string | null {
   if (!value) return null;
   const normalized = value.trim();
   return normalized.length > 0 ? normalized : null;
-}
-
-function normalizeGeographyValue(value: string | null | undefined): string | null {
-  return normalizeText(value)?.toLowerCase() || null;
 }
 
 function providerMetadataRecord(metadata: unknown): Record<string, unknown> {
@@ -431,20 +423,8 @@ function newProviderSubscriptionValues(providerId: number) {
   };
 }
 
-function serviceLocationKey(location: {
-  countryCode?: string | null;
-  province?: string | null;
-  city?: string | null;
-  suburb?: string | null;
-}) {
-  return [
-    normalizeText(location.countryCode) || 'ZA',
-    location.province,
-    location.city,
-    location.suburb,
-  ]
-    .map(value => normalizeText(value)?.toLowerCase() || '')
-    .join('|');
+function serviceLocationKey(location: { canonicalPlaceId?: string | null }) {
+  return normalizeText(location.canonicalPlaceId) || '';
 }
 
 function normalizePublicWebsiteUrl(value: string | null | undefined): string | null {
@@ -523,16 +503,8 @@ export function isProviderDirectoryEligible(input: {
   );
 }
 
-export function hasProviderCoverage(location: {
-  province?: string | null;
-  city?: string | null;
-  suburb?: string | null;
-}) {
-  return Boolean(
-    normalizeText(location.province) ||
-    normalizeText(location.city) ||
-    normalizeText(location.suburb),
-  );
+export function hasProviderCoverage(location: { canonicalPlaceId?: string | null }) {
+  return isCanonicalPlaceId(location.canonicalPlaceId);
 }
 
 /**
@@ -592,50 +564,16 @@ export function computeProviderPublicationReadiness(
 
 export function providerCoversLocation(
   locations: Array<{
-    province: string | null;
-    city: string | null;
-    suburb: string | null;
+    canonicalPlaceId: string;
   }>,
   location: {
-    province?: string | null;
-    city?: string | null;
-    suburb?: string | null;
+    canonicalPlaceId?: string | null;
   },
 ): boolean {
-  const province = normalizeText(location.province)?.toLowerCase() || null;
-  const city = normalizeText(location.city)?.toLowerCase() || null;
-  const suburb = normalizeText(location.suburb)?.toLowerCase() || null;
-
-  if (!province && !city && !suburb) return true;
-
-  return locations.some(providerLocation => {
-    if (!hasProviderCoverage(providerLocation)) return false;
-    if (
-      province &&
-      String(providerLocation.province || '')
-        .trim()
-        .toLowerCase() !== province
-    ) {
-      return false;
-    }
-    if (
-      city &&
-      String(providerLocation.city || '')
-        .trim()
-        .toLowerCase() !== city
-    ) {
-      return false;
-    }
-    if (
-      suburb &&
-      String(providerLocation.suburb || '')
-        .trim()
-        .toLowerCase() !== suburb
-    ) {
-      return false;
-    }
-    return true;
-  });
+  const canonicalPlaceId = location.canonicalPlaceId;
+  if (!canonicalPlaceId) return true;
+  if (!isCanonicalPlaceId(canonicalPlaceId)) return false;
+  return locations.some(providerLocation => providerLocation.canonicalPlaceId === canonicalPlaceId);
 }
 
 async function lockAndValidateProviderForLead(
@@ -643,7 +581,7 @@ async function lockAndValidateProviderForLead(
   providerId: number,
   category: ServiceCategory,
   serviceCode: string,
-  location: { province: string | null; city: string | null; suburb: string | null },
+  location: { canonicalPlaceId: string },
 ): Promise<string> {
   await executor
     .select({ id: partners.id })
@@ -687,9 +625,7 @@ async function lockAndValidateProviderForLead(
 
   const locations = await executor
     .select({
-      province: serviceProviderLocations.province,
-      city: serviceProviderLocations.city,
-      suburb: serviceProviderLocations.suburb,
+      canonicalPlaceId: serviceProviderLocations.canonicalPlaceId,
     })
     .from(serviceProviderLocations)
     .where(eq(serviceProviderLocations.providerId, providerId))
@@ -717,7 +653,14 @@ async function lockAndValidateProviderForLead(
   if (!matchingService) {
     throw new Error('This provider does not offer the selected service');
   }
-  if (!providerCoversLocation(locations, location)) {
+  if (
+    !providerCoversLocation(
+      locations.filter((item): item is typeof item & { canonicalPlaceId: string } =>
+        isCanonicalPlaceId(item.canonicalPlaceId),
+      ),
+      location,
+    )
+  ) {
     throw new Error('This provider does not list coverage for the selected area');
   }
   return matchingService.code;
@@ -783,12 +726,7 @@ type ReplaceProviderServiceInput = {
 
 type ReplaceProviderLocationInput = {
   id?: number | null;
-  province?: string | null;
-  city?: string | null;
-  suburb?: string | null;
-  countryCode?: string | null;
-  postalCode?: string | null;
-  radiusKm?: number | null;
+  canonicalPlaceId?: string | null;
   isPrimary?: boolean;
 };
 
@@ -796,9 +734,7 @@ type DirectorySearchInput = {
   query?: string;
   category?: ServiceCategory;
   serviceCode?: string;
-  province?: string;
-  city?: string;
-  suburb?: string;
+  canonicalPlaceId?: string;
   minPrice?: number;
   maxPrice?: number;
   availability?: 'accepting' | 'any';
@@ -854,9 +790,7 @@ type CreateServiceLeadInput = {
   propertyId?: number | null;
   listingId?: number | null;
   developmentId?: number | null;
-  province?: string | null;
-  city?: string | null;
-  suburb?: string | null;
+  canonicalPlaceId: string;
   notes: string;
   serviceCode: string;
   context?: Record<string, unknown> | null;
@@ -956,17 +890,18 @@ export class ServicesEngineService {
     const locations = await db
       .select({
         id: serviceProviderLocations.id,
-        countryCode: serviceProviderLocations.countryCode,
-        province: serviceProviderLocations.province,
-        city: serviceProviderLocations.city,
-        suburb: serviceProviderLocations.suburb,
-        postalCode: serviceProviderLocations.postalCode,
-        radiusKm: serviceProviderLocations.radiusKm,
+        canonicalPlaceId: serviceProviderLocations.canonicalPlaceId,
         isPrimary: serviceProviderLocations.isPrimary,
       })
       .from(serviceProviderLocations)
       .where(eq(serviceProviderLocations.providerId, providerId))
-      .orderBy(desc(serviceProviderLocations.isPrimary), serviceProviderLocations.city);
+      .orderBy(desc(serviceProviderLocations.isPrimary), serviceProviderLocations.id);
+    const locationPlaceIds = locations
+      .map(location => location.canonicalPlaceId)
+      .filter((placeId): placeId is string => isCanonicalPlaceId(placeId));
+    const locationProjection = await loadCanonicalPlaceSearchProjection(db as never, {
+      placeIds: locationPlaceIds,
+    });
 
     const reviewRows = await db
       .select({
@@ -1002,18 +937,22 @@ export class ServicesEngineService {
       isActive: Number(item.isActive || 0) === 1,
     }));
 
-    const locationsResult = locations
-      .map(item => ({
-        id: Number(item.id),
-        countryCode: item.countryCode,
-        province: item.province || null,
-        city: item.city || null,
-        suburb: item.suburb || null,
-        postalCode: item.postalCode || null,
-        radiusKm: Number(item.radiusKm || 25),
-        isPrimary: Number(item.isPrimary || 0) === 1,
-      }))
-      .filter(hasProviderCoverage);
+    const locationsResult = locations.flatMap(item => {
+      const canonicalPlaceId = item.canonicalPlaceId;
+      const label = canonicalPlaceId
+        ? locationProjection.labels.get(canonicalPlaceId)?.label
+        : null;
+      if (!canonicalPlaceId || !label || !locationProjection.executions.has(canonicalPlaceId))
+        return [];
+      return [
+        {
+          id: Number(item.id),
+          canonicalPlaceId,
+          label,
+          isPrimary: Number(item.isPrimary || 0) === 1,
+        },
+      ];
+    });
     const activeServicesResult = servicesResult.filter(service => service.isActive);
     const isPublished =
       isProviderDirectoryEligible({
@@ -1097,11 +1036,8 @@ export class ServicesEngineService {
 
       locations: profile.locations.map(location => ({
         id: location.id,
-        countryCode: location.countryCode,
-        province: location.province,
-        city: location.city,
-        suburb: location.suburb,
-        postalCode: location.postalCode,
+        canonicalPlaceId: location.canonicalPlaceId,
+        label: location.label,
         isPrimary: location.isPrimary,
       })),
 
@@ -1783,12 +1719,16 @@ export class ServicesEngineService {
       .where(eq(serviceProviderServices.providerId, providerId));
     const locations = await executor
       .select({
-        province: serviceProviderLocations.province,
-        city: serviceProviderLocations.city,
-        suburb: serviceProviderLocations.suburb,
+        canonicalPlaceId: serviceProviderLocations.canonicalPlaceId,
       })
       .from(serviceProviderLocations)
       .where(eq(serviceProviderLocations.providerId, providerId));
+    const placeIds = locations
+      .map(location => location.canonicalPlaceId)
+      .filter((placeId): placeId is string => isCanonicalPlaceId(placeId));
+    const placeProjection = await loadCanonicalPlaceSearchProjection(executor as never, {
+      placeIds,
+    });
 
     const profileExists = Boolean(base.profileId);
     const isActive = Number(base.isActive || 0) === 1;
@@ -1796,7 +1736,12 @@ export class ServicesEngineService {
     const activeServiceCount = (services || []).filter(
       service => Number(service.isActive || 0) === 1,
     ).length;
-    const validCoverageCount = (locations || []).filter(hasProviderCoverage).length;
+    const validCoverageCount = locations.filter(location => {
+      const placeId = location.canonicalPlaceId;
+      return Boolean(
+        placeId && placeProjection.executions.has(placeId) && placeProjection.labels.has(placeId),
+      );
+    }).length;
 
     return computeProviderPublicationReadiness({
       providerId: Number(base.providerId),
@@ -1905,13 +1850,22 @@ export class ServicesEngineService {
         ? await db
             .select({
               providerId: serviceProviderLocations.providerId,
-              province: serviceProviderLocations.province,
-              city: serviceProviderLocations.city,
-              suburb: serviceProviderLocations.suburb,
+              canonicalPlaceId: serviceProviderLocations.canonicalPlaceId,
             })
             .from(serviceProviderLocations)
             .where(inArray(serviceProviderLocations.providerId, providerIds))
         : [];
+
+    const coveragePlaceIds: string[] = Array.from(
+      new Set(
+        locationRows
+          .map(location => location.canonicalPlaceId)
+          .filter((placeId): placeId is string => isCanonicalPlaceId(placeId)),
+      ),
+    );
+    const placeProjection = await loadCanonicalPlaceSearchProjection(db as never, {
+      placeIds: coveragePlaceIds,
+    });
 
     const entries = baseRows.map(row => {
       const providerId = Number(row.providerId);
@@ -1921,6 +1875,13 @@ export class ServicesEngineService {
       const providerLocations = locationRows.filter(
         location => Number(location.providerId) === providerId,
       );
+      const validProviderLocations = providerLocations.flatMap(location => {
+        const canonicalPlaceId = location.canonicalPlaceId;
+        const label = canonicalPlaceId ? placeProjection.labels.get(canonicalPlaceId)?.label : null;
+        if (!canonicalPlaceId || !label || !placeProjection.executions.has(canonicalPlaceId))
+          return [];
+        return [{ canonicalPlaceId, label }];
+      });
       const activeServices = providerServices.filter(
         service => Number(service.isActive || 0) === 1,
       );
@@ -1938,7 +1899,7 @@ export class ServicesEngineService {
         directoryActive: Number(row.directoryActive || 0) === 1,
         subscriptionStatus: row.subscriptionStatus,
         activeServiceCount: activeServices.length,
-        validCoverageCount: providerLocations.filter(hasProviderCoverage).length,
+        validCoverageCount: validProviderLocations.length,
       });
 
       return {
@@ -1961,11 +1922,7 @@ export class ServicesEngineService {
           maxPrice: service.maxPrice ?? null,
           currency: service.currency,
         })),
-        coverageAreas: providerLocations.filter(hasProviderCoverage).map(location => ({
-          province: location.province || null,
-          city: location.city || null,
-          suburb: location.suburb || null,
-        })),
+        coverageAreas: validProviderLocations,
         createdAt: row.createdAt || null,
       };
     });
@@ -2423,49 +2380,35 @@ export class ServicesEngineService {
   async replaceProviderLocations(providerId: number, locations: ReplaceProviderLocationInput[]) {
     const db = await getDb();
     if (!db) throw new Error('Database not available');
-
-    const submitted = locations
-      .map((location, index) => ({
-        id: location.id ? Number(location.id) : null,
-        countryCode:
-          location.countryCode === undefined
-            ? undefined
-            : normalizeText(location.countryCode) || 'ZA',
-        province:
-          location.province === undefined ? undefined : normalizeText(location.province) || null,
-        city: location.city === undefined ? undefined : normalizeText(location.city) || null,
-        suburb: location.suburb === undefined ? undefined : normalizeText(location.suburb) || null,
-        postalCode:
-          location.postalCode === undefined
-            ? undefined
-            : normalizeText(location.postalCode) || null,
-        radiusKm:
-          location.radiusKm === undefined
-            ? undefined
-            : Number.isFinite(Number(location.radiusKm))
-              ? Number(location.radiusKm)
-              : 25,
-        isPrimary: location.isPrimary === undefined ? index === 0 : location.isPrimary,
-      }))
-      .filter(location => hasProviderCoverage(location));
-
-    if (submitted.length === 0) {
+    const submitted = locations.map((location, index) => ({
+      id: location.id ? Number(location.id) : null,
+      canonicalPlaceId: normalizeText(location.canonicalPlaceId),
+      isPrimary: location.isPrimary === undefined ? index === 0 : location.isPrimary,
+    }));
+    if (
+      submitted.length === 0 ||
+      submitted.some(location => !isCanonicalPlaceId(location.canonicalPlaceId))
+    ) {
       throw new Error('At least one valid coverage area is required');
     }
+    const placeIds = submitted.map(location => location.canonicalPlaceId!);
+    if (new Set(placeIds).size !== placeIds.length) {
+      throw new Error('Coverage areas must be unique within a provider profile');
+    }
+    const projection = await loadCanonicalPlaceSearchProjection(db as never, { placeIds });
+    if (
+      placeIds.some(
+        placeId => !projection.executions.has(placeId) || !projection.labels.has(placeId),
+      )
+    ) {
+      throw new Error('Choose an approved canonical Place for every coverage area');
+    }
 
-    const submittedKeys = new Set<string>();
     const submittedRowIds = locations
       .map(location => (location.id ? Number(location.id) : null))
       .filter((id): id is number => id !== null);
     if (new Set(submittedRowIds).size !== submittedRowIds.length) {
       throw new Error('Coverage area updates must use unique location IDs');
-    }
-    for (const location of submitted) {
-      const key = serviceLocationKey(location);
-      if (submittedKeys.has(key)) {
-        throw new Error('Coverage areas must be unique within a provider profile');
-      }
-      submittedKeys.add(key);
     }
 
     await db.transaction(async tx => {
@@ -2480,16 +2423,14 @@ export class ServicesEngineService {
         .from(serviceProviderLocations)
         .where(eq(serviceProviderLocations.providerId, providerId))
         .for('update');
-      const existingByKey = new Map<string, number[]>();
-      for (const row of existing) {
-        const key = serviceLocationKey(row);
-        const ids = existingByKey.get(key) || [];
-        ids.push(Number(row.id));
-        existingByKey.set(key, ids);
-      }
       const submittedById = new Map<number, (typeof submitted)[number]>();
       const submittedKeys = new Set<string>();
       for (const location of submitted) {
+        const key = serviceLocationKey(location);
+        if (submittedKeys.has(key)) {
+          throw new Error('Coverage areas must be unique within a provider profile');
+        }
+        submittedKeys.add(key);
         if (location.id !== null) {
           if (submittedById.has(location.id)) {
             throw new Error('Coverage area identifiers must be unique');
@@ -2497,16 +2438,8 @@ export class ServicesEngineService {
           submittedById.set(location.id, location);
           continue;
         }
-        const key = serviceLocationKey(location);
-        if (submittedKeys.has(key)) {
-          throw new Error('Coverage areas must be unique within a provider profile');
-        }
-        submittedKeys.add(key);
-        const matchingIds = existingByKey.get(key) || [];
-        if (matchingIds.length > 1) {
-          throw new Error('Coverage areas must be unique within a provider profile');
-        }
-        if (matchingIds[0]) submittedById.set(matchingIds[0], location);
+        const match = existing.find(row => row.canonicalPlaceId === location.canonicalPlaceId);
+        if (match) submittedById.set(Number(match.id), location);
       }
 
       const existingIds = new Set(existing.map(row => Number(row.id)));
@@ -2514,61 +2447,32 @@ export class ServicesEngineService {
         throw new Error('Coverage area not found for this provider');
       }
 
-      const finalKeys = new Set<string>();
-      for (const row of existing) {
-        const id = Number(row.id);
-        const input = submittedById.get(id);
-        if (!input) continue;
-        const key = serviceLocationKey(input);
-        if (finalKeys.has(key)) {
-          throw new Error('Coverage areas must be unique within a provider profile');
-        }
-        finalKeys.add(key);
-      }
-      const matchedExistingKeys = new Set(
-        [...submittedById.values()].map(location => serviceLocationKey(location)),
-      );
-      for (const location of submitted) {
-        if (location.id !== null || matchedExistingKeys.has(serviceLocationKey(location))) continue;
-        const key = serviceLocationKey(location);
-        if (finalKeys.has(key)) {
-          throw new Error('Coverage areas must be unique within a provider profile');
-        }
-        finalKeys.add(key);
-      }
-
       const claimed = new Set<number>();
-      const claimedKeys = new Set<string>();
       for (const row of existing) {
         const id = Number(row.id);
         const input = submittedById.get(id);
         if (!input) continue;
         claimed.add(id);
-        claimedKeys.add(serviceLocationKey(input));
         await tx
           .update(serviceProviderLocations)
           .set({
-            countryCode: input.countryCode === undefined ? row.countryCode : input.countryCode,
-            province: input.province === undefined ? row.province : input.province,
-            city: input.city === undefined ? row.city : input.city,
-            suburb: input.suburb === undefined ? row.suburb : input.suburb,
-            postalCode: input.postalCode === undefined ? row.postalCode : input.postalCode,
-            radiusKm: input.radiusKm === undefined ? row.radiusKm : input.radiusKm,
+            canonicalPlaceId: input.canonicalPlaceId,
             isPrimary: input.isPrimary === undefined ? row.isPrimary : input.isPrimary ? 1 : 0,
           })
           .where(eq(serviceProviderLocations.id, id));
       }
 
       for (const location of submitted) {
-        if (location.id !== null || claimedKeys.has(serviceLocationKey(location))) continue;
+        if (
+          location.id !== null ||
+          [...submittedById.values()].some(
+            existingLocation => existingLocation.canonicalPlaceId === location.canonicalPlaceId,
+          )
+        )
+          continue;
         await tx.insert(serviceProviderLocations).values({
           providerId,
-          countryCode: location.countryCode || 'ZA',
-          province: location.province ?? null,
-          city: location.city ?? null,
-          suburb: location.suburb ?? null,
-          postalCode: location.postalCode ?? null,
-          radiusKm: location.radiusKm ?? 25,
+          canonicalPlaceId: location.canonicalPlaceId,
           isPrimary: location.isPrimary ? 1 : 0,
         });
       }
@@ -2580,11 +2484,24 @@ export class ServicesEngineService {
       }
     });
 
-    return db
+    const rows = await db
       .select()
       .from(serviceProviderLocations)
       .where(eq(serviceProviderLocations.providerId, providerId))
-      .orderBy(desc(serviceProviderLocations.isPrimary), serviceProviderLocations.city);
+      .orderBy(desc(serviceProviderLocations.isPrimary), serviceProviderLocations.id);
+    return rows.flatMap(row => {
+      const canonicalPlaceId = row.canonicalPlaceId;
+      const label = canonicalPlaceId ? projection.labels.get(canonicalPlaceId)?.label : null;
+      if (!canonicalPlaceId || !label) return [];
+      return [
+        {
+          id: Number(row.id),
+          canonicalPlaceId,
+          label,
+          isPrimary: Number(row.isPrimary || 0) === 1,
+        },
+      ];
+    });
   }
 
   async directorySearch(input: DirectorySearchInput): Promise<ProviderDirectoryRecord[]> {
@@ -2594,9 +2511,8 @@ export class ServicesEngineService {
     const limit = Math.max(1, Math.min(50, Number(input.limit || 20)));
     const normalizedQuery = normalizeText(input.query)?.toLowerCase() || null;
     const normalizedServiceCode = normalizeText(input.serviceCode)?.toLowerCase() || null;
-    const normalizedProvince = normalizeText(input.province)?.toLowerCase() || null;
-    const normalizedCity = normalizeText(input.city)?.toLowerCase() || null;
-    const normalizedSuburb = normalizeText(input.suburb)?.toLowerCase() || null;
+    const canonicalPlaceId = input.canonicalPlaceId || null;
+    if (canonicalPlaceId && !isCanonicalPlaceId(canonicalPlaceId)) return [];
 
     const baseRows = await db
       .select({
@@ -2659,13 +2575,29 @@ export class ServicesEngineService {
     const locations = await db
       .select({
         providerId: serviceProviderLocations.providerId,
-        province: serviceProviderLocations.province,
-        city: serviceProviderLocations.city,
-        suburb: serviceProviderLocations.suburb,
-        radiusKm: serviceProviderLocations.radiusKm,
+        canonicalPlaceId: serviceProviderLocations.canonicalPlaceId,
+        isPrimary: serviceProviderLocations.isPrimary,
       })
       .from(serviceProviderLocations)
       .where(inArray(serviceProviderLocations.providerId, baseProviderIds));
+
+    const coveragePlaceIds = Array.from(
+      new Set(
+        [canonicalPlaceId, ...locations.map(location => location.canonicalPlaceId)].filter(
+          (placeId): placeId is string => isCanonicalPlaceId(placeId),
+        ),
+      ),
+    );
+    const placeProjection = await loadCanonicalPlaceSearchProjection(db as never, {
+      placeIds: coveragePlaceIds,
+    });
+    if (
+      canonicalPlaceId &&
+      (!placeProjection.executions.has(canonicalPlaceId) ||
+        !placeProjection.labels.has(canonicalPlaceId))
+    ) {
+      return [];
+    }
 
     const servicesByProvider = new Map<number, ProviderDirectoryRecord['services']>();
     for (const row of services) {
@@ -2683,12 +2615,13 @@ export class ServicesEngineService {
     const locationsByProvider = new Map<number, ProviderDirectoryRecord['locations']>();
     for (const row of locations) {
       const current = locationsByProvider.get(row.providerId) || [];
-      if (!hasProviderCoverage(row)) continue;
+      const id = row.canonicalPlaceId;
+      const label = id ? placeProjection.labels.get(id)?.label : null;
+      if (!id || !label || !placeProjection.executions.has(id)) continue;
       current.push({
-        province: row.province || null,
-        city: row.city || null,
-        suburb: row.suburb || null,
-        radiusKm: Number(row.radiusKm || 25),
+        canonicalPlaceId: id,
+        label,
+        isPrimary: Number(row.isPrimary || 0) === 1,
       });
       locationsByProvider.set(row.providerId, current);
     }
@@ -2745,13 +2678,7 @@ export class ServicesEngineService {
         }
       }
 
-      if (
-        !providerCoversLocation(record.locations, {
-          province: normalizedProvince,
-          city: normalizedCity,
-          suburb: normalizedSuburb,
-        })
-      ) {
+      if (!providerCoversLocation(record.locations, { canonicalPlaceId })) {
         return false;
       }
 
@@ -2802,9 +2729,8 @@ export class ServicesEngineService {
       services: record.services,
 
       locations: record.locations.map(location => ({
-        province: location.province,
-        city: location.city,
-        suburb: location.suburb,
+        canonicalPlaceId: location.canonicalPlaceId,
+        label: location.label,
       })),
     }));
   }
@@ -2866,17 +2792,24 @@ export class ServicesEngineService {
     const requestedServiceCode = normalizeText(input.serviceCode);
 
     const notes = normalizeText(input.notes);
-    const province = normalizeText(input.province);
-    const city = normalizeText(input.city);
-    const suburb = normalizeText(input.suburb);
+    const canonicalPlaceId = normalizeText(input.canonicalPlaceId);
     if (!requestedServiceCode) {
       throw new Error('Select a service before submitting a service request');
     }
     if (!notes) {
       throw new Error('A project description is required');
     }
-    if (!province && !city && !suburb) {
+    if (!isCanonicalPlaceId(canonicalPlaceId)) {
       throw new Error('A request area is required');
+    }
+    const selectedPlaceProjection = await loadCanonicalPlaceSearchProjection(db as never, {
+      placeIds: [canonicalPlaceId],
+    });
+    if (
+      !selectedPlaceProjection.executions.has(canonicalPlaceId) ||
+      !selectedPlaceProjection.labels.has(canonicalPlaceId)
+    ) {
+      throw new Error('Choose an approved canonical Place for this request');
     }
 
     const requestedContext = {
@@ -2902,9 +2835,7 @@ export class ServicesEngineService {
           intentStage: serviceLeads.intentStage,
           contextJson: serviceLeads.contextJson,
           notes: serviceLeads.notes,
-          geoProvince: serviceLeads.geoProvince,
-          geoCity: serviceLeads.geoCity,
-          geoSuburb: serviceLeads.geoSuburb,
+          canonicalPlaceId: serviceLeads.canonicalPlaceId,
           propertyId: serviceLeads.propertyId,
           listingId: serviceLeads.listingId,
           developmentId: serviceLeads.developmentId,
@@ -2930,9 +2861,7 @@ export class ServicesEngineService {
         existing.sourceSurface === input.sourceSurface &&
         existing.intentStage === input.intentStage &&
         normalizeText(existing.notes) === notes &&
-        normalizeGeographyValue(existing.geoProvince) === normalizeGeographyValue(province) &&
-        normalizeGeographyValue(existing.geoCity) === normalizeGeographyValue(city) &&
-        normalizeGeographyValue(existing.geoSuburb) === normalizeGeographyValue(suburb) &&
+        existing.canonicalPlaceId === canonicalPlaceId &&
         Number(existing.propertyId || 0) === Number(propertyId || 0) &&
         Number(existing.listingId || 0) === Number(listingId || 0) &&
         Number(existing.developmentId || 0) === Number(developmentId || 0) &&
@@ -3036,13 +2965,7 @@ export class ServicesEngineService {
     }
     let serviceCode = matchingService.code;
 
-    if (
-      !providerCoversLocation(profile.locations, {
-        province,
-        city,
-        suburb,
-      })
-    ) {
+    if (!providerCoversLocation(profile.locations, { canonicalPlaceId })) {
       throw new Error('This provider does not list coverage for the selected area');
     }
 
@@ -3077,9 +3000,7 @@ export class ServicesEngineService {
         input.category,
         serviceCode,
         {
-          province,
-          city,
-          suburb,
+          canonicalPlaceId,
         },
       );
 
@@ -3093,9 +3014,7 @@ export class ServicesEngineService {
         propertyId,
         listingId,
         developmentId,
-        geoProvince: province,
-        geoCity: city,
-        geoSuburb: suburb,
+        canonicalPlaceId,
         notes,
         contextJson: Object.keys(context).length > 0 ? context : null,
         status: 'new',
@@ -3229,9 +3148,7 @@ export class ServicesEngineService {
         propertyId: serviceLeads.propertyId,
         listingId: serviceLeads.listingId,
         developmentId: serviceLeads.developmentId,
-        geoProvince: serviceLeads.geoProvince,
-        geoCity: serviceLeads.geoCity,
-        geoSuburb: serviceLeads.geoSuburb,
+        canonicalPlaceId: serviceLeads.canonicalPlaceId,
         notes: serviceLeads.notes,
         contextJson: serviceLeads.contextJson,
         status: serviceLeads.status,
@@ -3262,6 +3179,15 @@ export class ServicesEngineService {
     if (!isRequester && !isProvider && !isAdmin) {
       throw new Error('Forbidden');
     }
+
+    const leadPlaceProjection = isCanonicalPlaceId(lead.canonicalPlaceId)
+      ? await loadCanonicalPlaceSearchProjection(db as never, {
+          placeIds: [lead.canonicalPlaceId],
+        })
+      : null;
+    const leadPlaceLabel = lead.canonicalPlaceId
+      ? leadPlaceProjection?.labels.get(lead.canonicalPlaceId)?.label || null
+      : null;
 
     const requesterName =
       [lead.requesterFirstName, lead.requesterLastName].filter(Boolean).join(' ').trim() ||
@@ -3318,9 +3244,8 @@ export class ServicesEngineService {
       listingId: lead.listingId ? Number(lead.listingId) : null,
       developmentId: lead.developmentId ? Number(lead.developmentId) : null,
       location: {
-        province: lead.geoProvince || null,
-        city: lead.geoCity || null,
-        suburb: lead.geoSuburb || null,
+        canonicalPlaceId: lead.canonicalPlaceId || null,
+        label: leadPlaceLabel,
       },
       notes: lead.notes || null,
       context: isProvider || isAdmin ? lead.contextJson || null : null,
@@ -3366,9 +3291,7 @@ export class ServicesEngineService {
         propertyId: serviceLeads.propertyId,
         listingId: serviceLeads.listingId,
         developmentId: serviceLeads.developmentId,
-        geoProvince: serviceLeads.geoProvince,
-        geoCity: serviceLeads.geoCity,
-        geoSuburb: serviceLeads.geoSuburb,
+        canonicalPlaceId: serviceLeads.canonicalPlaceId,
         notes: serviceLeads.notes,
         contextJson: serviceLeads.contextJson,
         status: serviceLeads.status,
@@ -3387,8 +3310,19 @@ export class ServicesEngineService {
       .limit(Math.max(1, Math.min(100, Number(limit || 50))))
       .offset(Math.max(0, Number(offset || 0)));
 
+    const placeIds = leads
+      .map(lead => lead.canonicalPlaceId)
+      .filter((placeId): placeId is string => isCanonicalPlaceId(placeId));
+    const placeProjection = await loadCanonicalPlaceSearchProjection(db as never, { placeIds });
+
     return leads.map(lead => ({
       ...lead,
+      location: {
+        canonicalPlaceId: lead.canonicalPlaceId || null,
+        label: lead.canonicalPlaceId
+          ? placeProjection.labels.get(lead.canonicalPlaceId)?.label || null
+          : null,
+      },
       id: Number(lead.id),
       serviceCode: getServiceCodeFromContext(lead.contextJson),
       requesterName:

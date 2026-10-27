@@ -15,7 +15,6 @@ import { trpc } from '@/lib/trpc';
 import {
   buildProviderProfilePath,
   buildServiceCategoryPath,
-  parseServiceLocationInput,
   serviceJourneyContextFromSearch,
   toProviderSlug,
   type ServiceCategory,
@@ -36,6 +35,12 @@ import { ServicesSiteFooter } from '@/components/services/ServicesSiteFooter';
 import type { ProviderDirectoryItem } from '@/components/services/ProviderCard';
 import { applySeo } from '@/lib/seo';
 import { useServicesLocation } from '@/features/services/useServicesLocation';
+import {
+  CanonicalPlaceSelector,
+  type CanonicalPlaceSelection,
+} from '@/components/location/CanonicalPlaceSelector';
+import { canonicalPlaceSelectionFromResolved } from '@/lib/canonicalPlaceSelection';
+import { isCanonicalPlaceId } from '@shared/placeAuthority';
 
 const DIRECTORY_SCAN_LIMIT = 50;
 const RAIL_SIZE = 8;
@@ -89,8 +94,21 @@ function providerCategory(provider: ProviderDirectoryItem): ServiceCategory {
 export default function ServicesHomePage() {
   const { search, setLocation } = useServicesLocation();
   const journeyContext = serviceJourneyContextFromSearch(search);
+  const rawPlaceId = new URLSearchParams(search).get('canonicalPlaceId');
+  const initialPlaceId = isCanonicalPlaceId(rawPlaceId) ? rawPlaceId : '';
+  const resolvedPlaceQuery = trpc.placeAuthority.resolveSearchPlace.useQuery(
+    { placeId: initialPlaceId },
+    { enabled: Boolean(initialPlaceId), refetchOnWindowFocus: false },
+  );
+  const resolvedPlace = useMemo(
+    () => canonicalPlaceSelectionFromResolved(resolvedPlaceQuery.data),
+    [resolvedPlaceQuery.data],
+  );
   const [selectedServiceKey, setSelectedServiceKey] = useState('plumbing');
-  const [searchLocation, setSearchLocation] = useState('');
+  const [selectedPlace, setSelectedPlace] = useState<CanonicalPlaceSelection | null | undefined>(
+    undefined,
+  );
+  const activePlace = selectedPlace === undefined ? resolvedPlace : selectedPlace;
 
   const directoryQuery = trpc.servicesEngine.directorySearch.useQuery({
     limit: DIRECTORY_SCAN_LIMIT,
@@ -132,7 +150,6 @@ export default function ServicesHomePage() {
 
   function submitSearch() {
     if (!selectedService) return;
-    const location = parseServiceLocationInput(searchLocation);
     if (!selectedService.category) {
       setLocation('/services');
       return;
@@ -140,7 +157,7 @@ export default function ServicesHomePage() {
     setLocation(
       buildPopularServiceHref(selectedService, {
         ...journeyContext,
-        ...location,
+        canonicalPlaceId: activePlace?.canonicalPlaceId,
       }),
     );
   }
@@ -205,21 +222,13 @@ export default function ServicesHomePage() {
                   </select>
                 </label>
 
-                <label className="block text-left">
-                  <span className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-[#4B5C6B]">
-                    Location
-                  </span>
-                  <div className="mt-2 flex h-12 items-center rounded-xl border border-[#E3EBF0] bg-[#FDFDFD] px-4 transition focus-within:border-[#168363]">
-                    <MapPin className="mr-2 h-4 w-4 shrink-0 text-[#8A99A6]" aria-hidden="true" />
-                    <input
-                      aria-label="Service location"
-                      value={searchLocation}
-                      onChange={event => setSearchLocation(event.target.value)}
-                      placeholder="e.g. Sandton, Gauteng"
-                      className="w-full bg-transparent text-sm text-[#0B1B2A] outline-none placeholder:text-[#A8B4BF]"
-                    />
-                  </div>
-                </label>
+                <CanonicalPlaceSelector
+                  value={activePlace}
+                  onChange={setSelectedPlace}
+                  label="Location"
+                  purpose="search"
+                  placeholder="Choose an approved Place"
+                />
 
                 <button type="button" onClick={submitSearch} className={servicesUi.action}>
                   <Search className="h-4 w-4" aria-hidden="true" />
@@ -392,16 +401,14 @@ export default function ServicesHomePage() {
                     ))}
                     {(spotlightProvider.locations || []).slice(0, 1).map(location => (
                       <li
-                        key={`${location.city}-${location.suburb}`}
+                        key={location.canonicalPlaceId}
                         className="flex items-center gap-2.5 text-[13px] text-slate-200"
                       >
                         <MapPin
                           className="h-3.5 w-3.5 shrink-0 text-[#5FD3AC]"
                           aria-hidden="true"
                         />
-                        {[location.suburb, location.city, location.province]
-                          .filter(Boolean)
-                          .join(', ')}
+                        {location.label}
                       </li>
                     ))}
                   </ul>

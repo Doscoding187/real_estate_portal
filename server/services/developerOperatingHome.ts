@@ -367,6 +367,7 @@ export function buildDevelopmentOperatingSummary(input: {
   const commercialEligible = input.commercialAccess?.eligible ?? true;
   const publicEligible = isDevelopmentHomePublicEligible({
     ...input.development,
+    canonicalPlaceId: input.geography.canonicalPlaceId,
     commercialEligible,
   });
   const commercialAccessRequired =

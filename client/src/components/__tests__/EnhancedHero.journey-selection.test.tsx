@@ -116,6 +116,27 @@ vi.mock('@/components/LocationAutosuggest', () => ({
   ),
 }));
 
+vi.mock('@/components/location/CanonicalPlaceSelector', () => ({
+  CanonicalPlaceSelector: (props: any) => (
+    <button
+      type="button"
+      data-testid="select-development-place"
+      onClick={() =>
+        props.onChange?.({
+          canonicalPlaceId: johannesburgId,
+          label: 'Johannesburg',
+          placeType: 'city',
+          scope: 'metro_city',
+          administrativeContext: 'Gauteng',
+          canonicalPath: '/gauteng/johannesburg',
+        })
+      }
+    >
+      Select canonical development Place
+    </button>
+  ),
+}));
+
 vi.mock('@/lib/trpc', () => ({
   trpc: {
     location: {
@@ -229,7 +250,11 @@ describe('EnhancedHero explicit journey selection', () => {
 
     expect(screen.queryByTestId(`selected-location-${johannesburgId}`)).not.toBeInTheDocument();
     expect(screen.getByTestId(`selected-location-${sandtonId}`)).toHaveTextContent('Sandton');
-    expect(screen.getByText('Sandton replaces the previous Place.')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Sandton replaces the previous selection because the places have different scopes or parents.',
+      ),
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Buy' })[0]);
     fireEvent.click(screen.getAllByRole('button', { name: 'Search', exact: true })[0]);
@@ -275,7 +300,7 @@ describe('EnhancedHero explicit journey selection', () => {
   it('routes an enabled Developments selection to the canonical search URL', () => {
     render(<EnhancedHero activeTab="developments" />);
 
-    fireEvent.click(screen.getByTestId('select-johannesburg'));
+    fireEvent.click(screen.getByTestId('select-development-place'));
     fireEvent.click(screen.getAllByRole('button', { name: 'Search', exact: true })[0]);
 
     expect(setLocation).toHaveBeenCalledWith(

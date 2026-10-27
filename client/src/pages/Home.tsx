@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useLocation, useSearch } from 'wouter';
 import { HomeSearchProvider } from '@/contexts/HomeSearchContext';
 import { HomeLayout } from '@/layouts/HomeLayout';
-import { normalizeHeroUiTab, type HeroTab } from '@/types/hero';
+import { normalizeHeroUiTab } from '@/types/hero';
 import {
   buildHomepageJourneyUrl,
   isHomepageHeroJourneyEnabled,
@@ -51,10 +51,6 @@ export default function Home() {
     }
   }, [rawIntent, requestedJourney, setLocation]);
 
-  const effectiveHeroTab: HeroTab =
-    activeJourney && isHomepageHeroJourneyEnabled(activeJourney)
-      ? (activeJourney as HeroTab)
-      : 'buy';
   const handleTabChange = (tab: string) => {
     const normalizedTab = normalizeHeroUiTab(tab);
     if (!normalizedTab) return;
@@ -64,8 +60,7 @@ export default function Home() {
     setLocation(nextLocation);
   };
 
-  const heroTabValue =
-    activeJourney && isHomepageHeroJourneyEnabled(activeJourney) ? effectiveHeroTab : '';
+  const heroTabValue = activeJourney && isHomepageHeroJourneyEnabled(activeJourney) ? activeJourney : '';
   const homeCanonicalUrl = toAbsoluteUrl('/');
   const homeDescription =
     'Search South African property listings, explore new developments, compare areas, and connect with agents and developers on Property Listify.';
@@ -95,14 +90,12 @@ export default function Home() {
         <PageFrame contained={false}>
           {isMobile ? (
             <HomeMobileView
-              activeHeroTab={effectiveHeroTab}
               heroTabValue={heroTabValue}
               onBrowseProperties={() => setLocation('/property-for-sale')}
               onTabChange={handleTabChange}
             />
           ) : (
             <HomeDesktopView
-              activeHeroTab={effectiveHeroTab}
               heroTabValue={heroTabValue}
               onBrowseProperties={() => setLocation('/property-for-sale')}
               onTabChange={handleTabChange}

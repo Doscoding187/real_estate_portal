@@ -6,38 +6,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { MapPin } from 'lucide-react';
 import { LocationMapPicker, type LocationData } from '@/components/location/LocationMapPicker';
-import {
-  CanonicalPlaceSelector,
-  type CanonicalPlaceSelection,
-} from '@/components/location/CanonicalPlaceSelector';
-import { trpc } from '@/lib/trpc';
 import { WizardData } from '@/lib/types/wizard-workflows';
 
 export function LocationPhase() {
   const { developmentData, setIdentity, saveWorkflowStepData } = useDevelopmentWizard();
-  const canonicalPlaceId = developmentData.location.canonicalPlaceId;
-  const placeResolution = trpc.placeAuthority.resolveSearchPlace.useQuery(
-    { placeId: canonicalPlaceId ?? '' },
-    { enabled: Boolean(canonicalPlaceId), retry: false },
-  );
-  const storedSelection = developmentData.location.canonicalPlaceSelection as
-    | CanonicalPlaceSelection
-    | null;
-  const canonicalSelection =
-    storedSelection?.canonicalPlaceId === canonicalPlaceId
-      ? storedSelection
-      : placeResolution.data
-        ? {
-            canonicalPlaceId: placeResolution.data.placeId,
-            label: placeResolution.data.label,
-            placeType: placeResolution.data.placeType,
-            scope: placeResolution.data.searchScope,
-            administrativeContext: placeResolution.data.administrativeContext,
-            canonicalPath: placeResolution.data.canonicalPath,
-            parentPlaceId:
-              placeResolution.data.cityPlaceId || placeResolution.data.provincePlaceId || null,
-          }
-        : null;
 
   // Helper to sync updates to both Legacy (UI) and Workflow (Validation) stores
   const handleUpdate = useCallback(
@@ -147,20 +119,6 @@ export function LocationPhase() {
           </div>
 
           <div className="grid gap-6 pt-4 border-t border-slate-100">
-            <CanonicalPlaceSelector
-              value={canonicalSelection}
-              onChange={selection =>
-                handleUpdate({
-                  canonicalPlaceId: selection?.canonicalPlaceId ?? null,
-                  canonicalPlaceSelection: selection,
-                })
-              }
-              purpose="authoring"
-              label="Canonical Place"
-              inputId="development-canonical-place"
-              hint="Choose one admitted Place. The selected Place ID determines the development’s geography."
-            />
-
             <div className="space-y-2">
               <Label htmlFor="address">
                 Street Address <span className="text-slate-400 font-normal">(Optional)</span>
@@ -189,8 +147,8 @@ export function LocationPhase() {
               </div>
             </div>
             <p className="text-sm text-slate-600">
-              City, suburb, and locality are assigned by an administrator after reviewing the
-              development site against canonical Place data.
+              A platform reviewer assigns the canonical Place after reviewing the development site.
+              Public development search uses only that reviewed Place assignment.
             </p>
           </div>
         </CardContent>

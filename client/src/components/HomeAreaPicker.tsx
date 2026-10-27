@@ -64,7 +64,6 @@ export function HomeAreaPicker({
   open,
   onOpenChange,
   initialSelection,
-  cityHint = '',
   journey,
   category,
   onConfirm,
@@ -72,7 +71,6 @@ export function HomeAreaPicker({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialSelection: HomeAreaSelection;
-  cityHint?: string;
   journey: 'buy' | 'rent' | 'developments';
   category?: string;
   onConfirm: (selection: HomeAreaSelection) => void;
@@ -80,7 +78,6 @@ export function HomeAreaPicker({
   const [selectedPlace, setSelectedPlace] = useState(() => initialPlace(initialSelection.locations));
   const journeyLabel =
     journey === 'rent' ? 'Rent' : journey === 'developments' ? 'New developments' : 'Buy';
-  const title = cityHint ? `Choose a Place near ${cityHint}` : 'Choose a Place';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -89,7 +86,7 @@ export function HomeAreaPicker({
           <MapPin className="h-5 w-5" aria-hidden="true" />
         </span>
         <DialogHeader className="text-left">
-          <DialogTitle className="text-xl">{title}</DialogTitle>
+          <DialogTitle className="text-xl">Choose a Place</DialogTitle>
           <DialogDescription className="leading-6">
             {journeyLabel}{category ? ` · ${category}` : ''}. Choose one admitted canonical Place.
           </DialogDescription>
@@ -101,7 +98,6 @@ export function HomeAreaPicker({
           label="Search a city, town, suburb or locality"
           placeholder="Start typing a place name"
           hint="The selected Place ID will be used for the search."
-          initialQuery={cityHint}
         />
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

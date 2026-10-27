@@ -117,21 +117,7 @@ const propertyTypes: PropertyType[] = [
   },
 ];
 
-const cities = [
-  'Cape Town', // Western Cape
-  'Johannesburg', // Gauteng
-  'Durban', // KwaZulu-Natal
-  'Bloemfontein', // Free State
-  'Gqeberha', // Eastern Cape (Port Elizabeth)
-  'Polokwane', // Limpopo
-  'Kimberley', // Northern Cape
-  'Mbombela', // Mpumalanga
-  'Mahikeng', // North West
-];
-
 interface DiscoverPropertiesProps {
-  initialCity?: string;
-  availableCities?: string[];
   title?: string;
   subtitle?: string;
   locationName?: string;
@@ -140,8 +126,6 @@ interface DiscoverPropertiesProps {
 }
 
 export function DiscoverProperties({
-  initialCity,
-  availableCities,
   title,
   subtitle,
   locationName = 'South Africa',
@@ -170,10 +154,7 @@ export function DiscoverProperties({
   const displayTitle = title || defaultTitle;
   const displaySubtitle = subtitle || defaultSubtitle;
 
-  const [selectedCity, setSelectedCity] = useState(initialCity || (homeSearch ? '' : 'Cape Town'));
   const [developmentPlace, setDevelopmentPlace] = useState<CanonicalPlaceSelection | null>(null);
-
-  const displayCities = availableCities || cities;
 
   const [listingType, setListingType] = useState<'sale' | 'rent' | 'developments'>('sale');
   const [saleExpanded, setSaleExpanded] = useState(true);
@@ -195,13 +176,10 @@ export function DiscoverProperties({
   }, [sharedJourney]);
   const selection: HomeAreaSelection = {
     locations: homeSearch?.locations || [],
-    searchArea: homeSearch?.searchArea || null,
   };
   const areaLabel = homeSearch
-    ? selection.searchArea?.label ||
-      selection.locations.map(location => location.name).join(' + ') ||
-      selectedCity
-    : selectedCity;
+    ? selection.locations.map(location => location.name).join(' + ')
+    : '';
   const locationPhrase = areaLabel ? `in ${areaLabel}` : 'in your chosen area';
   const broadConfirmed =
     needsHomeAreaClarification(selection) &&
@@ -271,15 +249,11 @@ export function DiscoverProperties({
     },
   };
   const mobileActiveCopy = mobileSectionCopy[listingType];
-  const developmentBrowseHref = buildDiscoverBrowseHref(
-    'developments',
-    selectedCity,
-    developmentPlace?.canonicalPlaceId,
-  );
+  const developmentBrowseHref = buildDiscoverBrowseHref('developments', developmentPlace);
   const mobileActiveHref =
     listingType === 'developments'
       ? developmentBrowseHref
-      : buildDiscoverBrowseHref(listingType, selectedCity);
+      : buildDiscoverBrowseHref(listingType);
   const browseDevelopment = () => chooseCategory('developments');
 
   const handleSaleClick = () => {
@@ -323,46 +297,6 @@ export function DiscoverProperties({
           </h2>
           <p className="text-muted-foreground text-xs md:text-sm max-w-2xl">{displaySubtitle}</p>
         </div>
-
-        {/* City labels are only available to property journeys. */}
-        {listingType !== 'developments' ? (
-        <div className="home-section-tabs flex justify-start overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
-          <div className="inline-flex flex-nowrap justify-start gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200 h-auto">
-            {displayCities.map(city => (
-              <button
-                key={city}
-                onClick={() => {
-                  setSelectedCity(city);
-                  setDevelopmentPlace(null);
-                  if (homeSearch) {
-                    homeSearch.setLocations([]);
-                    homeSearch.setSearchArea(null);
-                    homeSearch.setConfirmedBroadId(null);
-                  }
-                }}
-                className={`
-                  rounded-lg px-4 py-2 text-sm font-semibold border border-transparent transition-all whitespace-nowrap
-                  ${
-                    (
-                      homeSearch?.locations.length
-                        ? homeSearch.locations.some(location =>
-                            location.type === 'city'
-                              ? location.name === city
-                              : location.citySlug === city.toLowerCase().replace(/\s+/g, '-'),
-                          )
-                        : selectedCity === city
-                    )
-                      ? 'bg-[#2774AE] text-white shadow-sm'
-                      : 'bg-transparent text-slate-600 hover:text-[#2774AE] hover:bg-white'
-                  }
-                `}
-              >
-                {city}
-              </button>
-            ))}
-          </div>
-        </div>
-        ) : null}
 
         {homeSearch && listingType !== 'developments' && (
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-100 bg-blue-50/40 px-4 py-3">
@@ -491,7 +425,7 @@ export function DiscoverProperties({
                       Explore apartments, houses, and townhomes for sale {locationPhrase}.
                     </p>
                     <DiscoveryAction
-                      href={buildDiscoverBrowseHref('sale', selectedCity)}
+                      href={buildDiscoverBrowseHref('sale')}
                       onChoose={homeSearch ? () => chooseCategory('sale') : undefined}
                       className="text-sm font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors group"
                     >
@@ -532,7 +466,7 @@ export function DiscoverProperties({
                         {areaLabel || 'your chosen area'}.
                       </p>
                       <DiscoveryAction
-                        href={buildDiscoverBrowseHref('rent', selectedCity)}
+                        href={buildDiscoverBrowseHref('rent')}
                         onChoose={homeSearch ? () => chooseCategory('rent') : undefined}
                         className="text-sm font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors group"
                       >
@@ -610,8 +544,7 @@ export function DiscoverProperties({
                       href={buildDiscoverCardHref(
                         property.type,
                         property.listingType,
-                        selectedCity,
-                        developmentPlace?.canonicalPlaceId,
+                        developmentPlace,
                       )}
                       className="group relative block h-[272px] overflow-hidden rounded-xl border border-slate-800 bg-slate-900 shadow-md transition-all duration-500 hover:shadow-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2774AE] focus-visible:ring-offset-2 sm:h-[360px]"
                     >
@@ -683,10 +616,8 @@ export function DiscoverProperties({
             journey={picker.type === 'sale' ? 'buy' : picker.type}
             category={picker.category}
             initialSelection={selection}
-            cityHint={selectedCity}
             onConfirm={next => {
               homeSearch.setLocations(next.locations);
-              homeSearch.setSearchArea(next.searchArea);
               homeSearch.setConfirmedBroadId(
                 needsHomeAreaClarification(next) ? (next.locations[0]?.id ?? null) : null,
               );
@@ -698,10 +629,6 @@ export function DiscoverProperties({
               );
               setPicker(null);
               if (!picker.edit && href) setLocation(href);
-            }}
-            onExplore={href => {
-              setPicker(null);
-              setLocation(href);
             }}
           />
         )}

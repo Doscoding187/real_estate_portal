@@ -793,17 +793,6 @@ export interface ImageUrls {
 export interface PropertyFilters {
   /** Internal, validated Place membership. Empty membership must return no rows. */
   canonicalPlaceIds?: string[];
-  // Location
-  province?: string;
-  city?: string;
-  suburb?: string[];
-  locations?: string[];
-  /** Canonical public location identity; public search must not widen this to text. */
-  canonicalLocation?: {
-    provinceId: number;
-    cityId?: number;
-    suburbId?: number;
-  };
 
   // Basic filters
   propertyType?: Property['propertyType'][];
@@ -1062,6 +1051,8 @@ export interface SavedSearch {
   userId: number;
   name: string;
   criteria: Record<string, unknown>;
+  /** Canonical Place Authority foreign key; when set it is the sole search geography. */
+  placeId?: string | null;
   notificationFrequency: 'instant' | 'daily' | 'weekly' | 'never';
   emailEnabled: boolean;
   inAppEnabled: boolean;

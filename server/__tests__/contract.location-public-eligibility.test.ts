@@ -17,11 +17,14 @@ describe('map inventory uses the canonical public search path', () => {
     expect(rootRouter).not.toContain('enhancedLocation');
   });
 
-  it('keeps generic public search and development discovery on canonical eligibility', () => {
-    const source = readRepoFile('server/services/globalSearchService.ts');
+  it('keeps inventory and Development discovery on canonical Place eligibility', () => {
+    const propertySearch = readRepoFile('server/services/propertySearchService.ts');
+    const developmentSearch = readRepoFile('server/services/publicDevelopmentSearchService.ts');
 
-    expect(source).toContain('resolvePublicPropertyEligibilityIds');
-    expect(source).toContain('publicDevelopmentEligibilityConditions()');
-    expect(source).toContain('const candidateRows =');
+    expect(propertySearch).toContain('properties.canonicalPlaceId');
+    expect(propertySearch).toContain('resolvePublicPropertyEligibilities(');
+    expect(propertySearch).toContain('loadCanonicalPlaceSearchProjection(');
+    expect(developmentSearch).toContain('publicDevelopmentEligibilityConditions()');
+    expect(developmentSearch).toContain('listDevelopmentIdsForCanonicalPlace(');
   });
 });

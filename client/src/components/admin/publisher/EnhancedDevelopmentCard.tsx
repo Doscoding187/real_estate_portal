@@ -186,9 +186,7 @@ export const EnhancedDevelopmentCard: React.FC<EnhancedDevelopmentCardProps> = (
           <div className="flex items-center gap-1.5 text-sm text-gray-600">
             <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
             <span className="line-clamp-1">
-              {development.address ||
-                development.locationLabels?.join(', ') ||
-                'Place assignment pending review'}
+              {development.address || 'Place assignment pending review'}
             </span>
           </div>
         </div>

@@ -5,7 +5,6 @@ import { authService } from './_core/auth';
 import { measureAuthMePhase } from './_core/authMeTiming';
 import { COOKIE_NAME } from '../shared/const';
 import type { User } from './_core/context';
-import { OWNERSHIP_TYPES, STRUCTURAL_TYPES, FLOOR_TYPES } from '../shared/db-enums';
 import { systemRouter } from './_core/systemRouter';
 import { protectedProcedure, publicProcedure, router } from './_core/trpc';
 import * as db from './db';
@@ -22,9 +21,7 @@ import { videoRouter } from './videoRouter';
 import { billingRouter } from './billingRouter';
 import { locationRouter } from './locationRouter';
 import { placeAuthorityRouter } from './placeAuthorityRouter';
-import { enhancedLocationRouter } from './enhancedLocationRouter';
 import { googleMapsRouter } from './googleMapsRouter';
-import { priceInsightsRouter } from './priceInsightsRouter';
 import { requireUser } from './_core/requireUser';
 import { getActiveDistributionIdentityFlags } from './services/distributionIdentityProjection';
 import { validatePublicSearchInput } from '../shared/publicSearchValidation';
@@ -40,7 +37,6 @@ import {
   resolvePublicPropertyEligibility,
 } from './services/publicPropertyEligibilityService';
 import { toPublicPropertyDetailDto, toPublicPropertyImage } from './services/publicPropertyDto';
-import { safeErrorSummary } from './_core/safeError';
 
 function getUserId(ctx: { user: { id: number } | null }) {
   return requireUser(ctx).id;
@@ -86,7 +82,7 @@ function toAuthMeUser(user: User) {
   };
 }
 
-import { listingRouter, assertListingContentCustody } from './listingRouter';
+import { listingRouter } from './listingRouter';
 import { uploadRouter } from './uploadRouter';
 import { savedSearchRouter } from './savedSearchRouter';
 import { guestMigrationRouter } from './guestMigrationRouter';
@@ -104,8 +100,6 @@ import { exploreAnalyticsRouter } from './exploreAnalyticsRouter';
 import { analyticsRouter } from './analyticsRouter';
 import { similarPropertiesRouter } from './similarPropertiesRouter';
 import { cacheRouter } from './cacheRouter';
-import { locationPagesRouter } from './locationPagesRouter';
-import { propertyResultsRouter } from './propertyResultsRouter';
 import { monetizationRouter } from './monetizationRouter';
 import { partnerRouter } from './partnerRouter';
 import { cataloguePublisherRouter } from './cataloguePublisherRouter';
@@ -122,7 +116,6 @@ import { landRouter } from './landRouter';
 import { landPublicRouter } from './landPublicRouter';
 import { commercialRouter } from './commercialOfficeRouter';
 import { sharedLivingRouter } from './sharedLivingRouter';
-import { homeMarketInsightsRouter } from './homeMarketInsightsRouter';
 
 const appRouterConfig = {
   system: systemRouter,
@@ -142,15 +135,12 @@ const appRouterConfig = {
   location: locationRouter,
   // Slice 3: internal executable Place Authority boundary. Not a public switch.
   placeAuthority: placeAuthorityRouter,
-  enhancedLocation: enhancedLocationRouter,
   googleMaps: googleMapsRouter,
-  priceInsights: priceInsightsRouter,
   listing: listingRouter,
   land: landRouter,
   landPublic: landPublicRouter,
   commercial: commercialRouter,
   sharedLiving: sharedLivingRouter,
-  homeMarketInsights: homeMarketInsightsRouter,
   upload: uploadRouter,
   settings: settingsRouter,
   savedSearch: savedSearchRouter,
@@ -166,7 +156,6 @@ const appRouterConfig = {
   exploreAnalytics: exploreAnalyticsRouter,
   similarProperties: similarPropertiesRouter,
   cache: cacheRouter,
-  locationPages: locationPagesRouter,
   cataloguePublisher: cataloguePublisherRouter,
   superAdminPublisher: superAdminPublisherRouter,
   reviews: reviewsRouter,
@@ -176,8 +165,6 @@ const appRouterConfig = {
   demand: demandRouter,
   servicesEngine: servicesEngineRouter,
   discovery: discoveryRouter,
-
-  propertyResults: propertyResultsRouter,
 
   auth: router({
     me: publicProcedure.query(async opts => {
@@ -252,156 +239,6 @@ const appRouterConfig = {
     myProperties: publicProcedure.query(async () => {
       return [] as any[];
     }),
-    search: publicProcedure
-      .input(
-        z
-          .object({
-            city: z.string().optional(),
-            province: z.string().optional(),
-            suburb: z.array(z.string()).optional(), // Added support for suburb array
-            locations: z.array(z.string()).optional(), // Multi-location support
-            propertyType: z
-              .enum([
-                'apartment',
-                'house',
-                'villa',
-                'plot',
-                'commercial',
-                'townhouse',
-                'cluster_home',
-                'farm',
-                'shared_living',
-              ])
-              .optional(),
-            listingType: z
-              .enum(['sale', 'rent', 'rent_to_buy', 'auction', 'shared_living'])
-              .optional(),
-            minPrice: z.number().optional(),
-            maxPrice: z.number().optional(),
-            minBedrooms: z.number().optional(),
-            maxBedrooms: z.number().optional(),
-            minBathrooms: z.number().optional(), // Added
-            minArea: z.number().optional(),
-            maxArea: z.number().optional(),
-            minErfSize: z.number().nonnegative().optional(),
-            maxErfSize: z.number().nonnegative().optional(),
-            minFloorSize: z.number().nonnegative().optional(),
-            maxFloorSize: z.number().nonnegative().optional(),
-            minLandSize: z.number().nonnegative().optional(),
-            maxLandSize: z.number().nonnegative().optional(),
-            status: z.enum(['available', 'sold', 'rented', 'pending']).optional(),
-            ownershipType: z.array(z.enum(OWNERSHIP_TYPES)).optional(),
-            structuralType: z.array(z.enum(STRUCTURAL_TYPES)).optional(),
-            floors: z.array(z.enum(FLOOR_TYPES)).optional(),
-            amenities: z.array(z.string()).optional(),
-            postedBy: z.array(z.string()).optional(),
-            minLat: z.number().optional(),
-            maxLat: z.number().optional(),
-            minLng: z.number().optional(),
-            maxLng: z.number().optional(),
-            limit: z.number().default(20),
-            offset: z.number().default(0),
-            sortOption: z
-              .enum([
-                'price_asc',
-                'price_desc',
-                'date_desc',
-                'date_asc',
-                'suburb_asc',
-                'suburb_desc',
-              ])
-              .optional(), // Added sort option support
-            includeDevelopments: z.boolean().optional(),
-          })
-          .superRefine((input, context) => {
-            if (!isCommercialMarketingPropertyType(input.propertyType)) return;
-            context.addIssue({
-              code: z.ZodIssueCode.custom,
-              path: ['propertyType'],
-              message: COMMERCIAL_PUBLIC_JOURNEY_HANDOFF_MESSAGE,
-            });
-          }),
-      )
-      .query(async ({ input }) => {
-        // Compatibility edge only. First-party callers use
-        // searchPublicInventory; this procedure translates legacy offset
-        // state into that canonical authority and contains no search policy.
-        rejectGenericCommercialPublicSearch(input.propertyType);
-        const listingType =
-          input.listingType === 'sale' || input.listingType === 'rent'
-            ? input.listingType
-            : undefined;
-        if (!listingType) {
-          return {
-            properties: [],
-            cards: [],
-            total: 0,
-            page: 1,
-            pageSize: input.limit,
-            hasMore: false,
-            ...(input.includeDevelopments ? { developments: { items: [], total: 0 } } : {}),
-          };
-        }
-
-        const { publicSearchService } = await import('./services/publicSearchService');
-        const result = await publicSearchService.searchInventory({
-          province: input.province,
-          city: input.city,
-          suburb: input.suburb,
-          locations: input.locations,
-          propertyType: input.propertyType,
-          listingType,
-          listingSource: input.includeDevelopments ? undefined : 'manual',
-          minPrice: input.minPrice,
-          maxPrice: input.maxPrice,
-          minBedrooms: input.minBedrooms,
-          maxBedrooms: input.maxBedrooms,
-          minBathrooms: input.minBathrooms,
-          minArea: input.minArea,
-          maxArea: input.maxArea,
-          minErfSize: input.minErfSize,
-          maxErfSize: input.maxErfSize,
-          minFloorSize: input.minFloorSize,
-          maxFloorSize: input.maxFloorSize,
-          minLandSize: input.minLandSize,
-          maxLandSize: input.maxLandSize,
-          minLat: input.minLat,
-          maxLat: input.maxLat,
-          minLng: input.minLng,
-          maxLng: input.maxLng,
-          sortOption:
-            input.sortOption === 'suburb_asc' || input.sortOption === 'suburb_desc'
-              ? 'relevance'
-              : input.sortOption,
-          page: Math.floor(input.offset / input.limit),
-          pageSize: input.limit,
-        });
-        const propertyCards = result.cards.filter(card => card.kind === 'property');
-        const developmentCards = result.cards.filter(card => card.kind === 'development');
-
-        return {
-          properties: propertyCards,
-          cards: propertyCards,
-          total: result.sourceCounts.manual,
-          page: result.page + 1,
-          pageSize: result.pageSize,
-          hasMore: result.hasMore,
-          ...(input.includeDevelopments
-            ? {
-                developments: {
-                  items: developmentCards.map(card => ({
-                    ...card,
-                    id: Number(card.developmentId || card.development?.id || card.id),
-                    name: card.development?.name || card.title,
-                    slug: card.development?.slug || null,
-                  })),
-                  total: result.sourceCounts.development,
-                },
-              }
-            : {}),
-        };
-      }),
-
     /**
      * Canonical public inventory authority. Property and approved-development
      * inventory are fetched and paginated here before the browser receives a
@@ -417,15 +254,6 @@ const appRouterConfig = {
               .max(40)
               .refine(isPlaceId, 'Choose an approved canonical Place')
               .optional(),
-            province: z.string().trim().max(120).optional(),
-            city: z.string().trim().max(120).optional(),
-            suburb: z.array(z.string().trim().max(120)).max(10).optional(),
-            locations: z.array(z.string().trim().max(120)).max(10).optional(),
-            locationId: z.string().trim().max(128).optional(),
-            factualLocationId: z.string().trim().max(128).optional(),
-            locationIds: z.array(z.string().trim().max(128)).max(10).optional(),
-            searchAreaId: z.string().trim().max(120).optional(),
-            searchAreaIds: z.array(z.string().trim().max(120)).max(10).optional(),
             propertyType: z.enum(PUBLIC_PROPERTY_TYPES).optional(),
             listingType: z.enum(['sale', 'rent']).optional(),
             listingSource: z.enum(['manual', 'development']).optional(),
@@ -453,6 +281,7 @@ const appRouterConfig = {
             page: z.number().int().min(0).max(PUBLIC_SEARCH_MAX_PAGE_INDEX).default(0),
             pageSize: z.number().int().min(1).max(50).default(12),
           })
+          .strict()
           .superRefine((input, context) => {
             if (isCommercialMarketingPropertyType(input.propertyType)) {
               context.addIssue({
@@ -541,67 +370,6 @@ const appRouterConfig = {
         return publicDevelopmentSearchService.search(input);
       }),
 
-    // Get filter counts for search refinement
-    getFilterCounts: publicProcedure
-      .input(
-        z.object({
-          filters: z
-            .object({
-              city: z.string().optional(),
-              province: z.string().optional(),
-              suburb: z.array(z.string()).optional(),
-              locations: z.array(z.string()).optional(),
-              propertyType: z.string().optional(),
-              listingType: z.string().optional(),
-              minPrice: z.number().optional(),
-              maxPrice: z.number().optional(),
-              minBedrooms: z.number().optional(),
-              maxBedrooms: z.number().optional(),
-              locationId: z.string().optional(),
-            })
-            .strict()
-            .optional(),
-        }),
-      )
-      .query(async ({ input }) => {
-        try {
-          const { propertySearchService } = await import('./services/propertySearchService');
-          const filters = input.filters || {};
-          if (filters.propertyType === 'commercial') {
-            return {
-              total: 0,
-              byType: {},
-              byBedrooms: {},
-              byLocation: [],
-              byPropertyType: {},
-              byPriceRange: [],
-            };
-          }
-          const normalizedFilters = {
-            ...filters,
-            propertyType:
-              typeof filters.propertyType === 'string'
-                ? [filters.propertyType as any]
-                : filters.propertyType,
-            listingType: filters.listingType as any,
-          };
-
-          return await propertySearchService.getFilterCounts(normalizedFilters, {
-            publicOnly: true,
-          });
-        } catch (error) {
-          console.error('Error getting filter counts:', safeErrorSummary(error));
-          return {
-            total: 0,
-            byType: {},
-            byBedrooms: {},
-            byLocation: [],
-            byPropertyType: {},
-            byPriceRange: [],
-          };
-        }
-      }),
-
     getById: publicProcedure
       .input(
         z.object({
@@ -651,33 +419,15 @@ const appRouterConfig = {
         const property = current.property;
         const listingType = String(property.listingType).toLowerCase();
         if (listingType !== 'sale' && listingType !== 'rent') return [];
-
-        const positiveId = (value: unknown) => {
-          const id = Number(value || 0);
-          return Number.isSafeInteger(id) && id > 0 ? id : null;
-        };
-        const suburbId = positiveId(property.suburbId);
-        const cityId = positiveId(property.cityId);
-        const provinceId = positiveId(property.provinceId);
-        const locationId = suburbId
-          ? `suburb:${suburbId}`
-          : cityId
-            ? `city:${cityId}`
-            : provinceId
-              ? `province:${provinceId}`
-              : undefined;
+        const canonicalPlaceId = property.canonicalPlaceId;
+        if (!isPlaceId(canonicalPlaceId)) return [];
         const propertyType = String(property.propertyType || '');
 
         const { publicSearchService } = await import('./services/publicSearchService');
         const result = await publicSearchService.searchInventory({
           listingType,
           listingSource: 'manual',
-          ...(locationId
-            ? { locationId }
-            : {
-                province: String(property.province || '') || undefined,
-                city: String(property.city || '') || undefined,
-              }),
+          canonicalPlaceId,
           ...((PUBLIC_PROPERTY_TYPES as readonly string[]).includes(propertyType)
             ? { propertyType }
             : {}),
@@ -703,171 +453,6 @@ const appRouterConfig = {
       .query(async ({ input }) => {
         const publicProperty = await resolvePublicPropertyEligibility(input.propertyId);
         return publicProperty?.images.map(toPublicPropertyImage) || [];
-      }),
-
-    // Property Management (CRUD) - Protected
-    create: protectedProcedure
-      .input(
-        z.object({
-          title: z.string().min(5, 'Title must be at least 5 characters').max(255),
-          description: z.string().min(10, 'Description must be at least 10 characters'),
-          propertyType: z.enum([
-            'apartment',
-            'house',
-            'villa',
-            'plot',
-            'commercial',
-            'townhouse',
-            'cluster_home',
-            'farm',
-            'shared_living',
-          ]),
-          listingType: z.enum(['sale', 'rent', 'rent_to_buy', 'auction', 'shared_living']),
-          price: z.number().positive('Price must be positive'),
-          bedrooms: z.number().int().positive().optional(),
-          bathrooms: z.number().int().positive().optional(),
-          area: z.number().positive('Area must be positive'),
-          address: z.string().min(5, 'Address must be at least 5 characters'),
-          city: z.string().min(2, 'City must be at least 2 characters'),
-          province: z.string().min(2, 'Province must be at least 2 characters'),
-          zipCode: z.string().optional(),
-          latitude: z.string().optional(),
-          longitude: z.string().optional(),
-          amenities: z.array(z.string()).optional(),
-          yearBuilt: z.number().int().positive().optional(),
-          levies: z.number().int().optional(),
-          ratesAndTaxes: z.number().int().optional(),
-          videoUrl: z.string().url().optional(),
-          virtualTourUrl: z.string().url().optional(),
-          agentId: z.number().int().optional(),
-          developmentId: z.number().int().optional(),
-          images: z.array(z.string()).min(1, 'At least one image is required'), // Array of image URLs
-        }),
-      )
-      .mutation(async () => {
-        // Keep this procedure name and input contract temporarily for legacy
-        // callers, but retire its direct-to-publication behavior. Listings
-        // must now use the canonical review and approval workflow.
-        throw new TRPCError({
-          code: 'PRECONDITION_FAILED',
-          message:
-            'Direct property creation has been retired. Use the canonical listing workflow for review and publication.',
-        });
-      }),
-
-    update: protectedProcedure
-      .input(
-        z.object({
-          id: z.number().int().positive(),
-          title: z.string().min(5).max(255).optional(),
-          description: z.string().min(10).optional(),
-          propertyType: z
-            .enum([
-              'apartment',
-              'house',
-              'villa',
-              'plot',
-              'commercial',
-              'townhouse',
-              'cluster_home',
-              'farm',
-              'shared_living',
-            ])
-            .optional(),
-          listingType: z
-            .enum(['sale', 'rent', 'rent_to_buy', 'auction', 'shared_living'])
-            .optional(),
-          price: z.number().positive().optional(),
-          bedrooms: z.number().int().positive().optional(),
-          bathrooms: z.number().int().positive().optional(),
-          area: z.number().positive().optional(),
-          address: z.string().min(5).optional(),
-          city: z.string().min(2).optional(),
-          province: z.string().min(2).optional(),
-          zipCode: z.string().optional(),
-          latitude: z.string().optional(),
-          longitude: z.string().optional(),
-          amenities: z.array(z.string()).optional(),
-          yearBuilt: z.number().int().positive().optional(),
-          levies: z.number().int().optional(),
-          ratesAndTaxes: z.number().int().optional(),
-          videoUrl: z.string().url().optional(),
-          virtualTourUrl: z.string().url().optional(),
-          agentId: z.number().int().optional(),
-          developmentId: z.number().int().optional(),
-          status: z.enum(['available', 'sold', 'rented', 'pending']).optional(),
-        }),
-      )
-      .mutation(async ({ ctx, input }) => {
-        // Verify ownership
-        const property = await db.getPropertyById(input.id);
-        const user = getUser(ctx);
-        if (!property || property.ownerId !== user.id) {
-          throw new Error('Unauthorized');
-        }
-        rejectGenericCommercialPropertyWorkflow(property.propertyType);
-        rejectGenericCommercialPropertyWorkflow(input.propertyType);
-
-        if (property.sourceListingId != null) {
-          throw new TRPCError({
-            code: 'PRECONDITION_FAILED',
-            message:
-              'Listing-backed public properties are read-only. Update the source listing through the canonical listing workflow.',
-          });
-        }
-
-        // Update property
-        await db.updateProperty(
-          input.id,
-          user.id,
-          {
-            ...input,
-            amenities: input.amenities ? JSON.stringify(input.amenities) : undefined,
-            updatedAt: new Date().toISOString(),
-          },
-          user.role ?? undefined,
-        );
-
-        return { success: true };
-      }),
-
-    delete: protectedProcedure
-      .input(
-        z.object({
-          id: z.number().int().positive(),
-        }),
-      )
-      .mutation(async ({ ctx, input }) => {
-        // Verify ownership
-        const property = await db.getPropertyById(input.id);
-        const user = getUser(ctx);
-        if (!property || property.ownerId !== user.id) {
-          throw new Error('Unauthorized');
-        }
-        rejectGenericCommercialPropertyWorkflow(property.propertyType);
-
-        if (property.sourceListingId != null) {
-          const sourceListing = await db.getListingById(Number(property.sourceListingId));
-          rejectGenericCommercialPropertyWorkflow(sourceListing?.propertyType);
-          if (!sourceListing) {
-            throw new TRPCError({ code: 'NOT_FOUND', message: 'Source listing not found' });
-          }
-          await assertListingContentCustody(
-            sourceListing,
-            user,
-            'Not authorized to archive this listing',
-          );
-          // A public property is a projection of its authored listing. Preserve
-          // the source and durable history by routing removal through the
-          // canonical archive lifecycle instead of deleting the projection.
-          await db.archiveListing(Number(property.sourceListingId));
-          return { success: true, status: 'archived' as const };
-        }
-
-        // Unlinked historical properties retain their legacy deletion path.
-        await db.deleteProperty(input.id, user.id, user.role ?? undefined);
-
-        return { success: true };
       }),
 
     // Consumer saved inventory. The command carries desired state so retries

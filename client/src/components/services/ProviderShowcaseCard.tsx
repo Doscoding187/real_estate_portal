@@ -157,9 +157,7 @@ export function ProviderShowcaseCard({
 }: ProviderShowcaseCardProps) {
   const services = (provider.services || []).filter(service => service.displayName);
   const location = (provider.locations || [])[0];
-  const locationLine =
-    [location?.suburb, location?.city, location?.province].filter(Boolean).join(', ') ||
-    'Coverage on request';
+  const locationLine = location?.label || 'Coverage on request';
   const isVerified = provider.verificationStatus === 'verified';
   const priceRange = providerPriceRange(provider);
   const since = providerSince(provider.createdAt);
@@ -253,9 +251,7 @@ export function ProviderShowcaseRow({
 }) {
   const services = (provider.services || []).filter(service => service.displayName);
   const location = (provider.locations || [])[0];
-  const locationLine =
-    [location?.suburb, location?.city, location?.province].filter(Boolean).join(', ') ||
-    'Coverage on request';
+  const locationLine = location?.label || 'Coverage on request';
   const isVerified = provider.verificationStatus === 'verified';
   const headline = firstLine(provider.headline) || firstLine(provider.bio);
 

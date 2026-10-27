@@ -703,7 +703,6 @@ export function buildDevelopmentSubmitPayload(input: DevelopmentSubmitPayloadInp
     developmentType,
     transactionType,
     ownershipType: normalizeSubmitOwnershipType(ownershipSource),
-    canonicalPlaceId: canonicalDevelopmentData.location?.canonicalPlaceId ?? null,
     address: canonicalDevelopmentData.location?.address,
     postalCode: canonicalDevelopmentData.location?.postalCode,
     latitude: canonicalDevelopmentData.location?.latitude,

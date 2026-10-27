@@ -1,145 +1,82 @@
 import { describe, expect, it } from 'vitest';
-import { homeAreaFromDiscovery, needsHomeAreaClarification } from '@/lib/homeAreaSelection';
+import { needsHomeAreaClarification } from '@/lib/homeAreaSelection';
+import { hasCanonicalLocationIdentity } from '@/lib/locationDiscovery';
 import { buildSelectedDiscoverHref } from '@/lib/publicDiscoveryRoutes';
 import { EMPTY_HOME_SEARCH_FILTERS } from '@/contexts/HomeSearchContext';
-import type {
-  SearchAreaDiscoveryResult,
-  CanonicalLocationDiscoveryResult,
-} from '@shared/searchDiscovery';
-const city: CanonicalLocationDiscoveryResult = {
-  kind: 'canonical_location',
-  canonicalLocationId: 'city:12',
-  factualLevel: 'city',
-  searchScopeKind: 'metro_city',
-  label: 'Johannesburg',
+import type { LocationNode } from '@/types/location';
+
+const city: LocationNode = {
+  id: 'pl-place-01-000000000000000000000001',
+  canonicalLocationId: 'pl-place-01-000000000000000000000001',
+  factualType: 'city',
+  type: 'city',
+  name: 'Johannesburg',
+  slug: 'johannesburg',
+  provinceSlug: 'gauteng',
+  canonicalPath: '/gauteng/johannesburg',
+};
+
+const locality: LocationNode = {
+  id: 'pl-place-01-000000000000000000000002',
+  canonicalLocationId: 'pl-place-01-000000000000000000000002',
+  factualType: 'suburb',
+  type: 'suburb',
+  name: 'Rosebank',
+  slug: 'rosebank',
   provinceSlug: 'gauteng',
   citySlug: 'johannesburg',
-  display: { typeLabel: 'City' },
-  canonicalPath: '/gauteng/johannesburg',
-  source: 'canonical_geography',
+  parentCanonicalLocationId: city.canonicalLocationId,
+  canonicalPath: '/gauteng/johannesburg/rosebank',
 };
-const area: SearchAreaDiscoveryResult = {
-  kind: 'search_area',
-  searchAreaId: 'metro-north',
-  label: 'Metro North',
-  display: { typeLabel: 'Property market area' },
-  lifecycle: 'active',
-  availability: 'available',
-  publicEligible: true,
-  supportedJourneys: ['buy', 'rent'],
-  source: 'search_area',
-};
-describe('Homepage area identity and handoff', () => {
-  it('clarifies absent, city and province scope but not an explicitly selected locality or market area', () => {
-    expect(needsHomeAreaClarification({ locations: [], searchArea: null })).toBe(true);
-    expect(needsHomeAreaClarification(homeAreaFromDiscovery(city, 'buy')!)).toBe(true);
+
+describe('homepage Place selection and handoff', () => {
+  it('asks for a narrower choice after province or city selection', () => {
+    expect(needsHomeAreaClarification({ locations: [] })).toBe(true);
+    expect(needsHomeAreaClarification({ locations: [city] })).toBe(true);
+    expect(needsHomeAreaClarification({ locations: [locality] })).toBe(false);
+  });
+
+  it('accepts Place IDs and rejects the retired runtime geography IDs', () => {
+    expect(hasCanonicalLocationIdentity(city)).toBe(true);
     expect(
-      needsHomeAreaClarification(
-        homeAreaFromDiscovery(
-          {
-            ...city,
-            canonicalLocationId: 'suburb:34',
-            factualLevel: 'suburb',
-            suburbSlug: 'rosebank',
-            searchScopeKind: 'locality',
-          },
-          'buy',
-        )!,
-      ),
+      hasCanonicalLocationIdentity({ ...city, id: 'city:12', canonicalLocationId: 'city:12' }),
     ).toBe(false);
-    expect(needsHomeAreaClarification(homeAreaFromDiscovery(area, 'buy')!)).toBe(false);
   });
-  it('rejects unavailable, private or unsupported market areas and mismatched location identities', () => {
-    expect(
-      homeAreaFromDiscovery({ ...area, availability: 'preview', publicEligible: false }, 'buy'),
-    ).toBeNull();
-    expect(homeAreaFromDiscovery(area, 'developments')).toBeNull();
-    expect(
-      homeAreaFromDiscovery({ ...city, canonicalLocationId: 'google-provider-id' }, 'buy'),
-    ).toBeNull();
-    expect(homeAreaFromDiscovery({ ...city, factualLevel: 'suburb' }, 'buy')).toBeNull();
-  });
-  it('does not reuse typed or property-search geography for Development browse', () => {
-    const selectedCity = homeAreaFromDiscovery(city, 'buy')!;
-    expect(
-      buildSelectedDiscoverHref('developments', selectedCity, EMPTY_HOME_SEARCH_FILTERS),
-    ).toBeNull();
-    expect(
-      buildSelectedDiscoverHref(
-        'developments',
-        { locations: [], searchArea: null },
+
+  it('uses the exact Place ID for Buy and Rent browse', () => {
+    for (const journey of ['sale', 'rent'] as const) {
+      const href = buildSelectedDiscoverHref(
+        journey,
+        { locations: [locality] },
         EMPTY_HOME_SEARCH_FILTERS,
-        undefined,
-        'pl-place-01-000000000000000000000001',
-      ),
-    ).toContain('canonicalPlaceId=pl-place-01-000000000000000000000001');
-  });
-  it('clarifies a factual town without rewriting its city runtime handle', () => {
-    const selection = homeAreaFromDiscovery(
-      { ...city, factualType: 'town', label: 'Rosebank' },
-      'buy',
-    )!;
-    expect(needsHomeAreaClarification(selection)).toBe(true);
-    const url = new URL(
-      buildSelectedDiscoverHref('sale', selection, EMPTY_HOME_SEARCH_FILTERS)!,
-      'http://localhost',
-    );
-    expect(url.searchParams.get('locationId')).toBe('city:12');
-  });
-  it('does not convert municipality context into an executable city scope', () => {
-    for (const factualType of [
-      'local_municipality',
-      'district_municipality',
-      'metropolitan_municipality',
-    ]) {
-      expect(
-        homeAreaFromDiscovery({ ...city, factualType, label: 'Ekurhuleni' }, 'buy'),
-      ).toBeNull();
+      );
+      const url = new URL(href!, 'http://localhost');
+      expect(url.searchParams.get('canonicalPlaceId')).toBe(locality.canonicalLocationId);
+      for (const key of ['locationId', 'locationIds', 'city', 'province', 'suburb']) {
+        expect(url.searchParams.has(key)).toBe(false);
+      }
     }
   });
-  it('preserves category and budget using existing adapters, with one geography authority', () => {
-    const selection = homeAreaFromDiscovery(area, 'buy')!;
-    const url = new URL(
-      buildSelectedDiscoverHref(
-        'sale',
-        selection,
-        { ...EMPTY_HOME_SEARCH_FILTERS, priceMax: '2000000', minBedrooms: '2' },
-        'Houses',
-      )!,
-      'http://localhost',
-    );
-    expect(url.pathname).toBe('/property-for-sale');
-    expect(url.searchParams.get('searchAreaId')).toBe(area.searchAreaId);
-    expect(url.searchParams.get('propertyType')).toBe('house');
-    expect(url.searchParams.get('maxPrice')).toBe('2000000');
-    expect(url.searchParams.get('minBedrooms')).toBe('2');
-    for (const key of [
-      'locationId',
-      'locationIds',
-      'city',
-      'province',
-      'suburb',
-      'canonicalPlaceId',
-    ])
-      expect(url.searchParams.has(key)).toBe(false);
-    const rent = new URL(
-      buildSelectedDiscoverHref(
-        'rent',
-        homeAreaFromDiscovery(city, 'rent')!,
-        { ...EMPTY_HOME_SEARCH_FILTERS, budgetMax: '10000' },
-        'Apartments',
-      )!,
-      'http://localhost',
-    );
-    expect(rent.pathname).toBe('/property-to-rent');
-    expect(rent.searchParams.get('locationId')).toBe('city:12');
-    expect(rent.searchParams.get('maxPrice')).toBe('10000');
+
+  it('requires a separate canonical Place selection for Development browse', () => {
     expect(
-      buildSelectedDiscoverHref(
-        'sale',
-        { locations: [], searchArea: null },
-        EMPTY_HOME_SEARCH_FILTERS,
-      ),
+      buildSelectedDiscoverHref('developments', { locations: [city] }, EMPTY_HOME_SEARCH_FILTERS),
+    ).toBeNull();
+
+    const href = buildSelectedDiscoverHref(
+      'developments',
+      { locations: [] },
+      EMPTY_HOME_SEARCH_FILTERS,
+      undefined,
+      'pl-place-01-000000000000000000000003',
+    );
+    expect(href).toContain('canonicalPlaceId=pl-place-01-000000000000000000000003');
+  });
+
+  it('does not infer a Place from display labels or browse with mixed selections', () => {
+    expect(buildSelectedDiscoverHref('sale', { locations: [] }, EMPTY_HOME_SEARCH_FILTERS)).toBeNull();
+    expect(
+      buildSelectedDiscoverHref('sale', { locations: [city, locality] }, EMPTY_HOME_SEARCH_FILTERS),
     ).toBeNull();
   });
 });

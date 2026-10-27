@@ -41,8 +41,6 @@ import {
 } from '@/contexts/HomeSearchContext';
 import { needsHomeAreaClarification } from '@/lib/homeAreaSelection';
 import { LocationAutosuggest } from './LocationAutosuggest';
-import { trpc } from '@/lib/trpc';
-import { VITE_SEARCH_DISCOVERY_AUTOSUGGEST_ENABLED } from '@/const';
 import {
   getHomepageHeroJourneys,
   getPublicHeroJourney,
@@ -64,7 +62,6 @@ import {
   buildConsumerJourneyUrl,
   LAND_PUBLIC_CLASSIFICATION_OPTIONS,
 } from '@/lib/consumerJourneyRouter';
-import { parseCanonicalLocationIdentity } from '@shared/locationAuthority';
 import {
   COMMERCIAL_AVAILABILITY_OPTIONS,
   COMMERCIAL_BUDGET_OPTIONS,
@@ -72,8 +69,6 @@ import {
   COMMERCIAL_SPACE_SIZE_OPTIONS,
 } from '@shared/commercialSearchContract';
 import type { LocationNode } from '@/types/location';
-import type { SearchAreaDiscoveryResult, SearchDiscoveryResult } from '@shared/searchDiscovery';
-import type { SearchJourneyId } from '@shared/searchScope';
 
 export interface EnhancedHeroProps {
   variant?: 'home' | 'location';
@@ -522,9 +517,6 @@ export function EnhancedHero({
   const [developmentPlace, setDevelopmentPlace] = useState<CanonicalPlaceSelection | null>(null);
   const selectedLocations = homeSearch?.locations ?? localLocations;
   const setSelectedLocations = homeSearch?.setLocations ?? setLocalLocations;
-  const [localSearchArea, setLocalSearchArea] = useState<SearchAreaDiscoveryResult | null>(null);
-  const selectedSearchArea = homeSearch?.searchArea ?? localSearchArea;
-  const setSelectedSearchArea = homeSearch?.setSearchArea ?? setLocalSearchArea;
   const [showIntentResolver, setShowIntentResolver] = useState(false);
   const [locationSelectionNotice, setLocationSelectionNotice] = useState<string | null>(null);
   const [priceRangeOpen, setPriceRangeOpen] = useState(false);
@@ -547,21 +539,11 @@ export function EnhancedHero({
   const canSubmitSearch =
     journey === 'developments'
       ? Boolean(developmentPlace?.canonicalPlaceId)
-      : hasCanonicalLocations || Boolean(selectedSearchArea);
-  const discoveryJourney = ['buy', 'rent', 'plot_land', 'commercial'].includes(journey)
-    ? (journey as SearchJourneyId)
-    : undefined;
-  const { data: serverDiscoverySuggestions } = trpc.location.placeSuggestions.useQuery(
-    { query: searchQuery, limit: 6 },
-    {
-      enabled: VITE_SEARCH_DISCOVERY_AUTOSUGGEST_ENABLED === '1' && searchQuery.trim().length >= 2,
-    },
-  );
-  const discoverySuggestions = useMemo(
-    () =>
-      VITE_SEARCH_DISCOVERY_AUTOSUGGEST_ENABLED === '1' ? serverDiscoverySuggestions || [] : [],
-    [serverDiscoverySuggestions],
-  );
+      : journey === 'plot_land'
+        ? hasCanonicalLocations
+        : journey
+          ? hasCanonicalLocations && selectedLocations.length === 1
+          : hasCanonicalLocations;
   useEffect(() => {
     if (!priceRangeOpen) return;
     const closeWhenOutside = (event: PointerEvent) => {
@@ -602,22 +584,22 @@ export function EnhancedHero({
   };
   const selectCanonicalLocation = (location: LocationNode) => {
     setConfirmedBroadId(null);
-    const resolution = resolveCanonicalLocationSelection(selectedLocations, location, 5);
+    const maxLocations = journey === 'plot_land' || !journey ? 5 : 1;
+    const resolution = resolveCanonicalLocationSelection(selectedLocations, location, maxLocations);
     setSearchQuery('');
-    setSelectedSearchArea(null);
     setSelectedLocations(resolution.locations);
     setShowIntentResolver(false);
     setLocationSelectionNotice(
       resolution.outcome === 'replaced-incompatible'
-        ? `${location.name} replaces the previous area. Multi-area search combines sibling locations at the same level.`
+        ? `${location.name} replaces the previous selection because the places have different scopes or parents.`
         : resolution.outcome === 'limit-reached'
-          ? 'You can search up to five areas together.'
+          ? 'You can search up to five sibling places together for Land.'
           : resolution.outcome === 'invalid'
-            ? 'Choose a Property Listify city, suburb, or province suggestion to search.'
+            ? 'Choose an admitted Place suggestion to search.'
             : null,
     );
   };
-  const runSearch = (locations = selectedLocations, area = selectedSearchArea) => {
+  const runSearch = (locations = selectedLocations) => {
     setPriceRangeOpen(false);
     if (journey === 'developments') {
       if (!developmentPlace?.canonicalPlaceId || priceRangeError) return;
@@ -632,10 +614,9 @@ export function EnhancedHero({
       );
       return;
     }
-    if ((!locations.length && !area) || priceRangeError) return;
+    if (!locations.length || priceRangeError) return;
     if (!journey) {
-      const path =
-        !area && locations.length === 1 ? buildLocationDiscoveryPath(locations[0]) : undefined;
+      const path = locations.length === 1 ? buildLocationDiscoveryPath(locations[0]) : undefined;
       if (path) {
         setLocation(path);
         return;
@@ -643,16 +624,10 @@ export function EnhancedHero({
       setShowIntentResolver(true);
       return;
     }
-    const searchScope = area
-      ? { kind: 'search_area' as const, searchAreaId: area.searchAreaId }
-      : undefined;
     if (journey === 'buy') {
       setLocation(
         buildBuySearchUrl({
-          searchQuery,
-          selectedLocations: area ? [] : locations,
-          searchScope,
-          searchAreaAvailability: area?.availability,
+          selectedLocations: locations,
           propertyType: filters.propertyType,
           minPrice: filters.priceMin,
           maxPrice: filters.priceMax,
@@ -666,10 +641,7 @@ export function EnhancedHero({
       setLocation(
         buildPropertySearchUrl({
           transactionType: 'to-rent',
-          searchQuery,
-          selectedLocations: area ? [] : locations,
-          searchScope,
-          searchAreaAvailability: area?.availability,
+          selectedLocations: locations,
           propertyType: filters.propertyType,
           maxPrice: filters.budgetMax,
         }),
@@ -707,8 +679,7 @@ export function EnhancedHero({
         buildConsumerJourneyUrl({
           intent: 'buy',
           journey: 'land',
-          selectedLocations: area ? [] : locations,
-          searchScope,
+          selectedLocations: locations,
           landClassification: filters.classification,
           maxPrice: filters.maxPrice,
         }),
@@ -720,16 +691,9 @@ export function EnhancedHero({
       // Pass geography + any active SL-specific filter selections so the
       // discovery page receives them as URL params.
       const search = new URLSearchParams();
-      if (area) {
-        search.set('searchAreaId', area.searchAreaId);
-      } else if (locations.length === 1) {
+      if (locations.length === 1) {
         const id = locations[0].canonicalLocationId || locations[0].id;
-        if (id) search.set('locationId', id);
-      } else if (locations.length > 1) {
-        locations.forEach(loc => {
-          const id = loc.canonicalLocationId || loc.id;
-          if (id) search.append('locationIds', id);
-        });
+        if (id) search.set('canonicalPlaceId', id);
       }
       if (filters.market) search.set('market', String(filters.market));
       if (filters.maxPrice) search.set('maxPrice', String(filters.maxPrice));
@@ -741,10 +705,7 @@ export function EnhancedHero({
   const categories = getHomepageHeroJourneys();
   const submitSearch = () => {
     if (!canSubmitSearch || priceRangeError) return;
-    const selection: HomeAreaSelection = {
-      locations: selectedLocations,
-      searchArea: selectedSearchArea,
-    };
+    const selection: HomeAreaSelection = { locations: selectedLocations };
     if (
       homeSearch &&
       (journey === 'buy' || journey === 'rent') &&
@@ -881,7 +842,6 @@ export function EnhancedHero({
                   selectedLocations={selectedLocations}
                   onRemove={index => {
                     setConfirmedBroadId(null);
-                    setSelectedSearchArea(null);
                     setSelectedLocations(items =>
                       items.filter((_, itemIndex) => itemIndex !== index),
                     );
@@ -889,59 +849,7 @@ export function EnhancedHero({
                   onChange={setSearchQuery}
                   onSelect={selectCanonicalLocation}
                   onSubmit={submitSearch}
-                  maxLocations={5}
-                  discoverySuggestions={discoverySuggestions as SearchDiscoveryResult[]}
-                  onDiscoverySelect={(suggestion: SearchDiscoveryResult) => {
-                    if (suggestion.kind === 'search_area') {
-                      setConfirmedBroadId(null);
-                      if (suggestion.availability !== 'available' || !suggestion.publicEligible)
-                        return;
-                      setSearchQuery('');
-                      setSelectedSearchArea(suggestion);
-                      setSelectedLocations([
-                        {
-                          id: suggestion.searchAreaId,
-                          searchAreaId: suggestion.searchAreaId,
-                          name: suggestion.label,
-                          slug:
-                            suggestion.publicSlug ||
-                            suggestion.label.toLowerCase().replace(/\s+/g, '-'),
-                          type: 'area',
-                          selectionKind: 'search_area',
-                        },
-                      ]);
-                      return;
-                    }
-                    const identity = parseCanonicalLocationIdentity(
-                      suggestion.canonicalLocationId,
-                    );
-                    if (!identity) return;
-                    selectCanonicalLocation({
-                      id: suggestion.canonicalLocationId,
-                      canonicalLocationId: suggestion.canonicalLocationId,
-                      factualType: suggestion.factualType,
-                      name: suggestion.label,
-                      slug: suggestion.suburbSlug || suggestion.citySlug || suggestion.provinceSlug,
-                      type: suggestion.factualLevel,
-                      provinceSlug: suggestion.provinceSlug,
-                      citySlug: suggestion.citySlug,
-                      canonicalPath: suggestion.canonicalPath,
-                      ...(suggestion.runtimeLocationId
-                        ? { runtimeLocationId: suggestion.runtimeLocationId }
-                        : {}),
-                      ...(suggestion.factualLocationId
-                        ? { factualLocationId: suggestion.factualLocationId }
-                        : {}),
-                      ...(suggestion.parentCanonicalLocationId
-                        ? { parentCanonicalLocationId: suggestion.parentCanonicalLocationId }
-                        : {}),
-                      selectionTypeLabel: suggestion.display.typeLabel,
-                      ...(suggestion.display.contextLabel
-                        ? { selectionContextLabel: suggestion.display.contextLabel }
-                        : {}),
-                    });
-                  }}
-                      onDiscoveryNavigate={setLocation}
+                  maxLocations={journey === 'plot_land' || !journey ? 5 : 1}
                     />
                   </>
                 )}
@@ -976,18 +884,14 @@ export function EnhancedHero({
                   <Button
                     type="button"
                     data-testid="homepage-location-intent-buy"
+                    disabled={selectedLocations.length !== 1 || !hasCanonicalLocations}
                     className="bg-blue-700 hover:bg-blue-800"
                     onClick={() => {
                       selectJourney('buy');
                       setShowIntentResolver(false);
                       setLocation(
                         buildBuySearchUrl({
-                          searchQuery,
-                          selectedLocations: selectedSearchArea ? [] : selectedLocations,
-                          searchScope: selectedSearchArea
-                            ? { kind: 'search_area', searchAreaId: selectedSearchArea.searchAreaId }
-                            : undefined,
-                          searchAreaAvailability: selectedSearchArea?.availability,
+                          selectedLocations,
                           propertyType: filters.propertyType,
                           minPrice: filters.priceMin,
                           maxPrice: filters.priceMax,
@@ -999,7 +903,12 @@ export function EnhancedHero({
                   >
                     Buy
                   </Button>
-                  <Button type="button" variant="outline" onClick={() => selectJourney('rent')}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={selectedLocations.length !== 1 || !hasCanonicalLocations}
+                    onClick={() => selectJourney('rent')}
+                  >
                     Rent
                   </Button>
                   <Button
@@ -1012,7 +921,7 @@ export function EnhancedHero({
                 </div>
                 {selectedLocations.length > 1 ? (
                   <p className="mt-3 text-xs text-slate-600" role="status">
-                    Search both selected areas together. Results can match either area.
+                    Buy and Rent searches use one canonical Place. Remove extra Places to continue.
                   </p>
                 ) : null}
               </section>
@@ -1145,19 +1054,14 @@ export function EnhancedHero({
           open
           onOpenChange={setAreaPickerOpen}
           journey={journey}
-          initialSelection={{ locations: selectedLocations, searchArea: selectedSearchArea }}
+          initialSelection={{ locations: selectedLocations }}
           onConfirm={selection => {
             setSelectedLocations(selection.locations);
-            setSelectedSearchArea(selection.searchArea);
             setConfirmedBroadId(
               needsHomeAreaClarification(selection) ? (selection.locations[0]?.id ?? null) : null,
             );
             setAreaPickerOpen(false);
-            runSearch(selection.locations, selection.searchArea);
-          }}
-          onExplore={href => {
-            setAreaPickerOpen(false);
-            setLocation(href);
+            runSearch(selection.locations);
           }}
         />
       )}

@@ -13,6 +13,7 @@ import {
 } from './services/explorePublishingEligibilityService';
 import { developments, exploreContent, listings } from '../drizzle/schema';
 import { PLACE_ID_REGEX } from '../shared/placeAuthority';
+import { listDevelopmentPlaceGeography } from './services/developmentPlaceAssignmentService';
 
 function unavailableExploreCatalog(name: string): never {
   throw new TRPCError({
@@ -281,12 +282,8 @@ export const exploreRouter = router({
           .limit(1);
         canonicalPlaceId = listing?.canonicalPlaceId ?? null;
       } else if (input.developmentId) {
-        const [development] = await db
-          .select({ canonicalPlaceId: developments.canonicalPlaceId })
-          .from(developments)
-          .where(eq(developments.id, input.developmentId))
-          .limit(1);
-        canonicalPlaceId = development?.canonicalPlaceId ?? null;
+        const geography = await listDevelopmentPlaceGeography([input.developmentId]);
+        canonicalPlaceId = geography.get(input.developmentId)?.canonicalPlaceId ?? null;
       }
 
       const result = await db.insert(exploreContent).values({
