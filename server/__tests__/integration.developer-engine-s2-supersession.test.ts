@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { getDb } from '../db-connection';
 import {
   cataloguePublishers,
+  developmentPlaceAssignments,
   developmentSupersessions,
   developments,
   leads,
@@ -19,12 +20,14 @@ import {
   type DeveloperTestContext,
 } from '../test-utils/developerTestContext';
 import { developmentService } from '../services/developmentService';
+import { recordReviewedDevelopmentPlaceAssignment } from '../services/developmentPlaceAssignmentService';
 import {
   activateDevelopmentSupersession,
   resolveActiveDevelopmentSupersessionRedirect,
   reverseDevelopmentSupersession,
   verifyDevelopmentSupersession,
 } from '../services/developmentSupersessionService';
+import { CANONICAL_JOHANNESBURG_PLACE_ID } from './helpers/canonicalPlaceFixture';
 
 const describeWithDb: typeof describe =
   process.env.S2_DB_TESTS === '1' && process.env.DATABASE_URL
@@ -167,6 +170,7 @@ async function insertDevelopment(input: {
   slug: string;
   publisherType: 'platform' | 'developer';
   cataloguePublisherId: number;
+  reviewerUserId: number;
 }) {
   const db = await database();
   const [result] = await db.insert(developments).values({
@@ -189,6 +193,14 @@ async function insertDevelopment(input: {
     isActive: 1,
   });
   fixture.unitIds.push(unitId);
+  await recordReviewedDevelopmentPlaceAssignment({
+    developmentId: id,
+    phaseId: null,
+    placeId: CANONICAL_JOHANNESBURG_PLACE_ID,
+    assignmentKind: 'site',
+    evidenceReference: `test-fixture:development-s2:${input.slug}:canonical-place`,
+    reviewerUserId: input.reviewerUserId,
+  });
   return id;
 }
 
@@ -201,11 +213,13 @@ async function insertPair(label = suffix()) {
     slug: `s2-source-${label}`,
     publisherType: 'platform',
     cataloguePublisherId: platformPublisherId,
+    reviewerUserId: superAdminId,
   });
   const replacementId = await insertDevelopment({
     slug: `s2-replacement-${label}`,
     publisherType: 'developer',
     cataloguePublisherId: developerIdentity.cataloguePublisherId,
+    reviewerUserId: superAdminId,
   });
   return {
     superAdminId,
@@ -247,6 +261,11 @@ describeWithDb('Developer Engine S2 supersession lifecycle integration', () => {
       await db
         .delete(developmentSupersessions)
         .where(inArray(developmentSupersessions.id, fixture.relationshipIds));
+    }
+    if (fixture.developmentIds.length) {
+      await db
+        .delete(developmentPlaceAssignments)
+        .where(inArray(developmentPlaceAssignments.developmentId, fixture.developmentIds));
     }
     if (fixture.unitIds.length) {
       await db.delete(unitTypes).where(inArray(unitTypes.id, fixture.unitIds));
@@ -566,6 +585,7 @@ describeWithDb('Developer Engine S2 supersession lifecycle integration', () => {
       slug: 's2-replacement-redirect-v2',
       publisherType: 'developer',
       cataloguePublisherId: pair.developerPublisherId,
+      reviewerUserId: pair.superAdminId,
     });
     const ambiguousSlugRedirect =
       await resolveActiveDevelopmentSupersessionRedirect(originalSourcePath);
@@ -633,6 +653,7 @@ describeWithDb('Developer Engine S2 supersession lifecycle integration', () => {
           slug: 's2-source-ambiguous',
           publisherType: 'platform',
           cataloguePublisherId: pair.platformPublisherId,
+          reviewerUserId: pair.superAdminId,
         });
       },
       message: /canonical root route is ambiguous/i,
