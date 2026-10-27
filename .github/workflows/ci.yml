@@ -406,7 +406,7 @@ jobs:
             head="${{ github.sha }}"
           fi
           changed=$(git diff --name-only "$base" "$head" 2>/dev/null || true)
-          if printf '%s\n' "$changed" | grep -qE '^(e2e/|playwright\.config\.ts$|\.github/workflows/ci\.yml$|client/src/(pages/|components/(search|city-guide|location|EnhancedHero|HomeAreaPicker)|lib/(location|search|cityGuide|heroJourney|homeArea))|server/(locationRouter\.ts|_core/vite\.ts|services/(location|nationalPlace|publicSearch|searchDiscovery|canonicalPlace))|shared/(locationAuthority|searchDiscovery|searchScope|placeAuthority)\.ts|drizzle/schema/(placeAuthority|locations)\.ts|data/(geography-coverage|gauteng-place-admission|place-admission-territories)|scripts/measure-city-scope-members)'; then
+          if printf '%s\n' "$changed" | grep -qE '^(e2e/|playwright\.config\.ts$|\.github/workflows/ci\.yml$|client/src/(pages/|components/(search|city-guide|location|EnhancedHero|HomeAreaPicker)|lib/(location|search|cityGuide|heroJourney|homeArea))|server/(placeAuthorityRouter\.ts|locationRouter\.ts|_core/vite\.ts|services/(location|nationalPlace|publicSearch|searchDiscovery|canonicalPlace))|shared/(locationAuthority|canonicalPlaceUrlProjection|searchDiscovery|searchScope|placeAuthority)\.ts|drizzle/schema/(placeAuthority|locations)\.ts|data/(geography-coverage|gauteng-place-admission|place-admission-territories|place-url-projection)|tools/place-admission/|scripts/measure-city-scope-members)'; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
           else
             echo "changed=false" >> "$GITHUB_OUTPUT"
@@ -518,16 +518,9 @@ jobs:
       - name: Verify canonical disposable scenario data
         run: pnpm db:scenario:verify
 
-      # The journey needs the published geography to be present, not just the
-      # schema. Prove the location API answers for a published suburb after the
-      # fixtures exist but before a browser starts, so a missing fixture reads
-      # as a data failure rather than a page failure.
-      - name: Prove the published location API answers
-        run: >
-          node scripts/provePublishedLocationApi.mjs
-
-      # The geography journey proves the customer can reach a published
-      # location and that the retired SRP geography family stays retired.
+      # The route journey resolves each canonical URL through Place Authority
+      # after the admitted package fixtures are loaded. It also proves retired
+      # SRP geography paths stay retired.
       - name: Run the geography journey
         env:
           # An isolated CI database only resolves its target class in the test

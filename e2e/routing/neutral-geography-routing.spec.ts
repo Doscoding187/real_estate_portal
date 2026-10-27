@@ -129,9 +129,18 @@ test.describe('Neutral geography routing', () => {
         .getByRole('button', { name: 'Search', exact: true })
         .click();
 
-      await expect(page).toHaveURL(/\/property-for-sale\?.*locationId=suburb%3A\d+/);
-      await expect(page).toHaveURL(/suburb=sandton/);
-      await expect(page).toHaveURL(/province=gauteng/);
+      await expect(page).toHaveURL(
+        /\/property-for-sale\?.*canonicalPlaceId=pl-place-01-[a-f0-9]{24}/,
+      );
+      const resultUrl = new URL(page.url());
+      expect(resultUrl.pathname).toBe('/property-for-sale');
+      expect(resultUrl.searchParams.get('canonicalPlaceId')).toMatch(
+        /^pl-place-01-[a-f0-9]{24}$/,
+      );
+      for (const legacyKey of ['locationId', 'city', 'province', 'suburb']) {
+        expect(resultUrl.searchParams.has(legacyKey)).toBe(false);
+      }
+      await expect(page.getByTestId('selected-location-chip')).toContainText('Sandton');
     });
 
     test('broad city selection clarifies through the area picker before searching', async ({
