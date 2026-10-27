@@ -24,6 +24,10 @@ import {
   type DevelopmentHomeInventory,
 } from './developmentInventorySummary';
 import {
+  listDevelopmentPlaceGeography,
+  type DevelopmentPlaceGeography,
+} from './developmentPlaceAssignmentService';
+import {
   developerVisibleReviewFeedback,
   deriveDevelopmentHomeLifecycleState,
   isDevelopmentHomePublicEligible,
@@ -81,9 +85,8 @@ export type DeveloperOperatingDevelopmentSummary = {
     imageUrl: string | null;
     location: {
       address: string | null;
-      suburb: string | null;
-      city: string;
-      province: string;
+      canonicalPlaceId: string | null;
+      locationLabels: string[];
     };
   };
   lifecycle: {
@@ -163,9 +166,6 @@ type DevelopmentOperatingRow = Pick<
   | 'name'
   | 'slug'
   | 'address'
-  | 'suburb'
-  | 'city'
-  | 'province'
   | 'transactionType'
   | 'approvalStatus'
   | 'isPublished'
@@ -334,6 +334,7 @@ export function buildDeveloperOperatingNextAction(input: {
 
 export function buildDevelopmentOperatingSummary(input: {
   development: DevelopmentOperatingRow;
+  geography: DevelopmentPlaceGeography;
   persistedUnitTypes: (typeof unitTypes.$inferSelect)[];
   reviewRows: DevelopmentHomeReviewRow[];
   leadSummary: DeveloperOperatingLeadSummary;
@@ -396,9 +397,8 @@ export function buildDevelopmentOperatingSummary(input: {
       imageUrl: parsePrimaryImageUrl(input.development.images),
       location: {
         address: input.development.address ?? null,
-        suburb: input.development.suburb ?? null,
-        city: input.development.city,
-        province: input.development.province,
+        canonicalPlaceId: input.geography.canonicalPlaceId,
+        locationLabels: input.geography.locationLabels,
       },
     },
     lifecycle: {
@@ -581,9 +581,6 @@ async function loadDevelopmentRows(
     name: developments.name,
     slug: developments.slug,
     address: developments.address,
-    suburb: developments.suburb,
-    city: developments.city,
-    province: developments.province,
     transactionType: developments.transactionType,
     approvalStatus: developments.approvalStatus,
     isPublished: developments.isPublished,
@@ -653,7 +650,7 @@ export async function getDeveloperOperatingHome(input: {
   }
 
   const developmentIds = developmentRows.map(development => development.id);
-  const [persistedUnitTypes, reviewRows] = await Promise.all([
+  const [persistedUnitTypes, reviewRows, geographyByDevelopment] = await Promise.all([
     database.select().from(unitTypes).where(inArray(unitTypes.developmentId, developmentIds)),
     database
       .select({
@@ -668,6 +665,7 @@ export async function getDeveloperOperatingHome(input: {
       .from(developmentApprovalQueue)
       .where(inArray(developmentApprovalQueue.developmentId, developmentIds))
       .orderBy(desc(developmentApprovalQueue.submittedAt), desc(developmentApprovalQueue.id)),
+    listDevelopmentPlaceGeography(developmentIds),
   ]);
 
   const unitTypesByDevelopment = new Map<number, (typeof unitTypes.$inferSelect)[]>();
@@ -695,6 +693,10 @@ export async function getDeveloperOperatingHome(input: {
       });
       return buildDevelopmentOperatingSummary({
         development,
+        geography: geographyByDevelopment.get(development.id) ?? {
+          canonicalPlaceId: null,
+          locationLabels: [],
+        },
         persistedUnitTypes: unitTypesByDevelopment.get(development.id) ?? [],
         reviewRows: reviewsByDevelopment.get(development.id) ?? [],
         leadSummary,

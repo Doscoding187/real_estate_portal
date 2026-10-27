@@ -1,6 +1,6 @@
 import type { FeedType } from '../../../../shared/types';
 import { getDb } from '../../../db';
-import { exploreContent, listings, developments } from '../../../../drizzle/schema';
+import { exploreContent, listings } from '../../../../drizzle/schema';
 import { and, desc, eq, sql } from 'drizzle-orm';
 
 interface CategoryCandidatesOptions {
@@ -107,7 +107,6 @@ class DiscoveryLegacyFeedSource {
       .select({ content: exploreContent })
       .from(exploreContent)
       .leftJoin(listings, eq(exploreContent.referenceId, listings.id))
-      .leftJoin(developments, eq(exploreContent.referenceId, developments.id))
       .where(
         and(
           eq(exploreContent.contentType, 'video'),
@@ -117,8 +116,6 @@ class DiscoveryLegacyFeedSource {
             LOWER(COALESCE(${listings.city}, '')) LIKE ${`%${loc}%`}
             OR LOWER(COALESCE(${listings.suburb}, '')) LIKE ${`%${loc}%`}
             OR LOWER(COALESCE(${listings.province}, '')) LIKE ${`%${loc}%`}
-            OR LOWER(COALESCE(${developments.city}, '')) LIKE ${`%${loc}%`}
-            OR LOWER(COALESCE(${developments.province}, '')) LIKE ${`%${loc}%`}
           )`,
         ),
       )

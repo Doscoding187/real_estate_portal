@@ -153,7 +153,7 @@ export default function DevelopmentOpportunityCard({
         </h2>
         <p className="mt-1 flex items-center gap-1.5 text-[12.5px] text-muted-foreground">
           <MapPin className="h-3.5 w-3.5 shrink-0" />
-          {[item.city, item.province].filter(Boolean).join(', ') || 'Location to be confirmed'}
+          {item.locationLabels?.join(', ') || 'Location to be confirmed'}
         </p>
 
         <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[12px] text-muted-foreground">

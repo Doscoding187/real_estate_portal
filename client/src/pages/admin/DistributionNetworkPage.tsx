@@ -476,7 +476,7 @@ export default function DistributionNetworkPage() {
           <CardContent className="space-y-4">
             <div className="flex flex-wrap items-start gap-2">
               <Input
-                placeholder="Search development, city, province, brand"
+                placeholder="Search development or brand"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 className="max-w-md"
@@ -640,7 +640,7 @@ export default function DistributionNetworkPage() {
                                     <div>
                                       <p className="font-semibold">{row.developmentName}</p>
                                       <p className="text-xs text-slate-500">
-                                        {row.city}, {row.province}
+                                        {row.locationLabels?.join(', ') || 'No reviewed Place assignment'}
                                       </p>
                                     </div>
                                     <div className="flex flex-wrap gap-2">
@@ -693,7 +693,7 @@ export default function DistributionNetworkPage() {
                                     <div className="space-y-1">
                                       <p className="font-semibold">{row.developmentName}</p>
                                       <p className="text-xs text-slate-500">
-                                        {row.city}, {row.province}
+                                        {row.locationLabels?.join(', ') || 'No reviewed Place assignment'}
                                       </p>
                                       <p className="text-xs text-slate-500">
                                         {getPartnerDevelopmentSetupDescription(state)}

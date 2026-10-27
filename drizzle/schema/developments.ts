@@ -24,6 +24,7 @@ import { users } from './core';
 import { plans } from './billing';
 import { locations } from './locations';
 import { cataloguePublishers, developerOrganisations } from './developerIdentity';
+import { place } from './placeAuthority';
 
 const DEVELOPMENT_DOCUMENT_TYPE_VALUES = [
   'price_list',
@@ -246,8 +247,6 @@ export const developments = mysqlTable(
     description: text(),
     developmentType: mysqlEnum(['residential', 'commercial', 'mixed_use', 'land']).notNull(),
     address: text(),
-    city: varchar({ length: 100 }).notNull(),
-    province: varchar({ length: 100 }).notNull(),
     latitude: varchar({ length: 50 }),
     longitude: varchar({ length: 50 }),
     totalUnits: int(),
@@ -270,8 +269,6 @@ export const developments = mysqlTable(
     floorPlans: text(),
     brochures: text(),
     rating: decimal({ precision: 3, scale: 2 }),
-    suburb: varchar({ length: 100 }),
-    locationId: int('location_id'),
     postalCode: varchar('postal_code', { length: 20 }),
     gpsAccuracy: mysqlEnum('gps_accuracy', ['accurate', 'approximate']).default('approximate'),
     highlights: json(),
@@ -507,6 +504,9 @@ export const developmentPhases = mysqlTable(
     archivedAt: timestamp('archived_at', { mode: 'string' }),
   },
   table => [
+    // Required by development_place_assignments' composite phase FK. A phase
+    // may only be assigned under the Development that owns it.
+    unique('uq_development_phases_development_id_id').on(table.developmentId, table.id),
     index('idx_development_phases_development_id').on(table.developmentId),
     index('idx_development_phases_status').on(table.status),
     index('idx_development_phases_spec_type').on(table.specType),
@@ -905,5 +905,86 @@ export const developmentInventoryItems = mysqlTable(
       table.transactionType,
     ),
     index('idx_development_inventory_type_status').on(table.unitTypeId, table.status),
+  ],
+);
+
+export const DEVELOPMENT_PLACE_ASSIGNMENT_KINDS = [
+  'site',
+  'presentation',
+  'estate',
+] as const;
+
+export const DEVELOPMENT_PLACE_ASSIGNMENT_REVIEW_STATES = [
+  'pending_review',
+  'accepted',
+  'rejected',
+  'withdrawn',
+] as const;
+
+/**
+ * A reviewed association between a Development (or one of its phases) and a
+ * canonical Place. Only accepted `site` assignments are executable geography.
+ * Presentation and estate associations remain descriptive metadata and never
+ * participate in area matching.
+ */
+export const developmentPlaceAssignments = mysqlTable(
+  'development_place_assignments',
+  {
+    id: int().autoincrement().primaryKey(),
+    developmentId: int('development_id')
+      .notNull()
+      .references(() => developments.id, { onDelete: 'restrict' }),
+    phaseId: int('phase_id'),
+    placeId: varchar('place_id', { length: 40 })
+      .notNull()
+      .references(() => place.placeId, { onDelete: 'restrict', onUpdate: 'restrict' }),
+    assignmentKind: mysqlEnum('assignment_kind', DEVELOPMENT_PLACE_ASSIGNMENT_KINDS)
+      .default('site')
+      .notNull(),
+    reviewState: mysqlEnum('review_state', DEVELOPMENT_PLACE_ASSIGNMENT_REVIEW_STATES)
+      .default('pending_review')
+      .notNull(),
+    evidenceReference: varchar('evidence_reference', { length: 1000 }).notNull(),
+    createdByUserId: int('created_by_user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    // Keep reviewed decisions attributable. The review-shape check requires
+    // this actor, so deleting a reviewer must be restricted rather than
+    // silently nulling the durable decision record.
+    reviewedByUserId: int('reviewed_by_user_id').references(() => users.id, {
+      onDelete: 'restrict',
+    }),
+    reviewedAt: timestamp('reviewed_at', { mode: 'string' }),
+    reviewNote: text('review_note'),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    foreignKey({
+      name: 'fk_development_place_assignments_phase_owner',
+      columns: [table.developmentId, table.phaseId],
+      foreignColumns: [developmentPhases.developmentId, developmentPhases.id],
+    }).onDelete('restrict'),
+    index('idx_development_place_assignments_development_state_kind').on(
+      table.developmentId,
+      table.reviewState,
+      table.assignmentKind,
+    ),
+    index('idx_development_place_assignments_place_state_kind').on(
+      table.placeId,
+      table.reviewState,
+      table.assignmentKind,
+    ),
+    index('idx_development_place_assignments_phase_id').on(table.phaseId),
+    check(
+      'chk_development_place_assignment_review_metadata',
+      sql.raw(
+        "(`review_state` = 'pending_review' AND `reviewed_by_user_id` IS NULL AND `reviewed_at` IS NULL) OR (`review_state` IN ('accepted', 'rejected', 'withdrawn') AND `reviewed_by_user_id` IS NOT NULL AND `reviewed_at` IS NOT NULL)",
+      ),
+    ),
+    check(
+      'chk_development_place_assignment_evidence_reference',
+      sql.raw('CHAR_LENGTH(TRIM(`evidence_reference`)) > 0'),
+    ),
   ],
 );

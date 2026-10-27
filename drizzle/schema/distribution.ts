@@ -850,8 +850,8 @@ export const distributionProspectCheckFitMatches = mysqlTable(
       .notNull()
       .references(() => developments.id, { onDelete: 'cascade' }),
     developmentName: varchar('development_name', { length: 255 }).notNull(),
-    city: varchar('city', { length: 120 }),
-    province: varchar('province', { length: 120 }),
+    // A point-in-time label only; it is never used as geography authority.
+    locationLabel: varchar('location_label', { length: 500 }),
     entryPrice: int('entry_price').notNull(),
     currencyCode: varchar('currency_code', { length: 10 }).default('ZAR').notNull(),
     qualified: tinyint('qualified').default(0).notNull(),

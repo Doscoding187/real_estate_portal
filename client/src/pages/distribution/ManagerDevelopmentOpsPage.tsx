@@ -83,7 +83,7 @@ export default function ManagerDevelopmentOpsPage() {
               <CardHeader>
                 <CardTitle className="text-base">{item.developmentName}</CardTitle>
                 <CardDescription>
-                  {item.city || 'Unknown city'}, {item.province || 'Unknown province'}
+                  {item.locationLabels?.join(', ') || 'Location to be confirmed'}
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex items-center justify-between">

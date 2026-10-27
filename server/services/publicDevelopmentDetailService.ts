@@ -16,6 +16,7 @@ import {
 import { getDb } from '../db-connection';
 import { buildDevelopmentRootPath } from './developmentRouteAuthority';
 import { publicDevelopmentEligibilityConditions } from './publicDevelopmentEligibility';
+import { getDevelopmentPlaceGeography } from './developmentPlaceAssignmentService';
 
 function parseSlugOrId(input: string): { isId: boolean; value: string | number } {
   const trimmed = input.trim();
@@ -126,9 +127,6 @@ export class PublicDevelopmentDetailService {
         description: developments.description,
         images: developments.images,
         videos: developments.videos,
-        city: developments.city,
-        province: developments.province,
-        suburb: developments.suburb,
         address: developments.address,
         latitude: developments.latitude,
         longitude: developments.longitude,
@@ -138,7 +136,6 @@ export class PublicDevelopmentDetailService {
         estateSpecs: developments.estateSpecs,
         floorPlans: developments.floorPlans,
         brochures: developments.brochures,
-        locationId: developments.locationId,
         isPublished: developments.isPublished,
         publishedAt: developments.publishedAt,
         approvalStatus: developments.approvalStatus,
@@ -174,6 +171,8 @@ export class PublicDevelopmentDetailService {
 
     if (!row) return null;
 
+    const geography = await getDevelopmentPlaceGeography(Number(row.id));
+
     const [latestReview] = await db
       .select({ reviewedAt: developmentApprovalQueue.reviewedAt })
       .from(developmentApprovalQueue)
@@ -192,9 +191,8 @@ export class PublicDevelopmentDetailService {
       slug: (row.slug as string | null) ?? null,
       description: (row.description as string | null) ?? null,
       images: row.images,
-      city: String(row.city || ''),
-      suburb: (row.suburb as string | null) ?? null,
-      province: String(row.province || ''),
+      canonicalPlaceId: geography.canonicalPlaceId,
+      locationLabels: geography.locationLabels,
       developmentType:
         row.developmentType as PublicDevelopmentProjectionDevelopment['developmentType'],
       transactionType:
@@ -337,7 +335,6 @@ export class PublicDevelopmentDetailService {
       address:
         Number(row.showHouseAddress || 0) === 1 ? ((row.address as string | null) ?? null) : null,
       showHouseAddress: Number(row.showHouseAddress || 0) === 1,
-      locationId: (row.locationId as number | null) ?? null,
       latitude: coordinatesAreZeroPair ? null : latitude,
       longitude: coordinatesAreZeroPair ? null : longitude,
       gpsAccuracy: (row.gpsAccuracy as 'accurate' | 'approximate' | null) ?? null,

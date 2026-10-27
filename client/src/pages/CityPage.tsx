@@ -5,7 +5,6 @@ import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { LocationPageLayout } from '@/components/location/LocationPageLayout';
 import { LocationHeroSection } from '@/components/location/LocationHeroSection';
-import { SearchStage } from '@/components/location/SearchStage';
 import { FeaturedPropertiesCarousel } from '@/components/location/FeaturedPropertiesCarousel';
 
 import { LocationPropertyTypeExplorer } from '@/components/location/LocationPropertyTypeExplorer';
@@ -17,9 +16,6 @@ import { PropertyCategories } from '@/components/PropertyCategories';
 // Legacy components to be adapted or routed
 import { LocationGrid } from '@/components/location/LocationGrid';
 import { TabbedListingSection } from '@/components/location/TabbedListingSection';
-import { SimpleDevelopmentCard } from '@/components/SimpleDevelopmentCard';
-import { LocationTrendingFeedSection } from '@/components/location/LocationTrendingFeedSection';
-import type { FeedTab } from '@/components/location/LocationTrendingFeedSection';
 import { MarketInsights } from '@/components/location/MarketInsights';
 import { SEOTextBlock } from '@/components/location/SEOTextBlock';
 import { FinalCTA } from '@/components/location/FinalCTA';
@@ -29,10 +25,7 @@ import { SimilarLocations } from '@/components/location/SimilarLocations';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LocationSchema } from '@/components/location/LocationSchema';
 import { useSimilarLocations } from '@/hooks/useSimilarLocations';
-import { FeaturedDevelopers } from '@/components/location/FeaturedDevelopers';
 import { RecommendedAgents } from '@/components/location/RecommendedAgents';
-import { TopDevelopersCarousel } from '@/components/location/TopDevelopersCarousel';
-import { HighDemandProjectsCarousel } from '@/components/location/HighDemandProjectsCarousel';
 import { RecommendedAgenciesCarousel } from '@/components/location/RecommendedAgenciesCarousel';
 import { LocationTopLocalities } from '@/components/location/LocationTopLocalities';
 import { buildCampaignSlugHierarchy } from '@shared/locationCampaigns';
@@ -61,19 +54,6 @@ function ExistingCityPage({
     isLocationDiscovery ? null : locationPathPrefix === '/property-to-rent' ? 'rental' : 'buy',
   );
   const campaignHierarchy = buildCampaignSlugHierarchy(`${provinceSlug}/${citySlug}`);
-
-  const mapHeroTabToFeedTab = (tabId?: string | null): FeedTab => {
-    const t = String(tabId || 'buy').toLowerCase();
-    if (t === 'rental') return 'rent';
-    if (t === 'buy') return 'buy';
-    if (t === 'developments') return 'developments';
-    if (t === 'shared_living') return 'shared_living';
-    if (t === 'plot_land') return 'plot_land';
-    if (t === 'commercial') return 'commercial';
-    return 'buy';
-  };
-
-  const mapFeedTabToHeroTab = (tab: FeedTab): string => (tab === 'rent' ? 'rental' : tab);
 
   // Bare geography routes are always neutral discovery pages. Transactional search
   // state belongs to the explicit /property-for-sale or /property-to-rent roots.
@@ -113,7 +93,6 @@ function ExistingCityPage({
   const {
     city,
     suburbs = [],
-    developments = [],
     stats = {
       totalListings: 0,
       avgPrice: 0,
@@ -126,8 +105,6 @@ function ExistingCityPage({
 
   const propertyTypes = (data as any)?.propertyTypes ?? [];
   const topLocalities = (data as any)?.topLocalities ?? [];
-  const topDevelopers = (data as any)?.topDevelopers ?? [];
-  const investmentProjects = (data as any)?.investmentProjects ?? [];
   const recommendedAgencies = (data as any)?.recommendedAgencies ?? [];
 
   // Additional validation - city must exist
@@ -156,7 +133,7 @@ function ExistingCityPage({
         name={city.name}
         description={
           isLocationDiscovery
-            ? `Explore property opportunities, developments, local insights, and agents in ${city.name}.`
+            ? `Explore property opportunities, local insights, and agents in ${city.name}.`
             : `Property ${locationPathPrefix === '/property-to-rent' ? 'to rent' : 'for sale'} in ${city.name}`
         }
         url={locationCanonicalPath}
@@ -251,16 +228,6 @@ function ExistingCityPage({
             />
           ) : undefined
         }
-        highDemandDevelopments={
-          <LocationTrendingFeedSection
-            locationName={city.name}
-            province={city.provinceName || provinceSlug}
-            city={city.name}
-            activeTab={isLocationDiscovery ? null : mapHeroTabToFeedTab(heroTab)}
-            onTabChange={tab => setHeroTab(mapFeedTabToHeroTab(tab))}
-            neutralMode={isLocationDiscovery}
-          />
-        }
         popularLocations={
           <ExploreCities
             // CRITICAL: Suburb Link -> SRP
@@ -282,18 +249,6 @@ function ExistingCityPage({
         }
         recommendedAgents={
           <RecommendedAgents locationType="city" locationId={city.id} areaLabel={city.name} />
-        }
-        developerShowcase={
-          topDevelopers && topDevelopers.length > 0 ? (
-            <TopDevelopersCarousel developers={topDevelopers} locationName={city.name} />
-          ) : (
-            <FeaturedDevelopers locationType="city" locationId={city.id} locationName={city.name} />
-          )
-        }
-        investmentShowcase={
-          investmentProjects && investmentProjects.length > 0 ? (
-            <HighDemandProjectsCarousel projects={investmentProjects} locationName={city.name} />
-          ) : undefined
         }
         agencyShowcase={
           recommendedAgencies && recommendedAgencies.length > 0 ? (

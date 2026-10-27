@@ -76,10 +76,7 @@ export default function PublisherDevelopments() {
     const query = searchTerm.trim().toLowerCase();
     if (!query) return developments;
     return developments.filter(development => {
-      const location = development.identity.location;
-      return [development.identity.name, location.city, location.province]
-        .filter(Boolean)
-        .some(value => value.toLowerCase().includes(query));
+      return development.identity.name.toLowerCase().includes(query);
     });
   }, [developments, searchTerm]);
 
@@ -234,7 +231,8 @@ export default function PublisherDevelopments() {
                     </Badge>
                   </div>
                   <CardDescription>
-                    {development.identity.location.city}, {development.identity.location.province}
+                    {development.identity.location.locationLabels.join(', ') ||
+                      'Place assignment pending review'}
                   </CardDescription>
                 </div>
                 <div className="flex flex-wrap gap-2">

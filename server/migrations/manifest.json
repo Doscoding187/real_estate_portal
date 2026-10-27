@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0153_distribution_referrer_search_assessments.sql",
+  "expectedHead": "0157_developments_canonical_place_only.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -1603,6 +1603,48 @@
       "kind": "ddl",
       "statementPolicy": "single-ddl",
       "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 154,
+      "filename": "0154_development_phases_development_id_id_unique.sql",
+      "checksum": "37f5eac48fad49aefbe1ffd36e2dd9c2ce122abb5c9d1cefab3fbcea7b34e51c",
+      "parent": "0153_distribution_referrer_search_assessments.sql",
+      "parentChecksum": "717d90efef495747e013a3ae883e07d2486ee526985924737e514b8679f957f7",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 155,
+      "filename": "0155_development_place_assignments.sql",
+      "checksum": "034cf1900b1623fc3d8fa545144c9e26666bba58957d20853e4f0c11c5a6a254",
+      "parent": "0154_development_phases_development_id_id_unique.sql",
+      "parentChecksum": "37f5eac48fad49aefbe1ffd36e2dd9c2ce122abb5c9d1cefab3fbcea7b34e51c",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 156,
+      "filename": "0156_distribution_check_fit_location_label.sql",
+      "checksum": "f26969e541fc99558f765bc252c34a4c7817f1485c76ab0ce3f433cd58b91faf",
+      "parent": "0155_development_place_assignments.sql",
+      "parentChecksum": "034cf1900b1623fc3d8fa545144c9e26666bba58957d20853e4f0c11c5a6a254",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "Edward explicit pre-launch authorization to retire Development text and numeric geography in favor of reviewed Place assignments, 2026-10-27; authoring only, no database apply"
+    },
+    {
+      "sequence": 157,
+      "filename": "0157_developments_canonical_place_only.sql",
+      "checksum": "3dbddd436420556f2831b729f016a46a0095397961a33b5035995a1be991b140",
+      "parent": "0156_distribution_check_fit_location_label.sql",
+      "parentChecksum": "f26969e541fc99558f765bc252c34a4c7817f1485c76ab0ce3f433cd58b91faf",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "Edward explicit pre-launch authorization to retire Development text and numeric geography in favor of reviewed Place assignments, 2026-10-27; authoring only, no database apply"
     }
   ]
 }

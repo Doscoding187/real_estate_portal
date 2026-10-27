@@ -14,7 +14,7 @@ const {
   mockUpdateSet,
   mockUpdateWhere,
   mockSearchProperties,
-  mockSearchDevelopmentListings,
+  mockSearchInventory,
   mockSendEmail,
 } = vi.hoisted(() => ({
   mockGetDb: vi.fn(),
@@ -30,7 +30,7 @@ const {
   mockUpdateSet: vi.fn(),
   mockUpdateWhere: vi.fn(),
   mockSearchProperties: vi.fn(),
-  mockSearchDevelopmentListings: vi.fn(),
+  mockSearchInventory: vi.fn(),
   mockSendEmail: vi.fn(),
 }));
 
@@ -44,9 +44,9 @@ vi.mock('../propertySearchService', () => ({
   },
 }));
 
-vi.mock('../developmentDerivedListingService', () => ({
-  developmentDerivedListingService: {
-    searchListings: mockSearchDevelopmentListings,
+vi.mock('../publicSearchService', () => ({
+  publicSearchService: {
+    searchInventory: mockSearchInventory,
   },
 }));
 
@@ -196,11 +196,11 @@ describe('savedSearchNotificationEngine', () => {
         },
       ],
     });
-    mockSearchDevelopmentListings.mockResolvedValue({
+    mockSearchInventory.mockResolvedValue({
       total: 0,
-      items: [],
-      page: 1,
-      pageSize: 100,
+      cards: [],
+      page: 0,
+      pageSize: 50,
       hasMore: false,
     });
   });
@@ -391,15 +391,16 @@ describe('savedSearchNotificationEngine', () => {
     expect(result.emailedNotifications).toBe(0);
   });
 
-  it('supports development-only dry runs without writing notifications', async () => {
+  it('searches Development saved searches through an exact canonical Place assignment', async () => {
+    const canonicalPlaceId = 'pl-place-01-000000000000000000000001';
     mockDbWhere.mockResolvedValue([
       {
         id: 12,
         userId: 9,
         name: 'Off-plan Sandton',
         criteria: {
-          city: 'Johannesburg',
-          suburb: 'Sandton',
+          canonicalPlaceId,
+          listingType: 'sale',
           listingSource: 'development',
         },
         notificationFrequency: 'instant',
@@ -413,25 +414,30 @@ describe('savedSearchNotificationEngine', () => {
       total: 0,
       properties: [],
     });
-    mockSearchDevelopmentListings.mockResolvedValue({
+    mockSearchInventory.mockResolvedValue({
       total: 2,
-      items: [
+      cards: [
         {
           id: 'dev-42-unit-a',
           title: '2 Bedroom Apartment for Sale in Sandton',
           price: 2500000,
-          city: 'Johannesburg',
-          suburb: 'Sandton',
+          canonicalPlaceId: 'pl-place-01-000000000000000000000001',
+          locationLabels: ['Sandton', 'Johannesburg'],
           listingType: 'sale',
           listingSource: 'development',
-          listedDate: new Date('2026-03-21T09:30:00.000Z'),
-          development: { id: 42, slug: 'sandton-rise' },
+          kind: 'development',
+          city: 'Johannesburg',
+          suburb: 'Sandton',
+          province: 'Gauteng',
+          location: 'Sandton, Johannesburg',
+          href: '/development/sandton-rise',
           image: 'https://example.com/dev.jpg',
           images: [],
+          listedDate: new Date('2026-03-21T09:30:00.000Z'),
         },
       ],
-      page: 1,
-      pageSize: 100,
+      page: 0,
+      pageSize: 50,
       hasMore: false,
     });
 
@@ -441,7 +447,10 @@ describe('savedSearchNotificationEngine', () => {
       now: new Date('2026-03-21T10:00:00.000Z'),
     });
 
-    expect(mockSearchDevelopmentListings).toHaveBeenCalled();
+    expect(mockSearchInventory).toHaveBeenCalledWith(
+      expect.objectContaining({ canonicalPlaceId, listingSource: 'development' }),
+    );
+    expect(mockSearchProperties).not.toHaveBeenCalled();
     expect(mockInsertValues).not.toHaveBeenCalled();
     expect(mockSendEmail).not.toHaveBeenCalled();
     expect(result.notifications[0]).toMatchObject({
@@ -453,6 +462,37 @@ describe('savedSearchNotificationEngine', () => {
       newMatchCount: 2,
       actionUrl: '/development/sandton-rise',
     });
+  });
+
+  it('fails closed for text-only Development saved-search geography', async () => {
+    mockDbWhere.mockResolvedValue([
+      {
+        id: 13,
+        userId: 9,
+        name: 'Legacy Sandton search',
+        criteria: {
+          city: 'Johannesburg',
+          suburb: 'Sandton',
+          listingType: 'sale',
+          listingSource: 'development',
+        },
+        notificationFrequency: 'instant',
+        createdAt: '2026-03-21T08:00:00.000Z',
+        updatedAt: '2026-03-21T08:00:00.000Z',
+        lastNotifiedAt: null,
+      },
+    ]);
+    mockDbOrderBy.mockReturnValue({ where: mockDbWhere });
+
+    const result = await savedSearchNotificationEngine.processDueNotifications({
+      userId: 9,
+      dryRun: true,
+      now: new Date('2026-03-21T10:00:00.000Z'),
+    });
+
+    expect(mockSearchInventory).not.toHaveBeenCalled();
+    expect(mockSearchProperties).not.toHaveBeenCalled();
+    expect(result.notifications).toEqual([]);
   });
 
   it('skips email delivery when the saved-search user has no email address', async () => {

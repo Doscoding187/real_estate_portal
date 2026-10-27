@@ -182,7 +182,7 @@ describe('Developer Engine S0 containment contracts', () => {
     expect(derivedListingService).toContain('publicDevelopmentEligibilityConditions()');
     expect(developmentService).not.toContain("neq(developments.transactionType, 'auction')");
     expect(derivedListingService).not.toContain("neq(developments.transactionType, 'auction')");
-    expect(locationPagesService).toContain('publicDevelopmentEligibilityConditions()');
+    expect(locationPagesService).not.toContain('publicDevelopmentEligibilityConditions()');
     expect(publicLeadCaptureService).toContain('evaluatePublicDevelopmentEligibility');
     expect(distributionPolicy).toContain('getDevelopmentSalesProjection');
     expect(distributionPolicy).toContain('projection.campaign.visible === true');

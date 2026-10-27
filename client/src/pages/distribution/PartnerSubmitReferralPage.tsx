@@ -7,6 +7,10 @@ import { ReferralAppShell } from '@/components/referral/ReferralAppShell';
 import { ReferralIntakePausedCard } from '@/components/distribution/partner/ReferralIntakePausedCard';
 import { DevelopmentBrochureDialog } from '@/components/distribution/partner/DevelopmentBrochureDialog';
 import DevelopmentOpportunityCard from '@/components/distribution/partner/DevelopmentOpportunityCard';
+import {
+  CanonicalPlaceSelector,
+  type CanonicalPlaceSelection,
+} from '@/components/location/CanonicalPlaceSelector';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -248,7 +252,7 @@ export default function PartnerSubmitReferralPage() {
   const [downloadedBrochureIds, setDownloadedBrochureIds] = useState<number[]>([]);
   const [downloadedDocumentKeys, setDownloadedDocumentKeys] = useState<string[]>([]);
   const [search, setSearch] = useState('');
-  const [locationFilter, setLocationFilter] = useState('all');
+  const [locationPlace, setLocationPlace] = useState<CanonicalPlaceSelection | null>(null);
   const [typeFilter, setTypeFilter] = useState('all');
   const [priceFilter, setPriceFilter] = useState<string>('any');
   const [brochureItem, setBrochureItem] = useState<any>(null);
@@ -308,15 +312,6 @@ export default function PartnerSubmitReferralPage() {
     null;
   const selectedModeProjection = selectedDevelopment?.inventory?.modes?.[marketMode] || null;
 
-  const locationOptions = useMemo(() => {
-    const values = new Set<string>();
-    for (const item of eligibleDevelopments) {
-      const city = String(item.city || '').trim();
-      if (city) values.add(city);
-    }
-    return Array.from(values).sort();
-  }, [eligibleDevelopments]);
-
   const typeOptions = useMemo(() => {
     const values = new Set<string>();
     for (const item of eligibleDevelopments) {
@@ -330,12 +325,12 @@ export default function PartnerSubmitReferralPage() {
     const term = search.trim().toLowerCase();
     return eligibleDevelopments.filter(item => {
       if (term) {
-        const haystack = [item.developmentName, item.city, item.province]
-          .map(value => String(value || '').toLowerCase())
-          .join(' ');
-        if (!haystack.includes(term)) return false;
+        if (!String(item.developmentName || '').toLowerCase().includes(term)) return false;
       }
-      if (locationFilter !== 'all' && String(item.city || '') !== locationFilter) return false;
+      if (
+        locationPlace &&
+        (!item.canonicalPlaceId || item.canonicalPlaceId !== locationPlace.canonicalPlaceId)
+      ) return false;
       if (typeFilter !== 'all' && String(item.campaign?.developmentType || '') !== typeFilter) {
         return false;
       }
@@ -352,7 +347,7 @@ export default function PartnerSubmitReferralPage() {
       }
       return true;
     });
-  }, [eligibleDevelopments, locationFilter, marketMode, priceFilter, search, typeFilter]);
+  }, [eligibleDevelopments, locationPlace, marketMode, priceFilter, search, typeFilter]);
 
   const sharedDevelopments = useMemo(
     () =>
@@ -605,22 +600,16 @@ export default function PartnerSubmitReferralPage() {
                       onChange={event => setSearch(event.target.value)}
                     />
                   </div>
-                  <label className="flex min-w-0 flex-col justify-center gap-0.5 border-b border-border px-4 py-2.5 md:border-b-0 md:border-r">
-                    <span className="text-[11px] font-medium text-muted-foreground">Location</span>
-                    <select
-                      aria-label="Location"
-                      className="h-6 w-full border-0 bg-transparent p-0 text-[13.5px] font-medium text-[#0b1c3f] focus:outline-none focus:ring-0"
-                      value={locationFilter}
-                      onChange={event => setLocationFilter(event.target.value)}
-                    >
-                      <option value="all">All locations</option>
-                      {locationOptions.map(location => (
-                        <option key={location} value={location}>
-                          {location}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                  <div className="min-w-0 border-b border-border px-4 py-2.5 md:border-b-0 md:border-r">
+                    <CanonicalPlaceSelector
+                      value={locationPlace}
+                      onChange={setLocationPlace}
+                      purpose="search"
+                      label="Area"
+                      placeholder="Choose a city, suburb, or locality"
+                      hint="Only developments assigned to this exact Place are included."
+                    />
+                  </div>
                   <label className="flex min-w-0 flex-col justify-center gap-0.5 border-b border-border px-4 py-2.5 md:border-b-0 md:border-r">
                     <span className="text-[11px] font-medium text-muted-foreground">
                       Property type

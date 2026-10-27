@@ -348,7 +348,7 @@ export default function ProjectLibrary() {
             >
               {developments.map(development => (
                 <option key={development.id} value={development.id}>
-                  {development.name} · {development.city}, {development.province}
+                  {development.name} · {development.locationLabels?.join(', ') || 'Place assignment pending'}
                 </option>
               ))}
             </select>
@@ -383,7 +383,7 @@ export default function ProjectLibrary() {
             <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4 text-sm">
               <span className="font-medium text-slate-900">{selectedSummary.name}</span>
               <span className="text-slate-500">
-                {[selectedSummary.city, selectedSummary.province].filter(Boolean).join(', ')}
+                {selectedSummary.locationLabels?.join(', ') || 'Place assignment pending review'}
               </span>
               <Badge variant="outline">
                 {selectedSummary.isPublished ? 'Published development' : 'Not published'}

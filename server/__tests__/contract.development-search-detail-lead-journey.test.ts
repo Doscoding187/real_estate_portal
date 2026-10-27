@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
-  mockSearchDevelopmentListings,
+  mockSearchPublicInventory,
   mockSearchProperties,
   mockSearchDevelopments,
   mockGetPublicDevelopmentBySlug,
@@ -20,7 +20,7 @@ const {
   mockCaptureBrandLead,
   mockRecordAgentOsEventForAgentId,
 } = vi.hoisted(() => ({
-  mockSearchDevelopmentListings: vi.fn(),
+  mockSearchPublicInventory: vi.fn(),
   mockSearchProperties: vi.fn(),
   mockSearchDevelopments: vi.fn(),
   mockGetPublicDevelopmentBySlug: vi.fn(),
@@ -40,15 +40,15 @@ const {
   mockRecordAgentOsEventForAgentId: vi.fn(),
 }));
 
-vi.mock('../services/developmentDerivedListingService', () => ({
-  developmentDerivedListingService: {
-    searchListings: mockSearchDevelopmentListings,
-  },
-}));
-
 vi.mock('../services/propertySearchService', () => ({
   propertySearchService: {
     searchProperties: mockSearchProperties,
+  },
+}));
+
+vi.mock('../services/publicSearchService', () => ({
+  publicSearchService: {
+    searchInventory: mockSearchPublicInventory,
   },
 }));
 
@@ -126,45 +126,9 @@ describe('development search-detail-lead public journey contract', () => {
       page: 0,
       pageSize: 20,
       hasMore: false,
-      limit: 20,
-      offset: 0,
       locationState: 'not_requested',
     });
-    mockSearchDevelopmentListings.mockResolvedValue({
-      items: [
-        {
-          id: 'dev-77-unit-a',
-          unitTypeId: 'unit-a',
-          developmentId: 77,
-          title: 'Type A Apartment for Sale',
-          price: 1299000,
-          city: 'Johannesburg',
-          suburb: 'Berea',
-          province: 'Gauteng',
-          propertyType: 'apartment',
-          listingType: 'sale',
-          transactionType: 'for_sale',
-          listingSource: 'development',
-          bedrooms: 3,
-          bathrooms: 2,
-          availableUnits: 4,
-          totalUnits: 8,
-          images: [],
-          listedDate: new Date('2026-03-20T00:00:00.000Z'),
-          development: {
-            id: 77,
-            name: 'Cosmopolitan Projects',
-            slug: 'cosmopolitan-projects',
-            status: 'selling',
-          },
-          developerBrand: {
-            id: 13,
-            brandName: 'Cosmopolitan Projects',
-            slug: 'cosmopolitan-projects',
-            publicContactEmail: 'sales@example.com',
-          },
-        },
-      ],
+    mockSearchPublicInventory.mockResolvedValue({
       cards: [
         {
           kind: 'development',
@@ -207,7 +171,7 @@ describe('development search-detail-lead public journey contract', () => {
         },
       ],
       total: 1,
-      page: 1,
+      page: 0,
       pageSize: 20,
       hasMore: false,
     });
@@ -260,15 +224,22 @@ describe('development search-detail-lead public journey contract', () => {
       user: null,
     } as any);
 
-    const search = await caller.properties.searchDevelopmentListings({
-      city: 'Johannesburg',
-      province: 'Gauteng',
+    const canonicalPlaceId = 'pl-place-01-000000000000000000000001';
+    const search = await caller.properties.searchPublicInventory({
+      canonicalPlaceId,
       listingType: 'sale',
-      limit: 20,
-      offset: 0,
+      listingSource: 'development',
+      page: 0,
+      pageSize: 20,
+      sortOption: 'date_desc',
     });
 
     const card = (search as any).cards[0];
+    expect(mockSearchPublicInventory).toHaveBeenCalledWith(
+      expect.objectContaining({ canonicalPlaceId, listingSource: 'development' }),
+    );
+    expect(mockSearchPublicInventory.mock.calls[0][0]).not.toHaveProperty('city');
+    expect(mockSearchPublicInventory.mock.calls[0][0]).not.toHaveProperty('province');
     expect(card).toMatchObject({
       href: '/development/cosmopolitan-projects/unit/unit-a',
       developmentId: 77,
@@ -402,9 +373,8 @@ describe('development search-detail-lead public journey contract', () => {
           canonicalRoute: '/development/rental-heights',
           description: null,
           images: [],
-          city: 'Johannesburg',
-          suburb: 'Berea',
-          province: 'Gauteng',
+          canonicalPlaceId: 'pl-place-01-000000000000000000000001',
+          locationLabels: ['Johannesburg'],
           developmentType: 'residential',
           transactionType: 'for_rent',
           status: 'selling',
@@ -435,8 +405,6 @@ describe('development search-detail-lead public journey contract', () => {
       page: 0,
       pageSize: 1,
       hasMore: false,
-      limit: 1,
-      offset: 0,
       locationState: 'resolved',
     });
 
@@ -448,7 +416,7 @@ describe('development search-detail-lead public journey contract', () => {
 
     const result = await caller.developer.getHomeTrendingFeed({
       tab: 'developments',
-      province: 'Gauteng',
+      canonicalPlaceId: 'pl-place-01-000000000000000000000001',
       limit: 1,
     });
 
@@ -462,16 +430,45 @@ describe('development search-detail-lead public journey contract', () => {
       availabilityState: 'not_stated',
       publisherName: 'Rental Homes Publisher',
       publisherAuthorityKind: 'platform_reference',
+      canonicalPlaceId: 'pl-place-01-000000000000000000000001',
+      locationLabels: ['Johannesburg'],
     });
+    expect(result.items[0]).not.toHaveProperty('city');
+    expect(result.items[0]).not.toHaveProperty('suburb');
+    expect(result.meta).toMatchObject({ requestedScope: 'canonical_place' });
     expect(mockSearchDevelopments).toHaveBeenCalledWith(
       expect.objectContaining({
-        province: 'Gauteng',
+        canonicalPlaceId: 'pl-place-01-000000000000000000000001',
         developmentType: 'residential',
         pageSize: 1,
         sortOption: 'relevance',
       }),
     );
     expect(mockListPublicDevelopments).not.toHaveBeenCalled();
+  });
+
+  it('rejects Development browse requests with text or malformed Place geography', async () => {
+    const caller = appRouter.createCaller({
+      req: { headers: {} },
+      res: {},
+      user: null,
+    } as any);
+
+    await expect(
+      caller.developer.getHomeTrendingFeed({
+        tab: 'developments',
+        province: 'Gauteng',
+        limit: 1,
+      }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    await expect(
+      caller.developer.getHomeTrendingFeed({
+        tab: 'developments',
+        canonicalPlaceId: 'malformed',
+        limit: 1,
+      }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    expect(mockSearchDevelopments).not.toHaveBeenCalled();
   });
 
   it('preserves the canonical property type and compact parking fact for the homepage Buy rail', async () => {
@@ -520,15 +517,6 @@ describe('development search-detail-lead public journey contract', () => {
       pageSize: 12,
       hasMore: false,
     });
-    mockSearchDevelopmentListings.mockResolvedValueOnce({
-      items: [],
-      cards: [],
-      total: 0,
-      page: 1,
-      pageSize: 12,
-      hasMore: false,
-    });
-
     const caller = appRouter.createCaller({
       req: { headers: {} },
       res: {},
@@ -577,15 +565,6 @@ describe('development search-detail-lead public journey contract', () => {
       pageSize: 20,
       hasMore: false,
     });
-    mockSearchDevelopmentListings.mockResolvedValueOnce({
-      items: [],
-      cards: [],
-      total: 0,
-      page: 1,
-      pageSize: 20,
-      hasMore: false,
-    });
-
     const caller = appRouter.createCaller({
       req: { headers: {} },
       res: {},

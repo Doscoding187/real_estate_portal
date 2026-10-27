@@ -1,21 +1,30 @@
 import { describe, expect, it } from 'vitest';
-import { developerDiscoveryHref, readDeveloperProvince } from '../developerDiscovery';
-describe('Developer discovery scope continuity', () => {
-  it('accepts an existing province name or slug, while keeping unsupported scope invalid', () => {
-    expect(readDeveloperProvince('?province=western-cape')).toEqual({
-      province: 'Western Cape',
+import { developerDiscoveryHref, readDeveloperPlace } from '../developerDiscovery';
+
+const PLACE_ID = 'pl-place-01-000000000000000000000001';
+
+describe('Developer discovery Place scope', () => {
+  it('accepts one valid canonical Place and rejects text or mixed geography', () => {
+    expect(readDeveloperPlace(`?canonicalPlaceId=${PLACE_ID}`)).toEqual({
+      canonicalPlaceId: PLACE_ID,
       invalid: false,
     });
-    expect(readDeveloperProvince('?province=Atlantis')).toEqual({
-      province: undefined,
+    expect(readDeveloperPlace('?province=Gauteng')).toEqual({
+      canonicalPlaceId: undefined,
       invalid: true,
     });
-    expect(readDeveloperProvince('')).toEqual({ province: undefined, invalid: false });
+    expect(readDeveloperPlace(`?canonicalPlaceId=${PLACE_ID}&city=Johannesburg`)).toEqual({
+      canonicalPlaceId: PLACE_ID,
+      invalid: true,
+    });
+    expect(readDeveloperPlace('')).toEqual({ canonicalPlaceId: undefined, invalid: false });
   });
-  it('carries scope to the correct profile section and directory', () => {
-    expect(developerDiscoveryHref('/developer/builder', 'Western Cape', true)).toBe(
-      '/developer/builder?province=Western+Cape#developments',
+  it('carries only the canonical Place ID to the correct profile section and directory', () => {
+    expect(developerDiscoveryHref('/developer/builder', PLACE_ID, true)).toBe(
+      `/developer/builder?canonicalPlaceId=${PLACE_ID}#developments`,
     );
-    expect(developerDiscoveryHref('/developers', 'Gauteng')).toBe('/developers?province=Gauteng');
+    expect(developerDiscoveryHref('/developers', PLACE_ID)).toBe(
+      `/developers?canonicalPlaceId=${PLACE_ID}`,
+    );
   });
 });

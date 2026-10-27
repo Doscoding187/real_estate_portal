@@ -356,14 +356,9 @@ function buildPublicFilters(
   };
 }
 
-function buildDevelopmentFilters(
-  input: PublicSearchInventoryInput,
-  location: ResolvedLocation | null,
-) {
+function buildDevelopmentFilters(input: PublicSearchInventoryInput & { canonicalPlaceId: string }) {
   return {
-    province: location?.province.slug || input.province,
-    city: location?.city?.slug || input.city,
-    suburb: location?.suburb ? [location.suburb.slug] : input.suburb,
+    canonicalPlaceId: input.canonicalPlaceId,
     propertyType: genericJourneyPropertyTypes(input.listingType!, input.propertyType),
     listingType: input.listingType,
     minPrice: input.minPrice,
@@ -375,7 +370,6 @@ function buildDevelopmentFilters(
     minArea: input.minArea,
     maxArea: input.maxArea,
     bounds: buildSearchBounds(input),
-    locations: undefined,
   };
 }
 
@@ -424,11 +418,11 @@ export class PublicSearchService {
       );
     }
 
-    if (input.canonicalPlaceId && input.listingSource === 'development') {
+    if (input.listingSource === 'development' && !input.canonicalPlaceId) {
       return emptyLocationResult(
         input,
         'unavailable',
-        'Development inventory does not currently support this location selection. Search property listings instead.',
+        'Choose one approved canonical Place to search Development inventory.',
       );
     }
 
@@ -710,11 +704,12 @@ export class PublicSearchService {
 
     const filters = buildPublicFilters(input, location);
     filters.canonicalPlaceIds = placeMemberIds;
-    const developmentFilters = buildDevelopmentFilters(input, location);
     const manualEnabled = input.listingSource !== 'development';
-    // Development inventory has no canonical Place assignment. It cannot join
-    // this boundary through names or unrelated numeric geography.
-    const developmentEnabled = input.listingSource !== 'manual' && !input.canonicalPlaceId;
+    // Development inventory executes only against one reviewed Place identity.
+    const developmentEnabled = input.listingSource !== 'manual' && Boolean(input.canonicalPlaceId);
+    const developmentFilters = input.canonicalPlaceId
+      ? buildDevelopmentFilters({ ...input, canonicalPlaceId: input.canonicalPlaceId })
+      : undefined;
     const fetchSourceResults = async (requestedPage: number) => {
       const sourcePageSize =
         manualEnabled && developmentEnabled ? (requestedPage + 1) * pageSize : pageSize;
@@ -749,20 +744,12 @@ export class PublicSearchService {
               )
           : null,
         developmentEnabled
-          ? queryBoundary
-            ? developmentDerivedListingService.searchListings(
-                developmentFilters,
-                sourceSortOption,
-                sourcePage,
-                sourcePageSize,
-                queryBoundary,
-              )
-            : developmentDerivedListingService.searchListings(
-                developmentFilters,
-                sourceSortOption,
-                sourcePage,
-                sourcePageSize,
-              )
+          ? developmentDerivedListingService.searchListings(
+              developmentFilters!,
+              sourceSortOption,
+              sourcePage,
+              sourcePageSize,
+            )
           : null,
       ]);
     };

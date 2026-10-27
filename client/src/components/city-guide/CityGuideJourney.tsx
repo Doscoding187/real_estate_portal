@@ -2,7 +2,6 @@ import { useEffect, useId, useState } from 'react';
 import { Link } from 'wouter';
 import {
   ArrowRight,
-  Building2,
   Compass,
   Home,
   KeyRound,
@@ -19,7 +18,6 @@ import type { LocationNode } from '@/types/location';
 import { cityGuideChoices, guidePlaceNode } from '@/lib/cityGuideDiscovery';
 import {
   buildPropertySearchUrl,
-  buildDevelopmentsSearchUrl,
   BUY_PROPERTY_TYPE_OPTIONS,
   RENT_PROPERTY_TYPE_OPTIONS,
 } from '@/lib/heroJourneySearch';
@@ -148,7 +146,6 @@ export function CitySuburbFinder({
 const journeys = [
   { id: 'buy', label: 'Buy', icon: Home, release: 'buy' },
   { id: 'rent', label: 'Rent', icon: KeyRound, release: 'rent' },
-  { id: 'developments', label: 'Developments', icon: Building2, release: 'developments' },
   { id: 'explore', label: 'Explore areas', icon: Compass, release: undefined },
   { id: 'land', label: 'Land & plots', icon: LandPlot, release: 'plot_land' },
   { id: 'commercial', label: 'Commercial', icon: BriefcaseBusiness, release: 'commercial' },
@@ -176,9 +173,7 @@ export function CityGuideJourney({
             propertyType: type,
             maxPrice: budget,
           })
-        : journey === 'developments'
-          ? buildDevelopmentsSearchUrl({ selectedLocations: [place] })
-          : journey === 'explore'
+        : journey === 'explore'
             ? undefined
             : buildConsumerJourneyUrl({
                 intent: journey === 'land' ? 'buy' : 'rent',

@@ -417,11 +417,7 @@ export interface DevelopmentWizardState {
       latitude: string;
       longitude: string;
       address: string;
-      city: string;
-      province: string;
-      suburb?: string;
       postalCode?: string;
-      // Legacy props to prevent breaks
       gpsAccuracy?: 'accurate' | 'approximate';
       noOfficialStreet?: boolean;
     };
@@ -702,8 +698,6 @@ const initialState: Omit<DevelopmentWizardState, keyof ReturnType<typeof createA
       latitude: '',
       longitude: '',
       address: '',
-      city: '',
-      province: '',
     },
     media: {
       photos: [],
@@ -766,6 +760,17 @@ function normalizeDevelopmentData(
   current: typeof _DEFAULT_DEVELOPMENT_DATA,
   updates: Partial<typeof _DEFAULT_DEVELOPMENT_DATA>,
 ): typeof _DEFAULT_DEVELOPMENT_DATA {
+  const mergedLocation = {
+    ...(current.location || initialState.developmentData.location),
+    ...(updates.location || {}),
+  };
+  const canonicalLocation = {
+    address: mergedLocation.address ?? '',
+    postalCode: mergedLocation.postalCode ?? '',
+    latitude: mergedLocation.latitude ?? '',
+    longitude: mergedLocation.longitude ?? '',
+  };
+
   return {
     ...current,
     ...updates,
@@ -776,10 +781,7 @@ function normalizeDevelopmentData(
     amenities: updates.amenities ?? current.amenities ?? [],
     propertyTypes: updates.propertyTypes ?? current.propertyTypes ?? [],
     // Nested objects need deep merge
-    location: {
-      ...(current.location || initialState.developmentData.location),
-      ...(updates.location || {}),
-    } as typeof current.location,
+    location: canonicalLocation as typeof current.location,
     media: {
       photos: updates.media?.photos ?? current.media?.photos ?? [],
       videos: updates.media?.videos ?? current.media?.videos ?? [],
@@ -787,6 +789,25 @@ function normalizeDevelopmentData(
       heroImage: updates.media?.heroImage ?? current.media?.heroImage,
     },
   };
+}
+
+const DEVELOPMENT_WIZARD_LOCATION_FIELDS = [
+  'address',
+  'latitude',
+  'longitude',
+  'postalCode',
+  'gpsAccuracy',
+  'noOfficialStreet',
+] as const;
+
+function canonicalDevelopmentWizardLocation(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  const source = value as Record<string, unknown>;
+  return Object.fromEntries(
+    DEVELOPMENT_WIZARD_LOCATION_FIELDS
+      .filter(field => source[field] !== undefined)
+      .map(field => [field, source[field]]),
+  );
 }
 
 // Helper function to create actions
@@ -803,7 +824,7 @@ const createActions = (
     // 1. Extract Step Data Slices (Canonical Source)
     const identity = state.stepData?.identity_market || {};
     const config = state.stepData?.configuration || {};
-    const location = state.stepData?.location || {};
+    const location = canonicalDevelopmentWizardLocation(state.stepData?.location);
     const governance = state.stepData?.governance_finances || {};
     const amenities = state.stepData?.amenities_features || {};
     const marketing = state.stepData?.marketing_summary || {};
@@ -909,10 +930,11 @@ const createActions = (
       const wizardData = buildWizardData(state);
       const recommendations: string[] = [];
 
-      const suburb = String(wizardData.location?.suburb || '').trim();
-      if (!suburb) {
+      const latitude = Number(wizardData.location?.latitude);
+      const longitude = Number(wizardData.location?.longitude);
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
         recommendations.push(
-          'Add a suburb so the result card location is complete (suburb, city, province).',
+          'Add verified entrance coordinates so the development site can be reviewed and assigned to a canonical Place.',
         );
       }
 
@@ -1198,7 +1220,12 @@ const createActions = (
           break;
         case 5:
           if (!state.developmentData?.location?.address) errors.push('Location is required');
-          if (!state.developmentData?.location?.city) errors.push('City is required');
+          if (
+            !Number.isFinite(Number(state.developmentData?.location?.latitude)) ||
+            !Number.isFinite(Number(state.developmentData?.location?.longitude))
+          ) {
+            errors.push('Verified development entrance coordinates are required');
+          }
           break;
         case 8: {
           if ((state.developmentData?.highlights?.length || 0) < 3)
@@ -1474,16 +1501,21 @@ const createActions = (
     saveWorkflowStepData: (stepId: WizardStepId, data: Record<string, any>) =>
       set(state => {
         // 1) Update canonical step slice
+        const stepData =
+          stepId === 'location' ? canonicalDevelopmentWizardLocation(data) : data;
         const nextStepData = {
           ...state.stepData,
           [stepId]: {
             ...(state.stepData?.[stepId] ?? {}),
-            ...data,
+            ...stepData,
           },
         };
 
         // 2) Update legacy developmentData (best-effort mirror during migration)
-        const mergedDevData = normalizeDevelopmentData(state.developmentData, data as any);
+        const mergedDevData = normalizeDevelopmentData(
+          state.developmentData,
+          stepId === 'location' ? { location: stepData } : (data as any),
+        );
 
         // 3) CRITICAL: unitTypes mirror sync for immediate UI reactivity
         //    Only when saving the unit_types step and the payload includes unitTypes
@@ -1722,18 +1754,6 @@ const createActions = (
               source.address ??
               source.location?.address ??
               source.developmentData?.location?.address ??
-              '',
-            suburb:
-              source.suburb ??
-              source.location?.suburb ??
-              source.developmentData?.location?.suburb ??
-              '',
-            city:
-              source.city ?? source.location?.city ?? source.developmentData?.location?.city ?? '',
-            province:
-              source.province ??
-              source.location?.province ??
-              source.developmentData?.location?.province ??
               '',
             postalCode:
               source.postalCode ??
@@ -2095,11 +2115,11 @@ const createActions = (
         developmentData: normalizeDevelopmentData(state.developmentData, data),
       })),
 
-    setLocation: (loc: any) =>
+    setLocation: (loc: Partial<DevelopmentWizardState['developmentData']['location']>) =>
       set(state => ({
         developmentData: {
           ...state.developmentData,
-          location: { ...(state.developmentData?.location || {}), ...loc },
+          location: normalizeDevelopmentData(state.developmentData, { location: loc }).location,
         },
       })),
 
@@ -2449,7 +2469,12 @@ export const useDevelopmentWizard = create<DevelopmentWizardState>()(
         workflowId: state.workflowId,
         currentStepId: state.currentStepId,
         completedSteps: state.completedSteps,
-        stepData: state.stepData,
+        stepData: {
+          ...state.stepData,
+          ...(state.stepData?.location
+            ? { location: canonicalDevelopmentWizardLocation(state.stepData.location) }
+            : {}),
+        },
       }),
     },
   ),

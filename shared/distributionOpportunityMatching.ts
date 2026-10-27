@@ -66,7 +66,10 @@ export type DistributionOpportunityUnit = {
   priceTo: number | null;
 };
 
-/** Reviewed Place identity for a development; null means no reviewed assignment exists. */
+/**
+ * Unique executable Place identity for this opportunity. Null means the result
+ * has no eligible reviewed assignment or its aggregate spans multiple Places.
+ */
 export type DistributionOpportunityPlaceAssignment = {
   canonicalPlaceId: string | null;
 };

@@ -47,8 +47,6 @@ export interface DevelopmentSalesProjection {
     tagline: string | null;
     description: string | null;
     developmentType: string;
-    city: string;
-    province: string;
     images: string[];
   };
   inventory: {
@@ -284,8 +282,6 @@ export async function getDevelopmentSalesProjection(
         description: developments.description,
         developmentType: developments.developmentType,
         transactionType: developments.transactionType,
-        city: developments.city,
-        province: developments.province,
         images: developments.images,
         status: developments.status,
         approvalStatus: developments.approvalStatus,
@@ -482,8 +478,6 @@ export async function getDevelopmentSalesProjection(
       tagline: publicationVisible ? row.development.tagline || null : null,
       description: publicationVisible ? row.development.description || null : null,
       developmentType: publicationVisible ? String(row.development.developmentType) : '',
-      city: publicationVisible ? String(row.development.city) : '',
-      province: publicationVisible ? String(row.development.province) : '',
       images: publicationVisible ? publicImageUrls(row.development.images) : [],
     },
     inventory:

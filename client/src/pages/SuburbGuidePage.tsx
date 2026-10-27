@@ -10,7 +10,6 @@ import {
   type FeedTab,
 } from '@/components/location/LocationTrendingFeedSection';
 import { SuburbLocalProfessionals } from '@/components/location/SuburbLocalProfessionals';
-import { SuburbDevelopers } from '@/components/location/SuburbDevelopers';
 import { SuburbAgencies } from '@/components/location/SuburbAgencies';
 import { NearbyAmenitiesMap } from '@/components/location/NearbyAmenitiesMap';
 import { SuburbMarketInsights } from '@/components/location/SuburbMarketInsights';
@@ -20,7 +19,6 @@ import { formatZARCompact } from '@/lib/utils';
 import { isHomepageHeroJourneyEnabled } from '@/lib/publicNavigation';
 import {
   buildBuySearchUrl,
-  buildDevelopmentsSearchUrl,
   buildPropertySearchUrl,
 } from '@/lib/heroJourneySearch';
 import { getCityGuideImage } from '@/lib/cityGuideImages';
@@ -132,7 +130,6 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
   const verifiedSuburb = isCanonicalSuburb ? suburb : undefined;
   const stats = suburbQuery.data?.stats;
   const marketInsights = suburbQuery.data?.marketInsights;
-  const suburbDevelopments = suburbQuery.data?.developments;
   const otherAreas = useMemo(() => {
     const rows = (cityQuery.data as any)?.suburbs;
     if (!Array.isArray(rows)) return [];
@@ -273,7 +270,6 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
     return {
       buy: buildBuySearchUrl({ selectedLocations: [location] }),
       rent: buildPropertySearchUrl({ transactionType: 'to-rent', selectedLocations: [location] }),
-      developments: buildDevelopmentsSearchUrl({ selectedLocations: [location] }),
     };
   }, [location]);
 
@@ -299,14 +295,12 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
   const rentShare = saleAndRentCount > 0 ? 100 - saleShare : 0;
   const buyJourneyEnabled = isHomepageHeroJourneyEnabled('buy');
   const rentJourneyEnabled = isHomepageHeroJourneyEnabled('rent');
-  const developmentsJourneyEnabled = isHomepageHeroJourneyEnabled('developments');
   const enabledFeedTabs = useMemo<FeedTab[]>(() => {
     const tabs: FeedTab[] = [];
     if (buyJourneyEnabled) tabs.push('buy');
     if (rentJourneyEnabled) tabs.push('rent');
-    if (developmentsJourneyEnabled) tabs.push('developments');
     return tabs;
-  }, [buyJourneyEnabled, developmentsJourneyEnabled, rentJourneyEnabled]);
+  }, [buyJourneyEnabled, rentJourneyEnabled]);
   const isRailVisible = useCallback(
     (tab: FeedTab) => feedResolutions[tab] !== 'empty',
     [feedResolutions],
@@ -322,9 +316,6 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
     ...(rentJourneyEnabled && isRailVisible('rent')
       ? [{ id: 'for-rent', label: 'Rentals', count: Number(stats?.rentalCount || 0) }]
       : []),
-    ...(developmentsJourneyEnabled && isRailVisible('developments')
-      ? [{ id: 'new-developments', label: 'Developments' }]
-      : []),
     { id: 'area-snapshot', label: 'Area snapshot' },
     ...(hasRecordedListings ? [{ id: 'market-insights', label: 'Market insights' }] : []),
     ...(!hasRecordedListings ? [{ id: 'supply-guidance', label: 'Keep looking' }] : []),
@@ -332,7 +323,6 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
     ...(suburbCenter ? [{ id: 'local-area', label: 'Local area' }] : []),
     { id: 'guide-methodology', label: 'How this guide works' },
     { id: 'faqs', label: 'FAQs' },
-    { id: 'developers', label: 'Developers' },
     { id: 'agencies', label: 'Agencies' },
     { id: 'local-experts', label: 'Local agents' },
     { id: 'city-areas', label: 'Explore more areas' },
@@ -405,7 +395,7 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
     return [
       {
         question: `Where is ${name}?`,
-        answer: `${name} is a suburb of ${city} in ${province}, South Africa. This guide covers homes for sale, rentals and new developments published for this exact suburb on Property Listify.`,
+        answer: `${name} is a suburb of ${city} in ${province}, South Africa. This guide covers homes for sale and rentals published for this area on Property Listify.`,
       },
       {
         question: `How many homes are for sale in ${name}?`,
@@ -649,7 +639,7 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
           <p className="suburb-guide-eyebrow">{verifiedSuburb.cityName} · Suburb guide</p>
           <h1>Explore {verifiedSuburb.name}</h1>
           <p className="suburb-guide-hero__intro">
-            Find homes to buy or rent, and explore new developments listed in this area.
+            Find homes to buy or rent in this area.
           </p>
           <div className="suburb-guide-hero__scope" aria-label="Selected area">
             <span>
@@ -870,7 +860,6 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
                 neutralMode={false}
                 visibleTabs={['buy']}
                 viewAllHref={viewAllHref}
-                standardizeDevelopmentUnitCards
                 cardLayout="carousel"
                 showTabs={false}
                 hideWhenEmpty
@@ -894,7 +883,6 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
                 neutralMode={false}
                 visibleTabs={['rent']}
                 viewAllHref={viewAllHref}
-                standardizeDevelopmentUnitCards
                 cardLayout="carousel"
                 showTabs={false}
                 hideWhenEmpty
@@ -903,30 +891,6 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
                 headingEyebrow="FOR RENT · RECENTLY LISTED"
                 headingTitle={`Homes to rent in ${verifiedSuburb.name}`}
                 headingDescription="Browse rentals and available rental units in this selected area."
-              />
-            ) : null}
-
-            {developmentsJourneyEnabled && isRailVisible('developments') ? (
-              <LocationTrendingFeedSection
-                sectionId="new-developments"
-                locationName={verifiedSuburb.name}
-                province={verifiedSuburb.provinceName}
-                city={verifiedSuburb.cityName}
-                suburb={verifiedSuburb.name}
-                maxItems={8}
-                activeTab="developments"
-                neutralMode={false}
-                visibleTabs={['developments']}
-                viewAllHref={viewAllHref}
-                cardLayout="carousel"
-                requirePhotoReadyDevelopments
-                showTabs={false}
-                hideWhenEmpty
-                onFeedResolutionChange={handleFeedResolution}
-                sectionClassName="suburb-guide-feed-panel suburb-guide-development-panel"
-                headingEyebrow="PROJECTS IN THIS AREA"
-                headingTitle={`New developments in ${verifiedSuburb.name}`}
-                headingDescription="Browse projects separately from resale homes. Open a project to see its published unit offers—sale, rental or auction terms where available."
               />
             ) : null}
 
@@ -947,9 +911,6 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
                 <div className="suburb-guide-feeds-fallback__actions">
                   {viewAllHref.buy ? <Link href={viewAllHref.buy}>View all homes</Link> : null}
                   {viewAllHref.rent ? <Link href={viewAllHref.rent}>View all rentals</Link> : null}
-                  {viewAllHref.developments ? (
-                    <Link href={viewAllHref.developments}>View all developments</Link>
-                  ) : null}
                 </div>
               </section>
             ) : null}
@@ -1093,14 +1054,6 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
             ))}
           </div>
         </section>
-
-        <SuburbDevelopers
-          suburbName={verifiedSuburb.name}
-          cityName={verifiedSuburb.cityName}
-          provinceName={verifiedSuburb.provinceName}
-          developments={suburbDevelopments}
-          viewAllDevelopmentsHref={viewAllHref.developments}
-        />
 
         <SuburbAgencies suburbId={Number(verifiedSuburb.id)} suburbName={verifiedSuburb.name} />
 

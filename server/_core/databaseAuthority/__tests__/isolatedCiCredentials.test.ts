@@ -27,7 +27,9 @@ describe('isolated CI physical credential boundary', () => {
 
   it('builds explicit application and worker grants without control-table DML', () => {
     const plan = buildIsolatedCiGrantPlan();
-    expect(plan.applicationTables).toHaveLength(238);
+    expect(plan.applicationTables).toHaveLength(239);
+    expect(plan.applicationTables).toContain('development_place_assignments');
+    expect(plan.applicationTables).toContain('distribution_referrer_search_assessments');
     expect(
       plan.statementsByCredential.runtime.filter(statement =>
         /legal_releases|legal_active_release|user_legal_acceptances/.test(statement),
@@ -125,7 +127,8 @@ describe('isolated CI physical credential boundary', () => {
     // its own migration identity and its own runtime identity.
     const BOOTSTRAP_JOBS = ['db-contract-verification', 'test', 'browser-journey'];
     for (const job of BOOTSTRAP_JOBS) {
-      const block = workflow.match(new RegExp(`\\n  ${job}:[\\s\\S]*?(?=\\n  [a-z-]+:)`))?.[0] ?? '';
+      const block =
+        workflow.match(new RegExp(`\\n  ${job}:[\\s\\S]*?(?=\\n  [a-z-]+:)`))?.[0] ?? '';
       expect(block, `${job} must provision its own migration identity`).toContain(
         '- name: Provision isolated CI migration identity',
       );

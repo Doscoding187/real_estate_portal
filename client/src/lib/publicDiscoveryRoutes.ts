@@ -33,17 +33,15 @@ function withQuery(pathname: string, params: URLSearchParams) {
   return query ? `${pathname}?${query}` : pathname;
 }
 
-export function buildDiscoverBrowseHref(listingType: DiscoverListingType, selectedCity: string) {
+export function buildDiscoverBrowseHref(
+  listingType: DiscoverListingType,
+  selectedCity: string,
+  canonicalPlaceId?: string,
+) {
   const params = new URLSearchParams();
 
   if (listingType === 'developments') {
-    const search = selectedCity.trim();
-
-    if (search) {
-      params.set('search', search);
-    }
-
-    return withQuery('/new-developments', params);
+    return buildDevelopmentsSearchUrl({ canonicalPlaceId });
   }
 
   appendLocationContext(params, selectedCity);
@@ -55,19 +53,12 @@ export function buildDiscoverCardHref(
   propertyLabel: string,
   listingType: DiscoverListingType,
   selectedCity: string,
+  canonicalPlaceId?: string,
 ) {
   if (listingType === 'developments') {
-    const params = new URLSearchParams();
-    const search = selectedCity.trim();
-
-    if (search) {
-      params.set('search', search);
-    }
-
-    // These visual card labels are marketing groupings, not persisted
-    // development filter values. Preserve location context without
-    // manufacturing an unsupported backend filter.
-    return withQuery('/new-developments', params);
+    // Card labels are presentation only. The canonical Place selection is
+    // the entire geography filter for Development search.
+    return buildDevelopmentsSearchUrl({ canonicalPlaceId });
   }
 
   const params = new URLSearchParams();
@@ -89,21 +80,22 @@ export function buildSelectedDiscoverHref(
   selection: HomeAreaSelection,
   filters: HomeSearchFilters,
   propertyLabel?: string,
+  canonicalPlaceId?: string,
 ): string | null {
-  if (!selection.locations.length && !selection.searchArea) return null;
-  const propertyType = propertyLabel
-    ? DISCOVER_PROPERTY_TYPE_BY_LABEL[propertyLabel as keyof typeof DISCOVER_PROPERTY_TYPE_BY_LABEL]
-    : filters.propertyType;
   if (listingType === 'developments') {
-    if (selection.searchArea) return null;
+    if (selection.locations.length || selection.searchArea || !canonicalPlaceId) return null;
     return buildDevelopmentsSearchUrl({
-      selectedLocations: selection.locations,
+      canonicalPlaceId,
       developmentType: filters.developmentType,
       developmentStatus: filters.developmentStatus,
       minPrice: filters.priceMin,
       maxPrice: filters.priceMax,
     });
   }
+  if (!selection.locations.length && !selection.searchArea) return null;
+  const propertyType = propertyLabel
+    ? DISCOVER_PROPERTY_TYPE_BY_LABEL[propertyLabel as keyof typeof DISCOVER_PROPERTY_TYPE_BY_LABEL]
+    : filters.propertyType;
   return buildPropertySearchUrl({
     transactionType: listingType === 'rent' ? 'to-rent' : 'for-sale',
     selectedLocations: selection.searchArea ? [] : selection.locations,

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'wouter';
 import { Building2, ArrowRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -12,74 +13,66 @@ import {
 } from '@/components/ui/carousel';
 import { trpc } from '@/lib/trpc';
 import { developerDiscoveryHref } from '@shared/developerDiscovery';
-import { HOME_PROVINCE_OPTIONS } from '@/lib/homeProvinceOptions';
-
-type TopDevelopersProps = {
-  selectedProvince: string;
-  onProvinceChange?: (province: string) => void;
-};
+import {
+  CanonicalPlaceSelector,
+  type CanonicalPlaceSelection,
+} from '@/components/location/CanonicalPlaceSelector';
 const projectCount = (value: unknown) => {
   if (value === null || value === undefined) return null;
   const number = Number(value);
   return Number.isFinite(number) && number >= 0 ? Math.trunc(number) : null;
 };
 
-export function TopDevelopers({ selectedProvince, onProvinceChange }: TopDevelopersProps) {
+export function TopDevelopers() {
+  const [placeSelection, setPlaceSelection] = useState<CanonicalPlaceSelection | null>(null);
+  const query = trpc.cataloguePublisher.listPublishers.useQuery({
+    canonicalPlaceId: placeSelection?.canonicalPlaceId,
+    limit: 12,
+  });
   const {
     data: developers,
     isError,
     isFetching,
     isLoading,
     refetch,
-  } = trpc.cataloguePublisher.listPublishersByProvince.useQuery({
-    province: selectedProvince,
-    limit: 12,
-  });
+  } = query;
   const profiles = developers?.slice(0, 10) ?? [];
-  const directoryHref = developerDiscoveryHref('/developers', selectedProvince);
+  const selectedPlaceId = placeSelection?.canonicalPlaceId;
+  const selectedPlaceLabel = placeSelection?.label;
+  const directoryHref = developerDiscoveryHref('/developers', selectedPlaceId);
+  const scopeLabel = selectedPlaceLabel ? ` in ${selectedPlaceLabel}` : ' across South Africa';
   return (
     <section className="home-section bg-white">
       <div className="home-section-content">
         <div className="home-section-header flex flex-wrap items-end justify-between gap-4">
           <div>
             <h2 className="home-section-title text-[1.125rem] font-bold text-slate-900 sm:text-xl md:text-[26px]">
-              Developers with projects in {selectedProvince}
+              {selectedPlaceLabel
+                ? `Developers with projects in ${selectedPlaceLabel}`
+                : 'Explore real estate developers'}
             </h2>
             <p className="max-w-3xl text-xs leading-relaxed text-slate-600 md:text-sm">
-              Explore developers with approved, published projects in {selectedProvince}.
+              {selectedPlaceLabel
+                ? `Explore developers with publicly listed projects assigned to ${selectedPlaceLabel}.`
+                : 'Explore developer profiles and publicly listed projects across South Africa.'}
             </p>
           </div>
         </div>
-        {onProvinceChange && (
-          <div className="home-section-tabs scrollbar-hide -mx-4 flex justify-start overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0">
-            <div
-              role="group"
-              aria-label="Developer project province"
-              className="inline-flex h-auto flex-nowrap justify-start gap-1.5 rounded-xl border border-slate-200 bg-slate-50 p-1.5"
-            >
-              {HOME_PROVINCE_OPTIONS.map(province => (
-                <button
-                  key={province}
-                  type="button"
-                  aria-pressed={selectedProvince === province}
-                  onClick={() => onProvinceChange(province)}
-                  className={`min-h-[44px] whitespace-nowrap rounded-lg border border-transparent px-3 py-2 text-[13px] font-semibold transition-all md:px-4 md:text-sm ${
-                    selectedProvince === province
-                      ? 'bg-[#2774AE] text-white shadow-sm'
-                      : 'bg-transparent text-slate-600 hover:text-[#2774AE] hover:bg-white'
-                  }`}
-                >
-                  {province}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+        <div className="mb-5 max-w-xl">
+          <CanonicalPlaceSelector
+            value={placeSelection}
+            onChange={setPlaceSelection}
+            purpose="search"
+            label="Filter projects by canonical Place"
+            placeholder="Search approved Places"
+            hint="Only projects with this exact reviewed Place assignment match."
+          />
+        </div>
         {isLoading ? (
           <div
             data-testid="developer-feed-loading"
             role="status"
-            aria-label={`Loading developers with projects in ${selectedProvince}`}
+            aria-label="Loading developer profiles"
             className="-mx-4 overflow-hidden px-4 sm:mx-0 sm:px-0"
           >
             <div className="flex gap-2">
@@ -109,7 +102,7 @@ export function TopDevelopers({ selectedProvince, onProvinceChange }: TopDevelop
               Developer profiles could not be loaded
             </h3>
             <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-600">
-              Please try again. Your selected province is still here.
+              Please try again. Your selected Place is still here.
             </p>
             <Button
               variant="outline"
@@ -124,9 +117,7 @@ export function TopDevelopers({ selectedProvince, onProvinceChange }: TopDevelop
           <Carousel opts={{ align: 'start', loop: false }} className="w-full">
             <CarouselContent className="-ml-2">
               {profiles.map(developer => {
-                const count = projectCount(developer.localStats?.activeDevelopments);
-                const selling = projectCount(developer.localStats?.sellingNow);
-                const launching = projectCount(developer.localStats?.launchingSoon);
+                const count = projectCount(developer.developmentCount);
                 const profilePath = `/developer/${developer.slug}`;
                 return (
                   <CarouselItem
@@ -161,33 +152,29 @@ export function TopDevelopers({ selectedProvince, onProvinceChange }: TopDevelop
                         <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-3">
                           <p className="text-sm font-semibold text-slate-900">
                             {count !== null
-                              ? `${count} published ${count === 1 ? 'project' : 'projects'}`
-                              : 'Published projects'}
+                              ? `${count} public ${count === 1 ? 'project' : 'projects'}`
+                              : 'Developer profile'}
                           </p>
-                          <p className="mt-1 text-xs text-slate-600">In {selectedProvince}</p>
+                          <p className="mt-1 text-xs text-slate-600">
+                            {selectedPlaceLabel ? `Assigned to ${selectedPlaceLabel}` : 'On Property Listify'}
+                          </p>
                         </div>
-                        <div className="mt-3 flex min-h-5 flex-wrap gap-x-3 gap-y-1 text-xs text-slate-600">
-                          {selling !== null && selling > 0 && <span>{selling} selling now</span>}
-                          {launching !== null && launching > 0 && (
-                            <span>{launching} launching soon</span>
-                          )}
-                          {!selling && !launching && (
-                            <span>Check project details for availability</span>
-                          )}
-                        </div>
+                        <p className="mt-3 min-h-5 text-xs text-slate-600">
+                          Check project details for current availability.
+                        </p>
                         <div className="mt-auto pt-4">
                           <Button
                             asChild
                             className="min-h-[44px] w-full bg-slate-900 text-xs text-white hover:bg-slate-800"
                           >
                             <Link
-                              href={developerDiscoveryHref(profilePath, selectedProvince, true)}
+                              href={developerDiscoveryHref(profilePath, selectedPlaceId, true)}
                             >
                               View projects <ArrowRight className="h-4 w-4" aria-hidden="true" />
                             </Link>
                           </Button>
                           <Link
-                            href={developerDiscoveryHref(profilePath, selectedProvince)}
+                            href={developerDiscoveryHref(profilePath, selectedPlaceId)}
                             className="mt-1 flex min-h-[44px] items-center justify-center rounded-md text-xs font-semibold text-[#2774AE] hover:underline focus-visible:outline focus-visible:outline-2"
                           >
                             Developer profile
@@ -206,10 +193,12 @@ export function TopDevelopers({ selectedProvince, onProvinceChange }: TopDevelop
           <div className="rounded-xl border border-dashed border-slate-200 px-5 py-8 text-center">
             <Building2 className="mx-auto h-8 w-8 text-slate-400" aria-hidden="true" />
             <h3 className="mt-3 text-sm font-bold text-slate-900">
-              No developers with published projects in {selectedProvince} yet
+              {selectedPlaceLabel
+                ? `No developers with publicly listed projects assigned to ${selectedPlaceLabel} yet`
+                : 'No developer profiles are available yet'}
             </h3>
             <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-600">
-              Choose another province or browse the developer directory.
+              Choose another Place or browse the developer directory.
             </p>
           </div>
         )}
@@ -219,7 +208,7 @@ export function TopDevelopers({ selectedProvince, onProvinceChange }: TopDevelop
             className="min-h-[44px] bg-gradient-to-r from-[#2774AE] to-[#2D68C4] px-6 text-white"
           >
             <Link href={directoryHref}>
-              Explore developers in {selectedProvince}{' '}
+              Explore developers{scopeLabel}{' '}
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Link>
           </Button>

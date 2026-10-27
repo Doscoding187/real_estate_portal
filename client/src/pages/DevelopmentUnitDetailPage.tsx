@@ -333,8 +333,7 @@ export default function DevelopmentUnitDetailPage() {
       name: publicFacts.name,
       slug: publicFacts.slug || slug,
       transactionType: publicFacts.transactionType,
-      suburb: publicFacts.suburb,
-      city: publicFacts.city,
+      locationLabels: publicFacts.locationLabels,
       heroImage,
       brochureUrl,
       cataloguePublisherId: publicFacts.publisher.id,
@@ -656,10 +655,10 @@ export default function DevelopmentUnitDetailPage() {
                     <p className="mt-3 max-w-2xl text-sm text-slate-600">{unitDescription}</p>
                   ) : null}
                   <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-slate-600">
-                    {(development.suburb || development.city) && (
+                    {development.locationLabels.length > 0 && (
                       <span className="inline-flex items-center gap-2">
                         <MapPinned className="h-4 w-4 text-slate-400" />
-                        {[development.suburb, development.city].filter(Boolean).join(', ')}
+                        {development.locationLabels.join(', ')}
                       </span>
                     )}
                     {development.developerName ? (

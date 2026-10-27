@@ -8,8 +8,7 @@ import { FallbackImage } from './FallbackImage';
 export interface SimpleDevelopmentCardProps {
   id: string;
   title: string;
-  city: string;
-  suburb?: string;
+  locationLabel: string;
   priceRange: {
     min: number | null;
     max: number | null;
@@ -32,8 +31,7 @@ export interface SimpleDevelopmentCardProps {
 export function SimpleDevelopmentCard({
   id,
   title,
-  city,
-  suburb,
+  locationLabel,
   priceRange,
   image,
   slug,
@@ -49,8 +47,7 @@ export function SimpleDevelopmentCard({
   className,
   actionLabel,
 }: SimpleDevelopmentCardProps) {
-  // Location display
-  const locationLabel = suburb ? `${suburb}, ${city}` : city;
+  const displayedLocation = locationLabel || 'Place assignment pending review';
 
   // Format price using SquareYards-style compact formatter
   const formattedPrice = formatPriceRangeCompact(priceRange?.min, priceRange?.max);
@@ -165,7 +162,7 @@ export function SimpleDevelopmentCard({
           )}
         >
           <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
-          <span className="truncate">{locationLabel}</span>
+          <span className="truncate">{displayedLocation}</span>
         </div>
 
         {publisherName ? (

@@ -30,8 +30,12 @@
     "server/_core/databaseAuthority/sourceArchive.ts",
     "server/_core/databaseAuthority/legalReleaseInstallation.ts"
   ],
-  "testInfrastructureRawConnectionSources": ["server/test-utils/developmentIntegrationMutex.ts"],
-  "retiredDirectMutationSources": ["scripts/testDbWorkflow.ts"],
+  "testInfrastructureRawConnectionSources": [
+    "server/test-utils/developmentIntegrationMutex.ts"
+  ],
+  "retiredDirectMutationSources": [
+    "scripts/testDbWorkflow.ts"
+  ],
   "legacyContainedDirectSources": [
     "scripts/check-agent-tables.ts",
     "scripts/check-bluespace-direct.ts",
@@ -40,7 +44,6 @@
     "scripts/check-developers-struct.ts",
     "scripts/check-developers-table.ts",
     "scripts/check-development-columns-direct.ts",
-    "scripts/check-development-location.ts",
     "scripts/check-location-data.ts",
     "scripts/check-properties-schema.ts",
     "scripts/check-property-indexes.ts",

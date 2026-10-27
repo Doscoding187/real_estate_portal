@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { DEVELOPER_DISCOVERY_PROVINCES } from '../shared/developerDiscovery';
 import { router, protectedProcedure, publicProcedure, superAdminProcedure } from './_core/trpc';
 import * as db from './db';
 import { TRPCError } from '@trpc/server';
@@ -57,7 +56,6 @@ import { calculateDevelopmentReadiness } from './lib/readiness';
 import { sanitizeDraftData } from './lib/sanitizeDraftData';
 import { requireUser } from './_core/requireUser';
 import { resolveOperatingIdentity } from './_core/identityResolver';
-import { composeResidentialHomeFeedItems } from './services/homeFeedComposition';
 import { hasHomePropertyPhoto } from '../shared/homePropertyPhoto';
 import { validatePersistedSubmissionReadiness } from './services/developmentSubmissionReadiness';
 import { buildDevelopmentHomeInventory } from './services/developmentInventorySummary';
@@ -77,6 +75,8 @@ import {
   type DeveloperOperatingHomeScope,
 } from './services/developerOperatingHome';
 import { getDeveloperPublicationAccess } from './services/developerPublicationAccess';
+import { getDevelopmentPlaceGeography } from './services/developmentPlaceAssignmentService';
+import { isPlaceId } from '../drizzle/schema/placeAuthority';
 import { AuditActions } from './_core/auditLog';
 import type { DeveloperPublicationAccess } from './services/developerPublicationAccess';
 import {
@@ -183,9 +183,6 @@ type DevelopmentHomeIdentityRow = Pick<
   | 'name'
   | 'slug'
   | 'address'
-  | 'suburb'
-  | 'city'
-  | 'province'
   | 'transactionType'
   | 'approvalStatus'
   | 'isPublished'
@@ -490,18 +487,18 @@ export const developerRouter = router({
 
   getPublicDevelopmentsForPublisher: publicProcedure
     .input(
-      z.object({
-        cataloguePublisherId: z.number().int().positive(),
-        province: z
-          .string()
-          .refine(
-            value => DEVELOPER_DISCOVERY_PROVINCES.includes(value),
-            'Choose a supported province',
-          )
-          .optional(),
-        limit: z.number().int().min(1).max(50).optional(),
-        offset: z.number().int().min(0).max(100000).optional(),
-      }),
+      z
+        .object({
+          cataloguePublisherId: z.number().int().positive(),
+          canonicalPlaceId: z
+            .string()
+            .trim()
+            .refine(isPlaceId, 'Choose an approved canonical Place')
+            .optional(),
+          limit: z.number().int().min(1).max(50).optional(),
+          offset: z.number().int().min(0).max(100000).optional(),
+        })
+        .strict(),
     )
     .query(async ({ input }) => {
       const resolvedPublisher = await resolvePublicPublisherProfile(
@@ -512,7 +509,7 @@ export const developerRouter = router({
       }
       return developmentService.listPublicDevelopments({
         cataloguePublisherId: resolvedPublisher.publisherProfile.id,
-        ...(input.province ? { province: input.province } : {}),
+        ...(input.canonicalPlaceId ? { canonicalPlaceId: input.canonicalPlaceId } : {}),
         ...(input.limit !== undefined ? { limit: input.limit } : {}),
         ...(input.offset !== undefined ? { offset: input.offset } : {}),
       });
@@ -811,70 +808,37 @@ export const developerRouter = router({
 
       return { success: true, id: input.id };
     }),
-  getPublishedDevelopments: publicProcedure
-    .input(
-      z.object({
-        province: z.string().optional(),
-        limit: z.number().optional(),
-        transactionType: z.enum(['for_sale', 'for_rent', 'auction']).optional(),
-        developmentType: z.enum(['residential', 'commercial', 'mixed_use', 'land']).optional(),
-        enableFallback: z.boolean().optional(),
-      }),
-    )
-    .query(async ({ input }) => {
-      // Primary Query
-      let results = await developmentService.listPublicDevelopments({
-        province: input.province,
-        limit: input.limit,
-        developmentType: input.developmentType,
-      } as any);
-
-      let usedFallback = false;
-      let fallbackLevel: 'none' | 'province' | 'nationwide' = 'none';
-
-      // Fallback Logic
-      if (input.enableFallback && results.length === 0) {
-        usedFallback = true;
-
-        // Fallback A: Residential For Sale in SAME province
-        if (input.province) {
-          fallbackLevel = 'province';
-          results = await developmentService.listPublicDevelopments({
-            province: input.province,
-            limit: input.limit,
-            developmentType: 'residential',
-          } as any);
-        }
-
-        // Fallback B: Residential For Sale NATIONWIDE (if Fallback A empty or no province)
-        if (results.length === 0) {
-          fallbackLevel = 'nationwide';
-          results = await developmentService.listPublicDevelopments({
-            limit: input.limit,
-            developmentType: 'residential',
-          } as any);
-        }
-      }
-
-      return {
-        developments: results,
-        meta: {
-          usedFallback,
-          fallbackLevel,
-          primaryCount: usedFallback ? 0 : results.length,
-        },
-      };
-    }),
-
   getHomeTrendingFeed: publicProcedure
     .input(
-      z.object({
-        tab: z.enum(['buy', 'rent', 'developments', 'shared_living', 'plot_land', 'commercial']),
-        province: z.string().optional(),
-        city: z.string().optional(),
-        suburb: z.string().optional(),
-        limit: z.number().min(1).max(10).optional(),
-      }),
+      z
+        .object({
+          tab: z.enum(['buy', 'rent', 'developments', 'shared_living', 'plot_land', 'commercial']),
+          canonicalPlaceId: z
+            .string()
+            .trim()
+            .refine(isPlaceId, 'Choose an approved canonical Place')
+            .optional(),
+          province: z.string().optional(),
+          city: z.string().optional(),
+          suburb: z.string().optional(),
+          limit: z.number().min(1).max(10).optional(),
+        })
+        .superRefine((input, refinementContext) => {
+          if (input.tab === 'developments' && (input.province || input.city || input.suburb)) {
+            refinementContext.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ['canonicalPlaceId'],
+              message: 'Development geography requires a canonical Place ID.',
+            });
+          }
+          if (input.canonicalPlaceId && input.tab !== 'developments') {
+            refinementContext.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ['canonicalPlaceId'],
+              message: 'Canonical Place filtering is available only in the Development journey.',
+            });
+          }
+        }),
     )
     .query(async ({ input }) => {
       const limit = input.limit ?? 5;
@@ -882,7 +846,7 @@ export const developerRouter = router({
       const requestedCity = input.city?.trim() || undefined;
       const requestedSuburb = input.suburb?.trim() || undefined;
 
-      type LocationScope = 'suburb' | 'city' | 'province' | 'national';
+      type LocationScope = 'canonical_place' | 'suburb' | 'city' | 'province' | 'national';
       type LocationFilter = {
         province?: string;
         city?: string;
@@ -890,10 +854,12 @@ export const developerRouter = router({
       };
       type FeedItem = {
         id: string;
-        kind: 'development' | 'listing' | 'unit' | 'shared_living' | 'land';
+        kind: 'development' | 'listing' | 'shared_living' | 'land';
         title: string;
-        city: string;
-        suburb: string;
+        city?: string;
+        suburb?: string;
+        canonicalPlaceId?: string | null;
+        locationLabels?: string[];
         priceFrom: number | null;
         priceTo: number | null;
         image: string;
@@ -925,29 +891,6 @@ export const developerRouter = router({
         };
       };
       type ListingFeedItem = FeedItem & { kind: 'listing' };
-      type UnitFeedItem = FeedItem & { kind: 'unit' };
-
-      const normalizeDevImage = (images: any): string => {
-        if (!images) return '';
-        if (Array.isArray(images) && images.length > 0) {
-          const first = images[0];
-          if (typeof first === 'string') return first;
-          if (first && typeof first === 'object' && typeof first.url === 'string') return first.url;
-        }
-        return '';
-      };
-
-      const mapDevelopment = (dev: any) => ({
-        id: String(dev.id),
-        kind: 'development' as const,
-        title: dev.name,
-        city: dev.city || '',
-        suburb: dev.suburb || '',
-        priceFrom: Number(dev.priceFrom || 0),
-        priceTo: Number(dev.priceTo || 0),
-        image: normalizeDevImage(dev.images),
-        href: `/development/${dev.slug || dev.id}`,
-      });
 
       const mapPublicDevelopment = (
         development: Awaited<
@@ -957,8 +900,8 @@ export const developerRouter = router({
         id: String(development.id),
         kind: 'development' as const,
         title: development.name,
-        city: development.city || '',
-        suburb: development.suburb || '',
+        canonicalPlaceId: development.canonicalPlaceId,
+        locationLabels: development.locationLabels,
         priceFrom: development.priceFrom,
         priceTo: development.priceTo,
         image: development.images[0] || '',
@@ -1119,80 +1062,30 @@ export const developerRouter = router({
           : [],
       });
 
-      const mapUnitListing = (item: any): UnitFeedItem => ({
-        id: String(item.id),
-        kind: 'unit' as const,
-        title: item.title,
-        city: item.city || '',
-        suburb: item.suburb || '',
-        priceFrom: Number(item.price || 0),
-        priceTo: Number(item.priceTo || item.price || 0),
-        image: String(item.image || ''),
-        href:
-          item.href ||
-          (item.development?.slug
-            ? `/development/${item.development.slug}/unit/${item.unitTypeId}`
-            : `/development/${item.developmentId}/unit/${item.unitTypeId}`),
-        listingType: item.listingType === 'rent' ? 'rent' : 'sale',
-        bedrooms: Number(item.bedrooms || 0) || null,
-        bathrooms: Number(item.bathrooms || 0) || null,
-        unitSize: Number(item.floorSize || 0) || null,
-        yardSize: Number(item.erfSize || 0) || null,
-        parkingCount: typeof item.parkingCount === 'number' ? item.parkingCount : null,
-        parkingType: item.parkingType || null,
-        propertyType: item.propertyType || null,
-        developmentName: String(item.development?.name || '').trim() || null,
-        developmentKey:
-          String(
-            item.development?.id || item.developmentId || item.development?.slug || '',
-          ).trim() || null,
-        badges: Array.isArray(item.badges)
-          ? item.badges.filter((badge: unknown): badge is string => typeof badge === 'string')
-          : [],
-      });
-
       const composeResidentialHomeFeed = async (
         locationFilter: LocationFilter,
         listingType: 'sale' | 'rent',
-      ): Promise<{ items: FeedItem[]; source: 'mixed' | 'listings' | 'units' }> => {
+      ): Promise<{ items: FeedItem[]; source: 'listings' }> => {
         const { propertySearchService } = await import('./services/propertySearchService');
-        const { developmentDerivedListingService } =
-          await import('./services/developmentDerivedListingService');
 
         const poolLimit = Math.max(limit * 2, 12);
-        const [listingResults, derivedDevelopmentListings] = await Promise.all([
-          propertySearchService.searchProperties(
-            {
-              province: locationFilter.province,
-              city: locationFilter.city,
-              suburb: locationFilter.suburb ? [locationFilter.suburb] : undefined,
-              listingType,
-              propertyType:
-                listingType === 'rent'
-                  ? ['house', 'apartment', 'townhouse']
-                  : ['house', 'apartment', 'townhouse', 'plot'],
-            } as any,
-            'date_desc',
-            1,
-            poolLimit,
-            undefined,
-            { publicOnly: true, requirePhoto: true },
-          ),
-          developmentDerivedListingService.searchListings(
-            {
-              province: locationFilter.province,
-              city: locationFilter.city,
-              suburb: locationFilter.suburb ? [locationFilter.suburb] : undefined,
-              listingType,
-              propertyType: ['house', 'apartment', 'townhouse'],
-              requireUnitPhoto: true,
-              requireAvailableStock: true,
-            },
-            'date_desc',
-            1,
-            poolLimit,
-          ),
-        ]);
+        const listingResults = await propertySearchService.searchProperties(
+          {
+            province: locationFilter.province,
+            city: locationFilter.city,
+            suburb: locationFilter.suburb ? [locationFilter.suburb] : undefined,
+            listingType,
+            propertyType:
+              listingType === 'rent'
+                ? ['house', 'apartment', 'townhouse']
+                : ['house', 'apartment', 'townhouse', 'plot'],
+          } as any,
+          'date_desc',
+          1,
+          poolLimit,
+          undefined,
+          { publicOnly: true, requirePhoto: true },
+        );
 
         const listingCardsById = new Map(
           (listingResults.cards || []).map(card => [String(card.id), card]),
@@ -1200,18 +1093,9 @@ export const developerRouter = router({
         const listingItems = (listingResults.properties || [])
           .map(prop => mapListing(prop, listingCardsById.get(String(prop.id))))
           .filter(item => hasHomePropertyPhoto(item.image));
-        const developmentUnitItems = (derivedDevelopmentListings.items || [])
-          .map(mapUnitListing)
-          .filter(item => hasHomePropertyPhoto(item.image));
-        const { items, source } = composeResidentialHomeFeedItems(
-          listingItems,
-          developmentUnitItems,
-          limit,
-        );
-
         return {
-          items: items as FeedItem[],
-          source,
+          items: listingItems.slice(0, limit),
+          source: 'listings',
         };
       };
 
@@ -1219,7 +1103,7 @@ export const developerRouter = router({
         locationFilter: LocationFilter,
       ): Promise<{
         items: FeedItem[];
-        source: 'developments' | 'listings' | 'units' | 'mixed' | 'shared_living' | 'land';
+        source: 'developments' | 'listings' | 'shared_living' | 'land';
       }> => {
         if (input.tab === 'buy') {
           return composeResidentialHomeFeed(locationFilter, 'sale');
@@ -1230,10 +1114,9 @@ export const developerRouter = router({
         }
 
         if (input.tab === 'developments') {
+          if (!input.canonicalPlaceId) return { items: [], source: 'developments' };
           const publicSearch = await publicDevelopmentSearchService.search({
-            province: locationFilter.province,
-            city: locationFilter.city,
-            suburb: locationFilter.suburb,
+            canonicalPlaceId: input.canonicalPlaceId,
             page: 0,
             pageSize: limit,
             sortOption: 'relevance',
@@ -1273,13 +1156,15 @@ export const developerRouter = router({
         return { items: [], source: 'listings' };
       };
 
-      const requestedScope: LocationScope = requestedSuburb
-        ? 'suburb'
-        : requestedCity
-          ? 'city'
-          : requestedProvince
-            ? 'province'
-            : 'national';
+      const requestedScope: LocationScope = input.canonicalPlaceId
+        ? 'canonical_place'
+        : requestedSuburb
+          ? 'suburb'
+          : requestedCity
+            ? 'city'
+            : requestedProvince
+              ? 'province'
+              : 'national';
 
       // The heading names the selected geography. Returning a nearby parent or
       // nationwide card rail when that geography is empty breaks that promise,
@@ -1331,61 +1216,63 @@ export const developerRouter = router({
 
   createLead: publicProcedure
     .input(
-      z.object({
-        developmentId: z.number().int().positive(),
-        cataloguePublisherId: z.number().int().positive().optional(),
-        transactionType: z.enum(['for_sale', 'for_rent']).optional(),
-        unitId: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.unitId).trim().optional(),
-        unitName: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.unitName).trim().optional(),
-        unitPriceFrom: z.number().nonnegative().optional(),
-        unitBedrooms: z.number().int().nonnegative().optional(),
-        unitBathrooms: z.number().nonnegative().optional(),
-        leadType: z.enum(['inquiry', 'viewing_request']).default('inquiry'),
-        name: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.name).trim().min(1),
-        email: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.email).trim().email(),
-        phone: z
-          .string()
-          .max(PUBLIC_LEAD_INPUT_LIMITS.phone)
-          .trim()
-          .min(1, 'Please enter your phone number.'),
-        message: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.message).trim().optional(),
-        website: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.honeypot).optional(),
-        affordabilityData: z
-          .object({
-            monthlyIncome: z.number().optional(),
-            monthlyExpenses: z.number().optional(),
-            monthlyDebts: z.number().optional(),
-            availableDeposit: z.number().optional(),
-            maxAffordable: z.number().optional(),
-            calculatedAt: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.calculatedAt).optional(),
-          })
-          .optional(),
-        referrerUrl: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.referrerUrl).trim().optional(),
-        utmSource: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.utm).trim().optional(),
-        utmMedium: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.utm).trim().optional(),
-        utmCampaign: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.utm).trim().optional(),
-        sourceSurface: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.source).trim().optional(),
-        leadSource: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.source).trim().optional(),
-        captureRequestId: z
-          .string()
-          .max(PUBLIC_LEAD_INPUT_LIMITS.captureRequestId)
-          .trim()
-          .min(PUBLIC_LEAD_INPUT_LIMITS.captureRequestIdMin),
-        consent: z.object({
-          accepted: z.literal(true),
-          version: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.consentVersion).trim().min(1),
-          source: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.consentSource).trim().optional(),
+      z
+        .object({
+          developmentId: z.number().int().positive(),
+          cataloguePublisherId: z.number().int().positive().optional(),
+          transactionType: z.enum(['for_sale', 'for_rent']).optional(),
+          unitId: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.unitId).trim().optional(),
+          unitName: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.unitName).trim().optional(),
+          unitPriceFrom: z.number().nonnegative().optional(),
+          unitBedrooms: z.number().int().nonnegative().optional(),
+          unitBathrooms: z.number().nonnegative().optional(),
+          leadType: z.enum(['inquiry', 'viewing_request']).default('inquiry'),
+          name: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.name).trim().min(1),
+          email: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.email).trim().email(),
+          phone: z
+            .string()
+            .max(PUBLIC_LEAD_INPUT_LIMITS.phone)
+            .trim()
+            .min(1, 'Please enter your phone number.'),
+          message: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.message).trim().optional(),
+          website: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.honeypot).optional(),
+          affordabilityData: z
+            .object({
+              monthlyIncome: z.number().optional(),
+              monthlyExpenses: z.number().optional(),
+              monthlyDebts: z.number().optional(),
+              availableDeposit: z.number().optional(),
+              maxAffordable: z.number().optional(),
+              calculatedAt: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.calculatedAt).optional(),
+            })
+            .optional(),
+          referrerUrl: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.referrerUrl).trim().optional(),
+          utmSource: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.utm).trim().optional(),
+          utmMedium: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.utm).trim().optional(),
+          utmCampaign: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.utm).trim().optional(),
+          sourceSurface: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.source).trim().optional(),
+          leadSource: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.source).trim().optional(),
+          captureRequestId: z
+            .string()
+            .max(PUBLIC_LEAD_INPUT_LIMITS.captureRequestId)
+            .trim()
+            .min(PUBLIC_LEAD_INPUT_LIMITS.captureRequestIdMin),
+          consent: z.object({
+            accepted: z.literal(true),
+            version: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.consentVersion).trim().min(1),
+            source: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.consentSource).trim().optional(),
+          }),
+        })
+        .superRefine((input, refinementContext) => {
+          const phoneError = agentProfilePhoneError(input.phone);
+          if (phoneError) {
+            refinementContext.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ['phone'],
+              message: phoneError,
+            });
+          }
         }),
-      }).superRefine((input, refinementContext) => {
-        const phoneError = agentProfilePhoneError(input.phone);
-        if (phoneError) {
-          refinementContext.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ['phone'],
-            message: phoneError,
-          });
-        }
-      }),
     )
     .mutation(async ({ ctx, input }) => {
       // Silently accept obvious bot submissions so the honeypot does not teach
@@ -1986,9 +1873,6 @@ export const developerRouter = router({
         name: developments.name,
         slug: developments.slug,
         address: developments.address,
-        suburb: developments.suburb,
-        city: developments.city,
-        province: developments.province,
         transactionType: developments.transactionType,
         approvalStatus: developments.approvalStatus,
         isPublished: developments.isPublished,
@@ -2058,6 +1942,8 @@ export const developerRouter = router({
       if (!row) {
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found' });
       }
+
+      const geography = await getDevelopmentPlaceGeography(row.id);
 
       const persistedUnitTypes = await dbConn
         .select()
@@ -2198,9 +2084,8 @@ export const developerRouter = router({
           slug: row.slug,
           location: {
             address: row.address ?? null,
-            suburb: row.suburb ?? null,
-            city: row.city,
-            province: row.province,
+            canonicalPlaceId: geography.canonicalPlaceId,
+            locationLabels: geography.locationLabels,
           },
           transactionType: row.transactionType,
           approvalStatus: row.approvalStatus,
@@ -2257,9 +2142,8 @@ export const developerRouter = router({
       name: development.identity.name,
       slug: development.identity.slug,
       address: development.identity.location.address,
-      suburb: development.identity.location.suburb,
-      city: development.identity.location.city,
-      province: development.identity.location.province,
+      canonicalPlaceId: development.identity.location.canonicalPlaceId,
+      locationLabels: development.identity.location.locationLabels,
       images: development.identity.imageUrl ? [development.identity.imageUrl] : [],
       approvalStatus: development.lifecycle.approvalStatus,
       isPublished: development.lifecycle.isPublished ? 1 : 0,

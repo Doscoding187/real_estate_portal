@@ -3,6 +3,7 @@ import {
   type DevelopmentSalesModeProjection,
 } from './distributionDeveloperReadPort';
 import type { DistributionOpportunityPlaceAssignment } from '../../shared/distributionOpportunityMatching';
+import { listDevelopmentPlaceGeography } from './developmentPlaceAssignmentService';
 
 export type DistributionPublicMarketMode = 'sale' | 'rent';
 
@@ -21,13 +22,12 @@ export type DistributionPublicOpportunity = DistributionOpportunityPlaceAssignme
   developmentId: number;
   revision: string;
   observedAt: string;
+  locationLabels: string[];
   campaign: {
     name: string;
     tagline: string | null;
     description: string | null;
     developmentType: string;
-    city: string;
-    province: string;
     images: string[];
   };
   inventory: {
@@ -93,6 +93,7 @@ export async function listPublicDistributionOpportunities(
   }
 
   const items: DistributionPublicOpportunity[] = [];
+  const geographyByDevelopmentId = await listDevelopmentPlaceGeography(uniqueIds);
   const batchSize = 5;
   for (let offset = 0; offset < uniqueIds.length; offset += batchSize) {
     const batch = uniqueIds.slice(offset, offset + batchSize);
@@ -108,21 +109,22 @@ export async function listPublicDistributionOpportunities(
 
       const modes = toPublicModes(projection.inventory.modes);
       if (!Object.keys(modes).length) return null;
+      const geography = geographyByDevelopmentId.get(developmentId) ?? {
+        canonicalPlaceId: null,
+        locationLabels: [],
+      };
 
       return {
         developmentId: projection.developmentId,
-        // No reviewed development-to-Place assignment source exists yet. Do not
-        // derive this from campaign city/province labels or the route.
-        canonicalPlaceId: null as DistributionOpportunityPlaceAssignment['canonicalPlaceId'],
+        canonicalPlaceId: geography.canonicalPlaceId,
         revision: projection.revision,
         observedAt: projection.observedAt,
+        locationLabels: geography.locationLabels,
         campaign: {
           name: projection.campaign.name,
           tagline: projection.campaign.tagline,
           description: projection.campaign.description,
           developmentType: projection.campaign.developmentType,
-          city: projection.campaign.city,
-          province: projection.campaign.province,
           images: projection.campaign.images,
         },
         inventory: {

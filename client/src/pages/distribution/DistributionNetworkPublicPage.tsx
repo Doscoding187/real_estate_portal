@@ -50,9 +50,10 @@ function formatModePrice(
   marketMode: DistributionMarketMode,
 ) {
   if (!mode) return 'Unavailable';
-  const range = mode.priceFrom === mode.priceTo
-    ? formatCurrency(mode.priceFrom)
-    : `${formatCurrency(mode.priceFrom)} – ${formatCurrency(mode.priceTo)}`;
+  const range =
+    mode.priceFrom === mode.priceTo
+      ? formatCurrency(mode.priceFrom)
+      : `${formatCurrency(mode.priceFrom)} – ${formatCurrency(mode.priceTo)}`;
   return marketMode === 'rent' ? `${range} / month` : range;
 }
 
@@ -87,6 +88,7 @@ export default function DistributionNetworkPublicPage() {
   } = trpc.properties.searchDevelopments.useQuery(
     {
       developmentType: 'residential',
+      canonicalPlaceId: matchPlace?.canonicalPlaceId,
       page: 0,
       pageSize: 50,
       sortOption: 'date_desc',
@@ -95,7 +97,7 @@ export default function DistributionNetworkPublicPage() {
   );
   const developments = developmentSearch?.items ?? [];
   const candidateDevelopmentIds = useMemo(
-    () => [...new Set(developments.map(development => Number(development.id)))],
+    () => [...new Set<number>(developments.map(development => Number(development.id)))],
     [developments],
   );
   const salesProjectionQuery = trpc.distribution.listPublicMarketableOpportunities.useQuery(
@@ -106,31 +108,35 @@ export default function DistributionNetworkPublicPage() {
       refetchOnWindowFocus: true,
     },
   );
-  const publicInventoryLoading = isLoadingDevs ||
-    (candidateDevelopmentIds.length > 0 && salesProjectionQuery.isLoading);
+  const publicInventoryLoading =
+    isLoadingDevs || (candidateDevelopmentIds.length > 0 && salesProjectionQuery.isLoading);
   const publicInventoryError = developmentSearchError || salesProjectionQuery.error;
   const searchMetadataById = useMemo(
-    () => new Map(developments.map(development => [Number(development.id), development])),
+    () =>
+      new Map<number, (typeof developments)[number]>(
+        developments.map(development => [Number(development.id), development] as const),
+      ),
     [developments],
   );
   const projectedDevelopments = useMemo(
-    () => (salesProjectionQuery.data?.items || []).flatMap(item => {
-      const searchMetadata = searchMetadataById.get(item.developmentId);
-      if (!searchMetadata) return [];
-      return [{
-        id: item.developmentId,
-        canonicalPlaceId: item.canonicalPlaceId,
-        name: item.campaign.name,
-        suburb: searchMetadata.suburb || null,
-        city: item.campaign.city,
-        province: item.campaign.province,
-        canonicalRoute: searchMetadata.canonicalRoute,
-        images: item.campaign.images,
-        description: item.campaign.description || item.campaign.tagline,
-        inventory: item.inventory,
-        observedAt: item.observedAt,
-      }];
-    }),
+    () =>
+      (salesProjectionQuery.data?.items || []).flatMap(item => {
+        const searchMetadata = searchMetadataById.get(item.developmentId);
+        if (!searchMetadata) return [];
+        return [
+          {
+            id: item.developmentId,
+            canonicalPlaceId: item.canonicalPlaceId,
+            name: item.campaign.name,
+            locationLabels: item.locationLabels,
+            canonicalRoute: searchMetadata.canonicalRoute,
+            images: item.campaign.images,
+            description: item.campaign.description || item.campaign.tagline,
+            inventory: item.inventory,
+            observedAt: item.observedAt,
+          },
+        ];
+      }),
     [salesProjectionQuery.data?.items, searchMetadataById],
   );
 
@@ -138,9 +144,9 @@ export default function DistributionNetworkPublicPage() {
     setInterestedDevId(devId ?? null);
     setIsFormVisible(true);
     setTimeout(() => {
-      document.getElementById('apply-form-section')?.scrollIntoView({ 
-        behavior: 'smooth', 
-        block: 'start' 
+      document.getElementById('apply-form-section')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
       });
     }, 150);
   };
@@ -170,53 +176,60 @@ export default function DistributionNetworkPublicPage() {
     const criteria = {
       marketMode,
       ...(matchPlace ? { canonicalPlaceId: matchPlace.canonicalPlaceId } : {}),
-      minPrice: selectedBandIsAny ? null : priceRange?.minPrice ?? null,
-      maxPrice: selectedBandIsAny ? null : priceRange?.maxPrice ?? null,
+      minPrice: selectedBandIsAny ? null : (priceRange?.minPrice ?? null),
+      maxPrice: selectedBandIsAny ? null : (priceRange?.maxPrice ?? null),
       bedrooms: [...selectedBeds],
     };
 
     return projectedDevelopments.filter(dev => {
       const mode = dev.inventory.modes[marketMode];
-      return matchesDistributionOpportunity({
-        canonicalPlaceId: dev.canonicalPlaceId,
-        marketMode,
-        available: Boolean(mode),
-        priceFrom: mode?.priceFrom ?? null,
-        priceTo: mode?.priceTo ?? null,
-        unitTypes: dev.inventory.unitTypes.map(unit => {
-          const unitMode = unit.modes[marketMode];
-          return {
-            bedrooms: unit.bedrooms,
-            label: unit.name,
-            available: Boolean(unitMode),
-            priceFrom: unitMode?.priceFrom ?? null,
-            priceTo: unitMode?.priceTo ?? null,
-          };
-        }),
-      }, criteria);
+      return matchesDistributionOpportunity(
+        {
+          canonicalPlaceId: dev.canonicalPlaceId,
+          marketMode,
+          available: Boolean(mode),
+          priceFrom: mode?.priceFrom ?? null,
+          priceTo: mode?.priceTo ?? null,
+          unitTypes: dev.inventory.unitTypes.map(unit => {
+            const unitMode = unit.modes[marketMode];
+            return {
+              bedrooms: unit.bedrooms,
+              label: unit.name,
+              available: Boolean(unitMode),
+              priceFrom: unitMode?.priceFrom ?? null,
+              priceTo: unitMode?.priceTo ?? null,
+            };
+          }),
+        },
+        criteria,
+      );
     });
   }, [marketMode, matchPriceRange, matchPlace, selectedBeds, projectedDevelopments]);
   const shortlistOptions = useMemo<ShortlistOption[]>(
-    () => projectedDevelopments.map(dev => {
-      const mode = dev.inventory.modes[marketMode];
-      return {
-        id: dev.id,
-        marketable: Boolean(mode),
-        name: dev.name,
-        location: [dev.suburb, dev.city, dev.province].filter(Boolean).join(', '),
-        imageUrl: dev.images[0] || null,
-        url: dev.canonicalRoute,
-        priceLabel: formatModePrice(mode, marketMode),
-        availabilityLabel: mode
-          ? `${mode.availableCount} currently available · checked ${formatObservedAt(dev.observedAt)}`
-          : 'No current availability for this option',
-        propertyDetails: dev.inventory.unitTypes
-          .filter(unit => Boolean(unit.modes[marketMode]))
-          .slice(0, 4)
-          .map(unit => `${unit.name}${unit.bedrooms === null ? '' : ` · ${unit.bedrooms} bed${unit.bedrooms === 1 ? '' : 's'}`} · ${formatModePrice(unit.modes[marketMode], marketMode)}`),
-        description: dev.description,
-      };
-    }),
+    () =>
+      projectedDevelopments.map(dev => {
+        const mode = dev.inventory.modes[marketMode];
+        return {
+          id: dev.id,
+          marketable: Boolean(mode),
+          name: dev.name,
+          location: dev.locationLabels.join(', '),
+          imageUrl: dev.images[0] || null,
+          url: dev.canonicalRoute,
+          priceLabel: formatModePrice(mode, marketMode),
+          availabilityLabel: mode
+            ? `${mode.availableCount} currently available · checked ${formatObservedAt(dev.observedAt)}`
+            : 'No current availability for this option',
+          propertyDetails: dev.inventory.unitTypes
+            .filter(unit => Boolean(unit.modes[marketMode]))
+            .slice(0, 4)
+            .map(
+              unit =>
+                `${unit.name}${unit.bedrooms === null ? '' : ` · ${unit.bedrooms} bed${unit.bedrooms === 1 ? '' : 's'}`} · ${formatModePrice(unit.modes[marketMode], marketMode)}`,
+            ),
+          description: dev.description,
+        };
+      }),
     [marketMode, projectedDevelopments],
   );
   const shortlistOptionsById = new Map(shortlistOptions.map(option => [String(option.id), option]));
@@ -231,9 +244,14 @@ export default function DistributionNetworkPublicPage() {
       : 'Any listed price',
     matchPlace ? `Preferred area: ${matchPlace.label}` : 'Any area',
     selectedBeds.size
-      ? [...selectedBeds].map(key => DISTRIBUTION_BEDROOM_FILTERS.find(option => option.key === key)?.label).filter(Boolean).join(', ')
+      ? [...selectedBeds]
+          .map(key => DISTRIBUTION_BEDROOM_FILTERS.find(option => option.key === key)?.label)
+          .filter(Boolean)
+          .join(', ')
       : 'Any bedroom count',
-  ].filter(Boolean).join(' · ');
+  ]
+    .filter(Boolean)
+    .join(' · ');
   const shortlistFilters = useMemo(
     () => ({
       priceBandKey: matchPriceRange,
@@ -270,11 +288,7 @@ export default function DistributionNetworkPublicPage() {
               >
                 Book Strategy Call
               </Button>
-              <Button
-                size="sm"
-                variant="conversion"
-                onClick={() => revealAndScrollToForm()}
-              >
+              <Button size="sm" variant="conversion" onClick={() => revealAndScrollToForm()}>
                 Apply to Join
               </Button>
               <Button
@@ -330,9 +344,7 @@ export default function DistributionNetworkPublicPage() {
               </p>
 
               <div className="text-blue-200 text-sm md:text-base font-medium mb-10 flex flex-col md:flex-row justify-center items-center gap-2 md:gap-4">
-                <span>
-                  Explore developer inventory
-                </span>
+                <span>Explore developer inventory</span>
                 <span className="hidden md:inline">•</span>
                 <span>Browse by area, price, and size</span>
                 <span className="hidden md:inline">•</span>
@@ -368,7 +380,8 @@ export default function DistributionNetworkPublicPage() {
                 </Button>
               </div>
               <p className="text-xs text-slate-500 mb-12">
-                You can apply even if no one is ready to proceed and you have no property-sales experience.
+                You can apply even if no one is ready to proceed and you have no property-sales
+                experience.
               </p>
 
               {/* NETWORK BENEFITS */}
@@ -383,7 +396,9 @@ export default function DistributionNetworkPublicPage() {
                 </div>
                 <div className="flex items-center gap-2 text-slate-400">
                   <ShieldCheck className="h-5 w-5 text-blue-400" />
-                  <span className="text-sm font-medium">Review the conditions before introducing someone</span>
+                  <span className="text-sm font-medium">
+                    Review the conditions before introducing someone
+                  </span>
                 </div>
               </div>
             </div>
@@ -404,11 +419,10 @@ export default function DistributionNetworkPublicPage() {
                   <ReferralApplyForm
                     onClose={() => setIsFormVisible(false)}
                     interestedDevId={interestedDevId}
-                    developments={developments.map(d => ({
+                    developments={projectedDevelopments.map(d => ({
                       id: d.id,
                       name: d.name,
-                      suburb: d.suburb,
-                      city: d.city,
+                      locationLabels: d.locationLabels,
                     }))}
                   />
                 </div>
@@ -429,7 +443,8 @@ export default function DistributionNetworkPublicPage() {
                   </h2>
                   <p className="text-lg text-slate-600 mb-6 leading-relaxed">
                     Choose whether they want to buy or rent, then narrow current opportunities by
-                    price, a selected Place, and bedrooms. This is a property search, not a credit decision.
+                    price, a selected Place, and bedrooms. This is a property search, not a credit
+                    decision.
                   </p>
                   <div className="bg-primary/5 border-l-4 border-primary p-4 rounded-r-lg text-slate-700 font-medium">
                     Prices and availability can change. After you join, you’ll see which options are
@@ -502,7 +517,10 @@ export default function DistributionNetworkPublicPage() {
                     {/* Bedrooms: select any number of options. */}
                     <div>
                       <label className="block text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">
-                        Bedrooms <span className="text-slate-400 font-normal normal-case">(select all that apply)</span>
+                        Bedrooms{' '}
+                        <span className="text-slate-400 font-normal normal-case">
+                          (select all that apply)
+                        </span>
                       </label>
                       <div className="flex flex-wrap gap-2">
                         {DISTRIBUTION_BEDROOM_FILTERS.map(bed => {
@@ -515,7 +533,7 @@ export default function DistributionNetworkPublicPage() {
                               onClick={() => toggleBed(bed.key)}
                               className={`px-3.5 py-2 rounded-lg text-xs font-bold border transition-all select-none ${
                                 active
-                            ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                                  ? 'bg-primary text-primary-foreground border-primary shadow-sm'
                                   : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-blue-400 hover:text-blue-700'
                               }`}
                             >
@@ -529,24 +547,32 @@ export default function DistributionNetworkPublicPage() {
                   </div>
 
                   {/* Dynamic Results Card */}
-                  <div className={`rounded-xl p-5 mb-5 flex flex-col sm:flex-row items-center justify-between gap-4 transition-colors ${
-                    filteredDevelopments.length === 0
-                      ? 'bg-amber-50 border border-amber-200'
-                      : 'bg-blue-50 border border-blue-100'
-                  }`}>
+                  <div
+                    className={`rounded-xl p-5 mb-5 flex flex-col sm:flex-row items-center justify-between gap-4 transition-colors ${
+                      filteredDevelopments.length === 0
+                        ? 'bg-amber-50 border border-amber-200'
+                        : 'bg-blue-50 border border-blue-100'
+                    }`}
+                  >
                     {filteredDevelopments.length === 0 ? (
                       <div className="w-full text-center">
-                        <p className="text-sm font-bold text-amber-800">No current opportunities match these choices.</p>
-                        <p className="text-xs text-amber-700 mt-1">Try a different area, price range, or bedroom count.</p>
+                        <p className="text-sm font-bold text-amber-800">
+                          No current opportunities match these choices.
+                        </p>
+                        <p className="text-xs text-amber-700 mt-1">
+                          Try a different area, price range, or bedroom count.
+                        </p>
                       </div>
                     ) : (
                       <>
                         <div>
                           <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">
-                            Current {marketMode === 'sale' ? 'buying' : 'rental'} options matching these choices
+                            Current {marketMode === 'sale' ? 'buying' : 'rental'} options matching
+                            these choices
                           </p>
                           <p className="text-xl font-bold text-slate-900">
-                            {filteredDevelopments.length} opportunit{filteredDevelopments.length !== 1 ? 'ies' : 'y'}
+                            {filteredDevelopments.length} opportunit
+                            {filteredDevelopments.length !== 1 ? 'ies' : 'y'}
                           </p>
                         </div>
                       </>
@@ -603,7 +629,7 @@ export default function DistributionNetworkPublicPage() {
               <div className="mx-auto grid max-w-6xl gap-6 sm:grid-cols-2 lg:grid-cols-4">
                 <Card className="border-slate-200 bg-white hover:border-blue-300 transition-colors shadow-sm">
                   <CardContent className="p-6">
-                      <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
                       <Users className="h-5 w-5" />
                     </div>
                     <h3 className="mb-2 text-base font-bold text-slate-900">
@@ -652,8 +678,8 @@ export default function DistributionNetworkPublicPage() {
                       Follow every referral
                     </h3>
                     <p className="text-sm leading-relaxed text-slate-600">
-                      See progress, the responsible team, required documents, and the next action
-                      in the partner workspace.
+                      See progress, the responsible team, required documents, and the next action in
+                      the partner workspace.
                     </p>
                   </CardContent>
                 </Card>
@@ -676,14 +702,17 @@ export default function DistributionNetworkPublicPage() {
                 </h2>
                 <p className="text-lg text-slate-600">
                   Browse currently available residential opportunities for{' '}
-                  {marketMode === 'sale' ? 'purchase' : 'rent'}. You can explore these public options
-                  now; referring someone depends on the opportunity and your account access.
+                  {marketMode === 'sale' ? 'purchase' : 'rent'}. You can explore these public
+                  options now; referring someone depends on the opportunity and your account access.
                 </p>
                 {developmentSearch?.hasMore && (
                   <p className="mt-2 text-sm text-slate-500">
-                    Showing up to 50 public listings; only options with confirmed public details and current marketable stock appear here.{' '}
+                    Showing up to 50 public listings; only options with confirmed public details and
+                    current marketable stock appear here.{' '}
                     <Link href="/new-developments">
-                      <span className="font-semibold text-primary underline">Browse the full catalogue</span>
+                      <span className="font-semibold text-primary underline">
+                        Browse the full catalogue
+                      </span>
                     </Link>
                     .
                   </p>
@@ -697,13 +726,16 @@ export default function DistributionNetworkPublicPage() {
                   <Skeleton className="h-[420px] w-full rounded-2xl bg-slate-100" />
                 </div>
               ) : publicInventoryError ? (
-                <p role="status" className="mx-auto max-w-3xl rounded-lg border border-amber-200 bg-amber-50 p-4 text-center text-sm text-amber-900">
+                <p
+                  role="status"
+                  className="mx-auto max-w-3xl rounded-lg border border-amber-200 bg-amber-50 p-4 text-center text-sm text-amber-900"
+                >
                   Current property availability is temporarily unavailable. Please try again later.
                 </p>
               ) : filteredDevelopments.length === 0 ? (
                 <p className="mx-auto max-w-3xl rounded-lg border border-slate-200 bg-slate-50 p-4 text-center text-sm text-slate-700">
-                  No public residential {marketMode === 'sale' ? 'purchase' : 'rental'} opportunities
-                  match these choices right now.
+                  No public residential {marketMode === 'sale' ? 'purchase' : 'rental'}{' '}
+                  opportunities match these choices right now.
                 </p>
               ) : (
                 <div className="mx-auto grid max-w-6xl gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -741,31 +773,45 @@ export default function DistributionNetworkPublicPage() {
                         >
                           <div>
                             <div className="opp-name">{dev.name}</div>
-                            <div className="opp-location">{dev.suburb || dev.city}</div>
+                            <div className="opp-location">
+                              {dev.locationLabels.join(', ') || 'Location to be confirmed'}
+                            </div>
                           </div>
                         </div>
                         <div className="opp-body">
                           <p className="mb-3 text-xs font-medium text-slate-500">
-                            Current {marketMode === 'sale' ? 'sale' : 'rental'} option · Checked {formatObservedAt(dev.observedAt)}
+                            Current {marketMode === 'sale' ? 'sale' : 'rental'} option · Checked{' '}
+                            {formatObservedAt(dev.observedAt)}
                           </p>
                           <div className="opp-price-row">
                             <div className="opp-price">
                               {formatModePrice(mode, marketMode)}
                               <span>
-                                Current advertised {marketMode === 'rent' ? 'monthly rent' : 'sale price'} range. Confirm final unit costs with the responsible team.
+                                Current advertised{' '}
+                                {marketMode === 'rent' ? 'monthly rent' : 'sale price'} range.
+                                Confirm final unit costs with the responsible team.
                               </span>
                             </div>
                             <div className="opp-payout">
                               {availabilityLabel}
-                              <span>Availability can change. Confirm the selected unit is still available before proceeding.</span>
+                              <span>
+                                Availability can change. Confirm the selected unit is still
+                                available before proceeding.
+                              </span>
                             </div>
                           </div>
                         </div>
                         <div className="opp-footer">
-                          <button className="btn-refer" onClick={() => setLocation(dev.canonicalRoute)}>
+                          <button
+                            className="btn-refer"
+                            onClick={() => setLocation(dev.canonicalRoute)}
+                          >
                             View property
                           </button>
-                          <button className="btn-details" onClick={() => revealAndScrollToForm(dev.id)}>
+                          <button
+                            className="btn-details"
+                            onClick={() => revealAndScrollToForm(dev.id)}
+                          >
                             Ask how to refer this property
                           </button>
                         </div>
@@ -778,7 +824,9 @@ export default function DistributionNetworkPublicPage() {
                     <div className="h-14 w-14 rounded-full bg-primary flex items-center justify-center text-primary-foreground mb-4 shadow-md">
                       <Unlock className="h-6 w-6" />
                     </div>
-                    <h3 className="text-base font-bold text-slate-900 mb-2">Join the referral network</h3>
+                    <h3 className="text-base font-bold text-slate-900 mb-2">
+                      Join the referral network
+                    </h3>
                     <p className="text-sm text-slate-600 max-w-[200px] mb-6">
                       After you join, we’ll show which opportunities you can refer someone to.
                     </p>
@@ -842,7 +890,9 @@ export default function DistributionNetworkPublicPage() {
                     <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-primary border-[6px] border-primary/10 shadow-md text-primary-foreground font-black text-xl">
                       3
                     </div>
-                    <h3 className="mb-2 text-base font-bold text-slate-900">Introduce with permission</h3>
+                    <h3 className="mb-2 text-base font-bold text-slate-900">
+                      Introduce with permission
+                    </h3>
                     <p className="text-sm text-slate-600 leading-relaxed">
                       If they want to continue, we guide you through their permission and the
                       information needed before you share their details.
@@ -853,7 +903,9 @@ export default function DistributionNetworkPublicPage() {
                     <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-white border-[6px] border-emerald-100 shadow-sm text-emerald-600 font-black text-xl">
                       4
                     </div>
-                    <h3 className="mb-2 text-base font-bold text-slate-900">Follow progress and payout</h3>
+                    <h3 className="mb-2 text-base font-bold text-slate-900">
+                      Follow progress and payout
+                    </h3>
                     <p className="text-sm text-slate-600 leading-relaxed">
                       See recorded updates, the next confirmed action, and the referral payout
                       conditions for that opportunity.
@@ -865,8 +917,8 @@ export default function DistributionNetworkPublicPage() {
                 <div className="bg-white border border-slate-200 rounded-xl p-6 sm:p-8 flex flex-col md:flex-row justify-between items-center gap-6 shadow-sm">
                   <div className="flex-1">
                     <p className="text-slate-600 text-sm md:text-base">
-                      The deal page shows recorded updates. The process and milestones can differ
-                      by opportunity, and a viewing appears only after it is booked.
+                      The deal page shows recorded updates. The process and milestones can differ by
+                      opportunity, and a viewing appears only after it is booked.
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2 md:max-w-md justify-center md:justify-end">
@@ -902,8 +954,9 @@ export default function DistributionNetworkPublicPage() {
                   Each development has its own rules.
                 </h2>
                 <p className="text-lg text-slate-600">
-                  Eligibility, required steps, referral payout terms, and payment milestones can vary by
-                  developer. Review the terms for an opportunity before making an introduction.
+                  Eligibility, required steps, referral payout terms, and payment milestones can
+                  vary by developer. Review the terms for an opportunity before making an
+                  introduction.
                 </p>
               </div>
 
@@ -956,9 +1009,9 @@ export default function DistributionNetworkPublicPage() {
               <div className="mx-auto max-w-6xl rounded-2xl border border-slate-200 bg-slate-50 p-8 text-center sm:p-12">
                 <h3 className="mb-3 text-2xl font-bold text-slate-900">No universal payout rate</h3>
                 <p className="mx-auto max-w-3xl text-base text-slate-600">
-                  Each opportunity's terms determine whether a referral is eligible for a
-                  referral payout, how it is calculated, and which milestone applies.
-                  Check those terms before you submit.
+                  Each opportunity's terms determine whether a referral is eligible for a referral
+                  payout, how it is calculated, and which milestone applies. Check those terms
+                  before you submit.
                 </p>
               </div>
             </div>
@@ -975,7 +1028,9 @@ export default function DistributionNetworkPublicPage() {
                   </div>
                 </div>
                 <div className="w-full max-w-xs rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-                  <div className="text-xl font-black text-slate-900 mb-2">Property introductions</div>
+                  <div className="text-xl font-black text-slate-900 mb-2">
+                    Property introductions
+                  </div>
                   <div className="text-sm text-slate-600 font-medium tracking-wide">
                     Submitted by approved partners
                   </div>
@@ -1000,8 +1055,7 @@ export default function DistributionNetworkPublicPage() {
                 the right opportunity.
               </h2>
               <p className="mb-10 text-lg text-slate-400 font-light">
-                Apply to join, then review the active opportunities and terms available to
-                you.
+                Apply to join, then review the active opportunities and terms available to you.
               </p>
 
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">

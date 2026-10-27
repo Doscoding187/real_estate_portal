@@ -37,7 +37,7 @@ export function DevelopmentBrochureDialog({
   const { brandName = 'Listify Property' } = item.brand ?? {};
   const rate = item.affordability?.annualInterestRate;
   const rateAvailable = Boolean(item.affordability?.available && rate);
-  const location = [item.city, item.province].filter(Boolean).join(', ');
+  const location = item.locationLabels?.join(', ') || 'Location to be confirmed';
   const description = item.description || item.programPromotion?.description || '';
   const highlights = getBrochureHighlights(item);
   const heroImage = item.imageUrl || item.campaign?.images?.[0] || null;

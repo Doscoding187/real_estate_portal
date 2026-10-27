@@ -1,61 +1,51 @@
-import {
-  existsSync,
-  readFileSync,
-  readdirSync,
-} from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { getTableColumns } from 'drizzle-orm';
+import { developmentPlaceAssignments, developments } from '../../drizzle/schema';
 
-const ROOT = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  '../..',
-);
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
 function readRepoFile(relativePath: string): string {
   return readFileSync(path.join(ROOT, relativePath), 'utf8');
 }
 
-function countPhysicalTableDefinitions(
-  source: string,
-  physicalTableName: string,
-): number {
-  const escapedName = physicalTableName.replace(
-    /[.*+?^${}()|[\]\\]/g,
-    '\\$&',
-  );
+function countPhysicalTableDefinitions(source: string, physicalTableName: string): number {
+  const escapedName = physicalTableName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-  return (
-    source.match(
-      new RegExp(
-        `mysqlTable\\(\\s*['"]${escapedName}['"]`,
-        'g',
-      ),
-    ) ?? []
-  ).length;
+  return (source.match(new RegExp(`mysqlTable\\(\\s*['"]${escapedName}['"]`, 'g')) ?? []).length;
 }
 
 describe('database canonical model authority', () => {
+  it('uses reviewed Place assignments as the only Development geography authority', () => {
+    const developmentColumns = getTableColumns(developments);
+    const assignmentColumns = getTableColumns(developmentPlaceAssignments);
+
+    for (const retiredColumn of ['city', 'province', 'suburb', 'locationId']) {
+      expect(developmentColumns).not.toHaveProperty(retiredColumn);
+    }
+
+    expect(assignmentColumns).toHaveProperty('placeId');
+    expect(assignmentColumns).toHaveProperty('assignmentKind');
+    expect(assignmentColumns).toHaveProperty('reviewState');
+    expect(assignmentColumns).toHaveProperty('evidenceReference');
+    expect(assignmentColumns).toHaveProperty('reviewedByUserId');
+    expect(assignmentColumns).toHaveProperty('reviewedAt');
+  });
+
   it('retires the duplicate root listing schema', () => {
-    expect(
-      existsSync(path.join(ROOT, 'drizzle/listing-schema.ts')),
-    ).toBe(false);
+    expect(existsSync(path.join(ROOT, 'drizzle/listing-schema.ts'))).toBe(false);
   });
 
   it('retires the unadopted economic actor abstraction', () => {
-    expect(
-      existsSync(path.join(ROOT, 'drizzle/schema/economicActors.ts')),
-    ).toBe(false);
+    expect(existsSync(path.join(ROOT, 'drizzle/schema/economicActors.ts'))).toBe(false);
 
     const schemaIndex = readRepoFile('drizzle/schema/index.ts');
-    const runtimeCapabilities = readRepoFile(
-      'server/services/runtimeSchemaCapabilities.ts',
-    );
+    const runtimeCapabilities = readRepoFile('server/services/runtimeSchemaCapabilities.ts');
     expect(existsSync(path.join(ROOT, 'cleanup-production-data.ts'))).toBe(false);
 
-    expect(schemaIndex).not.toContain(
-      "export * from './economicActors';",
-    );
+    expect(schemaIndex).not.toContain("export * from './economicActors';");
 
     const retiredRuntimeAuthority = [
       'economicActorsReady',
@@ -67,51 +57,27 @@ describe('database canonical model authority', () => {
     for (const authorityName of retiredRuntimeAuthority) {
       expect(runtimeCapabilities).not.toContain(authorityName);
     }
-
   });
 
   it('retires inactive analytics and affordability models while preserving recent searches', () => {
     const analyticsSchema = readRepoFile('drizzle/schema/analytics.ts');
     const referralSchema = readRepoFile('drizzle/schema/referrals.ts');
-    const demandScoringService = readRepoFile(
-      'server/services/demandScoringService.ts',
-    );
+    const demandScoringService = readRepoFile('server/services/demandScoringService.ts');
 
-    expect(analyticsSchema).not.toContain(
-      "mysqlTable(\n  'location_analytics_events'",
-    );
-    expect(analyticsSchema).not.toContain(
-      'export const locationAnalyticsEvents',
-    );
+    expect(analyticsSchema).not.toContain("mysqlTable(\n  'location_analytics_events'");
+    expect(analyticsSchema).not.toContain('export const locationAnalyticsEvents');
 
-    expect(referralSchema).not.toContain(
-      "mysqlTable(\n  'affordability_config'",
-    );
-    expect(referralSchema).not.toContain(
-      'export const affordabilityConfig',
-    );
-    expect(referralSchema).not.toContain(
-      'AFFORDABILITY_CONFIG_VALUE_TYPE_VALUES',
-    );
+    expect(referralSchema).not.toContain("mysqlTable(\n  'affordability_config'");
+    expect(referralSchema).not.toContain('export const affordabilityConfig');
+    expect(referralSchema).not.toContain('AFFORDABILITY_CONFIG_VALUE_TYPE_VALUES');
 
-    expect(
-      countPhysicalTableDefinitions(
-        analyticsSchema,
-        'recent_searches',
-      ),
-    ).toBe(1);
+    expect(countPhysicalTableDefinitions(analyticsSchema, 'recent_searches')).toBe(1);
 
-    expect(demandScoringService).not.toContain(
-      'locationAnalyticsEvents',
-    );
+    expect(demandScoringService).not.toContain('locationAnalyticsEvents');
   });
 
   it('matches the committed launch table inventory and Explore classification', () => {
-    const inventory = JSON.parse(
-      readRepoFile(
-        'drizzle/schema/canonical-model-inventory.json',
-      ),
-    ) as {
+    const inventory = JSON.parse(readRepoFile('drizzle/schema/canonical-model-inventory.json')) as {
       tableCount: number;
       tables: string[];
       explore: {
@@ -127,32 +93,21 @@ describe('database canonical model authority', () => {
 
     const modularSchemaSource = readdirSync(schemaDirectory)
       .filter(fileName => fileName.endsWith('.ts'))
-      .map(fileName =>
-        readFileSync(
-          path.join(schemaDirectory, fileName),
-          'utf8',
-        ),
-      )
+      .map(fileName => readFileSync(path.join(schemaDirectory, fileName), 'utf8'))
       .join('\n');
 
     const modelTables = Array.from(
-      modularSchemaSource.matchAll(
-        /mysqlTable\(\s*['"]([^'"]+)['"]/g,
-      ),
+      modularSchemaSource.matchAll(/mysqlTable\(\s*['"]([^'"]+)['"]/g),
       match => String(match[1]),
     ).sort();
 
-    expect(inventory.tableCount).toBe(238);
-    expect(inventory.tables).toHaveLength(238);
-    expect(new Set(inventory.tables).size).toBe(238);
-    expect([...inventory.tables].sort()).toEqual(
-      inventory.tables,
-    );
+    expect(inventory.tableCount).toBe(239);
+    expect(inventory.tables).toHaveLength(239);
+    expect(new Set(inventory.tables).size).toBe(239);
+    expect([...inventory.tables].sort()).toEqual(inventory.tables);
     expect(modelTables).toEqual(inventory.tables);
 
-    expect(inventory.explore.primaryLaunchAuthority).toEqual([
-      'explore_content',
-    ]);
+    expect(inventory.explore.primaryLaunchAuthority).toEqual(['explore_content']);
 
     expect(inventory.explore.activeLaunchAuthority).toEqual([
       'explore_discovery_videos',
@@ -162,10 +117,7 @@ describe('database canonical model authority', () => {
       'topics',
     ]);
 
-    expect(inventory.explore.compatibilityAuthority).toEqual([
-      'content_topics',
-      'explore_shorts',
-    ]);
+    expect(inventory.explore.compatibilityAuthority).toEqual(['content_topics', 'explore_shorts']);
 
     expect(inventory.explore.bootstrapPresent).toEqual([
       'content_topics',
@@ -183,25 +135,13 @@ describe('database canonical model authority', () => {
   });
 
   it('aligns Explore compatibility models to active baseline shapes', () => {
-    const exploreSchema = readRepoFile(
-      'drizzle/schema/explore.ts',
-    );
+    const exploreSchema = readRepoFile('drizzle/schema/explore.ts');
 
-    expect(exploreSchema).toContain(
-      "contentId: varchar('content_id', { length: 36 }).notNull()",
-    );
-    expect(exploreSchema).toContain(
-      "relevanceScore: decimal('relevance_score'",
-    );
-    expect(exploreSchema).toContain(
-      "index('idx_content_topic').on(t.topicId)",
-    );
-    expect(exploreSchema).not.toContain(
-      "index('idx_ct_content')",
-    );
-    expect(exploreSchema).not.toContain(
-      "index('idx_ct_topic')",
-    );
+    expect(exploreSchema).toContain("contentId: varchar('content_id', { length: 36 }).notNull()");
+    expect(exploreSchema).toContain("relevanceScore: decimal('relevance_score'");
+    expect(exploreSchema).toContain("index('idx_content_topic').on(t.topicId)");
+    expect(exploreSchema).not.toContain("index('idx_ct_content')");
+    expect(exploreSchema).not.toContain("index('idx_ct_topic')");
 
     const requiredShortColumns = [
       "listingId: int('listing_id')",
@@ -226,9 +166,7 @@ describe('database canonical model authority', () => {
       exploreSchema.indexOf('export const exploreShorts ='),
     );
 
-    expect(exploreShortsBlock).not.toContain(
-      "exploreContentId: int('explore_content_id')",
-    );
+    expect(exploreShortsBlock).not.toContain("exploreContentId: int('explore_content_id')");
   });
 
   it('defines each canonical listing physical table once', () => {
@@ -236,12 +174,7 @@ describe('database canonical model authority', () => {
 
     const modularSchemaSource = readdirSync(schemaDirectory)
       .filter(fileName => fileName.endsWith('.ts'))
-      .map(fileName =>
-        readFileSync(
-          path.join(schemaDirectory, fileName),
-          'utf8',
-        ),
-      )
+      .map(fileName => readFileSync(path.join(schemaDirectory, fileName), 'utf8'))
       .join('\n');
 
     const listingTables = [
@@ -256,10 +189,7 @@ describe('database canonical model authority', () => {
 
     for (const physicalTableName of listingTables) {
       expect(
-        countPhysicalTableDefinitions(
-          modularSchemaSource,
-          physicalTableName,
-        ),
+        countPhysicalTableDefinitions(modularSchemaSource, physicalTableName),
         physicalTableName,
       ).toBe(1);
     }
@@ -269,15 +199,11 @@ describe('database canonical model authority', () => {
     const schemaIndex = readRepoFile('drizzle/schema/index.ts');
 
     expect(schemaIndex).toContain("export * from './listings';");
-    expect(schemaIndex).toContain(
-      "export * from './googlePlacesMonitoring';",
-    );
+    expect(schemaIndex).toContain("export * from './googlePlacesMonitoring';");
   });
 
   it('models all active Google Places monitoring tables', () => {
-    const monitoringSchema = readRepoFile(
-      'drizzle/schema/googlePlacesMonitoring.ts',
-    );
+    const monitoringSchema = readRepoFile('drizzle/schema/googlePlacesMonitoring.ts');
 
     const tableNames = [
       'google_places_api_logs',
@@ -288,19 +214,14 @@ describe('database canonical model authority', () => {
 
     for (const physicalTableName of tableNames) {
       expect(
-        countPhysicalTableDefinitions(
-          monitoringSchema,
-          physicalTableName,
-        ),
+        countPhysicalTableDefinitions(monitoringSchema, physicalTableName),
         physicalTableName,
       ).toBe(1);
     }
   });
 
   it('preserves the active Google Places migration indexes and constraints', () => {
-    const monitoringSchema = readRepoFile(
-      'drizzle/schema/googlePlacesMonitoring.ts',
-    );
+    const monitoringSchema = readRepoFile('drizzle/schema/googlePlacesMonitoring.ts');
 
     const authorityNames = [
       'idx_gpal_timestamp',

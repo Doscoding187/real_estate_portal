@@ -99,10 +99,7 @@ export default function DevelopmentsList() {
     return developments.filter(development => {
       if (!matchesDevelopmentFilter(development, activeFilter)) return false;
       if (!query) return true;
-      const location = development.identity.location;
-      return [development.identity.name, location.city, location.province]
-        .filter(Boolean)
-        .some(value => value.toLowerCase().includes(query));
+      return development.identity.name.toLowerCase().includes(query);
     });
   }, [activeFilter, developments, searchTerm]);
   const filterCounts = useMemo(
@@ -222,7 +219,8 @@ export default function DevelopmentsList() {
                     </Badge>
                   </div>
                   <CardDescription>
-                    {development.identity.location.city}, {development.identity.location.province}
+                    {development.identity.location.locationLabels.join(', ') ||
+                      'Place assignment pending review'}
                   </CardDescription>
                 </div>
                 <div className="flex flex-wrap gap-2">

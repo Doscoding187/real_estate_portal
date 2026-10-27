@@ -27,8 +27,6 @@ type ProjectionTermsSnapshot = {
     tagline: string | null;
     description: string | null;
     developmentType: string;
-    city: string;
-    province: string;
     images: string[];
   };
   inventory: {
@@ -95,6 +93,10 @@ export async function buildDistributionReferralTermsSnapshot(input: {
   db: DbExecutor;
   developmentId: number;
   developerProjection: ProjectionTermsSnapshot;
+  placeAssignment: {
+    canonicalPlaceId: string | null;
+    locationLabels: string[];
+  };
   marketMode: 'sale' | 'rent';
   intakeEvidenceSnapshot: Record<string, unknown>;
 }) {
@@ -226,7 +228,20 @@ export async function buildDistributionReferralTermsSnapshot(input: {
     revision: input.developerProjection.revision,
     observedAt: input.developerProjection.observedAt,
     marketMode: input.marketMode,
-    campaign: input.developerProjection.campaign,
+    campaign: {
+      visible: input.developerProjection.campaign.visible,
+      name: input.developerProjection.campaign.name,
+      tagline: input.developerProjection.campaign.tagline,
+      description: input.developerProjection.campaign.description,
+      developmentType: input.developerProjection.campaign.developmentType,
+      images: input.developerProjection.campaign.images,
+    },
+    placeAssignment: {
+      canonicalPlaceId: input.placeAssignment.canonicalPlaceId,
+      locationLabels: input.placeAssignment.canonicalPlaceId
+        ? input.placeAssignment.locationLabels
+        : [],
+    },
     inventory: {
       phaseScope: input.developerProjection.inventory.phaseScope,
       mode: projectionMode,

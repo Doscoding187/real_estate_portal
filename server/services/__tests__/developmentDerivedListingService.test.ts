@@ -9,6 +9,8 @@ const {
   mockLeftJoinTwo,
   mockWhere,
   mockOrderBy,
+  mockListDevelopmentIdsForCanonicalPlace,
+  mockListDevelopmentPlaceGeography,
 } = vi.hoisted(() => ({
   mockGetDb: vi.fn(),
   mockSelect: vi.fn(),
@@ -18,13 +20,29 @@ const {
   mockLeftJoinTwo: vi.fn(),
   mockWhere: vi.fn(),
   mockOrderBy: vi.fn(),
+  mockListDevelopmentIdsForCanonicalPlace: vi.fn(),
+  mockListDevelopmentPlaceGeography: vi.fn(),
 }));
 
 vi.mock('../../db-connection', () => ({
   getDb: mockGetDb,
 }));
 
+vi.mock('../developmentPlaceAssignmentService', () => ({
+  listDevelopmentIdsForCanonicalPlace: mockListDevelopmentIdsForCanonicalPlace,
+  listDevelopmentPlaceGeography: mockListDevelopmentPlaceGeography,
+}));
+
 import { developmentDerivedListingService } from '../developmentDerivedListingService';
+
+const CANONICAL_PLACE_ID = 'pl-place-01-6a145c6d642ba208a2c12de7';
+
+function searchListings(filters: Record<string, unknown> = {}, ...pagination: any[]) {
+  return developmentDerivedListingService.searchListings(
+    { canonicalPlaceId: CANONICAL_PLACE_ID, ...filters } as any,
+    ...pagination,
+  );
+}
 
 function collectSqlParts(
   value: unknown,
@@ -61,6 +79,16 @@ describe('DevelopmentDerivedListingService', () => {
     mockLeftJoinTwo.mockReturnValue({ where: mockWhere });
     mockWhere.mockReturnValue({ orderBy: mockOrderBy });
     mockGetDb.mockResolvedValue({ select: mockSelect });
+    mockListDevelopmentIdsForCanonicalPlace.mockResolvedValue([42, 43, 84]);
+    mockListDevelopmentPlaceGeography.mockImplementation(
+      async (developmentIds: number[]) =>
+        new Map(
+          developmentIds.map(developmentId => [
+            developmentId,
+            { canonicalPlaceId: CANONICAL_PLACE_ID, locationLabels: ['Johannesburg'] },
+          ]),
+        ),
+    );
     mockOrderBy.mockResolvedValue([
       {
         developmentId: 42,
@@ -69,9 +97,6 @@ describe('DevelopmentDerivedListingService', () => {
         developmentStatus: 'launching-soon',
         developmentType: 'residential',
         transactionType: 'for_sale',
-        city: 'Johannesburg',
-        suburb: 'Berea',
-        province: 'Gauteng',
         completionDate: '2027-05-01 00:00:00',
         legacyStatus: 'pre_launch',
         constructionPhase: 'planning',
@@ -123,12 +148,7 @@ describe('DevelopmentDerivedListingService', () => {
         unitBaseMedia: { gallery: [{ url: '/media/real-unit.jpg', category: 'photo' }] },
       },
     ]);
-    const result = await developmentDerivedListingService.searchListings(
-      { requireUnitPhoto: true },
-      'date_desc',
-      1,
-      1,
-    );
+    const result = await searchListings({ requireUnitPhoto: true }, 'date_desc', 1, 1);
     expect(result.total).toBe(1);
     expect(result.items[0]).toMatchObject({ unitTypeId: 'photo', image: '/media/real-unit.jpg' });
   });
@@ -141,7 +161,7 @@ describe('DevelopmentDerivedListingService', () => {
       { ...row, unitTypeId: 'sold', developmentStatus: 'sold-out' },
       { ...row, unitTypeId: 'available', availableUnits: 2 },
     ]);
-    const result = await developmentDerivedListingService.searchListings({
+    const result = await searchListings({
       requireAvailableStock: true,
     });
     expect(result.items.map(item => item.unitTypeId)).toEqual(['available']);
@@ -158,7 +178,7 @@ describe('DevelopmentDerivedListingService', () => {
         yardSize: null,
       },
     ]);
-    const result = await developmentDerivedListingService.searchListings({
+    const result = await searchListings({
       requireUnitPhoto: true,
       requireAvailableStock: true,
     });
@@ -172,16 +192,19 @@ describe('DevelopmentDerivedListingService', () => {
 
   it('does not hide database unavailability behind an empty property feed', async () => {
     mockGetDb.mockResolvedValueOnce(null);
-    await expect(developmentDerivedListingService.searchListings({})).rejects.toThrow(
-      'Database unavailable',
-    );
+    await expect(searchListings({})).rejects.toThrow('Database unavailable');
+  });
+
+  it('rejects a missing canonical Place before querying inventory', async () => {
+    await expect(developmentDerivedListingService.searchListings({} as any)).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+    });
+    expect(mockGetDb).not.toHaveBeenCalled();
   });
 
   it('maps public unit types into development-derived listings', async () => {
-    const result = await developmentDerivedListingService.searchListings(
+    const result = await searchListings(
       {
-        city: 'Johannesburg',
-        province: 'Gauteng',
         listingType: 'sale',
       },
       'date_desc',
@@ -254,9 +277,6 @@ describe('DevelopmentDerivedListingService', () => {
         developmentStatus: 'selling',
         developmentType: 'residential',
         transactionType: 'for_sale',
-        city: 'Johannesburg',
-        suburb: 'Berea',
-        province: 'Gauteng',
         developmentHighlights: JSON.stringify([
           '24-Hour Security',
           'Prime Location',
@@ -291,12 +311,7 @@ describe('DevelopmentDerivedListingService', () => {
       },
     ]);
 
-    const result = await developmentDerivedListingService.searchListings(
-      { listingType: 'sale' },
-      'date_desc',
-      1,
-      20,
-    );
+    const result = await searchListings({ listingType: 'sale' }, 'date_desc', 1, 20);
 
     expect(result.items[0]?.highlights).toEqual([
       '24 Hour Security',
@@ -311,48 +326,14 @@ describe('DevelopmentDerivedListingService', () => {
     ]);
   });
 
-  it('uses one canonical sibling boundary for development-derived OR filtering and totals', async () => {
-    const result = await developmentDerivedListingService.searchListings(
-      { listingType: 'sale' },
-      'date_desc',
-      1,
-      20,
-      {
-        kind: 'canonical_locations',
-        authorityKey: 'canonical-location-union:v1:suburb:suburb:34,suburb:35',
-        level: 'suburb',
-        parentCanonicalLocationId: 'city:12',
-        parentName: 'Johannesburg',
-        members: [
-          {
-            canonicalLocationId: 'suburb:34',
-            level: 'suburb',
-            name: 'Sandton',
-            provinceId: 1,
-            provinceName: 'Gauteng',
-            cityId: 12,
-            cityName: 'Johannesburg',
-            suburbId: 34,
-            suburbName: 'Sandton',
-          },
-          {
-            canonicalLocationId: 'suburb:35',
-            level: 'suburb',
-            name: 'Berea',
-            provinceId: 1,
-            provinceName: 'Gauteng',
-            cityId: 12,
-            cityName: 'Johannesburg',
-            suburbId: 35,
-            suburbName: 'Berea',
-          },
-        ],
-      },
-    );
+  it('resolves Development inventory through the requested Place ID', async () => {
+    const result = await searchListings({ listingType: 'sale' }, 'date_desc', 1, 20);
 
-    expect(result.total).toBe(1);
-    expect(result.items).toHaveLength(1);
-    expect(result.items[0].suburb).toBe('Berea');
+    expect(mockListDevelopmentIdsForCanonicalPlace).toHaveBeenCalledWith(CANONICAL_PLACE_ID);
+    expect(result.items[0]).toMatchObject({
+      canonicalPlaceId: CANONICAL_PLACE_ID,
+      locationLabels: ['Johannesburg'],
+    });
   });
 
   it('applies map bounds to development-derived listings', async () => {
@@ -364,9 +345,6 @@ describe('DevelopmentDerivedListingService', () => {
         developmentStatus: 'launching-soon',
         developmentType: 'residential',
         transactionType: 'for_sale',
-        city: 'Johannesburg',
-        suburb: 'Sandton',
-        province: 'Gauteng',
         latitude: '-26.1000',
         longitude: '28.0500',
         unitTypeId: 'inside-unit',
@@ -385,9 +363,6 @@ describe('DevelopmentDerivedListingService', () => {
         developmentStatus: 'launching-soon',
         developmentType: 'residential',
         transactionType: 'for_sale',
-        city: 'Johannesburg',
-        suburb: 'Sandton',
-        province: 'Gauteng',
         latitude: '-25.8000',
         longitude: '28.0500',
         unitTypeId: 'outside-unit',
@@ -401,7 +376,7 @@ describe('DevelopmentDerivedListingService', () => {
       },
     ]);
 
-    const result = await developmentDerivedListingService.searchListings(
+    const result = await searchListings(
       {
         listingType: 'sale',
         bounds: { south: -26.2, north: -26, west: 28, east: 28.1 },
@@ -415,10 +390,8 @@ describe('DevelopmentDerivedListingService', () => {
   });
 
   it('applies area filters before deriving both items and total', async () => {
-    const result = await developmentDerivedListingService.searchListings(
+    const result = await searchListings(
       {
-        city: 'Johannesburg',
-        province: 'Gauteng',
         listingType: 'sale',
         minArea: 75,
       },
@@ -434,10 +407,8 @@ describe('DevelopmentDerivedListingService', () => {
   });
 
   it('applies bathroom filters before deriving both items and total', async () => {
-    const result = await developmentDerivedListingService.searchListings(
+    const result = await searchListings(
       {
-        city: 'Johannesburg',
-        province: 'Gauteng',
         listingType: 'sale',
         maxBathrooms: 1,
       },
@@ -453,10 +424,8 @@ describe('DevelopmentDerivedListingService', () => {
   });
 
   it('only queries approved published developments with active unit inventory', async () => {
-    await developmentDerivedListingService.searchListings(
+    await searchListings(
       {
-        city: 'Johannesburg',
-        province: 'Gauteng',
         listingType: 'sale',
       },
       'date_desc',
@@ -481,9 +450,6 @@ describe('DevelopmentDerivedListingService', () => {
       developmentStatus: 'launching-soon',
       developmentType: 'residential',
       transactionType: 'for_rent',
-      city: 'Johannesburg',
-      suburb: 'Rosebank',
-      province: 'Gauteng',
       structuralType: 'apartment',
       bedrooms: 2,
       bathrooms: 1,
@@ -505,10 +471,8 @@ describe('DevelopmentDerivedListingService', () => {
       return [rentRow];
     });
 
-    const result = await developmentDerivedListingService.searchListings(
+    const result = await searchListings(
       {
-        city: 'Johannesburg',
-        province: 'Gauteng',
         listingType: 'rent',
       },
       'date_desc',
@@ -537,10 +501,8 @@ describe('DevelopmentDerivedListingService', () => {
         return sourceRow.transactionType === 'for_rent' ? [sourceRow] : [];
       });
 
-      const result = await developmentDerivedListingService.searchListings(
+      const result = await searchListings(
         {
-          city: 'Johannesburg',
-          province: 'Gauteng',
           listingType: 'rent',
         },
         'date_desc',
@@ -567,9 +529,6 @@ describe('DevelopmentDerivedListingService', () => {
         developmentStatus: 'launching-soon',
         developmentType: 'residential',
         transactionType: 'for_sale',
-        city: 'Johannesburg',
-        suburb: 'Berea',
-        province: 'Gauteng',
         completionDate: '2027-05-01 00:00:00',
         legacyStatus: 'pre_launch',
         constructionPhase: 'planning',
@@ -611,9 +570,6 @@ describe('DevelopmentDerivedListingService', () => {
         developmentStatus: 'launching-soon',
         developmentType: 'residential',
         transactionType: 'for_sale',
-        city: 'Johannesburg',
-        suburb: 'Berea',
-        province: 'Gauteng',
         completionDate: '2027-05-01 00:00:00',
         legacyStatus: 'pre_launch',
         constructionPhase: 'planning',
@@ -649,10 +605,8 @@ describe('DevelopmentDerivedListingService', () => {
       },
     ]);
 
-    const result = await developmentDerivedListingService.searchListings(
+    const result = await searchListings(
       {
-        city: 'Johannesburg',
-        province: 'Gauteng',
         listingType: 'sale',
       },
       'date_desc',
@@ -668,174 +622,5 @@ describe('DevelopmentDerivedListingService', () => {
       availableUnits: 0,
       totalUnits: 3,
     });
-  });
-
-  it('filters development-derived listings by text location slugs when provided', async () => {
-    mockOrderBy.mockResolvedValueOnce([
-      {
-        developmentId: 42,
-        developmentName: 'The Junction',
-        developmentSlug: 'the-junction',
-        developmentStatus: 'launching-soon',
-        developmentType: 'residential',
-        transactionType: 'for_sale',
-        city: 'Johannesburg',
-        suburb: 'Berea',
-        province: 'Gauteng',
-        completionDate: '2027-05-01 00:00:00',
-        legacyStatus: 'pre_launch',
-        constructionPhase: 'planning',
-        developmentImages: '[{"url":"https://example.com/dev-cover.jpg"}]',
-        developmentCreatedAt: '2026-03-20 10:00:00',
-        developerId: 7,
-        cataloguePublisherId: 9,
-        developerName: 'Builder Group',
-        developerLogo: 'https://example.com/developer-logo.jpg',
-        brandName: 'Builder Group',
-        brandSlug: 'builder-group',
-        brandLogoUrl: 'https://example.com/brand-logo.jpg',
-        brandPublicContactEmail: 'sales@builder-group.com',
-        unitTypeId: 'unit-jhb',
-        unitName: 'Johannesburg Apartment',
-        structuralType: 'apartment',
-        bedrooms: 2,
-        bathrooms: 2,
-        unitSize: 74,
-        yardSize: 0,
-        priceFrom: '1195000.00',
-        priceTo: '1395000.00',
-        basePriceFrom: '1195000.00',
-        basePriceTo: '1395000.00',
-        monthlyRentFrom: null,
-        monthlyRentTo: null,
-        startingBid: null,
-        auctionStatus: 'scheduled',
-        availableUnits: 7,
-        totalUnits: 12,
-        unitBaseMedia: '{"gallery":[{"url":"https://example.com/unit-primary.jpg"}]}',
-        unitCreatedAt: '2026-03-21 09:00:00',
-      },
-      {
-        developmentId: 43,
-        developmentName: 'Sky City',
-        developmentSlug: 'sky-city',
-        developmentStatus: 'selling-fast',
-        developmentType: 'residential',
-        transactionType: 'for_sale',
-        city: 'Alberton',
-        suburb: 'Sky City',
-        province: 'Gauteng',
-        completionDate: '2027-05-01 00:00:00',
-        legacyStatus: 'ready',
-        constructionPhase: 'completed',
-        developmentImages: '[{"url":"https://example.com/dev-cover-2.jpg"}]',
-        developmentCreatedAt: '2026-03-20 10:00:00',
-        developerId: 7,
-        cataloguePublisherId: 9,
-        developerName: 'Builder Group',
-        developerLogo: 'https://example.com/developer-logo.jpg',
-        brandName: 'Builder Group',
-        brandSlug: 'builder-group',
-        brandLogoUrl: 'https://example.com/brand-logo.jpg',
-        brandPublicContactEmail: 'sales@builder-group.com',
-        unitTypeId: 'unit-alberton',
-        unitName: 'Sky City Starter Home',
-        structuralType: 'house',
-        bedrooms: 2,
-        bathrooms: 1,
-        unitSize: 52,
-        yardSize: 180,
-        priceFrom: '758000.00',
-        priceTo: '810000.00',
-        basePriceFrom: '758000.00',
-        basePriceTo: '810000.00',
-        monthlyRentFrom: null,
-        monthlyRentTo: null,
-        startingBid: null,
-        auctionStatus: 'scheduled',
-        availableUnits: 4,
-        totalUnits: 10,
-        unitBaseMedia: '{"gallery":[{"url":"https://example.com/unit-alberton.jpg"}]}',
-        unitCreatedAt: '2026-03-22 09:00:00',
-      },
-    ]);
-
-    const result = await developmentDerivedListingService.searchListings(
-      {
-        locations: ['alberton'],
-        listingType: 'sale',
-      },
-      'date_desc',
-      1,
-      20,
-    );
-
-    expect(result.items).toHaveLength(1);
-    expect(result.items[0].unitTypeId).toBe('unit-alberton');
-    expect(result.items[0].city).toBe('Alberton');
-  });
-
-  it('matches lowercase city and province search inputs against title-cased database values', async () => {
-    mockOrderBy.mockResolvedValueOnce([
-      {
-        developmentId: 43,
-        developmentName: 'Sky City',
-        developmentSlug: 'sky-city',
-        developmentStatus: 'selling-fast',
-        developmentType: 'residential',
-        transactionType: 'for_sale',
-        city: 'Alberton',
-        suburb: 'Sky City',
-        province: 'Gauteng',
-        completionDate: '2027-05-01 00:00:00',
-        legacyStatus: 'ready',
-        constructionPhase: 'completed',
-        developmentImages: '[{"url":"https://example.com/dev-cover-2.jpg"}]',
-        developmentCreatedAt: '2026-03-20 10:00:00',
-        developerId: 7,
-        cataloguePublisherId: 9,
-        developerName: 'Builder Group',
-        developerLogo: 'https://example.com/developer-logo.jpg',
-        brandName: 'Builder Group',
-        brandSlug: 'builder-group',
-        brandLogoUrl: 'https://example.com/brand-logo.jpg',
-        brandPublicContactEmail: 'sales@builder-group.com',
-        unitTypeId: 'unit-alberton',
-        unitName: 'Sky City Starter Home',
-        structuralType: 'house',
-        bedrooms: 2,
-        bathrooms: 1,
-        unitSize: 52,
-        yardSize: 180,
-        priceFrom: '758000.00',
-        priceTo: '810000.00',
-        basePriceFrom: '758000.00',
-        basePriceTo: '810000.00',
-        monthlyRentFrom: null,
-        monthlyRentTo: null,
-        startingBid: null,
-        auctionStatus: 'scheduled',
-        availableUnits: 4,
-        totalUnits: 10,
-        unitBaseMedia: '{"gallery":[{"url":"https://example.com/unit-alberton.jpg"}]}',
-        unitCreatedAt: '2026-03-22 09:00:00',
-      },
-    ]);
-
-    const result = await developmentDerivedListingService.searchListings(
-      {
-        city: 'alberton',
-        province: 'gauteng',
-        listingType: 'sale',
-      },
-      'date_desc',
-      1,
-      20,
-    );
-
-    expect(result.items).toHaveLength(1);
-    expect(result.items[0].unitTypeId).toBe('unit-alberton');
-    expect(result.items[0].city).toBe('Alberton');
-    expect(result.items[0].province).toBe('Gauteng');
   });
 });

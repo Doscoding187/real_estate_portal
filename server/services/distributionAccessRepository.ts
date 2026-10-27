@@ -379,7 +379,7 @@ export async function listDevelopmentAccess(
     }
     if (
       search &&
-      ![reference.name, reference.displayName, reference.city, reference.province, reference.suburb]
+      ![reference.name, reference.displayName]
         .filter(Boolean)
         .some(value => String(value).toLocaleLowerCase().includes(search))
     ) {
@@ -389,8 +389,8 @@ export async function listDevelopmentAccess(
       ...row,
       developmentId,
       developmentName: reference.displayName,
-      city: reference.city,
-      province: reference.province,
+      canonicalPlaceId: reference.canonicalPlaceId,
+      locationLabels: reference.locationLabels,
       publisherName: reference.publisherName,
       publisherAuthorityKind: reference.publisherAuthorityKind,
       cataloguePublisherId: reference.publisherId,

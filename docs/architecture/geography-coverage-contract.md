@@ -101,11 +101,11 @@ consumer-specific workstreams and is governed by Section 10 exit conditions.
 
 **Preserved from v0.3.** Publicly searchable scopes remain exactly three:
 
-| Factual type | Search scope |
-| --- | --- |
-| province | `province` |
-| city, town | `metro_city` |
-| suburb, locality, neighbourhood, village, township | `locality` |
+| Factual type                                       | Search scope |
+| -------------------------------------------------- | ------------ |
+| province                                           | `province`   |
+| city, town                                         | `metro_city` |
+| suburb, locality, neighbourhood, village, township | `locality`   |
 
 **Superseded in v0.5:** the `Storage` column of the v0.3 table. The mapping to
 physical tables `provinces` / `cities` / `suburbs` is **no longer a binding
@@ -239,8 +239,8 @@ by the recorded roles and evidence, never by ingestion or sort order.
 
 **Superseded in v0.5:** the v0.3 implication that ingestion order could decide
 the preferred name. That is what produced the reviewed regression in which the
-Gauteng place known publicly as *Centurion* was projected with preferred name
-*Lyttelton* and its required acceptance probe failed (Section 13). A rename does
+Gauteng place known publicly as _Centurion_ was projected with preferred name
+_Lyttelton_ and its required acceptance probe failed (Section 13). A rename does
 **not** automatically create a new Place.
 
 Alternate spellings, language forms, transliterations, abbreviations and
@@ -357,16 +357,14 @@ version** used for that calculation, so that a stable Place identity does not
 conceal a changing geographic population. A Place identity is stable; the set of
 listings, statistics or market facts associated with it is not.
 
-
-
 ## 3. Coverage tiers
 
-| Tier | Meaning | Runtime behavior |
-| --- | --- | --- |
-| A — verified | Identity, parent chain, scope, licensing all supported | status `verified`; fully searchable/selectable; SEO eligible |
-| B — provisional | Identity and parent safe enough to search; evidence provisional or OSM-only pending gate | status `provisional`; searchable/selectable; no SEO |
-| C — candidate/alias pending | Fails identity, parent, ambiguity, or natural-key gates | No runtime row; recorded in disposition + review queue |
-| D — rejected/retired | Duplicate, non-independent, retired, licence-blocked | Never public; retained as provenance |
+| Tier                        | Meaning                                                                                  | Runtime behavior                                             |
+| --------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| A — verified                | Identity, parent chain, scope, licensing all supported                                   | status `verified`; fully searchable/selectable; SEO eligible |
+| B — provisional             | Identity and parent safe enough to search; evidence provisional or OSM-only pending gate | status `provisional`; searchable/selectable; no SEO          |
+| C — candidate/alias pending | Fails identity, parent, ambiguity, or natural-key gates                                  | No runtime row; recorded in disposition + review queue       |
+| D — rejected/retired        | Duplicate, non-independent, retired, licence-blocked                                     | Never public; retained as provenance                         |
 
 Tier assignment is computed by the pipeline and recorded per identity with an
 explicit reason string. Tiers map onto the existing schema enum
@@ -399,7 +397,7 @@ the generated disposition artifacts, which are the audit trail.
    A parent pointer never carries administrative, settlement, market or
    succession meaning simultaneously, and a relationship that is not explicitly
    authorized for search scope has no effect on query boundaries (D12). The
-   three-level natural key remains a valid *presentation* path, not a statement
+   three-level natural key remains a valid _presentation_ path, not a statement
    that a place has exactly one kind of parent.
 
 ## 5. Pipeline and artifacts
@@ -520,31 +518,30 @@ A transitional row with no exit condition is an audit defect and must not be
 introduced. Exit conditions name the slice and the observable condition that
 closes them.
 
-| Asset or path | Disposition | Authority role and required action | Exit condition |
-| --- | --- | --- | --- |
-| `docs/architecture/geography-coverage-contract.md` and the active territory manifest | **CANONICAL** | Govern policy, accepted inputs, sources, parent decisions, and licensing. Preserve and version them. | — |
-| `data/geography-coverage-v0.1/output/gauteng_runtime_reference_projection_v0.2.json` | **CANONICAL** | Frozen current Gauteng runtime row authority. Load by digest; do not rewrite while Slice 1 is reviewable. | Superseded only by an activated successor catalog with recorded digests. |
-| `data/geography-coverage-v0.1/output/gauteng_factual_runtime_mapping_v0.2.jsonl` | **CANONICAL** | Frozen current factual-to-runtime disposition bridge. Every factual identity remains distinct, including co-published members. | Superseded only by an activated successor mapping with recorded digests. |
-| `data/geography-coverage-v0.1/output/gauteng_coverage_disposition_v0.1.json` and `gauteng_review_queue_v0.1.jsonl` | **CANONICAL** | Preserve counts, reasons, candidate evidence, and research obligations; never materialize blocked rows publicly. | — |
-| `data/geography-coverage-v0.1/territory-catalog.v0.1.json` | **CANONICAL** | Digest-pinned registry of immutable territory artifacts. It contains no copied geography rows and cannot override a source artifact. | Default until an activation slice repoints `LOCATION_AUTHORITY_CATALOG_INDEX_PATH`. |
-| `data/place-admission-territories.v0.1/territory-registry.v0.1.json` | **CANONICAL** | The single authority for a territory's *admission* inputs and outputs (Section 21): source-authority directory, digest-pinned source manifest, source artifact filenames, admission version, package directory and package artifact filenames. Names locations; holds no geography rows and adjudicates nothing. | — |
-| `shared/factualRuntimeGeographyBridge.ts`, `shared/runtimeGeography.ts`, and the governed runtime reference loader | **CANONICAL** | Validate IDs, projection shape, natural-key hierarchy, and exact governed co-publication. Reject malformed or ambiguous source data. | — |
-| `server/_core/databaseAuthority/dataAdapters/canonicalGeography.ts` | **CANONICAL** | Materialize and verify governed natural keys on authorized targets. Numeric IDs are environment-local handles. The adapter's target **row shape** is transitional (see next row); its upsert-by-natural-key and fail-closed conflict behaviour are canonical. | — |
-| `place`, `place_name`, `place_relationship`, `place_evidence`, `place_external_mapping`, `search_area`, `search_area_member` (migrations 0091–0097) | **CANONICAL** | The minimum V1 Place Authority foundation approved in Section 14, established by Slice 1. Identity is the opaque `place_id` primary key; no numeric surrogate exists. Identity dimensions are separate columns, and every contract invariant is a database CHECK constraint. Empty by design: no Place is populated and no consumer references these tables yet. | — |
-| The `provinces`, `cities`, and `suburbs` **tables** as identity storage | **TRANSITIONAL** | Required until Place cutover. Continue to serve as the materialized projection of governed natural keys. | Closes when every domain in Section 10's consumer row references Place, and these tables are retired through the approved retirement mechanism. |
-| Static `PROVINCES`, `CITIES`, and `SUBURBS` arrays in the Database Authority geography adapter | **TRANSITIONAL** | Retain as the reviewed foundation minimum. Do not add more hand entries. | Closes when a versioned generated foundation source replaces the hand arrays. |
-| `server/services/searchAreaDefinitions.ts`, `searchAreaAuthority.ts` and the Search Area execution contracts | **CANONICAL, SEPARATE** | Search Areas remain a separate governed market identity. They have separate IDs, explicit membership, and explicit authorized journeys. They never become factual Places and never establish factual containment. | Migrates onto the approved persisted `search_area` / `search_area_member` model when that implementation slice arrives. No new Search Area service or registry may be created in the interim. |
-| `data/gauteng-search-area-candidates-v0.1/` and `data/gauteng-search-area-research-v0.1/` | **ARCHIVED EVIDENCE** | Preserve definitions, membership research, and provenance. Never copy a Search Area into a factual row or infer factual identity from membership. | — |
-| Google/provider IDs, labels, and `location_provider_mappings` | **ARCHIVED EVIDENCE** | Retain for enrichment, encounter review, and provenance. A provider observation must not create or promote a public geography row. | — |
-| `server/services/locationAutoPopulation.ts` and retired auto-population completion notes | **RETIRED** | Dead code with no runtime import. Preserve historical artifacts only where they document research or incidents. | Already closed. |
-| **Live provider-driven geography writes**: `listingLocationResolver.ts` suburb insert, `locationRouter.ts` `saveGooglePlaceLocation`, `locationPagesServiceEnhanced.ts` `findOrCreateLocation` / `syncLegacyTables` | **RETIRED** | These paths write provider observations into `provinces`/`cities`/`suburbs` with no governance gate, which violates D3. `saveGooglePlaceLocation` is additionally an unauthenticated `publicProcedure` mutation and references columns absent from the current schema. | Closes when each path is removed or reduced to recording an observation, and D3 is enforced executably rather than by prose. Tracked in Section 14. |
-| Legacy `locations` rows, `locations.id`, `listings.locationId`, `developments.locationId`, and geography text columns | **TRANSITIONAL** | Preserve current consumers and historical evidence, but resolve new cross-environment identity through governed natural keys and typed target handles. Do not copy numeric IDs between environments. | Closes when the parallel `locations` hierarchy is retired and consumers reference Place identity. |
-| Direct classic-table discovery, `resolveLocation` widening, free-text geography execution, and location-page text matching | **TRANSITIONAL** | Classify and remove in bounded consumer-convergence slices. They do not become canonical by being read from the canonical tables. | Closes when no public search path matches geography by display text; the hybrid ID-or-text matcher in property search is the last instance. |
-| Agents, Agencies, Services, Canvassing, Demand, Saved Searches, Explore, Developments, and location-page geography fields | **TRANSITIONAL** | Retain current behavior, then converge each family to typed canonical Place references without rewriting unrelated product logic. Cardinality intent is recorded in Section 12. | Closes per domain, each with its own convergence slice and its own verification. |
-| `data/gauteng-candidate-catalogue-v0.1/`, `data/gauteng-canonical-promotion-v0.1/`, `v0.2/`, and `data/gauteng-factual-canonical-v0.1/` summaries | **ARCHIVED EVIDENCE** | Retain provenance and research history. Do not bulk-migrate them around the governed projection and disposition checks. | — |
-| Superseded numeric runtime handles, provider place IDs, display text, and hard-coded client maps (e.g. `locationUtils.ts` `CITY_PROVINCE_MAP`, `EnhancedNavbar.tsx` hard-coded suburb list) | **DO NOT MIGRATE** | They may be read only inside an explicitly bounded transitional consumer. They never become canonical factual or cross-environment identity. | — |
-
-
+| Asset or path                                                                                                                                                                                                       | Disposition             | Authority role and required action                                                                                                                                                                                                                                                                                                                               | Exit condition                                                                                                                                                                                |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `docs/architecture/geography-coverage-contract.md` and the active territory manifest                                                                                                                                | **CANONICAL**           | Govern policy, accepted inputs, sources, parent decisions, and licensing. Preserve and version them.                                                                                                                                                                                                                                                             | —                                                                                                                                                                                             |
+| `data/geography-coverage-v0.1/output/gauteng_runtime_reference_projection_v0.2.json`                                                                                                                                | **CANONICAL**           | Frozen current Gauteng runtime row authority. Load by digest; do not rewrite while Slice 1 is reviewable.                                                                                                                                                                                                                                                        | Superseded only by an activated successor catalog with recorded digests.                                                                                                                      |
+| `data/geography-coverage-v0.1/output/gauteng_factual_runtime_mapping_v0.2.jsonl`                                                                                                                                    | **CANONICAL**           | Frozen current factual-to-runtime disposition bridge. Every factual identity remains distinct, including co-published members.                                                                                                                                                                                                                                   | Superseded only by an activated successor mapping with recorded digests.                                                                                                                      |
+| `data/geography-coverage-v0.1/output/gauteng_coverage_disposition_v0.1.json` and `gauteng_review_queue_v0.1.jsonl`                                                                                                  | **CANONICAL**           | Preserve counts, reasons, candidate evidence, and research obligations; never materialize blocked rows publicly.                                                                                                                                                                                                                                                 | —                                                                                                                                                                                             |
+| `data/geography-coverage-v0.1/territory-catalog.v0.1.json`                                                                                                                                                          | **CANONICAL**           | Digest-pinned registry of immutable territory artifacts. It contains no copied geography rows and cannot override a source artifact.                                                                                                                                                                                                                             | Default until an activation slice repoints `LOCATION_AUTHORITY_CATALOG_INDEX_PATH`.                                                                                                           |
+| `data/place-admission-territories.v0.1/territory-registry.v0.1.json`                                                                                                                                                | **CANONICAL**           | The single authority for a territory's _admission_ inputs and outputs (Section 21): source-authority directory, digest-pinned source manifest, source artifact filenames, admission version, package directory and package artifact filenames. Names locations; holds no geography rows and adjudicates nothing.                                                 | —                                                                                                                                                                                             |
+| `shared/factualRuntimeGeographyBridge.ts`, `shared/runtimeGeography.ts`, and the governed runtime reference loader                                                                                                  | **CANONICAL**           | Validate IDs, projection shape, natural-key hierarchy, and exact governed co-publication. Reject malformed or ambiguous source data.                                                                                                                                                                                                                             | —                                                                                                                                                                                             |
+| `server/_core/databaseAuthority/dataAdapters/canonicalGeography.ts`                                                                                                                                                 | **CANONICAL**           | Materialize and verify governed natural keys on authorized targets. Numeric IDs are environment-local handles. The adapter's target **row shape** is transitional (see next row); its upsert-by-natural-key and fail-closed conflict behaviour are canonical.                                                                                                    | —                                                                                                                                                                                             |
+| `place`, `place_name`, `place_relationship`, `place_evidence`, `place_external_mapping`, `search_area`, `search_area_member` (migrations 0091–0097)                                                                 | **CANONICAL**           | The minimum V1 Place Authority foundation approved in Section 14, established by Slice 1. Identity is the opaque `place_id` primary key; no numeric surrogate exists. Identity dimensions are separate columns, and every contract invariant is a database CHECK constraint. Empty by design: no Place is populated and no consumer references these tables yet. | —                                                                                                                                                                                             |
+| The `provinces`, `cities`, and `suburbs` **tables** as identity storage                                                                                                                                             | **TRANSITIONAL**        | Required until Place cutover. Continue to serve as the materialized projection of governed natural keys.                                                                                                                                                                                                                                                         | Closes when every domain in Section 10's consumer row references Place, and these tables are retired through the approved retirement mechanism.                                               |
+| Static `PROVINCES`, `CITIES`, and `SUBURBS` arrays in the Database Authority geography adapter                                                                                                                      | **TRANSITIONAL**        | Retain as the reviewed foundation minimum. Do not add more hand entries.                                                                                                                                                                                                                                                                                         | Closes when a versioned generated foundation source replaces the hand arrays.                                                                                                                 |
+| `server/services/searchAreaDefinitions.ts`, `searchAreaAuthority.ts` and the Search Area execution contracts                                                                                                        | **CANONICAL, SEPARATE** | Search Areas remain a separate governed market identity. They have separate IDs, explicit membership, and explicit authorized journeys. They never become factual Places and never establish factual containment.                                                                                                                                                | Migrates onto the approved persisted `search_area` / `search_area_member` model when that implementation slice arrives. No new Search Area service or registry may be created in the interim. |
+| `data/gauteng-search-area-candidates-v0.1/` and `data/gauteng-search-area-research-v0.1/`                                                                                                                           | **ARCHIVED EVIDENCE**   | Preserve definitions, membership research, and provenance. Never copy a Search Area into a factual row or infer factual identity from membership.                                                                                                                                                                                                                | —                                                                                                                                                                                             |
+| Google/provider IDs, labels, and `location_provider_mappings`                                                                                                                                                       | **ARCHIVED EVIDENCE**   | Retain for enrichment, encounter review, and provenance. A provider observation must not create or promote a public geography row.                                                                                                                                                                                                                               | —                                                                                                                                                                                             |
+| `server/services/locationAutoPopulation.ts` and retired auto-population completion notes                                                                                                                            | **RETIRED**             | Dead code with no runtime import. Preserve historical artifacts only where they document research or incidents.                                                                                                                                                                                                                                                  | Already closed.                                                                                                                                                                               |
+| **Live provider-driven geography writes**: `listingLocationResolver.ts` suburb insert, `locationRouter.ts` `saveGooglePlaceLocation`, `locationPagesServiceEnhanced.ts` `findOrCreateLocation` / `syncLegacyTables` | **RETIRED**             | These paths write provider observations into `provinces`/`cities`/`suburbs` with no governance gate, which violates D3. `saveGooglePlaceLocation` is additionally an unauthenticated `publicProcedure` mutation and references columns absent from the current schema.                                                                                           | Closes when each path is removed or reduced to recording an observation, and D3 is enforced executably rather than by prose. Tracked in Section 14.                                           |
+| Legacy `locations` rows, `locations.id`, `listings.locationId`, and remaining non-Development geography text columns                                                                                                | **TRANSITIONAL**        | Resolve remaining consumers through their governed Place or Search Area contract. Do not copy numeric IDs between environments. Development geography has already moved to reviewed Place assignments; its removed fields are not preserved as a compatibility path.                                                                                             | Closes as each remaining domain retires its parallel hierarchy and references its governed identity.                                                                                          |
+| Direct classic-table discovery, `resolveLocation` widening, free-text geography execution, and location-page text matching                                                                                          | **TRANSITIONAL**        | Classify and remove in bounded consumer-convergence slices. They do not become canonical by being read from the canonical tables.                                                                                                                                                                                                                                | Closes when no public search path matches geography by display text; the hybrid ID-or-text matcher in property search is the last instance.                                                   |
+| Agents, Agencies, Services, Canvassing, Demand, Saved Searches, Explore, and location-page geography fields                                                                                                         | **TRANSITIONAL**        | These are not compatibility obligations. Each remaining consumer must be cut over to its governed Place or Search Area contract; no new text-based authority may be added.                                                                                                                                                                                       | Closes per domain with its own verification.                                                                                                                                                  |
+| Development `city`, `province`, `suburb`, and numeric `locationId` fields and consumers                                                                                                                             | **RETIRED**             | These fields are not a compatibility contract and may not authorize, match, or widen geography. Active Development consumers use reviewed `development_place_assignments`; the model and consumers no longer expose the retired columns.                                                                                                                         | Code cutover is complete. Migration 0156 removes the baseline columns when the authored migration chain is released.                                                                          |
+| `data/gauteng-candidate-catalogue-v0.1/`, `data/gauteng-canonical-promotion-v0.1/`, `v0.2/`, and `data/gauteng-factual-canonical-v0.1/` summaries                                                                   | **ARCHIVED EVIDENCE**   | Retain provenance and research history. Do not bulk-migrate them around the governed projection and disposition checks.                                                                                                                                                                                                                                          | —                                                                                                                                                                                             |
+| Superseded numeric runtime handles, provider place IDs, display text, and hard-coded client maps (e.g. `locationUtils.ts` `CITY_PROVINCE_MAP`, `EnhancedNavbar.tsx` hard-coded suburb list)                         | **DO NOT MIGRATE**      | They may be read only inside an explicitly bounded transitional consumer. They never become canonical factual or cross-environment identity.                                                                                                                                                                                                                     | —                                                                                                                                                                                             |
 
 ## 11. Gauteng exact-source recovery status
 
@@ -607,15 +604,15 @@ merged into `main`** (`main` is at `ad0c4247`).
 
 ### 13.1 Authoritative artifacts and digests (v0.1 default catalog, source `za-gp`)
 
-| Artifact | SHA-256 |
-| --- | --- |
-| `data/geography-coverage-v0.1/territory-catalog.v0.1.json` | `ad32a26dbaa40d03f63545d5f9af0918cbea2e1d65c8166817b15c52e5d6f8c4` |
-| `data/geography-coverage-v0.1/gauteng-territory-manifest.v0.1.json` | `d4abd0b0303a7fdcd57e4a20f64bfbeece2c91dc7e0f953875cfbe90dfcb9b0f` |
+| Artifact                                                                             | SHA-256                                                            |
+| ------------------------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| `data/geography-coverage-v0.1/territory-catalog.v0.1.json`                           | `ad32a26dbaa40d03f63545d5f9af0918cbea2e1d65c8166817b15c52e5d6f8c4` |
+| `data/geography-coverage-v0.1/gauteng-territory-manifest.v0.1.json`                  | `d4abd0b0303a7fdcd57e4a20f64bfbeece2c91dc7e0f953875cfbe90dfcb9b0f` |
 | `data/geography-coverage-v0.1/output/gauteng_runtime_reference_projection_v0.2.json` | `faad65e4216c2fb62886e5561984a8b82fe3b750942a4bb38c2eba12a8141399` |
-| `data/geography-coverage-v0.1/output/gauteng_factual_runtime_mapping_v0.2.jsonl` | `ed709559ba69b28b6dcc20fc7381478f2e822ff8436bcaaf7dcaaddd410c63fa` |
-| `data/geography-coverage-v0.1/output/gauteng_coverage_disposition_v0.1.json` | `d80601e2b368190c31650a68c3f38d1ba351e9e05803ebd01ff21ae7a860d232` |
-| `data/geography-coverage-v0.1/output/gauteng_review_queue_v0.1.jsonl` | `d8e3521a20a9d906cc12ae13236e5aafdfd78291612068048a09cb5bbbab424a` |
-| `data/geography-coverage-v0.1/source-recovery.v0.1.json` | `7da0238c549590898db794b9d8cbf74b0a95cf22c36b6509caa60913645c699a` |
+| `data/geography-coverage-v0.1/output/gauteng_factual_runtime_mapping_v0.2.jsonl`     | `ed709559ba69b28b6dcc20fc7381478f2e822ff8436bcaaf7dcaaddd410c63fa` |
+| `data/geography-coverage-v0.1/output/gauteng_coverage_disposition_v0.1.json`         | `d80601e2b368190c31650a68c3f38d1ba351e9e05803ebd01ff21ae7a860d232` |
+| `data/geography-coverage-v0.1/output/gauteng_review_queue_v0.1.jsonl`                | `d8e3521a20a9d906cc12ae13236e5aafdfd78291612068048a09cb5bbbab424a` |
+| `data/geography-coverage-v0.1/source-recovery.v0.1.json`                             | `7da0238c549590898db794b9d8cbf74b0a95cf22c36b6509caa60913645c699a` |
 
 Authoritative v0.1 counts: 1,480 factual identities; 1,414 runtime rows; 64
 carried; 1,364 newly promoted identities; **116 queued**; 60 represented by
@@ -642,21 +639,21 @@ preserved as source research.
 The conflicting figures in earlier reports are **not** in conflict. Each is a
 correct count of a different, precisely identified state.
 
-| Figure | Meaning | State |
-| --- | --- | --- |
-| 103 parent-evidence files | Manifest `inputs.researched_parent_edges` entries | v0.1 committed |
-| 102 parent-evidence files | Files matching the `parent-evidence` name pattern | v0.1 committed |
-| 11 `awaiting_accepted_parent_edge` | v0.1 review queue | v0.1 committed |
-| 8 `duplicate_natural_key_within_parent` | v0.1 review queue | v0.1 committed |
-| 3 `natural_key_owned_by_accepted_row` | v0.1 review queue | v0.1 committed |
-| 116 | Total v0.1 review-queue rows | v0.1 committed |
-| 452 / 24 | **Admission-analysis subset**, not queue counts | v0.2 candidate, uncommitted |
-| 467 / 36 | Actual v0.2 review-queue rows | v0.2 candidate, uncommitted |
-| 535 | Total v0.2 review-queue rows | v0.2 candidate, uncommitted |
+| Figure                                  | Meaning                                           | State                       |
+| --------------------------------------- | ------------------------------------------------- | --------------------------- |
+| 103 parent-evidence files               | Manifest `inputs.researched_parent_edges` entries | v0.1 committed              |
+| 102 parent-evidence files               | Files matching the `parent-evidence` name pattern | v0.1 committed              |
+| 11 `awaiting_accepted_parent_edge`      | v0.1 review queue                                 | v0.1 committed              |
+| 8 `duplicate_natural_key_within_parent` | v0.1 review queue                                 | v0.1 committed              |
+| 3 `natural_key_owned_by_accepted_row`   | v0.1 review queue                                 | v0.1 committed              |
+| 116                                     | Total v0.1 review-queue rows                      | v0.1 committed              |
+| 452 / 24                                | **Admission-analysis subset**, not queue counts   | v0.2 candidate, uncommitted |
+| 467 / 36                                | Actual v0.2 review-queue rows                     | v0.2 candidate, uncommitted |
+| 535                                     | Total v0.2 review-queue rows                      | v0.2 candidate, uncommitted |
 
 The 452 and 24 figures came from an admission diff that classified **the 489
 v0.1 rows removed by the v0.2 projection** and then reported only the subset
-traceable to a v0.1 *promoted* runtime row. The full v0.2 queue is larger because
+traceable to a v0.1 _promoted_ runtime row. The full v0.2 queue is larger because
 it also contains identities that had no v0.1 promoted predecessor:
 
 - `awaiting_accepted_parent_edge`: 467 total = 422 traceable to a v0.1 promoted
@@ -738,19 +735,21 @@ Area authority converges onto this model when its implementation slice arrives.
 
 One Place Authority does **not** imply one foreign key per domain. The intended
 cardinality is recorded here so that consumer workstreams can proceed
-independently. Implementation is deferred to consumer-specific workstreams.
+independently. Implementation is domain-specific; Section 24 records the
+Development assignment model. Other rows remain deferred to their own
+consumer-specific workstreams.
 
-| Domain | Intended cardinality |
-| --- | --- |
-| Listing | One primary resolved geographic assignment for a property or site. |
-| Development | One or more geographic site or phase assignments, plus optional presentation or estate associations. |
-| Agent | Optional base location, plus many coverage or expertise Places or scopes. |
-| Agency | Branches and locations, plus many coverage associations. |
-| Service Provider | Multiple operating locations and service-specific coverage. |
-| Canvassing | Targeting sets, plus independently located properties and prospects. |
-| Demand | May target multiple Places, or one governed Search Area. |
-| Saved Search | Versioned geographic query intent, not merely one Place reference. |
-| Explore content | Zero-to-many geographic or subject associations. |
+| Domain           | Intended cardinality                                                                                 |
+| ---------------- | ---------------------------------------------------------------------------------------------------- |
+| Listing          | One primary resolved geographic assignment for a property or site.                                   |
+| Development      | One or more geographic site or phase assignments, plus optional presentation or estate associations. |
+| Agent            | Optional base location, plus many coverage or expertise Places or scopes.                            |
+| Agency           | Branches and locations, plus many coverage associations.                                             |
+| Service Provider | Multiple operating locations and service-specific coverage.                                          |
+| Canvassing       | Targeting sets, plus independently located properties and prospects.                                 |
+| Demand           | May target multiple Places, or one governed Search Area.                                             |
+| Saved Search     | Versioned geographic query intent, not merely one Place reference.                                   |
+| Explore content  | Zero-to-many geographic or subject associations.                                                     |
 
 ## 16. Province 2 (Western Cape) admission gate
 
@@ -787,20 +786,20 @@ Reconciled after the Phase 3 gate and the Western Cape evidence acquisition
 (`docs/architecture/geography-source-acquisition-decision.md`). Recorded as
 satisfied or remaining-open with evidence, so the gate is not assumed.
 
-| # | Prerequisite | State | Evidence |
-| --- | --- | --- | --- |
-| 1 | D0 recorded, versioned, reviewed | **satisfied** | D0 is Section 2 of this v0.5 contract. |
-| 2 | V1 concepts frozen; model declared with digests | **satisfied** | Migrations `0091`–`0097`; all seven tables present in `drizzle/schema/canonical-model-inventory.json`; 39 Place Authority CHECK constraints enforced. |
-| 3 | Gauteng admission repair landed | **satisfied for admission** | `gauteng-place-admission-v0.1` admits 1,466 Places from 1,488 source identities and is physically proven from zero on a fresh disposable target. Section 7 probes resolve **1705/1705**. `Kyalami` stays `quarantined_candidate` with a null `place_id`, so `must_stay_non_public` holds. The v0.1→v0.2 runtime row delta is **0** (1,414 → 1,414), so it is non-negative. |
-| 3 (residual) | Section 13.3 reconciliation | **open, by design** | The figures are reconciled as *different measured states*, not conflicts. The `v0.2 candidate, uncommitted` rows describe the Slice 1 geography-coverage review queue. Regeneration remains fail-closed under Section 11 because the exact v0.1 factual source is unrecoverable: `geography:coverage:check` exits non-zero with "Canonical layer files not found… Restore the approved canonical-root worktree." That is the recorded Section 11 state, not a regression, and the checked-in digests plus generated probes remain the executable evidence. |
-| 4 | D3 violation closed | **satisfied** | `server/services/locationPagesServiceEnhanced.ts` is absent; `saveGooglePlaceLocation` has zero occurrences in `server/locationRouter.ts`; no legacy geography inserts remain in `listingLocationResolver.ts`. Asserted executably by the Slice 3 discovery contract. |
-| 5 | D6.6 unresolved-search evidence reaches a governed queue | **satisfied for persistence** | `placeDiscoveryService.recordCoverageSignal` persists `unresolved_query` and `ambiguous_query` evidence with `researchPriority` 0 or 1. The governed *triage* cadence and queue ownership remain a Phase 6 item; persistence and prioritization are proven. |
-| 6 | TRANSITIONAL rows have exit conditions; Gauteng checkpoint pinned | **satisfied** | Every `TRANSITIONAL` row in Section 10 carries an explicit exit condition naming its slice and observable closure. The Gauteng checkpoint is pinned with recorded digests in Section 13. |
+| #            | Prerequisite                                                      | State                         | Evidence                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ------------ | ----------------------------------------------------------------- | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1            | D0 recorded, versioned, reviewed                                  | **satisfied**                 | D0 is Section 2 of this v0.5 contract.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| 2            | V1 concepts frozen; model declared with digests                   | **satisfied**                 | Migrations `0091`–`0097`; all seven tables present in `drizzle/schema/canonical-model-inventory.json`; 39 Place Authority CHECK constraints enforced.                                                                                                                                                                                                                                                                                                                                                                                                      |
+| 3            | Gauteng admission repair landed                                   | **satisfied for admission**   | `gauteng-place-admission-v0.1` admits 1,466 Places from 1,488 source identities and is physically proven from zero on a fresh disposable target. Section 7 probes resolve **1705/1705**. `Kyalami` stays `quarantined_candidate` with a null `place_id`, so `must_stay_non_public` holds. The v0.1→v0.2 runtime row delta is **0** (1,414 → 1,414), so it is non-negative.                                                                                                                                                                                 |
+| 3 (residual) | Section 13.3 reconciliation                                       | **open, by design**           | The figures are reconciled as _different measured states_, not conflicts. The `v0.2 candidate, uncommitted` rows describe the Slice 1 geography-coverage review queue. Regeneration remains fail-closed under Section 11 because the exact v0.1 factual source is unrecoverable: `geography:coverage:check` exits non-zero with "Canonical layer files not found… Restore the approved canonical-root worktree." That is the recorded Section 11 state, not a regression, and the checked-in digests plus generated probes remain the executable evidence. |
+| 4            | D3 violation closed                                               | **satisfied**                 | `server/services/locationPagesServiceEnhanced.ts` is absent; `saveGooglePlaceLocation` has zero occurrences in `server/locationRouter.ts`; no legacy geography inserts remain in `listingLocationResolver.ts`. Asserted executably by the Slice 3 discovery contract.                                                                                                                                                                                                                                                                                      |
+| 5            | D6.6 unresolved-search evidence reaches a governed queue          | **satisfied for persistence** | `placeDiscoveryService.recordCoverageSignal` persists `unresolved_query` and `ambiguous_query` evidence with `researchPriority` 0 or 1. The governed _triage_ cadence and queue ownership remain a Phase 6 item; persistence and prioritization are proven.                                                                                                                                                                                                                                                                                                |
+| 6            | TRANSITIONAL rows have exit conditions; Gauteng checkpoint pinned | **satisfied**                 | Every `TRANSITIONAL` row in Section 10 carries an explicit exit condition naming its slice and observable closure. The Gauteng checkpoint is pinned with recorded digests in Section 13.                                                                                                                                                                                                                                                                                                                                                                   |
 
 Two qualifications that this reconciliation does **not** remove:
 
 - The Section 11 fail-closed regeneration state means a Western Cape source
-  build cannot copy the Gauteng pipeline's *regeneration* path as a template.
+  build cannot copy the Gauteng pipeline's _regeneration_ path as a template.
   It must reproduce the v0.2 shape from the acquired bundle.
 - The Western Cape boundaries represent **2020**. Prerequisite satisfaction is
   about admission mechanics, not currency. No Western Cape scope may be
@@ -826,15 +825,15 @@ Database Authority and changes no runtime consumer.
 dependency order, registered in the canonical migration manifest and classified
 in `migration-tree-authority.json`:
 
-| Migration | Table |
-| --- | --- |
-| 0091 | `place` |
-| 0092 | `place_name` |
-| 0093 | `place_relationship` |
-| 0094 | `place_evidence` |
-| 0095 | `place_external_mapping` |
-| 0096 | `search_area` |
-| 0097 | `search_area_member` |
+| Migration | Table                    |
+| --------- | ------------------------ |
+| 0091      | `place`                  |
+| 0092      | `place_name`             |
+| 0093      | `place_relationship`     |
+| 0094      | `place_evidence`         |
+| 0095      | `place_external_mapping` |
+| 0096      | `search_area`            |
+| 0097      | `search_area_member`     |
 
 **Identity strategy.** `place_id` (`pl-place-01-<24 hex>`) is the primary key and
 the durable cross-environment identity. **No numeric surrogate was introduced**:
@@ -930,7 +929,6 @@ would be speculative. No consumer, resolver, or the three-level runtime tables
 were changed; no Search Area was activated; no provider behaviour was altered;
 no geography was retired; Western Cape and the Gauteng admission repair were not
 started.
-
 
 ## 19. Slice 2 delivery record — Gauteng Place admission (v0.5)
 
@@ -1032,16 +1030,16 @@ corrected, far too strong in the other. Both errors are resolved here.
 `province / metro_city / locality` are **product search-scope categories**. They
 are not mandatory levels in the canonical Place containment hierarchy.
 
-`D1_SCOPE_BY_TYPE` still decides which scope a *type* may carry.
-`scope_establishment` decides whether that scope is *established*, and the only
+`D1_SCOPE_BY_TYPE` still decides which scope a _type_ may carry.
+`scope_establishment` decides whether that scope is _established_, and the only
 mandatory ancestry requirement is an **evidenced administrative chain to the
 province**:
 
-| scope | required evidence |
-| --- | --- |
-| `province` | none; a province-scoped Place is its own provincial bound |
-| `metro_city` | an evidenced chain to a province |
-| `locality` | an evidenced chain to a province |
+| scope        | required evidence                                         |
+| ------------ | --------------------------------------------------------- |
+| `province`   | none; a province-scoped Place is its own provincial bound |
+| `metro_city` | an evidenced chain to a province                          |
+| `locality`   | an evidenced chain to a province                          |
 
 A scope that cannot reach a province is refused, because a search with no
 provincial bound is unbounded. Nothing else about the ancestry is mandatory.
@@ -1192,7 +1190,6 @@ A territory is admitted by adding a registry entry plus its governed source
 evidence. It is never admitted by adding application architecture, and never by
 copying another territory's rows as a template (Section 11).
 
-
 ## 22. Approved launch Listing scope membership (v0.6)
 
 **Approval:** Edward, 2026-10-07, geography launch-readiness goal conversation.
@@ -1259,4 +1256,45 @@ transaction protocol under local ownership authority without admitting any
 protected operation. The [release runbook](../database-authority/canonical-place-reference-release-2026-10-08.md)
 and [integration review](geography-integration-review-2026-10-08.md) bind schema,
 source, target and operation approval. Production application remains separately
-approved after senior review and required hosted CI.
+
+## 24. Development-to-Place assignments (2026-10-27)
+
+The Development identity remains a commercial record and does not create or
+imply a Place. A Development can be discovered before any geographic assignment
+is accepted, as required by D4. Its site geography is recorded in the
+domain-specific `development_place_assignments` relation; a row may target the
+whole Development or one of its phases. The database requires a phase to belong
+to the same Development as the assignment.
+
+An assignment records its canonical `place_id`, assignment kind, evidence
+reference, submitting actor and review decision. Only an `accepted` `site`
+assignment whose Place is active, searchable and carries a search scope can
+participate in geography matching. `presentation` and `estate` associations are
+descriptive and never executable. A super-admin records the reviewed assignment
+and may withdraw it with a reason; these decisions are also captured in the
+Development audit log. A typed city, province, address, coordinate, route or
+display label cannot create or repair an assignment. No automatic conversion
+from existing Development text fields is authorized.
+
+The existing referral opportunity projection aggregates inventory at the
+Development level. It exposes `canonicalPlaceId` only when all accepted,
+executable site assignments resolve to exactly one distinct Place ID. It
+returns null when there is no such assignment or when multiple distinct Places
+make the aggregate ambiguous. It does not select a primary assignment, combine
+Place scopes, or traverse Place relationships. Supporting a Development across
+multiple Places requires phase- or site-specific opportunity rows whose
+inventory is partitioned to the same assignment.
+
+Referral area matching compares the optional selected `canonicalPlaceId` with
+the result's assignment ID using exact equality. Null and malformed IDs fail
+closed. `locationLabels` are presentation data read from active preferred Place
+names and never enter the matcher. Public and partner referral browsing,
+manager/admin distribution displays, referral snapshots and check-fit match
+labels now use the reviewed assignment source. Check-fit affordability remains
+financial and its location label is display-only.
+
+Development text fields and numeric `locationId` are not a fallback or a
+protected legacy path. Any remaining Development consumer is an open cutover
+defect; the model migration is not complete until those reads and writes and
+then the columns themselves are removed. Existing text values are not
+automatically converted into reviewed assignments.

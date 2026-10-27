@@ -322,8 +322,9 @@ export interface Development {
   developmentType: DevelopmentType;
   status: DevelopmentStatus;
   address: string | null;
-  city: string;
-  province: string;
+  canonicalPlaceId: string | null;
+  /** Display-only names from accepted Development-to-Place assignments. */
+  locationLabels: string[];
   latitude: string | null;
   longitude: string | null;
   totalUnits: number | null;
@@ -373,14 +374,9 @@ export interface CreateDevelopmentInput {
   developmentType: DevelopmentType;
   description?: string;
   address?: string;
-  city: string;
-  suburb?: string;
-  province: string;
   postalCode?: string;
   latitude?: string;
   longitude?: string;
-  placeId?: string; // Google Places ID
-  locationId?: number; // Link to locations table
   priceFrom?: number;
   priceTo?: number;
   amenities?: string[];
@@ -397,8 +393,6 @@ export interface UpdateDevelopmentInput {
   developmentType?: DevelopmentType;
   status?: DevelopmentStatus;
   address?: string;
-  city?: string;
-  province?: string;
   latitude?: string;
   longitude?: string;
   totalUnits?: number;
@@ -916,9 +910,9 @@ export interface DevelopmentDerivedListing {
   title: string;
   price: number;
   priceTo?: number;
-  city: string;
-  suburb: string;
-  province: string;
+  canonicalPlaceId: string | null;
+  /** Display-only names from the reviewed canonical Place assignment. */
+  locationLabels: string[];
   propertyType: Property['propertyType'];
   listingType: Property['listingType'];
   transactionType: 'for_sale' | 'for_rent' | 'auction';
@@ -1011,6 +1005,7 @@ export type SearchCardIdentity =
 
 export interface SearchCardResult {
   canonicalPlaceId?: string;
+  locationLabels?: string[];
   kind: 'property' | 'development';
   id: string;
   href: string;

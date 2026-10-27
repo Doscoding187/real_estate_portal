@@ -17,12 +17,9 @@ interface LocationPageLayoutProps {
   topLocalitiesShowcase?: React.ReactNode;
   propertyCategories?: React.ReactNode;
   priceInsights?: React.ReactNode;
-  highDemandDevelopments?: React.ReactNode;
   popularLocations?: React.ReactNode;
   recommendedAgents?: React.ReactNode;
   agencyShowcase?: React.ReactNode;
-  developerShowcase?: React.ReactNode;
-  investmentShowcase?: React.ReactNode;
   buyerCTA?: React.ReactNode;
   listingsFeed?: React.ReactNode;
   fullWidthSection?: React.ReactNode;
@@ -43,12 +40,9 @@ export const LocationPageLayout: React.FC<LocationPageLayoutProps> = ({
   topLocalitiesShowcase,
   propertyCategories,
   priceInsights,
-  highDemandDevelopments,
   popularLocations,
   recommendedAgents,
   agencyShowcase,
-  developerShowcase,
-  investmentShowcase,
   buyerCTA,
   listingsFeed,
   fullWidthSection,
@@ -131,13 +125,6 @@ export const LocationPageLayout: React.FC<LocationPageLayoutProps> = ({
         {/* 6.5️⃣ Trending Suburbs (Full Width Carousel) */}
         {fullWidthSection && <section className="w-full scroll-mt-24">{fullWidthSection}</section>}
 
-        {/* 7️⃣ High Demand Developments (Projects) */}
-        {highDemandDevelopments && (
-          <section id="high-demand-developments" className="scroll-mt-24">
-            {highDemandDevelopments}
-          </section>
-        )}
-
         {/* 7️⃣ Top Localities - Market Intelligence */}
         {topLocalitiesShowcase && (
           <section id="top-localities" className="scroll-mt-24">
@@ -163,20 +150,6 @@ export const LocationPageLayout: React.FC<LocationPageLayoutProps> = ({
         {agencyShowcase && (
           <section id="agencies" className="scroll-mt-24">
             {agencyShowcase}
-          </section>
-        )}
-
-        {/* 🔟 Developer Showcase */}
-        {developerShowcase && (
-          <section id="developers" className="scroll-mt-24">
-            {developerShowcase}
-          </section>
-        )}
-
-        {/* 1️⃣1️⃣ High Demand Projects (Investment) */}
-        {investmentShowcase && (
-          <section id="investment-projects" className="scroll-mt-24">
-            {investmentShowcase}
           </section>
         )}
 

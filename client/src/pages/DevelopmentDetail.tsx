@@ -50,8 +50,6 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { NearbyLandmarks } from '@/components/property/NearbyLandmarks';
-import { SuburbInsights } from '@/components/property/SuburbInsights';
-import { LocalityGuide } from '@/components/property/LocalityGuide';
 import { MetaControl } from '@/components/seo/MetaControl';
 import { Breadcrumbs } from '@/components/search/Breadcrumbs';
 import { Footer } from '@/components/Footer';
@@ -1120,7 +1118,7 @@ export default function DevelopmentDetail() {
         ? Number(dev.publisherPublishedDevelopmentCount)
         : null,
 
-    location: `${publicFacts.suburb ? `${publicFacts.suburb}, ` : ''}${publicFacts.city}`,
+    location: publicFacts.locationLabels.join(', ') || 'Place assignment pending',
     address: dev.address || '',
     description: publicFacts.description,
     completionDate: publicFacts.completionDate
@@ -2085,19 +2083,12 @@ export default function DevelopmentDetail() {
 
                   <Card className="border-slate-200 shadow-sm">
                     <CardContent className="p-6">
-                      <SuburbInsights
-                        suburbId={dev.locationId || 0}
-                        suburbName={publicFacts.suburb || publicFacts.city}
-                        isDevelopment={true}
-                      />
+                      <h2 className="text-base font-semibold text-slate-900">Assigned Place</h2>
+                      <p className="mt-2 text-sm text-slate-600">
+                        {publicFacts.locationLabels.join(', ') || 'Place assignment pending review.'}
+                      </p>
                     </CardContent>
                   </Card>
-
-                  <LocalityGuide
-                    suburb={publicFacts.suburb || publicFacts.city}
-                    city={publicFacts.city}
-                    province={publicFacts.province}
-                  />
                 </section>
               </main>
 

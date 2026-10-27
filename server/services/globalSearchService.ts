@@ -13,6 +13,7 @@ import { eq, and, or, like, inArray, SQL, sql, ne } from 'drizzle-orm';
 import { excludeLandFromGenericPublicProjection } from './landLaunchContainmentService';
 import { publicDevelopmentEligibilityConditions } from './publicDevelopmentEligibility';
 import { resolvePublicPropertyEligibilityIds } from './publicPropertyEligibilityService';
+import { listDevelopmentPlaceGeography } from './developmentPlaceAssignmentService';
 
 export interface SearchOptions {
   query: string;
@@ -55,10 +56,8 @@ export interface DevelopmentResult {
   id: number;
   name: string;
   description: string | null;
-  city: string;
-  province: string;
-  locationId: number | null;
-  placeId: string | null;
+  canonicalPlaceId: string | null;
+  locationLabels: string[];
   mainImage: string | null;
   relevanceScore: number;
 }
@@ -101,12 +100,7 @@ type DevelopmentRow = {
   id: number;
   name: string;
   description: string | null;
-  city: string;
-  province: string;
-  locationId: number | null;
-  suburb: string | null;
   images: string | null;
-  placeId: string | null;
 };
 
 type ParentLocationRow = {
@@ -356,7 +350,8 @@ async function searchListings(query: string, limit: number = 10): Promise<Listin
 }
 
 /**
- * Search developments with location-based filtering
+ * Search Development identity and description. Location is display metadata
+ * from reviewed Place assignments and never participates in matching.
  */
 async function searchDevelopments(query: string, limit: number = 10): Promise<DevelopmentResult[]> {
   const db = await getDb();
@@ -367,23 +362,12 @@ async function searchDevelopments(query: string, limit: number = 10): Promise<De
       id: developments.id,
       name: developments.name,
       description: developments.description,
-      city: developments.city,
-      province: developments.province,
-      locationId: developments.locationId,
-      suburb: developments.suburb,
       images: developments.images,
-      placeId: locations.placeId,
     })
     .from(developments)
-    .leftJoin(locations, eq(developments.locationId, locations.id))
     .where(
       and(
-        or(
-          like(developments.name, searchQuery),
-          like(developments.description, searchQuery),
-          like(developments.city, searchQuery),
-          like(developments.suburb, searchQuery),
-        ),
+        or(like(developments.name, searchQuery), like(developments.description, searchQuery)),
         inArray(developments.status, ['launching-soon', 'selling', 'sold-out']),
         ne(developments.developmentType, 'commercial'),
         publicDevelopmentEligibilityConditions(),
@@ -391,14 +375,18 @@ async function searchDevelopments(query: string, limit: number = 10): Promise<De
     )
     .limit(limit)) as DevelopmentRow[];
 
+  const geographyByDevelopment = await listDevelopmentPlaceGeography(
+    results.map(result => Number(result.id)),
+  );
+
   return results.map((dev: DevelopmentRow) => ({
     id: dev.id,
     name: dev.name,
     description: dev.description,
-    city: dev.city,
-    province: dev.province,
-    locationId: dev.locationId,
-    placeId: dev.placeId,
+    ...(geographyByDevelopment.get(dev.id) ?? {
+      canonicalPlaceId: null,
+      locationLabels: [],
+    }),
     mainImage: extractMainImage(dev.images),
     relevanceScore: 50,
   }));

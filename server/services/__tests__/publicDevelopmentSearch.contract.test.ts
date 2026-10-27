@@ -14,8 +14,11 @@ describe('public Developments search authority', () => {
     expect(service).toContain(
       'Commercial development records are not an alternate public Commercial',
     );
-    expect(service).toContain('buildCanonicalLocationQueryBoundary');
-    expect(service).toContain("journey: 'developments'");
+    expect(service).toContain('listDevelopmentIdsForCanonicalPlace(');
+    expect(service).toContain('locationContext: { canonicalPlaceId: input.canonicalPlaceId }');
+    expect(service).not.toContain('input.province');
+    expect(service).not.toContain('input.city');
+    expect(service).not.toContain('input.suburb');
     expect(service).toContain('eq(unitTypes.isActive, 1)');
     expect(service).toContain('normalizePublicSearchPageForTotal');
     expect(service).toContain('sortPublicDevelopmentSearchItems');
@@ -34,6 +37,7 @@ describe('public Developments search authority', () => {
     const page = readRepoFile('client/src/pages/DevelopmentsDemo.tsx');
 
     expect(router).toContain('publicDevelopmentSearchService.search(input)');
+    expect(router).not.toContain('searchDevelopmentListings:');
     expect(page).toContain('trpc.properties.searchDevelopments.useQuery');
     expect(page).toContain('transactionType={development.transactionType}');
     expect(page).toContain('availabilityState={development.availabilityState}');

@@ -99,10 +99,7 @@ function buildItem(overrides: Record<string, unknown> = {}) {
     developmentName: 'Hillside Gardens',
     canonicalPlaceId: 'pl-place-01-000000000000000000000001',
     developmentFactsAvailable: true,
-    city: 'Johannesburg',
-    province: 'Gauteng',
-    suburb: null,
-    address: null,
+    locationLabels: ['Johannesburg'],
     description: 'Secure estate living close to schools and retail.',
     amenities: null,
     features: null,
@@ -112,8 +109,6 @@ function buildItem(overrides: Record<string, unknown> = {}) {
       tagline: 'Secure estate living',
       description: 'Secure estate living close to schools and retail.',
       developmentType: 'residential',
-      city: 'Johannesburg',
-      province: 'Gauteng',
       images: [],
     },
     inventory: {
@@ -214,15 +209,13 @@ const pausedItem = buildItem({
   developmentId: 202,
   developmentName: 'Ridge View Estate',
   canonicalPlaceId: 'pl-place-01-000000000000000000000002',
-  city: 'Midrand',
+  locationLabels: ['Midrand'],
   imageUrl: null,
   campaign: {
     name: 'Ridge View Estate',
     tagline: 'Modern living in Midrand',
     description: 'Modern rentals and sales near the business district.',
     developmentType: 'residential',
-    city: 'Midrand',
-    province: 'Gauteng',
     images: [],
   },
   inventory: {
@@ -293,7 +286,7 @@ describe('PartnerDevelopmentsPage', () => {
       developmentId: 303,
       developmentName: 'Ridge View Estate',
       canonicalPlaceId: 'pl-place-01-000000000000000000000002',
-      city: 'Johannesburg',
+      locationLabels: ['Johannesburg'],
     });
     const unassignedItem = buildItem({
       developmentId: 404,

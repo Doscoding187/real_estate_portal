@@ -13,7 +13,6 @@ import { Button } from '@/components/ui/button';
 import {
   Building2,
   Clock,
-  MapPin,
   Trash2,
   FileEdit,
   Loader2,
@@ -127,6 +126,10 @@ export default function MyDrafts() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {draftItems.map((draft: any) => {
             const draftData = draft.draftData as any;
+            const address =
+              typeof draftData?.developmentData?.location?.address === 'string'
+                ? draftData.developmentData.location.address.trim()
+                : '';
             const progress = draft.progress || calculateProgress(draft.currentStep);
             const progressColor = getProgressColor(progress);
 
@@ -139,7 +142,7 @@ export default function MyDrafts() {
                         {draft.draftName || 'Untitled Development'}
                       </CardTitle>
                       <CardDescription className="mt-1">
-                        {draftData.address || draftData.city || 'No location set'}
+                        {address || 'Place assignment pending review'}
                       </CardDescription>
                     </div>
                     <Building2 className="w-5 h-5 text-slate-400 flex-shrink-0" />
@@ -163,14 +166,6 @@ export default function MyDrafts() {
 
                   {/* Draft Details */}
                   <div className="space-y-2 text-sm">
-                    {draftData.city && draftData.province && (
-                      <div className="flex items-center text-slate-600">
-                        <MapPin className="w-4 h-4 mr-2 flex-shrink-0" />
-                        <span className="line-clamp-1">
-                          {draftData.city}, {draftData.province}
-                        </span>
-                      </div>
-                    )}
                     {draftData.unitTypes && draftData.unitTypes.length > 0 && (
                       <div className="flex items-center text-slate-600">
                         <Building2 className="w-4 h-4 mr-2 flex-shrink-0" />
