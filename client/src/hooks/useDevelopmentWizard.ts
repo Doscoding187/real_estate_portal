@@ -1222,15 +1222,20 @@ const createActions = (
             );
           }
           break;
-        case 5:
+        case 5: {
           if (!state.developmentData?.location?.address) errors.push('Location is required');
+          const latitude = state.developmentData?.location?.latitude?.trim();
+          const longitude = state.developmentData?.location?.longitude?.trim();
           if (
-            !Number.isFinite(Number(state.developmentData?.location?.latitude)) ||
-            !Number.isFinite(Number(state.developmentData?.location?.longitude))
+            !latitude ||
+            !longitude ||
+            !Number.isFinite(Number(latitude)) ||
+            !Number.isFinite(Number(longitude))
           ) {
             errors.push('Verified development entrance coordinates are required');
           }
           break;
+        }
         case 8: {
           if ((state.developmentData?.highlights?.length || 0) < 3)
             errors.push('Add at least 3 key selling points');
