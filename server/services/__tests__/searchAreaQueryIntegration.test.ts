@@ -160,23 +160,16 @@ describe('Search Area public query integration', () => {
       }),
       { publicOnly: true },
     );
-    expect(mockSearchListings).toHaveBeenCalledWith(
-      expect.anything(),
-      'date_desc',
-      1,
-      2,
-      expect.objectContaining({
-        authorityKey: 'search-area:johannesburg-sandton:v1',
-        memberSuburbIds: [34, 35],
-      }),
-    );
+    // Search Area membership scopes property inventory. Development inventory
+    // requires one separately selected canonical Place ID.
+    expect(mockSearchListings).not.toHaveBeenCalled();
     expect(result).toMatchObject({
       locationState: 'resolved',
       searchAreaContext: {
         searchAreaId: 'johannesburg-sandton',
         availability: 'available',
       },
-      total: 2,
+      total: 1,
     });
   });
 
@@ -332,8 +325,9 @@ describe('Search Area public query integration', () => {
       }),
       { publicOnly: true },
     );
+    expect(mockSearchListings).not.toHaveBeenCalled();
     expect(result).toMatchObject({
-      total: 2,
+      total: 1,
       locationState: 'resolved',
       searchAreaContext: {
         lifecycle: 'preview',
@@ -380,8 +374,7 @@ describe('Search Area public query integration', () => {
     });
 
     const propertyBoundary = mockSearchProperties.mock.calls[0]?.[4];
-    const developmentBoundary = mockSearchListings.mock.calls[0]?.[4];
-    expect(propertyBoundary).toEqual(developmentBoundary);
+    expect(mockSearchListings).not.toHaveBeenCalled();
     expect(propertyBoundary).toMatchObject({
       kind: 'canonical_locations',
       level: 'suburb',

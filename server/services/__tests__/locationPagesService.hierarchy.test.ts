@@ -197,20 +197,12 @@ describe('locationPagesService canonical hierarchy', () => {
         sale: expect.objectContaining({ listingCount: 0 }),
         rent: expect.objectContaining({ listingCount: 0 }),
       }),
-      developments: {
-        total: 0,
-        byType: { residential: 0, mixed_use: 0, commercial: 0, land: 0 },
-        byStatus: { 'launching-soon': 0, selling: 0, 'sold-out': 0 },
-        priceFromMinimum: null,
-        priceToMaximum: null,
-        publishers: [],
-      },
     });
     expect(result).not.toHaveProperty('listings');
     expect(result).not.toHaveProperty('analytics');
     expect(result).not.toHaveProperty('insights');
     expect(result).not.toHaveProperty('reviews');
-    expect(db.select).toHaveBeenCalledTimes(3);
+    expect(db.select).toHaveBeenCalledTimes(2);
     expect(resolvePublicPropertyEligibilities).not.toHaveBeenCalled();
   });
 
@@ -241,7 +233,7 @@ describe('locationPagesService canonical hierarchy', () => {
 
     expect(result?.city.slug).toBe('johannesburg');
     expect(result?.featuredProperties).toEqual([]);
-    expect(db.select).toHaveBeenCalledTimes(4);
+    expect(db.select).toHaveBeenCalledTimes(3);
   });
 
   it('gates locality medians by the canonical priced-listing sample', async () => {
@@ -448,7 +440,6 @@ describe('locationPagesService canonical hierarchy', () => {
         { id: 12, name: 'Johannesburg', slug: 'johannesburg', isMetro: 1 },
         { id: 13, name: 'Pretoria', slug: 'pretoria', isMetro: 1 },
       ],
-      [],
       [
         {
           id: 21,

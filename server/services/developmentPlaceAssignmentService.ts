@@ -9,6 +9,7 @@ import {
 } from '../../drizzle/schema';
 import { isPlaceId } from '../../drizzle/schema/placeAuthority';
 import { getDb } from '../db';
+import { normalizeDateTimeForDb } from './developmentDateUtils';
 
 export type DevelopmentPlaceGeography = {
   /**
@@ -120,7 +121,8 @@ export async function recordReviewedDevelopmentPlaceAssignment(
       });
     }
 
-    const reviewedAt = new Date().toISOString();
+    const reviewedAt = normalizeDateTimeForDb(new Date());
+    if (!reviewedAt) throw new Error('Unable to record the Development Place review time.');
     await tx.insert(developmentPlaceAssignments).values({
       developmentId: input.developmentId,
       phaseId: input.phaseId,
@@ -156,7 +158,8 @@ export async function withdrawReviewedDevelopmentPlaceAssignment(input: {
 
   const db = await getDb();
   if (!db) throw new Error('Database not available');
-  const reviewedAt = new Date().toISOString();
+  const reviewedAt = normalizeDateTimeForDb(new Date());
+  if (!reviewedAt) throw new Error('Unable to record the Development Place review time.');
 
   return db.transaction(async tx => {
     const [assignment] = await tx
