@@ -124,6 +124,8 @@ describe('database authority agent entry contract', () => {
       ['pnpm', ['db:migrate:test']],
       ['pnpm', ['db:reference:prepare']],
       ['pnpm', ['db:reference:verify']],
+      ['pnpm', ['db:places:prepare', '--', '--territory=za-gp']],
+      ['pnpm', ['db:places:verify', '--', '--territory=za-gp']],
       ['pnpm', ['db:foundation:prepare']],
       ['pnpm', ['db:foundation:verify']],
       ['pnpm', ['db:scenario:prepare']],
