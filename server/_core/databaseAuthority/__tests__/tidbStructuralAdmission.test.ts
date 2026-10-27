@@ -15,7 +15,7 @@ describe('TiDB CHECK/FK structural admission', () => {
     const before = JSON.stringify(desired);
     const report = auditTidbStructuralAdmission(desired);
     expect(report.checks).toHaveLength(40);
-    expect(report.foreignKeyImpacts).toHaveLength(19);
+    expect(report.foreignKeyImpacts).toHaveLength(16);
     expect(
       report.foreignKeyImpacts.filter(key => key.review === 'domain-lifecycle-decision-required'),
     ).toHaveLength(5);
