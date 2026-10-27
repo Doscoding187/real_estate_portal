@@ -2909,7 +2909,7 @@ async function runContainedApplicationVerification(
       throw new Error('Search-to-Lead scenario search did not resolve the canonical location.');
     if (search.sourceCounts.manual !== 3 || search.sourceCounts.development !== 1) {
       throw new Error(
-        'Search-to-Lead scenario did not prove the three canonical manual and one development sale sources.',
+        `Search-to-Lead scenario expected 3 canonical manual and 1 development sale source; received manual=${search.sourceCounts.manual}, development=${search.sourceCounts.development}.`,
       );
     }
     if (search.total !== 4 || search.hasMore) {
