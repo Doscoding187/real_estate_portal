@@ -1,5 +1,4 @@
 ALTER TABLE `listings`
-  DROP FOREIGN KEY `listings_locationId_locations_id_fk`,
   DROP FOREIGN KEY `listings_province_id_fk`,
   DROP FOREIGN KEY `listings_city_id_fk`,
   DROP FOREIGN KEY `listings_suburb_id_fk`,

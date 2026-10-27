@@ -1679,7 +1679,7 @@
     {
       "sequence": 161,
       "filename": "0161_listings_retire_numeric_geography.sql",
-      "checksum": "294b539db657073312dc7a26624da2702c9cf05bd12f11aaabbc2c2707f3522d",
+      "checksum": "93faa31991b25685d10efaa23282f319661ca8d42c1756b396030eaf9d0cfd17",
       "parent": "0160_explore_content_canonical_place_fk.sql",
       "parentChecksum": "1311a9b52378aa45bdd3c08f8f03c945b95c34acbee285220b95fe5e4436b5b1",
       "kind": "exceptional",
@@ -1692,7 +1692,7 @@
       "filename": "0162_properties_retire_numeric_geography.sql",
       "checksum": "f22ba9b19a85a0cff8c81206d0f1f7c63c5ea47d1897f0cdc792bab048ad703f",
       "parent": "0161_listings_retire_numeric_geography.sql",
-      "parentChecksum": "294b539db657073312dc7a26624da2702c9cf05bd12f11aaabbc2c2707f3522d",
+      "parentChecksum": "93faa31991b25685d10efaa23282f319661ca8d42c1756b396030eaf9d0cfd17",
       "kind": "exceptional",
       "statementPolicy": "approved-exception",
       "requiredReferenceDataVersion": null,
