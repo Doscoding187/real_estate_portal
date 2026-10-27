@@ -26,6 +26,33 @@ export function publicShortlistStorageKey(marketMode: 'sale' | 'rent') {
   return `property-listify:distribution-shortlist:v1:public:${marketMode}`;
 }
 
+export function publicSearchAssessmentTokenStorageKey(marketMode: 'sale' | 'rent') {
+  return `property-listify:distribution-search-assessment:v1:public:${marketMode}:token`;
+}
+
+export function ownedSearchAssessmentIdStorageKey(userId: string, marketMode: 'sale' | 'rent') {
+  return `property-listify:distribution-search-assessment:v1:user:${userId}:${marketMode}:id`;
+}
+
+export function readLocalStorageValue(key: string): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+export function writeLocalStorageValue(key: string, value: string | null): void {
+  if (typeof window === 'undefined') return;
+  try {
+    if (value === null) window.localStorage.removeItem(key);
+    else window.localStorage.setItem(key, value);
+  } catch {
+    // The shortlist still stays available from the in-memory selection state.
+  }
+}
+
 export function readSavedSelections(storageKey: string): Record<string, ShortlistSelection> {
   if (typeof window === 'undefined') return {};
   let raw: string | null = null;

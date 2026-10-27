@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
@@ -6,6 +6,12 @@ import { cn } from '@/lib/utils';
 import { ReferralAppShell } from '@/components/referral/ReferralAppShell';
 import { Button } from '@/components/ui/button';
 import { readSavedSelections } from '@/components/distribution/PropertyOpportunityShortlist';
+import {
+  ownedSearchAssessmentIdStorageKey,
+  publicSearchAssessmentTokenStorageKey,
+  readLocalStorageValue,
+  writeLocalStorageValue,
+} from '@/components/distribution/distributionShortlistStorage';
 import {
   formatPartnerDateTime,
   getPartnerPayoutRecordState,
@@ -148,6 +154,37 @@ export default function PartnerDashboardPage() {
     retry: false,
     refetchOnMount: 'always',
   });
+  const utils = trpc.useUtils();
+  const savedSearchAssessmentsQuery = trpc.distribution.listMySearchAssessments.useQuery(undefined, {
+    enabled: isAuthenticated,
+    retry: false,
+  });
+  const claimSignature = useRef('');
+  const claimSearchAssessments = trpc.distribution.claimMyPublicSearchAssessments.useMutation({
+    onSuccess: async assessments => {
+      for (const assessment of assessments) {
+        writeLocalStorageValue(
+          ownedSearchAssessmentIdStorageKey(String(user?.id ?? ''), assessment.marketMode),
+          assessment.assessmentId,
+        );
+        writeLocalStorageValue(publicSearchAssessmentTokenStorageKey(assessment.marketMode), null);
+      }
+      await utils.distribution.listMySearchAssessments.invalidate();
+    },
+  });
+  useEffect(() => {
+    if (loading || !isAuthenticated || !user?.id || claimSearchAssessments.isPending) return;
+    const assessments = (['sale', 'rent'] as const).flatMap(marketMode => {
+      const continuityToken = readLocalStorageValue(publicSearchAssessmentTokenStorageKey(marketMode));
+      return continuityToken ? [{ marketMode, continuityToken }] : [];
+    });
+    if (!assessments.length) return;
+    const signature = `${user.id}:${assessments.map(item => `${item.marketMode}:${item.continuityToken}`).join('|')}`;
+    if (claimSignature.current === signature) return;
+    claimSignature.current = signature;
+    claimSearchAssessments.mutate({ assessments });
+  }, [claimSearchAssessments.isPending, isAuthenticated, loading, user?.id]);
+
   const hasDistributionIdentity = statusQuery.data?.hasIdentity === true;
 
   const pipelineQuery = trpc.distribution.referrer.myPipeline.useQuery(
@@ -216,17 +253,18 @@ export default function PartnerDashboardPage() {
     return { counts, amounts };
   }, [payoutsQuery.data]);
 
-  const [savedShortlistCount, setSavedShortlistCount] = useState(0);
-  useEffect(() => {
-    const scope = user?.id ?? 'unknown';
-    let total = 0;
-    for (const mode of ['sale', 'rent'] as const) {
-      total += Object.keys(
-        readSavedSelections(`property-listify:distribution-shortlist:v1:partner:${scope}:${mode}`),
-      ).length;
+  const savedShortlistCount = useMemo(() => {
+    if (savedSearchAssessmentsQuery.data?.length) {
+      return savedSearchAssessmentsQuery.data.reduce(
+        (total, assessment) => total + assessment.selectedOpportunities.length,
+        0,
+      );
     }
-    setSavedShortlistCount(total);
-  }, [user?.id]);
+    const scope = user?.id ?? 'unknown';
+    return (['sale', 'rent'] as const).reduce((total, mode) => total + Object.keys(
+      readSavedSelections(`property-listify:distribution-shortlist:v1:partner:${scope}:${mode}`),
+    ).length, 0);
+  }, [savedSearchAssessmentsQuery.data, user?.id]);
 
   const queryError = statusQuery.isError ||
     (hasDistributionIdentity && (
@@ -505,7 +543,9 @@ export default function PartnerDashboardPage() {
                   <p className="mt-0.5 text-[13px] leading-5 text-muted-foreground">
                     Explore options before sharing someone's details.
                     {savedShortlistCount > 0
-                      ? ` ${savedShortlistCount} saved on this device.`
+                      ? savedSearchAssessmentsQuery.data?.length
+                        ? ` ${savedShortlistCount} selected option${savedShortlistCount === 1 ? '' : 's'} saved to your account.`
+                        : ` ${savedShortlistCount} saved on this device.`
                       : ''}
                   </p>
                 </div>
@@ -517,6 +557,43 @@ export default function PartnerDashboardPage() {
                   Explore opportunities <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
+              {claimSearchAssessments.isError ? (
+                <p role="status" className="py-2 text-xs text-amber-800">
+                  We couldn’t attach this browser’s shortlist to your account. It is still saved in this browser; reload this page to retry.
+                </p>
+              ) : null}
+              {savedSearchAssessmentsQuery.isError ? (
+                <p role="status" className="py-2 text-xs text-amber-800">
+                  Saved shortlists are temporarily unavailable. Your browser shortlist remains saved.
+                </p>
+              ) : null}
+              {savedSearchAssessmentsQuery.data?.length ? (
+                <ul className="space-y-2 py-3" aria-label="Saved property shortlists">
+                  {savedSearchAssessmentsQuery.data.slice(0, 4).map(assessment => {
+                    const snapshots = assessment.selectedOpportunities as Array<{
+                      developmentId: number;
+                      projectionRevision: string;
+                      observedAt: string;
+                      campaign?: { name?: string | null };
+                    }>;
+                    const areaText = (assessment.searchFilters as { areaText?: unknown }).areaText;
+                    return (
+                      <li key={assessment.id} className="rounded-lg border border-border bg-slate-50 px-3 py-2">
+                        <p className="text-xs font-semibold text-slate-800">
+                          {assessment.marketMode === 'sale' ? 'Buying' : 'Renting'} shortlist
+                          {typeof areaText === 'string' && areaText ? ` · ${areaText}` : ''}
+                        </p>
+                        <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                          {snapshots.map(snapshot => snapshot.campaign?.name || `Development ${snapshot.developmentId}`).join(' · ')}
+                        </p>
+                        <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
+                          Saved Developer projection revisions; availability and prices can change.
+                        </p>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : null}
               <div className="flex flex-wrap items-center gap-4 py-4">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#eef4fd] text-[#1d6fe3]">
                   <TrendingUp className="h-5 w-5" />

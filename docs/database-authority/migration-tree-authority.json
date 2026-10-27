@@ -1716,6 +1716,14 @@
       "approvedFiles": [
         "server/migrations/0152_service_provider_review_reports_reporter_created_index.sql"
       ]
+    },
+    {
+      "path": "server/migrations/0153_distribution_referrer_search_assessments.sql",
+      "classification": "canonical active",
+      "purpose": "Stores search-only referrer assessment filters and Developer projection snapshots separately from financial check fits.",
+      "approvedFiles": [
+        "server/migrations/0153_distribution_referrer_search_assessments.sql"
+      ]
     }
   ],
   "prohibitedPaths": [

@@ -109,6 +109,14 @@ import {
 import { getProspectDocumentPacks } from './services/distributionProspectDocumentPackService';
 import { listPublicDistributionOpportunities } from './services/distributionPublicOpportunityReadService';
 import {
+  claimDistributionSearchAssessments,
+  claimPublicSearchAssessmentsInputSchema,
+  listMyDistributionSearchAssessments,
+  saveDistributionSearchAssessment,
+  saveOwnedSearchAssessmentInputSchema,
+  savePublicSearchAssessmentInputSchema,
+} from './services/distributionReferrerSearchAssessmentService';
+import {
   checkfitV1InputSchema,
   runCheckfitV1,
 } from './services/checkfitV1Service';
@@ -8576,6 +8584,40 @@ export const distributionRouter = router({
       assertDistributionEnabled();
       return listPublicDistributionOpportunities(input.developmentIds);
     }),
+
+  savePublicSearchAssessment: publicProcedure
+    .input(savePublicSearchAssessmentInputSchema)
+    .mutation(async ({ input }) => {
+      assertDistributionEnabled();
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      return saveDistributionSearchAssessment({ db, userId: null, input });
+    }),
+
+  saveMySearchAssessment: protectedProcedure
+    .input(saveOwnedSearchAssessmentInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      assertDistributionEnabled();
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      return saveDistributionSearchAssessment({ db, userId: ctx.user!.id, input });
+    }),
+
+  claimMyPublicSearchAssessments: protectedProcedure
+    .input(claimPublicSearchAssessmentsInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      assertDistributionEnabled();
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      return claimDistributionSearchAssessments({ db, userId: ctx.user!.id, assessments: input.assessments });
+    }),
+
+  listMySearchAssessments: protectedProcedure.query(async ({ ctx }) => {
+    assertDistributionEnabled();
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+    return listMyDistributionSearchAssessments({ db, userId: ctx.user!.id });
+  }),
 
   calculateCheckfit: publicProcedure.input(checkfitV1InputSchema).mutation(async ({ input }) => {
     assertDistributionEnabled();
