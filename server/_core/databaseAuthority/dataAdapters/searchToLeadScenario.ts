@@ -307,6 +307,34 @@ export function buildScenarioInsertStatement(
   return `INSERT INTO ${table} (${columns.join(', ')}) VALUES (${columns.map(() => '?').join(', ')})`;
 }
 
+function withScenarioSqlDiagnostics(connection: AuthoritySqlConnection): AuthoritySqlConnection {
+  const run = async (
+    method: 'execute' | 'query',
+    statement: string,
+    values: readonly unknown[] = [],
+  ): Promise<unknown> => {
+    const undefinedBindIndex = values.findIndex(value => value === undefined);
+    if (undefinedBindIndex !== -1) {
+      throw new Error(
+        `Search-to-Lead scenario ${method} received an undefined bind at index ${undefinedBindIndex} for SQL: ${statement.slice(0, 180)}.`,
+      );
+    }
+    try {
+      return await connection[method](statement, values);
+    } catch (error) {
+      throw new Error(
+        `Search-to-Lead scenario ${method} failed for SQL ${statement.slice(0, 180)}: ${error instanceof Error ? error.message : String(error)}`,
+        { cause: error },
+      );
+    }
+  };
+  return {
+    execute: (statement, values) => run('execute', statement, values),
+    query: (statement, values) => run('query', statement, values),
+    end: () => connection.end(),
+  };
+}
+
 async function ensureDeterministicRow(input: {
   connection: AuthoritySqlConnection;
   table: string;
@@ -2830,7 +2858,9 @@ export async function prepareSearchToLeadScenario(input: {
     profileRoot: input.profileRoot,
   });
   const geography = await verifyCanonicalGeographyReferenceData(input.connection);
-  await withTransaction(input.connection, () => prepareScenarioRows(input.connection, geography));
+  await withTransaction(input.connection, () =>
+    prepareScenarioRows(withScenarioSqlDiagnostics(input.connection), geography),
+  );
   const verified = await verifySearchToLeadScenarioData(input.connection);
   return {
     ...ownership,
