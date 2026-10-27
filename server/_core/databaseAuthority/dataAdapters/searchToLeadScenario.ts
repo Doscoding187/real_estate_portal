@@ -3169,9 +3169,7 @@ async function runContainedApplicationVerification(
     }
 
     const rentalSearch = await publicSearchService.searchInventory({
-      province: 'gauteng',
-      city: 'johannesburg',
-      suburb: ['sandton'],
+      canonicalPlaceId: DEVELOPMENT_SITE_PLACE_ID,
       listingType: 'rent',
       page: 0,
       pageSize: 10,
@@ -3185,7 +3183,7 @@ async function runContainedApplicationVerification(
       rentalCard.listingType !== 'rent'
     ) {
       throw new Error(
-        'Search-to-Lead scenario Rent search did not return the canonical published rental card.',
+        `Search-to-Lead scenario Rent search did not return the canonical published rental card (state=${rentalSearch.locationState}, total=${rentalSearch.total}, manual=${rentalSearch.sourceCounts.manual}, development=${rentalSearch.sourceCounts.development}).`,
       );
     }
     const rentalCardParking = rentalCard.parking;
