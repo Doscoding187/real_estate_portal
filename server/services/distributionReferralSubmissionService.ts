@@ -9,8 +9,10 @@ import {
   users,
 } from '../../drizzle/schema';
 import { getDb } from '../db';
+import { isCanonicalPlaceId } from '../../shared/placeAuthority';
 import { requireApprovedAffordabilityModel } from './affordabilityAssessmentService';
 import { getDevelopmentSalesProjection } from './distributionDeveloperReadPort';
+import { getDevelopmentPlaceGeography } from './developmentPlaceAssignmentService';
 import {
   assertPartnerDevelopmentProgramAccess,
   assertPartnerDevelopmentReferralOpen,
@@ -80,6 +82,30 @@ function toPartnerVisibleReferralTermsSnapshot(
   if (!snapshot || !isValidDistributionReferralTermsSnapshot(snapshot, expectedDigest)) return null;
   const program = parseJsonObject(snapshot.program);
   const developerSalesSnapshot = parseJsonObject(snapshot.developerSalesSnapshot);
+  const campaign = parseJsonObject(developerSalesSnapshot?.campaign);
+  const placeAssignment = parseJsonObject(developerSalesSnapshot?.placeAssignment);
+  const canonicalPlaceId = isCanonicalPlaceId(placeAssignment?.canonicalPlaceId)
+    ? placeAssignment.canonicalPlaceId
+    : null;
+  const locationLabels = canonicalPlaceId && Array.isArray(placeAssignment?.locationLabels)
+    ? placeAssignment.locationLabels.filter(
+        (label): label is string => typeof label === 'string' && Boolean(label.trim()),
+      )
+    : [];
+  const safeDeveloperSalesSnapshot = developerSalesSnapshot && campaign
+    ? {
+        ...developerSalesSnapshot,
+        campaign: {
+          visible: campaign.visible,
+          name: campaign.name,
+          tagline: campaign.tagline,
+          description: campaign.description,
+          developmentType: campaign.developmentType,
+          images: campaign.images,
+        },
+        placeAssignment: { canonicalPlaceId, locationLabels },
+      }
+    : null;
 
   // Keep this as an allow-list: private intake evidence and policy internals
   // remain inside Distribution's referral workflow.
@@ -89,7 +115,7 @@ function toPartnerVisibleReferralTermsSnapshot(
     developmentId: snapshot.developmentId,
     marketMode: snapshot.marketMode,
     developerProjectionRevision: snapshot.developerProjectionRevision,
-    ...(developerSalesSnapshot ? { developerSalesSnapshot } : {}),
+    ...(safeDeveloperSalesSnapshot ? { developerSalesSnapshot: safeDeveloperSalesSnapshot } : {}),
     ...(program
       ? {
           program: {
@@ -376,6 +402,7 @@ export async function createReferralDeal(
     db,
     developmentId: input.developmentId,
     developerProjection,
+    placeAssignment: await getDevelopmentPlaceGeography(input.developmentId),
     marketMode: input.marketMode,
     intakeEvidenceSnapshot,
   });
@@ -899,9 +926,18 @@ export async function getMyReferralDeal(
     deal.referralTermsSnapshotDigest,
   );
   const salesSnapshot = partnerVisibleTermsSnapshot
-    ? parseJsonObject(programTermsSnapshot?.developerSalesSnapshot)
+    ? parseJsonObject(partnerVisibleTermsSnapshot.developerSalesSnapshot)
     : null;
   const snapshotCampaign = parseJsonObject(salesSnapshot?.campaign);
+  const snapshotPlaceAssignment = parseJsonObject(salesSnapshot?.placeAssignment);
+  const canonicalPlaceId = isCanonicalPlaceId(snapshotPlaceAssignment?.canonicalPlaceId)
+    ? snapshotPlaceAssignment.canonicalPlaceId
+    : null;
+  const locationLabels = canonicalPlaceId && Array.isArray(snapshotPlaceAssignment?.locationLabels)
+    ? snapshotPlaceAssignment.locationLabels.filter(
+        (label): label is string => typeof label === 'string' && Boolean(label.trim()),
+      )
+    : [];
   const savedWorkflowProgress = await getReferralWorkflowProgress(db, Number(deal.dealId));
   const workflowProgress = savedWorkflowProgress.verified ? savedWorkflowProgress : null;
   const resolvedRequirementSnapshots = await resolveDealRequirementSnapshots(db, [
@@ -924,8 +960,8 @@ export async function getMyReferralDeal(
     development: {
       developmentId: Number(deal.developmentId),
       name: String(snapshotCampaign?.name || `Development #${deal.developmentId}`),
-      city: snapshotCampaign?.city ? String(snapshotCampaign.city) : null,
-      province: snapshotCampaign?.province ? String(snapshotCampaign.province) : null,
+      canonicalPlaceId,
+      locationLabels,
     },
     status: String(deal.status || 'submitted'),
     marketMode: deal.marketMode || null,

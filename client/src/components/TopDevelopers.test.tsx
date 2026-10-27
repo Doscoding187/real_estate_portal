@@ -1,11 +1,11 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const testState = vi.hoisted(() => ({
   query: {} as Record<string, unknown>,
   refetch: vi.fn(),
   queryInput: undefined as unknown,
+  placeId: 'pl-place-01-000000000000000000000001',
 }));
 
 vi.stubGlobal(
@@ -20,7 +20,7 @@ vi.stubGlobal(
 vi.mock('@/lib/trpc', () => ({
   trpc: {
     cataloguePublisher: {
-      listPublishersByProvince: {
+      listPublishers: {
         useQuery: (input: unknown) => {
           testState.queryInput = input;
           return testState.query;
@@ -30,8 +30,27 @@ vi.mock('@/lib/trpc', () => ({
   },
 }));
 
+vi.mock('@/components/location/CanonicalPlaceSelector', () => ({
+  CanonicalPlaceSelector: ({ value, onChange }: any) => (
+    <button
+      type="button"
+      aria-label="Select canonical Place fixture"
+      onClick={() =>
+        onChange({
+          canonicalPlaceId: testState.placeId,
+          label: 'Reviewed Place',
+          placeType: 'locality',
+          scope: { kind: 'locality', canonicalLocationId: testState.placeId },
+          administrativeContext: null,
+        })
+      }
+    >
+      {value?.label || 'Select canonical Place'}
+    </button>
+  ),
+}));
+
 vi.mock('wouter', () => ({
-  useLocation: () => ['/', vi.fn()],
   Link: ({ href, children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
     <a href={href} {...props}>
       {children}
@@ -41,7 +60,7 @@ vi.mock('wouter', () => ({
 
 import { TopDevelopers } from './TopDevelopers';
 
-describe('TopDevelopers request states', () => {
+describe('TopDevelopers canonical Place scope', () => {
   beforeEach(() => {
     testState.refetch.mockReset();
     testState.refetch.mockResolvedValue(undefined);
@@ -55,25 +74,23 @@ describe('TopDevelopers request states', () => {
     };
   });
 
-  it('uses compact horizontal profile skeletons on mobile', () => {
+  it('uses compact horizontal profile skeletons while loading', () => {
     testState.query = { ...testState.query, isLoading: true };
 
-    render(<TopDevelopers selectedProvince="Gauteng" />);
+    render(<TopDevelopers />);
 
     const loading = screen.getByTestId('developer-feed-loading');
     const skeletons = within(loading).getAllByTestId('developer-profile-skeleton');
     expect(skeletons).toHaveLength(3);
     expect(skeletons[0]).toHaveClass('flex-[0_0_78%]');
-    expect(screen.queryByText('Developer profiles are being prepared')).not.toBeInTheDocument();
   });
 
-  it('offers retry when profile retrieval fails instead of claiming the catalogue is empty', () => {
+  it('offers retry when profile retrieval fails', () => {
     testState.query = { ...testState.query, isError: true };
 
-    render(<TopDevelopers selectedProvince="Gauteng" />);
+    render(<TopDevelopers />);
 
     expect(screen.getByRole('alert')).toHaveTextContent('Developer profiles could not be loaded');
-    expect(screen.queryByText('Developer profiles are being prepared')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
     expect(testState.refetch).toHaveBeenCalledTimes(1);
   });
@@ -81,65 +98,13 @@ describe('TopDevelopers request states', () => {
   it('uses the catalogue empty state only for a successful empty response', () => {
     testState.query = { ...testState.query, data: [] };
 
-    render(<TopDevelopers selectedProvince="Gauteng" />);
+    render(<TopDevelopers />);
 
-    expect(
-      screen.getByText('No developers with published projects in Gauteng yet'),
-    ).toBeInTheDocument();
+    expect(screen.getByText('No developer profiles are available yet')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('developer-feed-loading')).not.toBeInTheDocument();
   });
 
-  it('changes project province with one pill click and carries it through discovery links', () => {
-    testState.query = {
-      ...testState.query,
-      data: [{ id: 1, slug: 'local-builder', brandName: 'Local Builder' }],
-    };
-    function HomepageSection() {
-      const [province, setProvince] = useState('Gauteng');
-      return <TopDevelopers selectedProvince={province} onProvinceChange={setProvince} />;
-    }
-    render(<HomepageSection />);
-    const pills = within(screen.getByRole('group', { name: 'Developer project province' }));
-    expect(pills.getAllByRole('button').map(button => button.textContent)).toEqual([
-      'Gauteng',
-      'Western Cape',
-      'KwaZulu-Natal',
-      'Eastern Cape',
-      'Mpumalanga',
-      'Limpopo',
-      'North West',
-      'Free State',
-      'Northern Cape',
-    ]);
-    expect(pills.getByRole('button', { name: 'Gauteng' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
-
-    fireEvent.click(pills.getByRole('button', { name: 'Western Cape' }));
-
-    expect(pills.getByRole('button', { name: 'Western Cape' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
-    expect(pills.getByRole('button', { name: 'Gauteng' })).toHaveAttribute('aria-pressed', 'false');
-    expect(testState.queryInput).toEqual({ province: 'Western Cape', limit: 12 });
-    expect(
-      screen.getByRole('heading', { name: 'Developers with projects in Western Cape' }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'View projects' })).toHaveAttribute(
-      'href',
-      '/developer/local-builder?province=Western+Cape#developments',
-    );
-    expect(screen.getByRole('link', { name: 'Developer profile' })).toHaveAttribute(
-      'href',
-      '/developer/local-builder?province=Western+Cape',
-    );
-    expect(
-      screen.getByRole('link', { name: 'Explore developers in Western Cape' }),
-    ).toHaveAttribute('href', '/developers?province=Western+Cape');
-  });
-
-  it('uses the selected province and presents local evidence, not a featured claim', () => {
+  it('filters and carries links by the exact selected Place ID', () => {
     testState.query = {
       ...testState.query,
       data: [
@@ -147,31 +112,30 @@ describe('TopDevelopers request states', () => {
           id: 1,
           slug: 'local-builder',
           brandName: 'Local Builder',
-          logoUrl: null,
-          headOfficeLocation: 'Johannesburg',
-          localStats: { activeDevelopments: 3, sellingNow: 2, launchingSoon: 1 },
+          developmentCount: 3,
         },
       ],
     };
 
-    render(<TopDevelopers selectedProvince="Gauteng" />);
+    render(<TopDevelopers />);
+    fireEvent.click(screen.getByRole('button', { name: 'Select canonical Place fixture' }));
 
-    expect(testState.queryInput).toEqual({ province: 'Gauteng', limit: 12 });
+    expect(testState.queryInput).toEqual({ canonicalPlaceId: testState.placeId, limit: 12 });
     expect(
-      screen.getByRole('heading', { name: 'Developers with projects in Gauteng' }),
+      screen.getByRole('heading', { name: 'Developers with projects in Reviewed Place' }),
     ).toBeInTheDocument();
-    expect(screen.getByText('3 published projects')).toBeInTheDocument();
-    expect(screen.getByText('2 selling now')).toBeInTheDocument();
-    expect(screen.getByText('1 launching soon')).toBeInTheDocument();
+    expect(screen.getByText('3 public projects')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'View projects' })).toHaveAttribute(
       'href',
-      '/developer/local-builder?province=Gauteng#developments',
+      `/developer/local-builder?canonicalPlaceId=${testState.placeId}#developments`,
     );
     expect(screen.getByRole('link', { name: 'Developer profile' })).toHaveAttribute(
       'href',
-      '/developer/local-builder?province=Gauteng',
+      `/developer/local-builder?canonicalPlaceId=${testState.placeId}`,
     );
-    expect(screen.queryByRole('button', { name: /Active developments/ })).not.toBeInTheDocument();
-    expect(screen.queryByText(/featured/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Explore developers/ })).toHaveAttribute(
+      'href',
+      `/developers?canonicalPlaceId=${testState.placeId}`,
+    );
   });
 });

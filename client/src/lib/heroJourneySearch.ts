@@ -9,6 +9,7 @@ import {
 } from './searchIntent';
 import { isBuyPropertyType, sanitizeBuySearchFilters } from '../../../shared/buySearchContract';
 import { isRentPropertyType, sanitizeRentSearchFilters } from '../../../shared/rentSearchContract';
+import { isCanonicalPlaceId } from '../../../shared/placeAuthority';
 import {
   HOMES_BUY_SELECTABLE_PROPERTY_TYPES,
   HOMES_RENT_SELECTABLE_PROPERTY_TYPES,
@@ -67,7 +68,7 @@ export interface PropertySearchInput {
 }
 
 export interface DevelopmentsSearchInput {
-  selectedLocations?: readonly LocationNode[];
+  canonicalPlaceId?: string;
   developmentType?: string;
   developmentStatus?: string;
   minPrice?: string | number;
@@ -415,52 +416,19 @@ export function extractActiveSearchRefinementFilters(
  * and URL-owned refinement state consumed by /new-developments.
  */
 export function buildDevelopmentsSearchUrl({
-  selectedLocations = [],
+  canonicalPlaceId,
   developmentType,
   developmentStatus,
   minPrice,
   maxPrice,
 }: DevelopmentsSearchInput): string {
-  const locations = selectedLocations.filter(location => Boolean(location.slug || location.name));
-  const selections = locations.map(addStructuredLocation);
-  const validSelections = selections.filter((selection): selection is CanonicalSearchLocation =>
-    Boolean(selection),
-  );
-
-  if (validSelections.length !== locations.length || validSelections.length === 0) {
-    return '/new-developments?searchError=canonical-location-required';
+  if (!canonicalPlaceId || !isCanonicalPlaceId(canonicalPlaceId)) {
+    return '/new-developments?searchError=canonical-place-required';
   }
-
-  const geography: SearchIntent['geography'] = { level: 'country' };
-  if (validSelections.length === 1) {
-    const [selection] = validSelections;
-    if (selection.scope.kind === 'province') {
-      geography.level = 'province';
-    } else if (selection.scope.kind === 'metro_city') {
-      geography.level = 'city';
-    } else if (selection.scope.kind === 'locality') {
-      geography.level = 'suburb';
-    } else {
-      return '/new-developments?searchError=canonical-location-required';
-    }
-    geography.locationId = selection.scope.canonicalLocationId;
-    Object.assign(geography, selection.context);
-  } else {
-    const multiLocationScope = createMultiLocationSearchScope(
-      validSelections.map(selection => selection.scope),
-    );
-    if (!multiLocationScope || multiLocationScope.kind !== 'multi_location') {
-      return '/new-developments?searchError=canonical-location-required';
-    }
-    const canonicalIds = multiLocationScope.members
-      .filter(member => member.kind !== 'search_area')
-      .map(member => member.canonicalLocationId);
-    if (canonicalIds.length !== validSelections.length) {
-      return '/new-developments?searchError=canonical-location-required';
-    }
-    geography.level = 'multi_location';
-    geography.locationIds = canonicalIds;
-  }
+  const geography: SearchIntent['geography'] = {
+    level: 'canonical_place',
+    canonicalPlaceId,
+  };
 
   const filters: Record<string, unknown> = {};
   const normalizedType = String(developmentType || '')

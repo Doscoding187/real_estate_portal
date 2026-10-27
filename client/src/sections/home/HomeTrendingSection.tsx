@@ -2,11 +2,9 @@ import { HOME_PROVINCE_OPTIONS as PROVINCES } from '@/lib/homeProvinceOptions';
 import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
-import { SimpleDevelopmentCard } from '@/components/SimpleDevelopmentCard';
 import { SavePropertyPrompt } from '@/components/SavePropertyPrompt';
 import { SimpleHomeListingCard } from '@/components/SimpleHomeListingCard';
 import { SimpleSharedLivingCard } from '@/components/SimpleSharedLivingCard';
-import { getPrimaryDevelopmentImageUrl } from '@/lib/mediaUtils';
 import { isHomepageHeroJourneyEnabled } from '@/lib/publicNavigation';
 import { isLandVerticalAvailable } from '@shared/landLaunchPolicy';
 import { hasHomePropertyPhoto } from '@shared/homePropertyPhoto';
@@ -30,10 +28,12 @@ type HomeTrendingSectionProps = {
 
 type TrendingItem = {
   id: string;
-  kind: 'development' | 'listing' | 'unit' | 'shared_living' | 'land';
+  kind: 'development' | 'listing' | 'shared_living' | 'land';
   title: string;
-  city: string;
-  suburb: string;
+  city?: string;
+  suburb?: string;
+  canonicalPlaceId?: string | null;
+  locationLabels?: string[];
   priceFrom: number | null;
   priceTo: number | null;
   image: string;
@@ -44,7 +44,6 @@ type TrendingItem = {
   bathrooms?: number | null;
   area?: number | null;
   yardSize?: number | null;
-  unitSize?: number | null;
   parkingCount?: number | null;
   parkingType?: string | null;
   propertyType?: string | null;
@@ -74,7 +73,7 @@ const TAB_COPY: Record<HeroTab, { titleBase: string; subtitleBase: string }> = {
   },
   developments: {
     titleBase: 'New developments',
-    subtitleBase: 'Explore published development inventory and project opportunities by province.',
+    subtitleBase: 'Choose an admitted Place to search published development inventory.',
   },
   shared_living: {
     titleBase: 'Shared living opportunities',
@@ -95,7 +94,7 @@ const TAB_COPY: Record<HeroTab, { titleBase: string; subtitleBase: string }> = {
 const MOBILE_FRIENDLY_SUBTITLES: Record<HeroTab, string> = {
   buy: 'Discover standout homes for sale across South Africa.',
   rent: 'Browse published rental homes and apartments across South Africa.',
-  developments: 'Explore published residential and mixed-use developments across South Africa.',
+  developments: 'Choose an admitted Place to search published development inventory.',
   shared_living: 'Find student accommodation and shared living in prime urban hubs.',
   plot_land: 'View land opportunities suited to building or long-term investment.',
   commercial: 'Commercial leasing with verified occupancy costs and commercial terms.',
@@ -155,7 +154,7 @@ export function HomeTrendingSection({
   } = trpc.developer.getHomeTrendingFeed.useQuery(
     {
       tab: activeHeroTab,
-      province: selectedProvince,
+      ...(activeHeroTab === 'developments' ? {} : { province: selectedProvince }),
       limit: railLimit,
     },
     {
@@ -163,11 +162,32 @@ export function HomeTrendingSection({
         !commercialHandsOff &&
         !sharedLivingHandsOff &&
         !plotLandHandsOff &&
-        (activeHeroTab !== 'developments' || developmentsJourneyEnabled),
+        activeHeroTab !== 'developments',
     },
   );
 
   if (activeHeroTab === 'developments' && !developmentsJourneyEnabled) return null;
+
+  if (activeHeroTab === 'developments') {
+    return (
+      <section className="home-section">
+        <div className="home-section-header">
+          <h2 className="home-section-title text-xl font-bold text-slate-900">
+            Search new developments by Place
+          </h2>
+          <p className="max-w-2xl text-sm leading-6 text-slate-600">
+            Development results use an explicitly selected, reviewed canonical Place assignment.
+          </p>
+        </div>
+        <a
+          href="/new-developments"
+          className="inline-flex items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
+        >
+          Search new developments
+        </a>
+      </section>
+    );
+  }
 
   if (commercialHandsOff) {
     return (
@@ -238,10 +258,12 @@ export function HomeTrendingSection({
   }
 
   const trendingItems = ((trendingData?.items || []) as TrendingItem[])
-    .filter(item => {
-      if (item.kind !== 'listing' && item.kind !== 'unit') return true;
-      return hasHomePropertyPhoto(item.image) && !failedImages.has(item.image);
-    })
+    .filter(
+      item =>
+        item.kind === 'listing' &&
+        hasHomePropertyPhoto(item.image) &&
+        !failedImages.has(item.image),
+    )
     .slice(0, railLimit);
   const handleFavorite = (propertyId: number) => {
     if (!isAuthenticated) {
@@ -328,15 +350,7 @@ export function HomeTrendingSection({
               {isFetching ? 'Trying again…' : 'Try again'}
             </Button>
             <Button asChild>
-              <a
-                href={
-                  activeHeroTab === 'rent'
-                    ? '/property-to-rent'
-                    : activeHeroTab === 'developments'
-                      ? '/new-developments'
-                      : '/property-for-sale'
-                }
-              >
+              <a href={activeHeroTab === 'rent' ? '/property-to-rent' : '/property-for-sale'}>
                 Open property search
               </a>
             </Button>
@@ -356,19 +370,18 @@ export function HomeTrendingSection({
                   className="basis-[77%] pl-3.5 sm:basis-[64%] md:basis-1/2 lg:basis-1/4"
                 >
                   <div className="relative h-full">
-                    {item.kind === 'listing' || item.kind === 'unit' ? (
+                    {item.kind === 'listing' ? (
                       <SimpleHomeListingCard
                         id={item.id}
                         title={item.title}
-                        city={item.city}
-                        suburb={item.suburb}
+                        city={item.city || ''}
+                        suburb={item.suburb || ''}
                         image={item.image || ''}
                         href={item.href}
                         price={item.priceFrom}
-                        pricePrefix={item.kind === 'unit' ? 'From' : undefined}
                         bedrooms={item.bedrooms}
                         bathrooms={item.bathrooms}
-                        area={item.area ?? item.unitSize}
+                        area={item.area}
                         yardSize={item.yardSize}
                         parkingCount={item.parkingCount}
                         parkingType={item.parkingType}
@@ -380,11 +393,7 @@ export function HomeTrendingSection({
                           setFavoriteMutation.isPending &&
                           Number(setFavoriteMutation.variables?.propertyId) === Number(item.id)
                         }
-                        onFavoriteClick={
-                          item.kind === 'listing'
-                            ? () => handleFavorite(Number(item.id))
-                            : undefined
-                        }
+                        onFavoriteClick={() => handleFavorite(Number(item.id))}
                         onImageUnavailable={() =>
                           setFailedImages(previous => new Set(previous).add(item.image))
                         }
@@ -393,8 +402,8 @@ export function HomeTrendingSection({
                       <SimpleHomeListingCard
                         id={item.id}
                         title={item.title}
-                        city={item.city}
-                        suburb={item.suburb}
+                        city={item.city || ''}
+                        suburb={item.suburb || ''}
                         href={item.href}
                         price={item.priceFrom}
                         area={item.area}
@@ -404,7 +413,7 @@ export function HomeTrendingSection({
                     ) : item.kind === 'shared_living' && item.sharedLiving ? (
                       <SimpleSharedLivingCard
                         title={item.title}
-                        location={item.city}
+                        location={item.city || ''}
                         href={item.href}
                         monthlyRent={item.priceFrom}
                         rentUnknown={item.sharedLiving.rentUnknown}
@@ -413,28 +422,7 @@ export function HomeTrendingSection({
                         furnishedState={item.sharedLiving.furnishedState}
                         billsIncluded={item.sharedLiving.billsIncluded}
                       />
-                    ) : (
-                      <SimpleDevelopmentCard
-                        id={item.id}
-                        title={item.title}
-                        city={item.city}
-                        suburb={item.suburb}
-                        priceRange={{
-                          min: item.priceFrom,
-                          max: item.priceTo,
-                        }}
-                        image={getPrimaryDevelopmentImageUrl(item.image) || ''}
-                        slug={item.kind === 'development' ? item.id : undefined}
-                        href={item.href}
-                        isHotSelling
-                        bedrooms={item.bedrooms}
-                        bedroomRange={item.bedroomRange}
-                        listingType={item.listingType}
-                        status={item.status}
-                        availabilityState={item.availabilityState}
-                        publisherName={item.publisherName}
-                      />
-                    )}
+                    ) : null}
                   </div>
                 </CarouselItem>
               ))}
@@ -453,13 +441,7 @@ export function HomeTrendingSection({
             search while more listings are being added.
           </p>
           <a
-            href={
-              activeHeroTab === 'rent'
-                ? '/property-to-rent'
-                : activeHeroTab === 'developments'
-                  ? '/new-developments'
-                  : '/property-for-sale'
-            }
+            href={activeHeroTab === 'rent' ? '/property-to-rent' : '/property-for-sale'}
             className="mt-4 inline-flex h-10 items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
           >
             Browse available property

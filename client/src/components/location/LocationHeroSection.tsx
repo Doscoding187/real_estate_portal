@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLocation } from 'wouter';
-import { Search, Home, Building2, Key, Users, LandPlot, Store, Plus } from 'lucide-react';
+import { Search, Home, Key, Users, LandPlot, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -18,7 +18,6 @@ import type { LocationNode } from '@/types/location';
 import { buildLocationDiscoveryPath } from '@/lib/locationDiscovery';
 import {
   buildBuySearchUrl,
-  buildDevelopmentsSearchUrl,
   buildPropertySearchUrl,
 } from '@/lib/heroJourneySearch';
 import { isHomepageHeroJourneyEnabled } from '@/lib/publicNavigation';
@@ -53,7 +52,6 @@ interface LocationHeroSectionProps {
 const categories = [
   { id: 'buy', label: 'Buy', icon: Home, listingType: 'sale' },
   { id: 'rental', label: 'Rental', icon: Key, listingType: 'rent' },
-  { id: 'developments', label: 'Developments', icon: Building2, listingType: 'development' },
   { id: 'shared_living', label: 'Shared Living', icon: Users, listingType: 'shared_living' },
   { id: 'plot_land', label: 'Plot & Land', icon: LandPlot, listingType: 'plot' },
 ];
@@ -71,10 +69,6 @@ const filterConfig = {
   },
   rental: {
     propertyTypes: [...RENT_PUBLIC_PROPERTY_TYPES],
-  },
-  developments: {
-    types: ['residential', 'commercial', 'mixed_use', 'land'],
-    statuses: ['launching-soon', 'selling', 'sold-out'],
   },
   plot_land: {
     types: ['Residential', 'Commercial', 'Agricultural', 'Industrial'],
@@ -114,7 +108,6 @@ export function LocationHeroSection({
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
   const [showFilters, setShowFilters] = useState(false);
   const rentJourneyEnabled = isHomepageHeroJourneyEnabled('rent');
-  const developmentsJourneyEnabled = isHomepageHeroJourneyEnabled('developments');
   const landJourneyEnabled = isHomepageHeroJourneyEnabled('plot_land');
   const activeTab = controlledActiveTab ?? internalActiveTab;
   const locationSegments = locationSlug.split('/').filter(Boolean);
@@ -141,8 +134,6 @@ export function LocationHeroSection({
     propertyTypes: [] as string[],
     priceMin: '',
     priceMax: '',
-    developmentType: '',
-    developmentStatus: '',
     landType: '',
     commercialUseType: '',
     roomType: '',
@@ -151,7 +142,6 @@ export function LocationHeroSection({
 
   const handleCategoryClick = (categoryId: string) => {
     if (categoryId === 'rental' && !rentJourneyEnabled) return;
-    if (categoryId === 'developments' && !developmentsJourneyEnabled) return;
     if (categoryId === 'plot_land') {
       if (!landJourneyEnabled) return;
       setLocation(
@@ -186,7 +176,6 @@ export function LocationHeroSection({
     const effectiveCategoryId = categoryId || (neutralMode ? '' : 'buy');
     if (!effectiveCategoryId) return undefined;
     if (effectiveCategoryId === 'rental' && !rentJourneyEnabled) return undefined;
-    if (effectiveCategoryId === 'developments' && !developmentsJourneyEnabled) return undefined;
     if (effectiveCategoryId === 'plot_land' && !landJourneyEnabled) return undefined;
 
     if (neutralMode && effectiveCategoryId === 'buy') {
@@ -195,16 +184,6 @@ export function LocationHeroSection({
 
     const category = categories.find(c => c.id === effectiveCategoryId);
     if (!category) return '/';
-
-    if (category.listingType === 'development') {
-      return buildDevelopmentsSearchUrl({
-        selectedLocations: [location],
-        developmentType: filters.developmentType,
-        developmentStatus: filters.developmentStatus,
-        minPrice: filters.priceMin,
-        maxPrice: filters.priceMax,
-      });
-    }
 
     if (category.listingType === 'sale' || category.listingType === 'rent') {
       return buildPropertySearchUrl({
@@ -288,7 +267,6 @@ export function LocationHeroSection({
               .filter(
                 category =>
                   (category.id !== 'rental' || rentJourneyEnabled) &&
-                  (category.id !== 'developments' || developmentsJourneyEnabled) &&
                   (category.id !== 'plot_land' || landJourneyEnabled),
               )
               .map(category => {
@@ -479,90 +457,6 @@ export function LocationHeroSection({
                           <SelectItem value="10000">R 10,000 / month</SelectItem>
                           <SelectItem value="20000">R 20,000 / month</SelectItem>
                           <SelectItem value="50000">R 50,000+ / month</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </>
-                )}
-
-                {/* DEVELOPMENTS FILTERS */}
-                {activeTab === 'developments' && (
-                  <>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-muted-foreground uppercase">
-                        Development Type
-                      </Label>
-                      <Select
-                        value={filters.developmentType}
-                        onValueChange={val => handleFilterChange('developmentType', val)}
-                      >
-                        <SelectTrigger className="h-10 bg-gray-50/50">
-                          <SelectValue placeholder="Any Type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Any Type</SelectItem>
-                          {filterConfig.developments.types.map(type => (
-                            <SelectItem key={type} value={type}>
-                              {type}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-muted-foreground uppercase">
-                        Status
-                      </Label>
-                      <Select
-                        value={filters.developmentStatus}
-                        onValueChange={val => handleFilterChange('developmentStatus', val)}
-                      >
-                        <SelectTrigger className="h-10 bg-gray-50/50">
-                          <SelectValue placeholder="Any Status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Any Status</SelectItem>
-                          {filterConfig.developments.statuses.map(status => (
-                            <SelectItem key={status} value={status}>
-                              {status}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-muted-foreground uppercase">
-                        Min Price
-                      </Label>
-                      <Select
-                        value={filters.priceMin}
-                        onValueChange={val => handleFilterChange('priceMin', val)}
-                      >
-                        <SelectTrigger className="h-10 bg-gray-50/50">
-                          <SelectValue placeholder="No Min" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="500000">R 500,000</SelectItem>
-                          <SelectItem value="1000000">R 1,000,000</SelectItem>
-                          <SelectItem value="2000000">R 2,000,000</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-muted-foreground uppercase">
-                        Max Price
-                      </Label>
-                      <Select
-                        value={filters.priceMax}
-                        onValueChange={val => handleFilterChange('priceMax', val)}
-                      >
-                        <SelectTrigger className="h-10 bg-gray-50/50">
-                          <SelectValue placeholder="No Max" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="2000000">R 2,000,000</SelectItem>
-                          <SelectItem value="5000000">R 5,000,000</SelectItem>
-                          <SelectItem value="10000000">R 10,000,000+</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

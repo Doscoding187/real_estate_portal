@@ -3,13 +3,6 @@ import { useDevelopmentWizard } from '@/hooks/useDevelopmentWizard';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { toast } from 'sonner';
 import { MapPin } from 'lucide-react';
 import { LocationMapPicker, type LocationData } from '@/components/location/LocationMapPicker';
@@ -38,9 +31,6 @@ export function LocationPhase() {
   const handleLocationSelect = (data: LocationData) => {
     const updates = {
       address: data.address || developmentData.location.address,
-      city: data.city || developmentData.location.city,
-      province: data.province || developmentData.location.province,
-      suburb: data.suburb || developmentData.location.suburb,
       postalCode: data.postalCode || developmentData.location.postalCode,
       latitude:
         data.latitude == null ? developmentData.location.latitude : data.latitude.toString(),
@@ -145,60 +135,6 @@ export function LocationPhase() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="city">
-                  City / Town <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="city"
-                  data-field="location.city"
-                  placeholder="e.g. Cape Town"
-                  value={developmentData.location.city}
-                  onChange={e => handleUpdate({ city: e.target.value })}
-                  className="h-11"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="suburb">Suburb</Label>
-                <Input
-                  id="suburb"
-                  data-field="location.suburb"
-                  placeholder="e.g. Sea Point"
-                  value={developmentData.location.suburb || ''}
-                  onChange={e => handleUpdate({ suburb: e.target.value })}
-                  className="h-11"
-                />
-                <p className="text-xs text-slate-500">
-                  Recommended for cleaner card location formatting.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="province">
-                  Province <span className="text-red-500">*</span>
-                </Label>
-                <Select
-                  value={developmentData.location.province}
-                  onValueChange={val => handleUpdate({ province: val })}
-                >
-                  <SelectTrigger className="h-11" data-field="location.province">
-                    <SelectValue placeholder="Select Province" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Western Cape">Western Cape</SelectItem>
-                    <SelectItem value="Gauteng">Gauteng</SelectItem>
-                    <SelectItem value="KwaZulu-Natal">KwaZulu-Natal</SelectItem>
-                    <SelectItem value="Eastern Cape">Eastern Cape</SelectItem>
-                    <SelectItem value="Free State">Free State</SelectItem>
-                    <SelectItem value="Limpopo">Limpopo</SelectItem>
-                    <SelectItem value="Mpumalanga">Mpumalanga</SelectItem>
-                    <SelectItem value="North West">North West</SelectItem>
-                    <SelectItem value="Northern Cape">Northern Cape</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
                 <Label htmlFor="postalCode">Postal Code</Label>
                 <Input
                   id="postalCode"
@@ -210,6 +146,10 @@ export function LocationPhase() {
                 />
               </div>
             </div>
+            <p className="text-sm text-slate-600">
+              City, suburb, and locality are assigned by an administrator after reviewing the
+              development site against canonical Place data.
+            </p>
           </div>
         </CardContent>
       </Card>

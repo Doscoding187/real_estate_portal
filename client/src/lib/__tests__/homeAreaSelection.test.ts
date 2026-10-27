@@ -59,6 +59,21 @@ describe('Homepage area identity and handoff', () => {
     ).toBeNull();
     expect(homeAreaFromDiscovery({ ...city, factualLevel: 'suburb' }, 'buy')).toBeNull();
   });
+  it('does not reuse typed or property-search geography for Development browse', () => {
+    const selectedCity = homeAreaFromDiscovery(city, 'buy')!;
+    expect(
+      buildSelectedDiscoverHref('developments', selectedCity, EMPTY_HOME_SEARCH_FILTERS),
+    ).toBeNull();
+    expect(
+      buildSelectedDiscoverHref(
+        'developments',
+        { locations: [], searchArea: null },
+        EMPTY_HOME_SEARCH_FILTERS,
+        undefined,
+        'pl-place-01-000000000000000000000001',
+      ),
+    ).toContain('canonicalPlaceId=pl-place-01-000000000000000000000001');
+  });
   it('clarifies a factual town without rewriting its city runtime handle', () => {
     const selection = homeAreaFromDiscovery(
       { ...city, factualType: 'town', label: 'Rosebank' },

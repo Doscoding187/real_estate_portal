@@ -4,12 +4,8 @@ import {
   cities,
   suburbs,
   properties,
-  developments,
-  cataloguePublishers,
-  developerOrganisations,
 } from '../../drizzle/schema';
-import { eq, and, desc, sql, inArray, getTableColumns, type SQL } from 'drizzle-orm';
-import { publicDevelopmentEligibilityConditions } from './publicDevelopmentEligibility';
+import { eq, and, desc, inArray, type SQL } from 'drizzle-orm';
 import {
   resolvePublicPropertyEligibilities,
   type PublicPropertyEligibilityResolution,
@@ -117,131 +113,6 @@ function groupPropertiesByLocation(
   return grouped;
 }
 
-export type SuburbDevelopmentTypeMix = {
-  residential: number;
-  mixed_use: number;
-  commercial: number;
-  land: number;
-};
-
-export type SuburbDevelopmentStatusMix = {
-  'launching-soon': number;
-  selling: number;
-  'sold-out': number;
-};
-
-export type SuburbDevelopmentPublisher = {
-  id: number;
-  name: string;
-  slug: string | null;
-  logoUrl: string | null;
-  authorityKind: string | null;
-  developmentCount: number;
-};
-
-export type SuburbDevelopmentSummary = {
-  total: number;
-  byType: SuburbDevelopmentTypeMix;
-  byStatus: SuburbDevelopmentStatusMix;
-  priceFromMinimum: number | null;
-  priceToMaximum: number | null;
-  publishers: SuburbDevelopmentPublisher[];
-};
-
-export const EMPTY_SUBURB_DEVELOPMENT_SUMMARY: SuburbDevelopmentSummary = {
-  total: 0,
-  byType: { residential: 0, mixed_use: 0, commercial: 0, land: 0 },
-  byStatus: { 'launching-soon': 0, selling: 0, 'sold-out': 0 },
-  priceFromMinimum: null,
-  priceToMaximum: null,
-  publishers: [],
-};
-
-async function loadSuburbDevelopmentSummary(
-  db: any,
-  scope: { suburbName: string; suburbId: number; cityName: string },
-): Promise<SuburbDevelopmentSummary> {
-  const rows = await db
-    .select({
-      id: developments.id,
-      developmentType: developments.developmentType,
-      status: developments.status,
-      priceFrom: developments.priceFrom,
-      priceTo: developments.priceTo,
-      publisherId: cataloguePublishers.id,
-      publisherName: cataloguePublishers.name,
-      publisherSlug: cataloguePublishers.slug,
-      publisherLogoUrl: cataloguePublishers.logoUrl,
-      publisherAuthorityKind: cataloguePublishers.authorityKind,
-    })
-    .from(developments)
-    .leftJoin(cataloguePublishers, eq(developments.cataloguePublisherId, cataloguePublishers.id))
-    .where(
-      and(
-        sql`TRIM(LOWER(${developments.suburb})) = LOWER(${scope.suburbName})`,
-        sql`(TRIM(LOWER(${developments.city})) = LOWER(${scope.cityName}) OR ${developments.locationId} = ${scope.suburbId})`,
-        publicDevelopmentEligibilityConditions(),
-      ),
-    )
-    .limit(200);
-
-  const summary: SuburbDevelopmentSummary = {
-    total: rows.length,
-    byType: { residential: 0, mixed_use: 0, commercial: 0, land: 0 },
-    byStatus: { 'launching-soon': 0, selling: 0, 'sold-out': 0 },
-    priceFromMinimum: null,
-    priceToMaximum: null,
-    publishers: [],
-  };
-  const publishersById = new Map<number, SuburbDevelopmentPublisher>();
-
-  rows.forEach((row: any) => {
-    const type = String(row.developmentType || '') as keyof SuburbDevelopmentTypeMix;
-    if (type in summary.byType) summary.byType[type] += 1;
-    const status = String(row.status || '') as keyof SuburbDevelopmentStatusMix;
-    if (status in summary.byStatus) summary.byStatus[status] += 1;
-
-    const priceFrom = Number(row.priceFrom || 0);
-    if (priceFrom > 0) {
-      summary.priceFromMinimum =
-        summary.priceFromMinimum === null
-          ? priceFrom
-          : Math.min(summary.priceFromMinimum, priceFrom);
-    }
-    const priceTo = Number(row.priceTo || 0);
-    if (priceTo > 0) {
-      summary.priceToMaximum =
-        summary.priceToMaximum === null ? priceTo : Math.max(summary.priceToMaximum, priceTo);
-    }
-
-    const publisherId = Number(row.publisherId || 0);
-    const publisherName = String(row.publisherName || '').trim();
-    if (!publisherId || !publisherName) return;
-    const existing = publishersById.get(publisherId);
-    if (existing) {
-      existing.developmentCount += 1;
-      return;
-    }
-    publishersById.set(publisherId, {
-      id: publisherId,
-      name: publisherName,
-      slug: row.publisherSlug ? String(row.publisherSlug) : null,
-      logoUrl: row.publisherLogoUrl ? String(row.publisherLogoUrl) : null,
-      authorityKind: row.publisherAuthorityKind ? String(row.publisherAuthorityKind) : null,
-      developmentCount: 1,
-    });
-  });
-
-  summary.publishers = [...publishersById.values()]
-    .sort(
-      (left, right) =>
-        right.developmentCount - left.developmentCount || left.name.localeCompare(right.name),
-    )
-    .slice(0, 8);
-
-  return summary;
-}
-
 export const locationPagesService = {
   async getPopularCities(limit = 12) {
     const db = await getDb();
@@ -316,7 +187,6 @@ export const locationPagesService = {
 
     // Secondary queries wrapped individually so a single failure doesn't kill the whole page
     let cityList: any[] = [];
-    let featuredDevelopments: any[] = [];
     let trendingSuburbs: any[] = [];
     let eligibleProperties: EligibleLocationProperty[] = [];
 
@@ -365,33 +235,6 @@ export const locationPagesService = {
     }
 
     try {
-      featuredDevelopments = await db
-        .select({ ...getTableColumns(developments) })
-        .from(developments)
-        .leftJoin(
-          cataloguePublishers,
-          eq(developments.cataloguePublisherId, cataloguePublishers.id),
-        )
-        .leftJoin(
-          developerOrganisations,
-          eq(cataloguePublishers.developerOrganisationId, developerOrganisations.id),
-        )
-        .where(
-          and(
-            sql`TRIM(LOWER(${developments.province})) = LOWER(${province.name})`,
-            publicDevelopmentEligibilityConditions(),
-          ),
-        )
-        .limit(6);
-    } catch (error) {
-      console.warn(
-        '[LocationPages] Developments query failed for province',
-        safeErrorSummary(error),
-      );
-      throw error;
-    }
-
-    try {
       const provinceSuburbs = await db
         .select({
           id: suburbs.id,
@@ -428,7 +271,6 @@ export const locationPagesService = {
     return {
       province,
       cities: cityList,
-      featuredDevelopments,
       trendingSuburbs,
       stats: {
         totalListings: eligibleProperties.length,
@@ -544,27 +386,6 @@ export const locationPagesService = {
           )
         : [];
 
-      // 4. Developments in City (match by city name, trim whitespace, also include suburb matches)
-      // Cascading: show developments where city matches OR suburb is in this city's suburbs
-      const cityDevelopments = await db
-        .select({ ...getTableColumns(developments) })
-        .from(developments)
-        .leftJoin(
-          cataloguePublishers,
-          eq(developments.cataloguePublisherId, cataloguePublishers.id),
-        )
-        .leftJoin(
-          developerOrganisations,
-          eq(cataloguePublishers.developerOrganisationId, developerOrganisations.id),
-        )
-        .where(
-          and(
-            sql`(TRIM(LOWER(${developments.city})) = LOWER(${city.name}) OR TRIM(LOWER(${developments.suburb})) IN (SELECT LOWER(name) FROM suburbs WHERE cityId = ${city.id}))`,
-            publicDevelopmentEligibilityConditions(),
-          ),
-        )
-        .limit(8);
-
       // Always return city data, even if no listings exist (show empty state)
       console.log(
         `[LocationPages] Returning city data with ${featuredProperties.length} properties`,
@@ -596,7 +417,6 @@ export const locationPagesService = {
         city,
         suburbs: suburbList || [],
         featuredProperties: featuredProperties || [],
-        developments: cityDevelopments || [],
         stats: {
           totalListings: eligibleProperties.length,
           avgPrice: Number(averagePrice || 0),
@@ -686,20 +506,6 @@ export const locationPagesService = {
       eligibleProperties.map(property => getPublicPropertyMarketFact(property.resolution)),
     );
 
-    let suburbDevelopments = EMPTY_SUBURB_DEVELOPMENT_SUMMARY;
-    try {
-      suburbDevelopments = await loadSuburbDevelopmentSummary(db, {
-        suburbName: suburb.name,
-        suburbId: Number(suburb.id),
-        cityName: suburb.cityName,
-      });
-    } catch (error) {
-      console.warn(
-        '[LocationPages] Suburb development summary failed',
-        safeErrorSummary(error),
-      );
-    }
-
     return {
       suburb,
       stats: {
@@ -709,7 +515,6 @@ export const locationPagesService = {
         saleCount,
       },
       marketInsights,
-      developments: suburbDevelopments,
     };
   },
 };

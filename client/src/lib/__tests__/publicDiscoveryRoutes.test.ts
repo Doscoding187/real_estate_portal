@@ -59,18 +59,24 @@ describe('public discovery route authority', () => {
     expect(DISCOVER_PROPERTY_TYPE_BY_LABEL).not.toHaveProperty('Penthouses');
   });
 
-  it('keeps development cards on the canonical root without invented filters', () => {
-    const browse = parseRelativeUrl(buildDiscoverBrowseHref('developments', 'Cape Town'));
+  it('requires a reviewed Place ID for development browse and ignores display labels', () => {
+    const placeId = 'pl-place-01-000000000000000000000001';
+    const missing = parseRelativeUrl(buildDiscoverBrowseHref('developments', 'Cape Town'));
+    const browse = parseRelativeUrl(buildDiscoverBrowseHref('developments', 'Cape Town', placeId));
     const ready = parseRelativeUrl(
-      buildDiscoverCardHref('Ready to Move', 'developments', 'Cape Town'),
+      buildDiscoverCardHref('Ready to Move', 'developments', 'Cape Town', placeId),
     );
     const luxury = parseRelativeUrl(
-      buildDiscoverCardHref('Luxury Projects', 'developments', 'Cape Town'),
+      buildDiscoverCardHref('Luxury Projects', 'developments', 'Cape Town', placeId),
     );
+
+    expect(missing.pathname).toBe('/new-developments');
+    expect(missing.searchParams.get('searchError')).toBe('canonical-place-required');
 
     for (const url of [browse, ready, luxury]) {
       expect(url.pathname).toBe('/new-developments');
-      expect(url.searchParams.get('search')).toBe('Cape Town');
+      expect(url.searchParams.get('canonicalPlaceId')).toBe(placeId);
+      expect(url.searchParams.has('search')).toBe(false);
       expect(url.searchParams.has('type')).toBe(false);
       expect(url.searchParams.has('status')).toBe(false);
     }

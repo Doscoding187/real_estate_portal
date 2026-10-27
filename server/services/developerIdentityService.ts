@@ -11,6 +11,8 @@ import {
 } from '../../drizzle/schema';
 import { assertCataloguePublisherContentMutation } from './cataloguePublisherMutationPolicy';
 import { publicDevelopmentEligibilityConditions } from './publicDevelopmentEligibility';
+import { listDevelopmentIdsForCanonicalPlace } from './developmentPlaceAssignmentService';
+import { isPlaceId } from '../../drizzle/schema/placeAuthority';
 import {
   resolveDeveloperActorForUser,
   type DeveloperActorResolution,
@@ -59,7 +61,7 @@ export interface PublisherFilters {
   isVisible?: boolean;
   authorityKind?: PublisherAuthorityKind;
   search?: string;
-  province?: string;
+  canonicalPlaceId?: string;
   limit?: number;
   offset?: number;
 }
@@ -633,13 +635,34 @@ export async function listPublicCataloguePublishers(filters: PublisherFilters = 
     eq(cataloguePublishers.isVisible, 1),
     publicPublisherAuthorityCondition(),
   ];
-  if (filters.province) {
-    conditions.push(sql`EXISTS (
-      SELECT 1 FROM ${developments}
-      WHERE ${developments.cataloguePublisherId} = ${cataloguePublishers.id}
-        AND ${developments.province} = ${filters.province}
-        AND ${publicDevelopmentEligibilityConditions()}
-    )`);
+  let placeDevelopmentIds: number[] | undefined;
+  if (filters.canonicalPlaceId !== undefined) {
+    if (!isPlaceId(filters.canonicalPlaceId)) {
+      throw new TRPCError({ code: 'BAD_REQUEST', message: 'A canonical Place ID is required.' });
+    }
+    const developmentIds = await listDevelopmentIdsForCanonicalPlace(filters.canonicalPlaceId);
+    if (!developmentIds.length) return [];
+    placeDevelopmentIds = developmentIds;
+    const matchingPublishers = await database
+      .select({ publisherId: developments.cataloguePublisherId })
+      .from(developments)
+      .where(
+        and(inArray(developments.id, developmentIds), publicDevelopmentEligibilityConditions()),
+      );
+    const publisherIds = Array.from(
+      new Set<number>(
+        matchingPublishers
+          .map(row => row.publisherId)
+          .filter(
+            (publisherId): publisherId is number =>
+              typeof publisherId === 'number' &&
+              Number.isSafeInteger(publisherId) &&
+              publisherId > 0,
+          ),
+      ),
+    );
+    if (!publisherIds.length) return [];
+    conditions.push(inArray(cataloguePublishers.id, publisherIds));
     conditions.push(inArray(cataloguePublishers.publisherType, ['developer', 'hybrid']));
   }
   if (filters.brandTier) conditions.push(eq(cataloguePublishers.brandTier, filters.brandTier));
@@ -674,10 +697,17 @@ export async function listPublicCataloguePublishers(filters: PublisherFilters = 
   const publishers = rows.map(row => row.publisher);
   if (!publishers.length) return [];
   const ids = publishers.map(publisher => publisher.id);
+  const developmentCountConditions: any[] = [
+    inArray(developments.cataloguePublisherId, ids),
+    publicDevelopmentEligibilityConditions(),
+  ];
+  if (placeDevelopmentIds) {
+    developmentCountConditions.push(inArray(developments.id, placeDevelopmentIds));
+  }
   const developmentCounts = await database
     .select({ publisherId: developments.cataloguePublisherId, count: sql<number>`COUNT(*)` })
     .from(developments)
-    .where(inArray(developments.cataloguePublisherId, ids))
+    .where(and(...developmentCountConditions))
     .groupBy(developments.cataloguePublisherId);
   const countByPublisher = new Map(
     developmentCounts.map(row => [Number(row.publisherId), Number(row.count)]),
@@ -693,13 +723,20 @@ export async function listPublicCataloguePublishers(filters: PublisherFilters = 
 }
 
 /**
- * Organic homepage discovery for publishers with qualifying, live work in one
- * exact province. This query does not assign paid or featured placement.
+ * Organic discovery for publishers with qualifying live work assigned to one
+ * exact, reviewed canonical Place. Labels and parent relationships are not
+ * used to match.
  */
-export async function listPublicPublishersByProvince(
-  province: string,
+export async function listPublicPublishersByPlace(
+  placeId: string,
   limit = 10,
 ): Promise<LocalPublisherDiscovery[]> {
+  if (!isPlaceId(placeId)) {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'A canonical Place ID is required.' });
+  }
+  const developmentIds = await listDevelopmentIdsForCanonicalPlace(placeId);
+  if (!developmentIds.length) return [];
+
   const database = await getDb();
   if (!database) throw new Error('Database not available');
 
@@ -718,7 +755,7 @@ export async function listPublicPublishersByProvince(
     .innerJoin(cataloguePublishers, eq(developments.cataloguePublisherId, cataloguePublishers.id))
     .where(
       and(
-        eq(developments.province, province),
+        inArray(developments.id, developmentIds),
         inArray(cataloguePublishers.publisherType, ['developer', 'hybrid']),
         publicDevelopmentEligibilityConditions(),
       ),
@@ -858,7 +895,7 @@ export const developerIdentityService = {
   getPublicPublisherBySlug,
   listCataloguePublishers,
   listPublicCataloguePublishers,
-  listPublicPublishersByProvince,
+  listPublicPublishersByPlace,
   updateCataloguePublisher,
   setPublisherVisibility,
   getPublisherDevelopments,

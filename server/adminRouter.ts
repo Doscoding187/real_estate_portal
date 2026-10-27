@@ -34,6 +34,10 @@ import {
   analyticsEvents,
   showings,
   developments,
+  developmentPhases,
+  developmentPlaceAssignments,
+  place,
+  placeName,
   cataloguePublishers,
   developerOrganisations,
   developmentApprovalQueue,
@@ -42,6 +46,11 @@ import { eq, desc, asc, and, or, like, sql, type SQL, gte, lte, inArray } from '
 import { logAudit, AuditActions } from './_core/auditLog';
 import { nowAsDbTimestamp } from './utils/dbTypeUtils';
 import { developmentService } from './services/developmentService';
+import {
+  listDevelopmentPlaceGeography,
+  recordReviewedDevelopmentPlaceAssignment,
+  withdrawReviewedDevelopmentPlaceAssignment,
+} from './services/developmentPlaceAssignmentService';
 import { resolvePropertiesForListings } from './services/inventoryLinkResolver';
 import { getDiscoveryOpsReport } from './services/discoveryOpsReportService';
 import { excludeLandFromGenericListingWorkflow } from './services/landLaunchContainmentService';
@@ -1439,12 +1448,31 @@ export const adminRouter = router({
       .where(eq(developmentApprovalQueue.status, 'pending'))
       .orderBy(desc(developmentApprovalQueue.submittedAt));
 
-    return pendingDevs.map(item => ({
-      ...item.development,
-      developerName: item.publisher.name,
-      submittedAt: item.queueEntry.submittedAt,
-      queueId: item.queueEntry.id,
-    }));
+    const geographyByDevelopmentId = await listDevelopmentPlaceGeography(
+      pendingDevs.map(item => Number(item.development.id)),
+    );
+
+    return pendingDevs.map(item => {
+      const {
+        city,
+        province,
+        suburb,
+        locationId,
+        ...development
+      } = item.development;
+      void city;
+      void province;
+      void suburb;
+      void locationId;
+      return {
+        ...development,
+        locationLabels:
+          geographyByDevelopmentId.get(Number(item.development.id))?.locationLabels ?? [],
+        developerName: item.publisher.name,
+        submittedAt: item.queueEntry.submittedAt,
+        queueId: item.queueEntry.id,
+      };
+    });
   }),
 
   /**
@@ -1481,6 +1509,124 @@ export const adminRouter = router({
         .orderBy(unitTypes.displayOrder, unitTypes.id);
 
       return rows;
+    }),
+
+  adminGetDevelopmentPlaceAssignmentContext: superAdminProcedure
+    .input(z.object({ developmentId: z.number().int().positive() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+
+      const [phases, assignments] = await Promise.all([
+        db
+          .select({
+            id: developmentPhases.id,
+            name: developmentPhases.name,
+            phaseNumber: developmentPhases.phaseNumber,
+          })
+          .from(developmentPhases)
+          .where(eq(developmentPhases.developmentId, input.developmentId))
+          .orderBy(asc(developmentPhases.phaseNumber), asc(developmentPhases.id)),
+        db
+          .select({
+            id: developmentPlaceAssignments.id,
+            phaseId: developmentPlaceAssignments.phaseId,
+            placeId: developmentPlaceAssignments.placeId,
+            assignmentKind: developmentPlaceAssignments.assignmentKind,
+            reviewState: developmentPlaceAssignments.reviewState,
+            evidenceReference: developmentPlaceAssignments.evidenceReference,
+            reviewNote: developmentPlaceAssignments.reviewNote,
+            reviewedByUserId: developmentPlaceAssignments.reviewedByUserId,
+            reviewedAt: developmentPlaceAssignments.reviewedAt,
+            placeName: placeName.name,
+            phaseName: developmentPhases.name,
+          })
+          .from(developmentPlaceAssignments)
+          .innerJoin(place, eq(place.placeId, developmentPlaceAssignments.placeId))
+          .leftJoin(
+            placeName,
+            and(
+              eq(placeName.placeId, place.placeId),
+              eq(placeName.nameRole, 'preferred_public'),
+              eq(placeName.nameState, 'active'),
+            ),
+          )
+          .leftJoin(
+            developmentPhases,
+            and(
+              eq(developmentPhases.id, developmentPlaceAssignments.phaseId),
+              eq(developmentPhases.developmentId, developmentPlaceAssignments.developmentId),
+            ),
+          )
+          .where(eq(developmentPlaceAssignments.developmentId, input.developmentId))
+          .orderBy(asc(developmentPlaceAssignments.id)),
+      ]);
+
+      return { phases, assignments };
+    }),
+
+  adminReviewDevelopmentPlaceAssignment: superAdminProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int().positive(),
+        phaseId: z.number().int().positive().nullable(),
+        placeId: z.string().trim().max(40),
+        evidenceReference: z.string().trim().min(1).max(1000),
+        reviewNote: z.string().trim().max(2000).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      await recordReviewedDevelopmentPlaceAssignment({
+        ...input,
+        assignmentKind: 'site',
+        reviewerUserId: ctx.user.id,
+      });
+
+      await logAudit({
+        userId: ctx.user.id,
+        action: AuditActions.UPDATE_DEVELOPMENT,
+        targetType: 'development',
+        targetId: input.developmentId,
+        metadata: {
+          action: 'reviewed_site_place_assignment',
+          phaseId: input.phaseId,
+          placeId: input.placeId,
+          evidenceReference: input.evidenceReference,
+          reviewNote: input.reviewNote || null,
+        },
+        req: ctx.req,
+      });
+
+      return { success: true };
+    }),
+
+  adminWithdrawDevelopmentPlaceAssignment: superAdminProcedure
+    .input(
+      z.object({
+        assignmentId: z.number().int().positive(),
+        reviewNote: z.string().trim().min(1).max(2000),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { developmentId } = await withdrawReviewedDevelopmentPlaceAssignment({
+        ...input,
+        reviewerUserId: ctx.user.id,
+      });
+
+      await logAudit({
+        userId: ctx.user.id,
+        action: AuditActions.UPDATE_DEVELOPMENT,
+        targetType: 'development',
+        targetId: developmentId,
+        metadata: {
+          action: 'withdrew_site_place_assignment',
+          assignmentId: input.assignmentId,
+          reviewNote: input.reviewNote,
+        },
+        req: ctx.req,
+      });
+
+      return { success: true };
     }),
 
   /**

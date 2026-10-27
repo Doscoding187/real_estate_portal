@@ -1,9 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { mockSearchInventory, mockSearchProperties, mockSearchListings } = vi.hoisted(() => ({
+const { mockSearchInventory, mockSearchProperties } = vi.hoisted(() => ({
   mockSearchInventory: vi.fn(),
   mockSearchProperties: vi.fn(),
-  mockSearchListings: vi.fn(),
 }));
 
 vi.mock('../publicSearchService', () => ({
@@ -15,12 +14,6 @@ vi.mock('../publicSearchService', () => ({
 vi.mock('../propertySearchService', () => ({
   propertySearchService: {
     searchProperties: mockSearchProperties,
-  },
-}));
-
-vi.mock('../developmentDerivedListingService', () => ({
-  developmentDerivedListingService: {
-    searchListings: mockSearchListings,
   },
 }));
 
@@ -52,6 +45,8 @@ describe('saved-search notification public search authority', () => {
           id: 'dev-77-unit-1',
           href: '/development/rentals/unit/unit-1',
           title: 'Two Bedroom Rental',
+          canonicalPlaceId: 'pl-place-01-6a145c6d642ba208a2c12de7',
+          locationLabels: ['Sandton', 'Johannesburg'],
           city: 'Johannesburg',
           suburb: 'Sandton',
           price: 12000,
@@ -66,7 +61,7 @@ describe('saved-search notification public search authority', () => {
     });
   });
 
-  it('evaluates canonical Rent criteria through public inventory and preserves the card detail href', async () => {
+  it('evaluates Development Rent criteria through an exact canonical Place and preserves the detail href', async () => {
     const engine = new SavedSearchNotificationEngine();
     const evaluateSearch = (
       engine as unknown as {
@@ -81,7 +76,7 @@ describe('saved-search notification public search authority', () => {
     const result = await evaluateSearch(
       savedSearch({
         listingType: 'rent',
-        locationIds: ['suburb:34', 'suburb:35'],
+        canonicalPlaceId: 'pl-place-01-6a145c6d642ba208a2c12de7',
         propertyType: 'apartment',
         minPrice: 5000,
         maxPrice: 15000,
@@ -92,7 +87,7 @@ describe('saved-search notification public search authority', () => {
     expect(mockSearchInventory).toHaveBeenCalledWith(
       expect.objectContaining({
         listingType: 'rent',
-        locationIds: ['suburb:34', 'suburb:35'],
+        canonicalPlaceId: 'pl-place-01-6a145c6d642ba208a2c12de7',
         propertyType: 'apartment',
         minPrice: 5000,
         maxPrice: 15000,
@@ -103,7 +98,6 @@ describe('saved-search notification public search authority', () => {
       }),
     );
     expect(mockSearchProperties).not.toHaveBeenCalled();
-    expect(mockSearchListings).not.toHaveBeenCalled();
     expect(result).toMatchObject({
       totalMatches: 1,
       newMatchCount: 1,
@@ -147,14 +141,10 @@ describe('saved-search notification public search authority', () => {
       }
       expect(mockSearchInventory).not.toHaveBeenCalled();
       expect(mockSearchProperties).not.toHaveBeenCalled();
-      expect(mockSearchListings).not.toHaveBeenCalled();
     },
   );
 
-  it('keeps legacy predicates on the compatibility path instead of silently dropping them', async () => {
-    mockSearchProperties.mockResolvedValue({ properties: [], total: 0 });
-    mockSearchListings.mockResolvedValue({ items: [], total: 0 });
-
+  it('fails closed for Development criteria that use text geography without a canonical Place', async () => {
     const engine = new SavedSearchNotificationEngine();
     const evaluateSearch = (
       engine as unknown as {
@@ -162,24 +152,18 @@ describe('saved-search notification public search authority', () => {
       }
     ).evaluateSearch.bind(engine);
 
-    await evaluateSearch(
-      savedSearch({
-        listingType: 'sale',
-        city: 'johannesburg',
-        petFriendly: true,
-      }),
-    );
+    await expect(
+      evaluateSearch(
+        savedSearch({
+          listingType: 'sale',
+          city: 'johannesburg',
+          listingSource: 'development',
+          petFriendly: true,
+        }),
+      ),
+    ).resolves.toBeNull();
 
     expect(mockSearchInventory).not.toHaveBeenCalled();
-    expect(mockSearchProperties).toHaveBeenCalledOnce();
-    expect(mockSearchProperties).toHaveBeenCalledWith(
-      expect.objectContaining({ listingType: 'sale', city: 'johannesburg', petFriendly: true }),
-      'date_desc',
-      1,
-      100,
-      undefined,
-      { publicOnly: true },
-    );
-    expect(mockSearchListings).toHaveBeenCalledOnce();
+    expect(mockSearchProperties).not.toHaveBeenCalled();
   });
 });

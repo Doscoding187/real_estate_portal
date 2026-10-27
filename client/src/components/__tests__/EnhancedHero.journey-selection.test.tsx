@@ -113,6 +113,29 @@ vi.mock('@/lib/trpc', () => ({
   },
 }));
 
+vi.mock('@/components/location/CanonicalPlaceSelector', () => ({
+  CanonicalPlaceSelector: ({ onChange }: { onChange: (value: unknown) => void }) => (
+    <>
+      <input aria-label="Project Place" role="combobox" />
+      <button
+        type="button"
+        data-testid="select-johannesburg-place"
+        onClick={() =>
+          onChange({
+            canonicalPlaceId: 'pl-place-01-dee61758ef3bda7cd1a258ad',
+            label: 'Sandton',
+            placeType: 'suburb',
+            scope: 'locality',
+            administrativeContext: 'Johannesburg, Gauteng',
+          })
+        }
+      >
+        Select Sandton Place
+      </button>
+    </>
+  ),
+}));
+
 import { EnhancedHero } from '../EnhancedHero';
 
 describe('EnhancedHero explicit journey selection', () => {
@@ -259,11 +282,13 @@ describe('EnhancedHero explicit journey selection', () => {
   it('routes an enabled Developments selection to the canonical search URL', () => {
     render(<EnhancedHero activeTab="developments" />);
 
-    fireEvent.click(screen.getByTestId('select-johannesburg'));
+    fireEvent.click(screen.getByTestId('select-johannesburg-place'));
     fireEvent.click(screen.getAllByRole('button', { name: 'Search', exact: true })[0]);
 
     expect(setLocation).toHaveBeenCalledWith(
-      expect.stringMatching(/^\/new-developments\?locationId=city%3A12/),
+      expect.stringMatching(
+        /^\/new-developments\?canonicalPlaceId=pl-place-01-dee61758ef3bda7cd1a258ad/,
+      ),
     );
   });
 

@@ -5,13 +5,7 @@ import {
   savedSearches,
   users,
 } from '../../drizzle/schema';
-import type {
-  DevelopmentDerivedListing,
-  Property,
-  PropertyFilters,
-  SearchCardResult,
-  SavedSearch,
-} from '../../shared/types';
+import type { Property, PropertyFilters, SearchCardResult, SavedSearch } from '../../shared/types';
 import { PUBLIC_SEARCH_MAX_PAGE_SIZE } from '../../shared/publicSearchPagination';
 import { publicSearchService, type PublicSearchInventoryInput } from './publicSearchService';
 import { validatePublicSearchInput } from '../../shared/publicSearchValidation';
@@ -20,7 +14,6 @@ import { ENV } from '../_core/env';
 import { EmailService } from '../_core/emailService';
 import { getDb } from '../db-connection';
 import { normalizeSavedSearch } from '../lib/savedSearchContract';
-import { developmentDerivedListingService } from './developmentDerivedListingService';
 import { propertySearchService } from './propertySearchService';
 import {
   createSavedSearchDeliveryActionToken,
@@ -39,16 +32,21 @@ type ListingSourceFilter = 'manual' | 'development' | 'all';
 
 type ManualNotificationMatch = Pick<
   Property,
-  'id' | 'title' | 'price' | 'city' | 'suburb' | 'listingType' | 'listingSource' | 'listedDate'
+  'id' | 'title' | 'price' | 'city' | 'suburb' | 'listingType' | 'listedDate'
 > & {
+  listingSource: 'manual';
   href: string;
   image: string | null;
 };
 
-type DevelopmentNotificationMatch = Pick<
-  DevelopmentDerivedListing,
-  'id' | 'title' | 'price' | 'city' | 'suburb' | 'listingType' | 'listingSource' | 'listedDate'
-> & {
+type DevelopmentNotificationMatch = {
+  id: string;
+  title: string;
+  price: number;
+  locationLabels: string[];
+  listingType: 'sale' | 'rent';
+  listingSource: 'development';
+  listedDate: Date;
   href: string;
   image: string | null;
 };
@@ -425,6 +423,7 @@ function pluralize(count: number, singular: string, plural?: string): string {
 }
 
 function getMatchLocation(match: SavedSearchNotificationMatch): string {
+  if (match.listingSource === 'development') return match.locationLabels.join(', ');
   return [match.suburb, match.city].filter(Boolean).join(', ');
 }
 
@@ -434,7 +433,14 @@ function getMatchesLocationSummary(matches: SavedSearchNotificationMatch[]): str
     return preciseLocations[0];
   }
 
-  const cities = [...new Set(matches.map(match => match.city).filter(Boolean))];
+  const cities = [
+    ...new Set(
+      matches
+        .filter((match): match is ManualNotificationMatch => match.listingSource === 'manual')
+        .map(match => match.city)
+        .filter(Boolean),
+    ),
+  ];
   if (cities.length === 1) {
     return cities[0];
   }
@@ -507,12 +513,7 @@ function buildSavedSearchEmailText(
     '',
     ...payload.matches.map(
       match =>
-        `- ${match.title} — ${formatPrice(match.price, match.listingType)} — ${[
-          match.suburb,
-          match.city,
-        ]
-          .filter(Boolean)
-          .join(', ')} — ${buildAbsoluteUrl(match.href)}`,
+        `- ${match.title} — ${formatPrice(match.price, match.listingType)} — ${getMatchLocation(match)} — ${buildAbsoluteUrl(match.href)}`,
     ),
     '',
     `View results: ${buildAbsoluteUrl(payload.actionUrl)}`,
@@ -527,7 +528,7 @@ function buildSavedSearchEmailHtml(
 ): string {
   const matchCards = payload.matches
     .map(match => {
-      const location = [match.suburb, match.city].filter(Boolean).join(', ');
+      const location = getMatchLocation(match);
       return `
         <div style="padding: 16px 0; border-top: 1px solid #e2e8f0;">
           <div style="font-size: 16px; font-weight: 600; color: #0f172a; margin-bottom: 6px;">
@@ -674,6 +675,20 @@ function sortMatchesByDateDesc<T extends { listedDate: Date }>(matches: T[]): T[
 }
 
 function buildSearchCardMatch(card: SearchCardResult): SavedSearchNotificationMatch {
+  if (card.listingSource === 'development') {
+    return {
+      id: card.id,
+      title: card.title,
+      price: card.price,
+      locationLabels: card.locationLabels ?? [],
+      listingType: card.listingType,
+      listingSource: 'development',
+      listedDate: card.listedDate,
+      href: card.href,
+      image: card.image || card.images?.[0]?.url || null,
+    };
+  }
+
   return {
     id: card.id,
     title: card.title,
@@ -681,7 +696,7 @@ function buildSearchCardMatch(card: SearchCardResult): SavedSearchNotificationMa
     city: card.city,
     suburb: card.suburb,
     listingType: card.listingType,
-    listingSource: card.listingSource,
+    listingSource: 'manual',
     listedDate: card.listedDate,
     href: card.href,
     image: card.image || card.images?.[0]?.url || null,
@@ -786,29 +801,6 @@ function buildManualMatch(property: Property): ManualNotificationMatch {
     listedDate: property.listedDate,
     href: `/property/${property.id}`,
     image: property.images?.[0]?.url || null,
-  };
-}
-
-function buildDevelopmentMatch(listing: DevelopmentDerivedListing): DevelopmentNotificationMatch {
-  const unitTypeId = listing.unitTypeId ? String(listing.unitTypeId).trim() : '';
-  const detailSuffix = unitTypeId ? `/unit/${unitTypeId}` : '';
-  const href =
-    listing.href ||
-    (listing.development.slug
-      ? `/development/${listing.development.slug}${detailSuffix}`
-      : `/development/${listing.development.id}${detailSuffix}`);
-
-  return {
-    id: listing.id,
-    title: listing.title,
-    price: listing.price,
-    city: listing.city,
-    suburb: listing.suburb,
-    listingType: listing.listingType,
-    listingSource: 'development',
-    listedDate: listing.listedDate,
-    href,
-    image: listing.image || listing.images?.[0]?.url || null,
   };
 }
 
@@ -1042,6 +1034,10 @@ export class SavedSearchNotificationEngine {
       search.criteria,
     );
 
+    if (listingSource === 'development' && !isCanonicalPlaceId(search.criteria.canonicalPlaceId)) {
+      return null;
+    }
+
     if (publicSearchInput) {
       const publicResults = await publicSearchService.searchInventory({
         ...publicSearchInput,
@@ -1059,34 +1055,20 @@ export class SavedSearchNotificationEngine {
 
     if (search.criteria.canonicalPlaceId !== undefined) return null;
 
-    const [manualResults, developmentResults] = await Promise.all([
-      listingSource === 'development'
-        ? Promise.resolve(null)
-        : propertySearchService.searchProperties(
-            propertyFilters,
-            'date_desc',
-            1,
-            PREVIEW_QUERY_LIMIT,
-            undefined,
-            { publicOnly: true },
-          ),
-      listingSource === 'manual'
-        ? Promise.resolve(null)
-        : developmentDerivedListingService.searchListings(
-            propertyFilters,
-            'date_desc',
-            1,
-            PREVIEW_QUERY_LIMIT,
-          ),
-    ]);
+    const manualResults = await propertySearchService.searchProperties(
+      propertyFilters,
+      'date_desc',
+      1,
+      PREVIEW_QUERY_LIMIT,
+      undefined,
+      { publicOnly: true },
+    );
 
-    const manualMatches = manualResults?.properties?.map(buildManualMatch) ?? [];
-    const developmentMatches = developmentResults?.items?.map(buildDevelopmentMatch) ?? [];
-    const totalMatches = (manualResults?.total || 0) + (developmentResults?.total || 0);
+    const manualMatches = manualResults.properties?.map(buildManualMatch) ?? [];
 
     return buildSearchEvaluationResult(
-      [...manualMatches, ...developmentMatches],
-      totalMatches,
+      manualMatches,
+      manualResults.total || 0,
       search.lastNotifiedAt,
     );
   }

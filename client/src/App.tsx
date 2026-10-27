@@ -198,11 +198,6 @@ const DistributionReferralApplyPage = lazy(
 const SearchResults = lazy(() => import('./pages/SearchResults'));
 const SuburbGuidePage = lazy(() => import('./pages/SuburbGuidePage'));
 
-function LegacyDeveloperAuthoringRedirect() {
-  const query = typeof window === 'undefined' ? '' : window.location.search;
-  return <Redirect to={`/developer/create-development${query}`} />;
-}
-
 function Router() {
   // Auto-migrate guest data on login
   useGuestDataMigration();
@@ -410,11 +405,6 @@ function Router() {
             </RequireRole>
           </Route>
           <Route path="/listing-template" component={ListingTemplate} />
-          {/* Preserve legacy authoring URLs, but route them through the canonical
-              authenticated Developer boundary rather than mounting the wizard publicly. */}
-          <Route path="/developments/create" component={LegacyDeveloperAuthoringRedirect} />
-          <Route path="/development-wizard" component={LegacyDeveloperAuthoringRedirect} />
-
           {/* Canonical Developments Root */}
           <Route path="/new-developments" component={DevelopmentsDemo} />
           <Route path="/commercial" component={CommercialOffice} />
@@ -427,14 +417,6 @@ function Router() {
           <Route path="/shared-living/thread/:token" component={SharedLivingThread} />
           <Route path="/shared-living/:slug" component={SharedLivingDetail} />
           <Route path="/commercial/:slug" component={CommercialOfficeDetail} />
-          {/* Redirect Legacy /developments to /new-developments */}
-          <Route
-            path="/developments"
-            component={() => {
-              window.location.replace(`/new-developments${window.location.search}`);
-              return null;
-            }}
-          />
           <Route path="/development/:slug/unit/:unitId" component={DevelopmentUnitDetailPage} />
           <Route path="/development/:slug/qualification" component={DevelopmentQualificationPage} />
           <Route path="/development/:slug" component={DevelopmentDetail} />

@@ -116,12 +116,7 @@ export default function ReferrerDashboard() {
         String(dev.developmentName || '')
           .toLowerCase()
           .includes(q) ||
-        String(dev.city || '')
-          .toLowerCase()
-          .includes(q) ||
-        String(dev.province || '')
-          .toLowerCase()
-          .includes(q),
+        String(dev.developmentId || '').toLowerCase().includes(q),
     );
   }, [groupedDevelopments, search]);
 
@@ -226,7 +221,7 @@ export default function ReferrerDashboard() {
                   <Input
                     value={search}
                     onChange={e => setSearch(e.target.value)}
-                    placeholder="Search by development name or ID"
+                        placeholder="Search by development name or ID"
                     className="pl-9"
                   />
                 </div>
@@ -251,7 +246,7 @@ export default function ReferrerDashboard() {
                         <p
                           className={`text-xs ${isSelected ? 'text-slate-200' : 'text-slate-500'}`}
                         >
-                          {dev.city}, {dev.province}
+                          {dev.locationLabels?.join(', ') || 'No reviewed Place assignment'}
                         </p>
                       </button>
                     );

@@ -152,6 +152,25 @@ describe('HomeTrendingSection request states', () => {
     expect(screen.queryByTestId('home-property-feed-loading')).not.toBeInTheDocument();
   });
 
+  it('hands Development browsing to the canonical Place search without sending province text', () => {
+    render(
+      <HomeTrendingSection
+        selectedProvince="Gauteng"
+        onProvinceChange={vi.fn()}
+        activeHeroTab="developments"
+      />,
+    );
+
+    expect(screen.getByRole('link', { name: 'Search new developments' })).toHaveAttribute(
+      'href',
+      '/new-developments',
+    );
+    expect(testState.homeFeedUseQuery).toHaveBeenLastCalledWith(
+      expect.not.objectContaining({ province: expect.anything() }),
+      expect.objectContaining({ enabled: false }),
+    );
+  });
+
   it('keeps ten selected items in a four-card desktop rail with exterior hover controls', () => {
     const items = Array.from({ length: 10 }, (_, index) => ({
       id: String(index + 1),
@@ -279,7 +298,7 @@ describe('HomeTrendingSection request states', () => {
     expect(testState.setLocation).not.toHaveBeenCalled();
   });
 
-  it('uses the resale card facts and sale badge for a development unit', () => {
+  it('does not render Development units through the province-scoped property rail', () => {
     testState.query = {
       data: {
         items: [
@@ -304,13 +323,9 @@ describe('HomeTrendingSection request states', () => {
       },
     };
     renderSection();
-    expect(screen.getByText('For sale')).toBeInTheDocument();
-    expect(screen.queryByText('New development')).not.toBeInTheDocument();
-    expect(screen.getByText('120 m²')).toBeInTheDocument();
-    expect(screen.getByText('3 Bed')).toBeInTheDocument();
-    expect(screen.getByText('2 Bath')).toBeInTheDocument();
-    expect(screen.getByText('2 Parking')).toBeInTheDocument();
-    expect(screen.getByRole('link')).toHaveAttribute('href', '/development/project/unit/unit-a');
+    expect(screen.queryByText('Three-bedroom townhouse')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /development\/project/ })).not.toBeInTheDocument();
+    expect(screen.getByText('No published matches in Gauteng yet')).toBeInTheDocument();
   });
 
   it('omits cards without photos and removes a card when its photo fails', () => {

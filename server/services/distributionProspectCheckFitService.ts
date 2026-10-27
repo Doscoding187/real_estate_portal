@@ -85,8 +85,7 @@ export type ProspectCheckFitMatch = {
   developmentId: number;
   programId: number;
   developmentName: string;
-  city: string;
-  province: string;
+  locationLabel: string;
   entryPrice: number;
   currencyCode: string;
   qualified: boolean;
@@ -114,8 +113,7 @@ export type QualifiedOpportunity = {
   developmentId: number;
   programId: number;
   developmentName: string;
-  city: string;
-  province: string;
+  locationLabel: string;
   entryPrice: number;
   currencyCode: string;
 };
@@ -187,8 +185,7 @@ export function buildProspectCheckFitMatches(
       developmentId: opportunity.developmentId,
       programId: opportunity.programId,
       developmentName: opportunity.developmentName,
-      city: opportunity.city,
-      province: opportunity.province,
+      locationLabel: opportunity.locationLabel,
       entryPrice: opportunity.entryPrice,
       currencyCode: opportunity.currencyCode,
       qualified: opportunity.entryPrice <= estimatedPurchasePrice,
@@ -303,8 +300,7 @@ export async function createProspectCheckFit(input: {
           programId: match.programId,
           developmentId: match.developmentId,
           developmentName: match.developmentName,
-          city: match.city,
-          province: match.province,
+          locationLabel: match.locationLabel,
           entryPrice: match.entryPrice,
           currencyCode: match.currencyCode,
           qualified: match.qualified ? 1 : 0,
@@ -378,8 +374,7 @@ async function readProspectCheckFitMatches(
       developmentId: Number(match.developmentId),
       programId: Number(match.programId),
       developmentName: String(match.developmentName),
-      city: String(match.city || ''),
-      province: String(match.province || ''),
+      locationLabel: String(match.locationLabel || ''),
       entryPrice: Number(match.entryPrice),
       currencyCode: String(match.currencyCode || 'ZAR'),
       qualified: Number(match.qualified) === 1,

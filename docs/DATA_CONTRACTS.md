@@ -1,4 +1,4 @@
-# Data Contracts - Development Wizard
+# Data Contracts - Development Wizard and Place Assignment
 
 ## Scope
 Maps UI fields in the development wizard to tRPC inputs and database columns for:
@@ -10,6 +10,11 @@ Required vs optional is based on:
 - Server publish validation (`server/developerRouter.ts` -> helper `assertPublishable`)
 - Database NOT NULL constraints (`drizzle/schema.ts`)
 - Client-side required UI hints (not always enforced server-side)
+
+Development geography is persisted only through reviewed `development_place_assignments`.
+The removed `developments.city`, `province`, `suburb`, and `location_id` fields are not
+write, matching, or publication authority. A display label may be shown from active Place names,
+but it never authorizes geography.
 
 ## Development
 
@@ -29,11 +34,10 @@ Required vs optional is based on:
 | Amenities (AmenitiesPhase) | `amenities` | `developments.amenities` | Optional | Stored as JSON string in `server/services/developmentService.ts` (TEXT column in `drizzle/schema.ts`). |
 | Features (FinalisationPhase derived) | `features` | `developments.features` | Optional | Stored as JSON string in `server/services/developmentService.ts`. |
 | Address (LocationPhase) | `address` | `developments.address` | Publish | Required by `assertPublishable` in `server/developerRouter.ts`. |
-| City (LocationPhase) | `city` | `developments.city` | Create + Publish | `developments.city` is NOT NULL in `drizzle/schema.ts`; `assertPublishable` requires it. |
-| Province (LocationPhase) | `province` | `developments.province` | Create + Publish | `developments.province` is NOT NULL in `drizzle/schema.ts`; `assertPublishable` requires it. |
-| Suburb (LocationPhase) | `suburb` | `developments.suburb` | Optional | Column exists in `drizzle/schema.ts`. |
+| Reviewed site Place | `placeId`, evidence reference, reviewer decision | `development_place_assignments.place_id`, `review_state`, `assignment_kind`, evidence and review metadata | Required for Place-scoped public discovery | An administrator accepts an evidenced site assignment. Public matching uses one exact active, searchable Place ID; pending, invalid, missing, or conflicting assignments do not match. |
+| Phase Place | phase assignment | `development_place_assignments.phase_id` and `place_id` | Optional | The phase must belong to the Development. Phase-level assignments remain distinct and do not widen a Development-level match. |
 | Postal code (LocationPhase) | `postalCode` | `developments.postal_code` | Optional | Column exists in `drizzle/schema.ts`. |
-| Latitude / Longitude (LocationPhase) | `latitude`, `longitude` | `developments.latitude`, `developments.longitude` | Optional | Stored as strings. |
+| Latitude / Longitude (LocationPhase) | `latitude`, `longitude` | `developments.latitude`, `developments.longitude` | Optional | Physical site details only. Coordinates and address text do not assign a Place. |
 | Price from/to (FinalisationPhase computed) | `priceFrom`, `priceTo` | `developments.price_from`, `developments.price_to` | Optional | Computed from unit base price + extras. |
 | Levy range (FinalisationPhase) | `monthlyLevyFrom`, `monthlyLevyTo` | `developments.monthly_levy_from`, `developments.monthly_levy_to` | Optional | Columns exist in `drizzle/schema.ts`. |
 | Rates range (FinalisationPhase) | `ratesFrom`, `ratesTo` | `developments.rates_from`, `developments.rates_to` | Optional | Columns exist in `drizzle/schema.ts`. |

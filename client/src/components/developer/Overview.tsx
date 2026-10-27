@@ -351,7 +351,8 @@ export default function Overview() {
                     </Badge>
                   </div>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    {development.identity.location.city}, {development.identity.location.province}
+                    {development.identity.location.locationLabels.join(', ') ||
+                      'Place assignment pending review'}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">

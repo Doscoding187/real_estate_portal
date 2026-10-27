@@ -11,7 +11,7 @@ const state = vi.hoisted(() => ({
           identity: {
             id: 42,
             name: 'Harbour Heights',
-            location: { city: 'Cape Town', province: 'Western Cape' },
+            location: { canonicalPlaceId: null, locationLabels: ['Cape Town'] },
           },
           leads: {
             capturedLeadCount: 4,
@@ -34,7 +34,7 @@ const state = vi.hoisted(() => ({
           identity: {
             id: 43,
             name: 'Cedar Grove',
-            location: { city: 'Durban', province: 'KwaZulu-Natal' },
+            location: { canonicalPlaceId: null, locationLabels: ['Durban'] },
           },
           leads: {
             capturedLeadCount: 0,
@@ -127,7 +127,7 @@ describe('Developer lead progress analytics', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('Cedar Grove')).toBeInTheDocument();
     const harbourRow = screen.getByRole('row', { name: /Harbour Heights/ });
-    expect(within(harbourRow).getByText('Cape Town, Western Cape')).toBeInTheDocument();
+    expect(within(harbourRow).getByText('Cape Town')).toBeInTheDocument();
     expect(within(harbourRow).getByText('2')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'View leads for Harbour Heights' }));
     expect(state.setLocation).toHaveBeenCalledWith('/developer/leads?developmentId=42&range=30d');

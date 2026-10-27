@@ -50,9 +50,6 @@ const testState = vi.hoisted(() => {
     ownershipTypes: ['sectional-title'],
     location: {
       address: '11 Edit Road',
-      suburb: 'Sea Point',
-      city: 'Cape Town',
-      province: 'Western Cape',
       postalCode: '8005',
     },
     highlights: ['Pool', 'Secure access', 'Walkable location'],
@@ -250,9 +247,11 @@ describe('FinalisationPhase', () => {
       monthlyRentTo: 19_000,
       totalUnits: 12,
       availableUnits: 7,
-      city: 'Cape Town',
-      province: 'Western Cape',
     });
+    expect(payload).not.toHaveProperty('city');
+    expect(payload).not.toHaveProperty('province');
+    expect(payload).not.toHaveProperty('suburb');
+    expect(payload).not.toHaveProperty('locationId');
     expect(payload.priceFrom).toBeUndefined();
     expect(payload.priceTo).toBeUndefined();
     expect(payload.unitTypes[0]).toMatchObject({

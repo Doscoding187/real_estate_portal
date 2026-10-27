@@ -25,8 +25,8 @@ interface EnhancedDevelopmentCardProps {
     id: number;
     name: string;
     description?: string;
-    city?: string;
     address?: string;
+    locationLabels?: string[];
     priceFrom?: number;
     priceTo?: number;
     images?: string[];
@@ -186,7 +186,9 @@ export const EnhancedDevelopmentCard: React.FC<EnhancedDevelopmentCardProps> = (
           <div className="flex items-center gap-1.5 text-sm text-gray-600">
             <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
             <span className="line-clamp-1">
-              {development.address || development.city || 'Location not specified'}
+              {development.address ||
+                development.locationLabels?.join(', ') ||
+                'Place assignment pending review'}
             </span>
           </div>
         </div>

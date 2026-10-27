@@ -44,7 +44,7 @@ interface Props {
   onClose: () => void;
   interestedDevId?: number | null;
   /** Pass the loaded developments list so we can show the dev name */
-  developments?: Array<{ id: number; name: string; suburb?: string | null; city?: string | null }>;
+  developments?: Array<{ id: number; name: string; locationLabels: string[] }>;
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -233,10 +233,10 @@ export function ReferralApplyForm({ onClose, interestedDevId, developments }: Pr
               <p className="text-xs text-slate-700">
                 Interested in opportunities for{' '}
                 <strong className="font-semibold text-slate-900">{interestedDev.name}</strong>
-                {(interestedDev.suburb || interestedDev.city) && (
+                {interestedDev.locationLabels.length > 0 && (
                   <span className="text-slate-500">
                     {' '}
-                    · {interestedDev.suburb || interestedDev.city}
+                    · {interestedDev.locationLabels.join(', ')}
                   </span>
                 )}
               </p>

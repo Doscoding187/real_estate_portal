@@ -144,10 +144,27 @@ describe('publicSearchService contract', () => {
       expect(filters.canonicalPlaceIds).toEqual(scope === 'province' ? undefined : [id]);
       expect(options.provincePlaceId).toBe(scope === 'province' ? id : undefined);
       expect(options.publicOnly).toBe(true);
+      expect(mockSearchListings).toHaveBeenCalledWith(
+        expect.objectContaining({ canonicalPlaceId: id }),
+        'date_desc',
+        1,
+        12,
+      );
       expect(mockResolvePublicLocation).not.toHaveBeenCalled();
-      expect(mockSearchListings).not.toHaveBeenCalled();
     },
   );
+
+  it('requires one canonical Place before searching Development inventory', async () => {
+    const result = await publicSearchService.searchInventory({
+      city: 'Johannesburg',
+      listingType: 'sale',
+      listingSource: 'development',
+    });
+
+    expect(result).toMatchObject({ cards: [], total: 0, locationState: 'unavailable' });
+    expect(result.locationMessage).toContain('approved canonical Place');
+    expect(mockSearchListings).not.toHaveBeenCalled();
+  });
 
   it('does not widen an unresolved public location into a different search', async () => {
     mockResolvePublicLocation.mockResolvedValueOnce({
@@ -171,7 +188,11 @@ describe('publicSearchService contract', () => {
     expect(mockSearchListings).not.toHaveBeenCalled();
   });
 
-  it('blends authoritative sources before applying one server-side page boundary', async () => {
+  it('does not use typed location text to match Development inventory', async () => {
+    mockSearchProperties.mockResolvedValueOnce({
+      cards: [card('property', 'p-1', 1), card('property', 'p-2', 2)],
+      total: 3,
+    });
     const result = await publicSearchService.searchInventory({
       city: 'johannesburg',
       province: 'gauteng',
@@ -183,22 +204,17 @@ describe('publicSearchService contract', () => {
     expect(mockSearchProperties).toHaveBeenCalledWith(
       expect.objectContaining({ city: 'johannesburg', province: 'gauteng' }),
       'date_desc',
-      1,
-      4,
+      2,
+      2,
       undefined,
       { publicOnly: true },
     );
-    expect(mockSearchListings).toHaveBeenCalledWith(
-      expect.objectContaining({ city: 'johannesburg', province: 'gauteng' }),
-      'date_desc',
-      1,
-      4,
-    );
+    expect(mockSearchListings).not.toHaveBeenCalled();
     expect(result).toMatchObject({
-      total: 5,
+      total: 3,
       page: 1,
       pageSize: 2,
-      hasMore: true,
+      hasMore: false,
       locationState: 'resolved',
       locationContext: {
         type: 'city',
@@ -206,10 +222,10 @@ describe('publicSearchService contract', () => {
       },
     });
     expect(result.cards).toHaveLength(2);
-    expect(result.sourceCounts).toEqual({ manual: 3, development: 2 });
+    expect(result.sourceCounts).toEqual({ manual: 3, development: 0 });
   });
 
-  it('passes complete map bounds to both public inventory sources', async () => {
+  it('does not run Development inventory from a text-scoped map search', async () => {
     await publicSearchService.searchInventory({
       city: 'johannesburg',
       province: 'gauteng',
@@ -235,17 +251,11 @@ describe('publicSearchService contract', () => {
       undefined,
       { publicOnly: true },
     );
-    expect(mockSearchListings).toHaveBeenCalledWith(
-      expect.objectContaining({ bounds: expectedBounds }),
-      'date_desc',
-      1,
-      12,
-    );
+    expect(mockSearchListings).not.toHaveBeenCalled();
   });
 
   it('keeps the final accepted page reachable but never advertises an invalid next page', async () => {
     mockSearchProperties.mockResolvedValueOnce({ cards: [], total: 50_000 });
-    mockSearchListings.mockResolvedValueOnce({ cards: [], total: 50_000 });
 
     const result = await publicSearchService.searchInventory({
       page: PUBLIC_SEARCH_MAX_PAGE_INDEX,
@@ -256,14 +266,14 @@ describe('publicSearchService contract', () => {
     expect(mockSearchProperties).toHaveBeenCalledWith(
       expect.anything(),
       'date_desc',
-      1,
-      (PUBLIC_SEARCH_MAX_PAGE_INDEX + 1) * 12,
+      PUBLIC_SEARCH_MAX_PAGE_INDEX + 1,
+      12,
       undefined,
       { publicOnly: true },
     );
     expect(result).toMatchObject({
       page: PUBLIC_SEARCH_MAX_PAGE_INDEX,
-      total: 100_000,
+      total: 50_000,
       hasMore: false,
     });
   });
@@ -290,12 +300,10 @@ describe('publicSearchService contract', () => {
       pageSize: 2,
     });
 
-    expect(firstPage).toMatchObject({ page: 0, total: 5, pageSize: 2 });
-    expect(lastPage).toMatchObject({ page: 2, total: 5, pageSize: 2 });
-    expect(oneBeyondLastPage).toMatchObject({ page: 2, total: 5, pageSize: 2 });
-    expect(veryLargePage).toMatchObject({ page: 2, total: 5, pageSize: 2 });
-    expect(oneBeyondLastPage.cards.length).toBeLessThanOrEqual(2);
-    expect(veryLargePage.cards.length).toBeLessThanOrEqual(2);
+    expect(firstPage).toMatchObject({ page: 0, total: 3, pageSize: 2 });
+    expect(lastPage).toMatchObject({ page: 1, total: 3, pageSize: 2 });
+    expect(oneBeyondLastPage).toMatchObject({ page: 1, total: 3, pageSize: 2 });
+    expect(veryLargePage).toMatchObject({ page: 1, total: 3, pageSize: 2 });
     expect(oneBeyondLastPage.hasMore).toBe(false);
     expect(veryLargePage.hasMore).toBe(false);
   });
@@ -369,12 +377,7 @@ describe('publicSearchService contract', () => {
       undefined,
       { publicOnly: true },
     );
-    expect(mockSearchListings).toHaveBeenCalledWith(
-      expect.objectContaining({ propertyType: BUY_PUBLIC_PROPERTY_TYPES }),
-      'date_desc',
-      1,
-      12,
-    );
+    expect(mockSearchListings).not.toHaveBeenCalled();
 
     mockSearchProperties.mockClear();
     mockSearchListings.mockClear();
@@ -387,12 +390,7 @@ describe('publicSearchService contract', () => {
       undefined,
       { publicOnly: true },
     );
-    expect(mockSearchListings).toHaveBeenCalledWith(
-      expect.objectContaining({ propertyType: RENT_PUBLIC_PROPERTY_TYPES }),
-      'date_desc',
-      1,
-      12,
-    );
+    expect(mockSearchListings).not.toHaveBeenCalled();
   });
 
   it('rejects unsupported runtime journeys instead of treating them as Rent', async () => {
@@ -464,19 +462,8 @@ describe('publicSearchService contract', () => {
       undefined,
       { publicOnly: true },
     );
-    expect(mockSearchListings).toHaveBeenCalledWith(
-      expect.objectContaining({
-        listingType: 'rent',
-        minArea: 70,
-        maxArea: 120,
-        minPrice: 5_000,
-        maxBathrooms: 3,
-      }),
-      'price_asc',
-      1,
-      12,
-    );
-    expect(result.total).toBe(5);
+    expect(mockSearchListings).not.toHaveBeenCalled();
+    expect(result.total).toBe(3);
   });
 
   it('routes explicit public size filters to their matching canonical measurements', async () => {
@@ -535,8 +522,8 @@ describe('publicSearchService contract', () => {
     expect(second.total).toBe(first.total);
     expect(second.locationContext).toEqual(first.locationContext);
     expect(mockSearchProperties.mock.calls[1][1]).toBe('price_asc');
-    expect(mockSearchProperties.mock.calls[1][2]).toBe(1);
-    expect(mockSearchProperties.mock.calls[1][3]).toBe(4);
+    expect(mockSearchProperties.mock.calls[1][2]).toBe(2);
+    expect(mockSearchProperties.mock.calls[1][3]).toBe(2);
   });
 
   it('normalizes an unsupported runtime sort without widening the search', async () => {
@@ -555,11 +542,6 @@ describe('publicSearchService contract', () => {
       undefined,
       { publicOnly: true },
     );
-    expect(mockSearchListings).toHaveBeenCalledWith(
-      expect.objectContaining({ city: 'johannesburg', province: 'gauteng' }),
-      'date_desc',
-      1,
-      12,
-    );
+    expect(mockSearchListings).not.toHaveBeenCalled();
   });
 });

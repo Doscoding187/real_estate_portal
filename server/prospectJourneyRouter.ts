@@ -5,6 +5,7 @@ import { agencies, agents, developments, leads, properties, prospectIdentities, 
 import { protectedProcedure, router } from './_core/trpc';
 import { getDb } from './db';
 import { getOrCreateProspectIdentity, ProspectClaimError, PROSPECT_CLAIM_NEUTRAL_MESSAGE, redeemProspectActionClaim } from './services/prospectJourneyService';
+import { listDevelopmentPlaceGeography } from './services/developmentPlaceAssignmentService';
 
 const preferencesSchema = z.object({
   preferredContactMethod: z.enum(['email', 'phone', 'whatsapp']).optional(),
@@ -42,12 +43,15 @@ export function toProspectSafeViewingStatus(status: unknown) {
   return { code, label, nextAction };
 }
 
-function subject(row: any) {
+function subject(row: any, geography?: { canonicalPlaceId: string | null; locationLabels: string[] }) {
   const isDevelopment = Boolean(row.developmentId && !row.propertyId);
   return {
     kind: isDevelopment ? 'development' : 'property',
     title: row.propertyTitle || row.developmentName || 'Property enquiry',
-    location: [row.propertyCity || row.developmentCity, row.propertyProvince || row.developmentProvince].filter(Boolean).join(', ') || null,
+    canonicalPlaceId: isDevelopment ? geography?.canonicalPlaceId ?? null : null,
+    location: isDevelopment
+      ? geography?.locationLabels.join(', ') || null
+      : [row.propertyCity, row.propertyProvince].filter(Boolean).join(', ') || null,
     imageUrl: row.propertyImage || null,
     href: row.propertyId ? `/property/${row.propertyId}` : row.developmentSlug ? `/development/${row.developmentSlug}` : null,
   };
@@ -62,7 +66,7 @@ async function ownedLeads(db: any, identityId: string) {
     id: leads.id, propertyId: leads.propertyId, developmentId: leads.developmentId, status: leads.status,
     createdAt: leads.createdAt, firstRespondedAt: leads.firstRespondedAt, lastContactedAt: leads.lastContactedAt, updatedAt: leads.updatedAt,
     propertyTitle: properties.title, propertyCity: properties.city, propertyProvince: properties.province, propertyImage: properties.mainImage,
-    developmentName: developments.name, developmentCity: developments.city, developmentProvince: developments.province, developmentSlug: developments.slug,
+    developmentName: developments.name, developmentSlug: developments.slug,
     agencyName: agencies.name, agentName: agents.displayName,
   }).from(leads).leftJoin(properties, eq(leads.propertyId, properties.id)).leftJoin(developments, eq(leads.developmentId, developments.id)).leftJoin(agencies, eq(leads.agencyId, agencies.id)).leftJoin(agents, eq(leads.agentId, agents.id)).where(eq(leads.prospectIdentityId, identityId)).orderBy(desc(leads.createdAt));
 }
@@ -72,17 +76,22 @@ async function ownedViewings(db: any, identityId: string) {
     id: showings.id, leadId: showings.leadId, scheduledAt: showings.scheduledAt, status: showings.status, createdAt: showings.createdAt, updatedAt: showings.updatedAt,
     propertyId: leads.propertyId, developmentId: leads.developmentId,
     propertyTitle: properties.title, propertyCity: properties.city, propertyProvince: properties.province, propertyImage: properties.mainImage,
-    developmentName: developments.name, developmentCity: developments.city, developmentProvince: developments.province, developmentSlug: developments.slug,
+    developmentName: developments.name, developmentSlug: developments.slug,
     agencyName: agencies.name, agentName: agents.displayName,
   }).from(showings).leftJoin(leads, eq(showings.leadId, leads.id)).leftJoin(properties, eq(leads.propertyId, properties.id)).leftJoin(developments, eq(leads.developmentId, developments.id)).leftJoin(agencies, eq(leads.agencyId, agencies.id)).leftJoin(agents, eq(leads.agentId, agents.id)).where(or(eq(showings.prospectIdentityId, identityId), eq(leads.prospectIdentityId, identityId))).orderBy(desc(showings.scheduledAt));
 }
 
-function mapLead(row: any) {
-  return { id: row.id, submittedAt: row.createdAt, status: toProspectSafeLeadStatus(row.status), subject: subject(row), publicContact: { agencyName: row.agencyName || null, agentName: row.agentName || null } };
+function mapLead(row: any, geography?: Map<number, { canonicalPlaceId: string | null; locationLabels: string[] }>) {
+  return { id: row.id, submittedAt: row.createdAt, status: toProspectSafeLeadStatus(row.status), subject: subject(row, geography?.get(Number(row.developmentId))), publicContact: { agencyName: row.agencyName || null, agentName: row.agentName || null } };
 }
 
-function mapViewing(row: any) {
-  return { id: row.id, scheduledAt: row.scheduledAt, status: toProspectSafeViewingStatus(row.status), subject: subject(row), publicContact: { agencyName: row.agencyName || null, agentName: row.agentName || null } };
+function mapViewing(row: any, geography?: Map<number, { canonicalPlaceId: string | null; locationLabels: string[] }>) {
+  return { id: row.id, scheduledAt: row.scheduledAt, status: toProspectSafeViewingStatus(row.status), subject: subject(row, geography?.get(Number(row.developmentId))), publicContact: { agencyName: row.agencyName || null, agentName: row.agentName || null } };
+}
+
+async function geographyForRows(rows: any[]) {
+  const ids = [...new Set(rows.map(row => Number(row.developmentId)).filter(id => Number.isSafeInteger(id) && id > 0))];
+  return listDevelopmentPlaceGeography(ids);
 }
 
 export const prospectJourneyRouter = router({
@@ -96,25 +105,30 @@ export const prospectJourneyRouter = router({
   }),
   enquiries: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb(); if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
-    return (await ownedLeads(db, (await identityFor(db, ctx.user!.id)).id)).map(mapLead);
+    const rows = await ownedLeads(db, (await identityFor(db, ctx.user!.id)).id);
+    const geography = await geographyForRows(rows);
+    return rows.map(row => mapLead(row, geography));
   }),
   viewings: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb(); if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
-    return (await ownedViewings(db, (await identityFor(db, ctx.user!.id)).id)).map(mapViewing);
+    const rows = await ownedViewings(db, (await identityFor(db, ctx.user!.id)).id);
+    const geography = await geographyForRows(rows);
+    return rows.map(row => mapViewing(row, geography));
   }),
   timeline: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb(); if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
     const identity = await identityFor(db, ctx.user!.id);
     const [leadRows, viewingRows] = await Promise.all([ownedLeads(db, identity.id), ownedViewings(db, identity.id)]);
+    const geography = await geographyForRows([...leadRows, ...viewingRows]);
     const items: any[] = [];
     leadRows.forEach((row: any) => {
-      const safe = toProspectSafeLeadStatus(row.status); const itemSubject = subject(row);
+      const safe = toProspectSafeLeadStatus(row.status); const itemSubject = subject(row, geography.get(Number(row.developmentId)));
       items.push({ type: 'enquiry_submitted', occurredAt: row.createdAt, message: 'Enquiry sent', subject: itemSubject, nextAction: 'Wait for the agency to respond' });
       if (row.firstRespondedAt) items.push({ type: 'agent_acknowledged', occurredAt: row.firstRespondedAt, message: 'Agent received your enquiry', subject: itemSubject, nextAction: safe.nextAction });
       if (row.lastContactedAt) items.push({ type: 'contact_progress', occurredAt: row.lastContactedAt, message: safe.label, subject: itemSubject, nextAction: safe.nextAction });
       if (['lost', 'closed', 'converted'].includes(String(row.status))) items.push({ type: 'journey_updated', occurredAt: row.updatedAt, message: safe.label, subject: itemSubject, nextAction: null });
     });
-    viewingRows.forEach((row: any) => { const safe = toProspectSafeViewingStatus(row.status); items.push({ type: 'viewing_updated', occurredAt: row.updatedAt || row.createdAt, message: safe.label, subject: subject(row), nextAction: safe.nextAction, scheduledAt: row.scheduledAt }); });
+    viewingRows.forEach((row: any) => { const safe = toProspectSafeViewingStatus(row.status); items.push({ type: 'viewing_updated', occurredAt: row.updatedAt || row.createdAt, message: safe.label, subject: subject(row, geography.get(Number(row.developmentId))), nextAction: safe.nextAction, scheduledAt: row.scheduledAt }); });
     return items.sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime());
   }),
   contactPreferences: protectedProcedure.query(async ({ ctx }) => {

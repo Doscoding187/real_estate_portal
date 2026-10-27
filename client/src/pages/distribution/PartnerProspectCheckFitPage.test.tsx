@@ -106,8 +106,7 @@ const qualifyingCheckFit = {
       developmentId: 42,
       programId: 7,
       developmentName: 'Soweto Ridge',
-      city: 'Soweto',
-      province: 'Gauteng',
+      locationLabel: 'Soweto',
       entryPrice: 1200000,
       currencyCode: 'ZAR',
       qualified: true,
@@ -117,8 +116,7 @@ const qualifyingCheckFit = {
       developmentId: 43,
       programId: 8,
       developmentName: 'Sandton Heights',
-      city: 'Sandton',
-      province: 'Gauteng',
+      locationLabel: 'Sandton',
       entryPrice: 4000000,
       currencyCode: 'ZAR',
       qualified: false,
@@ -236,7 +234,7 @@ describe('PartnerProspectCheckFitPage', () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/Thandi Mokoena/)).toBeInTheDocument();
     expect(screen.getByText('Soweto Ridge')).toBeInTheDocument();
-    expect(screen.getByText('Soweto, Gauteng')).toBeInTheDocument();
+    expect(screen.getByText('Soweto')).toBeInTheDocument();
     expect(screen.getByText(/Sandton Heights/)).toBeInTheDocument();
     expect(screen.getByText(/May qualify/)).toBeInTheDocument();
   });
@@ -250,8 +248,7 @@ describe('PartnerProspectCheckFitPage', () => {
             developmentId: 42,
             developmentName: 'Soweto Ridge',
             imageUrl: 'https://cdn.example/soweto-ridge.jpg',
-            city: 'Soweto',
-            province: 'Gauteng',
+            locationLabels: ['Soweto'],
             campaign: { developmentType: 'residential' },
             inventory: { modes: { sale: { availableCount: 4 } } },
           },

@@ -30,6 +30,10 @@ import {
 } from 'lucide-react';
 import { HomeAreaPicker } from '@/components/HomeAreaPicker';
 import {
+  CanonicalPlaceSelector,
+  type CanonicalPlaceSelection,
+} from '@/components/location/CanonicalPlaceSelector';
+import {
   useHomeSearch,
   EMPTY_HOME_SEARCH_FILTERS,
   type HomeSearchFilters,
@@ -515,6 +519,7 @@ export function EnhancedHero({
   const confirmedBroadId = homeSearch?.confirmedBroadId ?? localConfirmedBroadId;
   const setConfirmedBroadId = homeSearch?.setConfirmedBroadId ?? setLocalConfirmedBroadId;
   const [localLocations, setLocalLocations] = useState<LocationNode[]>([]);
+  const [developmentPlace, setDevelopmentPlace] = useState<CanonicalPlaceSelection | null>(null);
   const selectedLocations = homeSearch?.locations ?? localLocations;
   const setSelectedLocations = homeSearch?.setLocations ?? setLocalLocations;
   const [localSearchArea, setLocalSearchArea] = useState<SearchAreaDiscoveryResult | null>(null);
@@ -539,10 +544,11 @@ export function EnhancedHero({
     selectedLocations.every(
       location => location.type !== 'area' && hasCanonicalLocationIdentity(location),
     );
-  const canSubmitSearch = hasCanonicalLocations || Boolean(selectedSearchArea);
-  const discoveryJourney = ['buy', 'rent', 'developments', 'plot_land', 'commercial'].includes(
-    journey,
-  )
+  const canSubmitSearch =
+    journey === 'developments'
+      ? Boolean(developmentPlace?.canonicalPlaceId)
+      : hasCanonicalLocations || Boolean(selectedSearchArea);
+  const discoveryJourney = ['buy', 'rent', 'plot_land', 'commercial'].includes(journey)
     ? (journey as SearchJourneyId)
     : undefined;
   const { data: serverDiscoverySuggestions } = trpc.location.placeSuggestions.useQuery(
@@ -613,6 +619,19 @@ export function EnhancedHero({
   };
   const runSearch = (locations = selectedLocations, area = selectedSearchArea) => {
     setPriceRangeOpen(false);
+    if (journey === 'developments') {
+      if (!developmentPlace?.canonicalPlaceId || priceRangeError) return;
+      setLocation(
+        buildDevelopmentsSearchUrl({
+          canonicalPlaceId: developmentPlace.canonicalPlaceId,
+          developmentType: filters.developmentType,
+          developmentStatus: filters.developmentStatus,
+          minPrice: filters.priceMin,
+          maxPrice: filters.priceMax,
+        }),
+      );
+      return;
+    }
     if ((!locations.length && !area) || priceRangeError) return;
     if (!journey) {
       const path =
@@ -653,18 +672,6 @@ export function EnhancedHero({
           searchAreaAvailability: area?.availability,
           propertyType: filters.propertyType,
           maxPrice: filters.budgetMax,
-        }),
-      );
-      return;
-    }
-    if (journey === 'developments') {
-      setLocation(
-        buildDevelopmentsSearchUrl({
-          selectedLocations: locations,
-          developmentType: filters.developmentType,
-          developmentStatus: filters.developmentStatus,
-          minPrice: filters.priceMin,
-          maxPrice: filters.priceMax,
         }),
       );
       return;
@@ -852,8 +859,19 @@ export function EnhancedHero({
                 onPointerDown={() => setPriceRangeOpen(false)}
                 onFocusCapture={() => setPriceRangeOpen(false)}
               >
-                <MapPin className="pointer-events-none absolute left-4 top-1/2 z-10 h-5 w-5 -translate-y-1/2 text-blue-700" />
-                <LocationAutosuggest
+                {journey === 'developments' ? (
+                  <CanonicalPlaceSelector
+                    value={developmentPlace}
+                    onChange={setDevelopmentPlace}
+                    purpose="search"
+                    label="Project Place"
+                    placeholder="Search approved Places"
+                    hint="Only developments assigned to this exact reviewed Place match."
+                  />
+                ) : (
+                  <>
+                    <MapPin className="pointer-events-none absolute left-4 top-1/2 z-10 h-5 w-5 -translate-y-1/2 text-blue-700" />
+                    <LocationAutosuggest
                   placeholder={presentation.placeholder}
                   className="w-full"
                   inputClassName="h-14 w-full rounded-xl border-slate-200 bg-white pl-11 pr-4 text-base text-slate-800 shadow-[0_2px_5px_rgba(15,23,42,0.06)] transition-all placeholder:text-slate-500 hover:border-blue-200 focus-visible:border-blue-600 focus-visible:ring-2 focus-visible:ring-blue-600/25"
@@ -923,8 +941,10 @@ export function EnhancedHero({
                         : {}),
                     });
                   }}
-                  onDiscoveryNavigate={setLocation}
-                />
+                      onDiscoveryNavigate={setLocation}
+                    />
+                  </>
+                )}
               </div>
               <Button
                 type="submit"

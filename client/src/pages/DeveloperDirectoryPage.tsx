@@ -7,15 +7,19 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent } from '@/components/ui/card';
-import { DeveloperProvinceSelect } from '@/components/development/DeveloperProvinceSelect';
+import {
+  CanonicalPlaceSelector,
+  type CanonicalPlaceSelection,
+} from '@/components/location/CanonicalPlaceSelector';
 import { trpc } from '@/lib/trpc';
-import { developerDiscoveryHref, readDeveloperProvince } from '@shared/developerDiscovery';
+import { developerDiscoveryHref, readDeveloperPlace } from '@shared/developerDiscovery';
 
 const PAGE_SIZE = 24;
 export default function DeveloperDirectoryPage() {
   const [, setLocation] = useLocation();
   const search = useSearch();
-  const scope = readDeveloperProvince(search);
+  const scope = readDeveloperPlace(search);
+  const [placeSelection, setPlaceSelection] = useState<CanonicalPlaceSelection | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [tierFilter, setTierFilter] = useState<'all' | 'national' | 'regional' | 'boutique'>('all');
@@ -24,12 +28,12 @@ export default function DeveloperDirectoryPage() {
     const timeout = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 200);
     return () => clearTimeout(timeout);
   }, [searchQuery]);
-  useEffect(() => setPage(0), [debouncedSearch, tierFilter, scope.province, scope.invalid]);
+  useEffect(() => setPage(0), [debouncedSearch, tierFilter, scope.canonicalPlaceId, scope.invalid]);
   const query = trpc.cataloguePublisher.listPublishers.useQuery(
     {
       search: debouncedSearch || undefined,
       brandTier: tierFilter === 'all' ? undefined : tierFilter,
-      province: scope.province,
+      canonicalPlaceId: scope.canonicalPlaceId,
       limit: PAGE_SIZE + 1,
       offset: page * PAGE_SIZE,
     },
@@ -43,9 +47,14 @@ export default function DeveloperDirectoryPage() {
     setTierFilter('all');
     setPage(0);
   };
-  const changeProvince = (province?: string) => {
+  const changePlace = (selection: CanonicalPlaceSelection | null) => {
+    setPlaceSelection(selection);
     setPage(0);
-    setLocation(developerDiscoveryHref('/developers', province));
+    setLocation(developerDiscoveryHref('/developers', selection?.canonicalPlaceId));
+  };
+  const clearPlace = () => {
+    setPlaceSelection(null);
+    setLocation('/developers');
   };
   const retry = () => void query.refetch();
   return (
@@ -56,8 +65,8 @@ export default function DeveloperDirectoryPage() {
           <div className="mx-auto max-w-3xl text-center">
             <h1 className="mb-3 text-3xl font-bold md:text-4xl">Developer directory</h1>
             <p className="mb-6 text-base leading-relaxed text-indigo-100">
-              {scope.province
-                ? `Discover developers with published projects in ${scope.province}.`
+              {scope.canonicalPlaceId
+                ? 'Discover developers with published projects assigned to this canonical Place.'
                 : 'Explore developer profiles and their published projects across South Africa.'}
             </p>
             <div className="grid gap-3 text-left sm:grid-cols-[minmax(0,1fr)_12rem_9rem]">
@@ -86,11 +95,21 @@ export default function DeveloperDirectoryPage() {
                   />
                 </div>
               </div>
-              <DeveloperProvinceSelect
-                province={scope.province}
-                invalid={scope.invalid}
-                onChange={changeProvince}
-              />
+              <div>
+                <CanonicalPlaceSelector
+                  value={placeSelection}
+                  onChange={changePlace}
+                  purpose="search"
+                  label="Project Place"
+                  placeholder="Search approved Places"
+                  hint="Only projects with this exact reviewed Place assignment match."
+                />
+                {scope.canonicalPlaceId && !placeSelection && !scope.invalid ? (
+                  <Button type="button" variant="ghost" size="sm" onClick={clearPlace}>
+                    Clear selected Place
+                  </Button>
+                ) : null}
+              </div>
               <div>
                 <label
                   htmlFor="developer-brand-tier"
@@ -123,9 +142,10 @@ export default function DeveloperDirectoryPage() {
             role="alert"
             className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-center"
           >
-            <h2 className="font-semibold text-slate-900">Choose a supported province</h2>
+            <h2 className="font-semibold text-slate-900">Choose a canonical Place</h2>
             <p className="mt-2 text-sm text-slate-600">
-              This location could not be used. Select a project province above to continue.
+              This location link is invalid or uses the retired province filter. Select an approved
+              Place above to continue.
             </p>
           </div>
         ) : query.isError ? (
@@ -161,11 +181,14 @@ export default function DeveloperDirectoryPage() {
           <>
             <p className="mb-4 text-sm text-slate-600" aria-live="polite">
               Showing {page * PAGE_SIZE + 1}–{page * PAGE_SIZE + profiles.length} developers
-              {scope.province ? ` with published projects in ${scope.province}` : ''}
+              {scope.canonicalPlaceId ? ' with projects at the selected Place' : ''}
             </p>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               {profiles.map(profile => {
-                const href = developerDiscoveryHref(`/developer/${profile.slug}`, scope.province);
+                const href = developerDiscoveryHref(
+                  `/developer/${profile.slug}`,
+                  scope.canonicalPlaceId,
+                );
                 return (
                   <Card
                     key={profile.id}
@@ -228,7 +251,7 @@ export default function DeveloperDirectoryPage() {
                         <Link
                           href={developerDiscoveryHref(
                             `/developer/${profile.slug}`,
-                            scope.province,
+                            scope.canonicalPlaceId,
                             true,
                           )}
                           className="inline-flex min-h-[44px] items-center gap-2 rounded-md text-sm font-semibold text-[#2774AE] hover:underline"
@@ -256,8 +279,8 @@ export default function DeveloperDirectoryPage() {
               {page ? 'No more developer profiles' : 'No matching developers found'}
             </h2>
             <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-slate-600">
-              {scope.province
-                ? `There are no matching developer profiles with published projects in ${scope.province}. You can change province or clear the name and reach filters.`
+              {scope.canonicalPlaceId
+                ? 'There are no matching developer profiles with projects assigned to this canonical Place. You can choose another Place or clear the name and reach filters.'
                 : 'Try another developer name or clear the filters.'}
             </p>
             <Button variant="outline" onClick={clearFilters} className="mt-4 min-h-[44px]">

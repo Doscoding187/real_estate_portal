@@ -43,6 +43,7 @@ const results: ContractCheck[] = [];
 
 const REQUIRED_TABLES = [
   'developments',
+  'development_place_assignments',
   'unit_types',
   'developers',
   'agent_memory',
@@ -59,11 +60,23 @@ const REQUIRED_COLUMNS = {
     { name: 'slug', type: 'varchar' },
     { name: 'developmentType', type: 'enum' },
     { name: 'status', type: 'enum' },
-    { name: 'city', type: 'varchar' },
-    { name: 'province', type: 'varchar' },
+    { name: 'catalogue_publisher_id', type: 'int' },
+    { name: 'transaction_type', type: 'enum' },
     { name: 'dev_owner_type', type: 'enum' }, // snake_case in DB
     { name: 'isPublished', type: 'int' },
     { name: 'approval_status', type: 'enum' }, // snake_case in DB
+  ],
+  development_place_assignments: [
+    { name: 'id', type: 'int' },
+    { name: 'development_id', type: 'int' },
+    { name: 'phase_id', type: 'int' },
+    { name: 'place_id', type: 'varchar' },
+    { name: 'assignment_kind', type: 'enum' },
+    { name: 'review_state', type: 'enum' },
+    { name: 'evidence_reference', type: 'varchar' },
+    { name: 'created_by_user_id', type: 'int' },
+    { name: 'reviewed_by_user_id', type: 'int' },
+    { name: 'reviewed_at', type: 'timestamp' },
   ],
   unit_types: [
     { name: 'id', type: 'varchar' },
@@ -118,7 +131,15 @@ const REQUIRED_COLUMNS = {
 const ENUM_VALUES = {
   'developments.status': ['launching-soon', 'selling', 'sold-out'],
   'developments.developmentType': ['residential', 'commercial', 'mixed_use', 'land'],
+  'developments.transaction_type': ['for_sale', 'for_rent', 'auction'],
   'developments.dev_owner_type': ['platform', 'developer'], // snake_case in DB
+  'development_place_assignments.assignment_kind': ['site', 'presentation', 'estate'],
+  'development_place_assignments.review_state': [
+    'pending_review',
+    'accepted',
+    'rejected',
+    'withdrawn',
+  ],
   'unit_types.ownership_type': ['full-title', 'sectional-title', 'leasehold', 'life-rights'], // snake_case in DB
   'unit_types.structural_type': [
     // snake_case in DB
@@ -175,7 +196,10 @@ async function queryRows(
   return Array.isArray(result?.[0]) ? result[0] : Array.isArray(result?.rows) ? result.rows : [];
 }
 
-async function verifyTableExists(connection: AuthoritySqlConnection, tableName: string): Promise<void> {
+async function verifyTableExists(
+  connection: AuthoritySqlConnection,
+  tableName: string,
+): Promise<void> {
   const rows = await queryRows(connection, 'SHOW TABLES LIKE ?', [tableName]);
 
   if (rows.length === 0) {
@@ -223,6 +247,23 @@ async function verifyColumns(
         details: { expected: expected.type, actual: actualType },
       });
     }
+  }
+}
+
+async function verifyColumnsAbsent(
+  connection: AuthoritySqlConnection,
+  tableName: string,
+  retiredColumns: readonly string[],
+): Promise<void> {
+  const columns = await queryRows(connection, 'SHOW COLUMNS FROM ??', [tableName]);
+  const actualColumns = new Set(columns.map((column: any) => String(column.Field)));
+  for (const column of retiredColumns) {
+    const passed = !actualColumns.has(column);
+    results.push({
+      name: `Retired column: ${tableName}.${column}`,
+      passed,
+      error: passed ? undefined : `Retired column '${column}' remains in table '${tableName}'`,
+    });
   }
 }
 
@@ -501,9 +542,7 @@ async function verifyMigrations(
       results.push({
         name: 'Migrations: Canonical SQL ledger',
         passed: false,
-        error:
-          'sql_migration_history does not exist. ' +
-          'Run the canonical SQL migrations first.',
+        error: 'sql_migration_history does not exist. ' + 'Run the canonical SQL migrations first.',
       });
       return;
     }
@@ -522,17 +561,12 @@ async function verifyMigrations(
     );
 
     const ledger = new Map<string, string>(
-      ledgerRows.map(row => [
-        String(row.filename),
-        String(row.checksum),
-      ]),
+      ledgerRows.map(row => [String(row.filename), String(row.checksum)]),
     );
 
     const activeFileSet = new Set(activeFiles);
 
-    const missingLedgerFiles = activeFiles.filter(
-      file => !ledger.has(file),
-    );
+    const missingLedgerFiles = activeFiles.filter(file => !ledger.has(file));
 
     const retiredLedgerFiles = ledgerRows
       .map(row => String(row.filename))
@@ -579,16 +613,10 @@ async function verifyMigrations(
       invalidSuccessfulAttemptEvidence.length === 0;
 
     const findings = [
-      missingLedgerFiles.length
-        ? `missing ledger files: ${missingLedgerFiles.join(', ')}`
-        : null,
-      retiredLedgerFiles.length
-        ? `retired ledger files: ${retiredLedgerFiles.join(', ')}`
-        : null,
+      missingLedgerFiles.length ? `missing ledger files: ${missingLedgerFiles.join(', ')}` : null,
+      retiredLedgerFiles.length ? `retired ledger files: ${retiredLedgerFiles.join(', ')}` : null,
       checksumMismatches.length
-        ? `checksum mismatches: ${checksumMismatches
-            .map(item => item.filename)
-            .join(', ')}`
+        ? `checksum mismatches: ${checksumMismatches.map(item => item.filename).join(', ')}`
         : null,
       incompleteAttempts.length
         ? `incomplete migration attempts: ${incompleteAttempts.map(row => row.attempt_id).join(', ')}`
@@ -604,16 +632,12 @@ async function verifyMigrations(
     results.push({
       name: 'Migrations: Canonical SQL ledger',
       passed,
-      error: passed
-        ? undefined
-        : `Canonical migration drift: ${findings.join('; ')}.`,
+      error: passed ? undefined : `Canonical migration drift: ${findings.join('; ')}.`,
       details: {
         activeFiles,
         expectedHead: manifest.document.expectedHead,
         manifestDigest: manifest.manifestDigest,
-        appliedFiles: ledgerRows.map(
-          row => String(row.filename),
-        ),
+        appliedFiles: ledgerRows.map(row => String(row.filename)),
         missingLedgerFiles,
         retiredLedgerFiles,
         checksumMismatches,
@@ -648,7 +672,10 @@ async function main() {
     approval: protectedDatabaseApprovalFromEnvironment(authority),
   });
   if (FORMAT === 'human') {
-    console.log('[db:verify] Authorized target:', authority.context.targetFingerprintHash.slice(0, 16));
+    console.log(
+      '[db:verify] Authorized target:',
+      authority.context.targetFingerprintHash.slice(0, 16),
+    );
   }
 
   let connection: AuthoritySqlConnection | null = null;
@@ -665,6 +692,12 @@ async function main() {
     for (const [table, columns] of Object.entries(REQUIRED_COLUMNS)) {
       await verifyColumns(connection, table, columns);
     }
+    await verifyColumnsAbsent(connection, 'developments', [
+      'city',
+      'province',
+      'suburb',
+      'location_id',
+    ]);
 
     // 3. Verify enum values
     for (const [key, values] of Object.entries(ENUM_VALUES)) {

@@ -27,6 +27,11 @@ import {
   type DeveloperMediaCategory,
 } from './developerMediaAuthority';
 import { resolveMediaDeliveryUrl } from '../_core/mediaStorage';
+import { isPlaceId } from '../../drizzle/schema/placeAuthority';
+import {
+  listDevelopmentIdsForCanonicalPlace,
+  listDevelopmentPlaceGeography,
+} from './developmentPlaceAssignmentService';
 
 import {
   developments,
@@ -725,16 +730,26 @@ function validateDevelopmentData(input: any, _userId: number) {
     throw new TRPCError({ code: 'BAD_REQUEST', message: 'Development type is required' });
   }
 
-  if (!input.province || typeof input.province !== 'string') {
-    throw new TRPCError({ code: 'BAD_REQUEST', message: 'Province is required' });
-  }
-
-  if (!input.city || typeof input.city !== 'string') {
-    throw new TRPCError({ code: 'BAD_REQUEST', message: 'City is required' });
-  }
-
   if (Array.isArray((input as any).unitTypes) && (input as any).unitTypes.length === 0) {
     throw new TRPCError({ code: 'BAD_REQUEST', message: 'At least one unit type is required' });
+  }
+}
+
+function rejectRetiredDevelopmentGeography(input: Record<string, unknown>) {
+  const retiredFields = ['city', 'province', 'suburb', 'locationId'];
+  const location = input.location && typeof input.location === 'object'
+    ? input.location as Record<string, unknown>
+    : {};
+  const supplied = retiredFields.filter(
+    field =>
+      Object.prototype.hasOwnProperty.call(input, field) ||
+      Object.prototype.hasOwnProperty.call(location, field),
+  );
+  if (supplied.length) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Development geography must be assigned through the reviewed canonical Place workflow.',
+    });
   }
 }
 
@@ -808,9 +823,6 @@ export async function getPublicDevelopment(id: number) {
       slug: developments.slug,
       description: developments.description,
       images: developments.images,
-      city: developments.city,
-      province: developments.province,
-      suburb: developments.suburb,
       address: developments.address,
       priceFrom: developments.priceFrom,
       priceTo: developments.priceTo,
@@ -831,8 +843,11 @@ export async function getPublicDevelopment(id: number) {
 
   if (!results[0]) return null;
 
+  const geography = await listDevelopmentPlaceGeography([id]);
+
   return {
     ...results[0],
+    ...(geography.get(id) ?? { canonicalPlaceId: null, locationLabels: [] }),
     images: parseJsonField(results[0].images),
   };
 }
@@ -840,9 +855,7 @@ export async function getPublicDevelopment(id: number) {
 export async function listPublicDevelopments(options: {
   limit?: number;
   offset?: number;
-  province?: string;
-  city?: string;
-  suburb?: string;
+  canonicalPlaceId?: string;
   developerId?: number;
   cataloguePublisherId?: number;
   developmentType?: 'residential' | 'commercial' | 'mixed_use' | 'land';
@@ -854,9 +867,7 @@ export async function listPublicDevelopments(options: {
   const {
     limit = 20,
     offset = 0,
-    province,
-    city,
-    suburb,
+    canonicalPlaceId,
     developerId,
     cataloguePublisherId,
     developmentType,
@@ -864,9 +875,17 @@ export async function listPublicDevelopments(options: {
   } = options;
 
   const conditions: any[] = [publicDevelopmentEligibilityConditions()];
-  if (province) conditions.push(eq(developments.province, province));
-  if (city) conditions.push(eq(developments.city, city));
-  if (suburb) conditions.push(eq(developments.suburb, suburb));
+  if (canonicalPlaceId !== undefined) {
+    if (!isPlaceId(canonicalPlaceId)) {
+      throw new TRPCError({ code: 'BAD_REQUEST', message: 'A canonical Place ID is required.' });
+    }
+    const matchingDevelopmentIds = await listDevelopmentIdsForCanonicalPlace(canonicalPlaceId);
+    conditions.push(
+      matchingDevelopmentIds.length
+        ? inArray(developments.id, matchingDevelopmentIds)
+        : sql`1 = 0`,
+    );
+  }
   if (developerId) conditions.push(eq(developments.cataloguePublisherId, developerId));
   if (cataloguePublisherId) {
     conditions.push(eq(developments.cataloguePublisherId, cataloguePublisherId));
@@ -881,9 +900,6 @@ export async function listPublicDevelopments(options: {
       slug: developments.slug,
       description: developments.description,
       images: developments.images,
-      city: developments.city,
-      suburb: developments.suburb,
-      province: developments.province,
       priceFrom: developments.priceFrom,
       priceTo: developments.priceTo,
       status: developments.status,
@@ -914,6 +930,7 @@ export async function listPublicDevelopments(options: {
     .offset(offset);
 
   const developmentIds = results.map((d: any) => Number(d.id)).filter(Boolean);
+  const geographyByDevelopment = await listDevelopmentPlaceGeography(developmentIds);
   const unitRows =
     developmentIds.length > 0
       ? await db
@@ -995,6 +1012,10 @@ export async function listPublicDevelopments(options: {
 
     return {
       ...d,
+      ...(geographyByDevelopment.get(Number(d.id)) ?? {
+        canonicalPlaceId: null,
+        locationLabels: [],
+      }),
       canonicalRoute: buildDevelopmentRootPath(d),
       images: parseJsonField(d.images),
       highlights: parseJsonField(d.highlights),
@@ -1053,8 +1074,6 @@ export async function searchPublicDevelopments(options: {
       id: developments.id,
       name: developments.name,
       slug: developments.slug,
-      city: developments.city,
-      province: developments.province,
       developerId: sql<number | null>`NULL`,
       cataloguePublisherId: developments.cataloguePublisherId,
       developerName: developerOrganisations.name,
@@ -1071,8 +1090,16 @@ export async function searchPublicDevelopments(options: {
     .where(and(...conditions))
     .limit(limit);
 
+  const geographyByDevelopment = await listDevelopmentPlaceGeography(
+    results.map(result => Number(result.id)),
+  );
+
   return results.map(result => ({
     ...result,
+    ...(geographyByDevelopment.get(Number(result.id)) ?? {
+      canonicalPlaceId: null,
+      locationLabels: [],
+    }),
     canonicalRoute: buildDevelopmentRootPath(result),
   }));
 }
@@ -1088,6 +1115,7 @@ export async function createDevelopment(
   operatingContext?: { cataloguePublisherId: number } | null,
 ) {
   rejectPhaseArrayWrite(data);
+  rejectRetiredDevelopmentGeography(data);
 
   const db = await getDb();
   if (!db) throw new Error('Database not available');
@@ -1235,20 +1263,6 @@ export async function createDevelopment(
     });
   }
 
-  // 4) location validation (soft strip)
-  if ((developmentData as any).locationId) {
-    const validLocation = await db.query.locations.findFirst({
-      where: eq(locations.id, (developmentData as any).locationId),
-      columns: { id: true },
-    });
-    if (!validLocation) {
-      console.warn(
-        `[createDevelopment] Invalid Location ID ${(developmentData as any).locationId} provided. Removing to prevent crash.`,
-      );
-      (developmentData as any).locationId = undefined;
-    }
-  }
-
   const allowedDevTypes = new Set(['residential', 'commercial', 'mixed_use', 'land']);
   if (!allowedDevTypes.has((developmentData as any).developmentType)) {
     throw createError(
@@ -1292,8 +1306,6 @@ export async function createDevelopment(
   const insertPayload: Record<string, any> = {
     name: (developmentData as any).name,
     slug,
-    city: (developmentData as any).city,
-    province: (developmentData as any).province,
     developmentType: (developmentData as any).developmentType || 'residential',
     transactionType: normalizedTransactionType,
     status: sanitizeEnum(
@@ -1328,10 +1340,9 @@ export async function createDevelopment(
       ? JSON.stringify((developmentData as any).propertyTypes)
       : null,
 
-    // New authority. Legacy ownership columns are intentionally omitted and
-    // remain compatibility residue until separately authorised for removal.
+    // Publisher ownership is server-derived. Geographic authority is recorded
+    // separately through reviewed Development-to-Place assignments.
     cataloguePublisherId: resolvedCataloguePublisherId,
-    locationId: (developmentData as any).locationId || null,
 
     marketingRole: sanitizeEnum(
       (developmentData as any).marketingRole,
@@ -1341,7 +1352,6 @@ export async function createDevelopment(
     tagline: sanitizeString((developmentData as any).tagline),
     description: sanitizeString((developmentData as any).description),
     address: sanitizeString((developmentData as any).address),
-    suburb: sanitizeString((developmentData as any).suburb),
     postalCode: sanitizeString((developmentData as any).postalCode),
 
     latitude: (developmentData as any).latitude || null,
@@ -1559,6 +1569,7 @@ export async function updateDevelopment(
   operatingContext?: { cataloguePublisherId: number } | null,
 ) {
   rejectPhaseArrayWrite(data);
+  rejectRetiredDevelopmentGeography(data);
 
   console.log('[updateDevelopment] Starting update for development:', id);
   console.log('[updateDevelopment] Payload keys:', Object.keys(data));
@@ -1649,10 +1660,6 @@ export async function updateDevelopment(
   // ---------------------------------------------------------------------------
   if (developmentData.address !== undefined)
     updatePayload.address = sanitizeString(developmentData.address);
-  if (developmentData.suburb !== undefined)
-    updatePayload.suburb = sanitizeString(developmentData.suburb);
-  if (developmentData.city !== undefined) updatePayload.city = developmentData.city;
-  if (developmentData.province !== undefined) updatePayload.province = developmentData.province;
   if (developmentData.postalCode !== undefined)
     updatePayload.postalCode = sanitizeString(developmentData.postalCode);
   if (developmentData.latitude !== undefined) updatePayload.latitude = developmentData.latitude;

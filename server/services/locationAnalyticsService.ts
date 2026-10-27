@@ -22,7 +22,6 @@ import { getDb } from '../db';
 import {
   locations,
   listings,
-  developments,
   locationSearches,
   recentSearches,
 } from '../../drizzle/schema';
@@ -68,7 +67,6 @@ export interface LocationStatistics {
   totalListings: number;
   forSaleCount: number;
   toRentCount: number;
-  developmentCount: number;
 
   // Market activity
   avgDaysOnMarket: number | null;
@@ -496,24 +494,6 @@ export const locationAnalyticsService = {
     // Get property type distribution
     const propertyTypeDistribution = await this.calculatePropertyTypes(locationId);
 
-    // Build location filter for developments
-    let locationFilter;
-    if (location.type === 'province') {
-      locationFilter = eq(developments.province, location.name);
-    } else if (location.type === 'city') {
-      locationFilter = eq(developments.city, location.name);
-    } else if (location.type === 'suburb') {
-      locationFilter = eq(developments.suburb, location.name);
-    } else {
-      locationFilter = eq(developments.suburb, location.name);
-    }
-
-    // Count developments
-    const developmentCount = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(developments)
-      .where(and(locationFilter, eq(developments.isPublished, 1)));
-
     return {
       // Price metrics
       avgSalePrice: priceStats.avgSalePrice,
@@ -525,7 +505,6 @@ export const locationAnalyticsService = {
       totalListings: marketActivity.totalListings,
       forSaleCount: marketActivity.forSaleCount,
       toRentCount: marketActivity.toRentCount,
-      developmentCount: Number(developmentCount[0]?.count || 0),
 
       // Market activity
       avgDaysOnMarket: marketActivity.avgDaysOnMarket,

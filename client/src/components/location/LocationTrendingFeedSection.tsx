@@ -1,10 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'wouter';
 import { trpc } from '@/lib/trpc';
-import { SimpleDevelopmentCard } from '@/components/SimpleDevelopmentCard';
-import { SimpleDevelopmentUnitCard } from '@/components/SimpleDevelopmentUnitCard';
 import { SimpleHomeListingCard } from '@/components/SimpleHomeListingCard';
-import { getPrimaryDevelopmentImageUrl } from '@/lib/mediaUtils';
 import {
   Carousel,
   CarouselContent,
@@ -18,7 +15,6 @@ import { isLandVerticalAvailable } from '@shared/landLaunchPolicy';
 export type FeedTab =
   | 'buy'
   | 'rent'
-  | 'developments'
   | 'shared_living'
   | 'plot_land'
   | 'commercial';
@@ -37,9 +33,7 @@ interface LocationTrendingFeedSectionProps {
   neutralMode?: boolean;
   visibleTabs?: readonly FeedTab[];
   viewAllHref?: Partial<Record<FeedTab, string>>;
-  standardizeDevelopmentUnitCards?: boolean;
   cardLayout?: 'carousel' | 'wide';
-  requirePhotoReadyDevelopments?: boolean;
   showTabs?: boolean;
   sectionClassName?: string;
   headingEyebrow?: string;
@@ -51,7 +45,7 @@ interface LocationTrendingFeedSectionProps {
 
 type TrendingFeedItem = {
   id: string;
-  kind: 'development' | 'listing' | 'unit';
+  kind: 'listing';
   title: string;
   city: string;
   suburb: string;
@@ -67,17 +61,11 @@ type TrendingFeedItem = {
   yardSize?: number | null;
   unitSize?: number | null;
   propertyType?: string | null;
-  developmentName?: string | null;
-  status?: 'launching-soon' | 'selling' | 'sold-out';
-  availabilityState?: 'available' | 'sold_out' | 'not_stated';
-  publisherName?: string | null;
-  badges?: string[];
 };
 
 const FEED_TABS: Array<{ label: string; value: FeedTab }> = [
   { label: 'Buy', value: 'buy' },
   { label: 'Rentals', value: 'rent' },
-  { label: 'Developments', value: 'developments' },
   { label: 'Shared Living', value: 'shared_living' },
   { label: 'Plot & Land', value: 'plot_land' },
   { label: 'Commercial', value: 'commercial' },
@@ -91,10 +79,6 @@ const TAB_COPY: Record<FeedTab, { title: string; subtitle: string }> = {
   rent: {
     title: 'Residential Properties for Rent',
     subtitle: 'Browse published rental stock in this area.',
-  },
-  developments: {
-    title: 'New Developments',
-    subtitle: 'Explore current development activity and newly published projects.',
   },
   shared_living: {
     title: 'Shared Living',
@@ -122,9 +106,7 @@ export function LocationTrendingFeedSection({
   neutralMode = false,
   visibleTabs,
   viewAllHref,
-  standardizeDevelopmentUnitCards = false,
   cardLayout = 'carousel',
-  requirePhotoReadyDevelopments = false,
   showTabs = true,
   sectionClassName,
   headingEyebrow,
@@ -135,23 +117,19 @@ export function LocationTrendingFeedSection({
 }: LocationTrendingFeedSectionProps) {
   const [internalTab, setInternalTab] = useState<FeedTab | null>(neutralMode ? null : 'buy');
   const rentJourneyEnabled = isHomepageHeroJourneyEnabled('rent');
-  const developmentsJourneyEnabled = isHomepageHeroJourneyEnabled('developments');
   // Public search entry does not release generic development inventory.
   const landJourneyEnabled = isHomepageHeroJourneyEnabled('plot_land') && isLandVerticalAvailable();
   const requestedActiveTab = controlledActiveTab !== undefined ? controlledActiveTab : internalTab;
   const activeTab =
     requestedActiveTab === 'rent' && !rentJourneyEnabled
       ? null
-      : requestedActiveTab === 'developments' && !developmentsJourneyEnabled
+      : requestedActiveTab === 'plot_land' && !landJourneyEnabled
         ? null
-        : requestedActiveTab === 'plot_land' && !landJourneyEnabled
-          ? null
-          : requestedActiveTab;
+        : requestedActiveTab;
   const visibleFeedTabs = FEED_TABS.filter(
     tab =>
       (!visibleTabs || visibleTabs.includes(tab.value)) &&
       (tab.value !== 'rent' || rentJourneyEnabled) &&
-      (tab.value !== 'developments' || developmentsJourneyEnabled) &&
       (tab.value !== 'plot_land' || landJourneyEnabled),
   );
   const sharedLivingHandsOff = activeTab === 'shared_living';
@@ -167,12 +145,11 @@ export function LocationTrendingFeedSection({
     { enabled: Boolean(activeTab) && !sharedLivingHandsOff },
   );
 
-  const sourceItems = (feedQuery.data?.items || []) as TrendingFeedItem[];
+  // These area feeds are driven by legacy text geography. Only canonical
+  // property listings may appear here; Development records use Place IDs.
+  const sourceItems = (feedQuery.data?.items || []) as Array<TrendingFeedItem | { kind: string }>;
   const eligibleItems = sourceItems.filter(
-    item =>
-      !requirePhotoReadyDevelopments ||
-      item.kind !== 'development' ||
-      Boolean(getPrimaryDevelopmentImageUrl(item.image)),
+    (item): item is TrendingFeedItem => item.kind === 'listing',
   );
   const items = eligibleItems.slice(0, maxItems);
   const resolution: FeedResolution =
@@ -245,9 +222,7 @@ export function LocationTrendingFeedSection({
               ? 'View all homes'
               : activeTab === 'rent'
                 ? 'View all rentals'
-                : activeTab === 'developments'
-                  ? 'View all developments'
-                  : 'View all'}
+                : 'View all'}
             <span aria-hidden="true">→</span>
           </Link>
         ) : null}
@@ -357,73 +332,9 @@ export function LocationTrendingFeedSection({
                           yardSize={item.yardSize}
                           propertyType={item.propertyType}
                           listingType={item.listingType}
-                          badgeLabel={
-                            standardizeDevelopmentUnitCards
-                              ? item.listingType === 'rent'
-                                ? 'For rent'
-                                : 'For sale'
-                              : item.listingType === 'rent'
-                                ? 'Property listing'
-                                : 'Resale'
-                          }
+                          badgeLabel={item.listingType === 'rent' ? 'Property listing' : 'Resale'}
                         />
-                      ) : item.kind === 'unit' ? (
-                        standardizeDevelopmentUnitCards ? (
-                          <SimpleHomeListingCard
-                            id={item.id}
-                            title={item.title}
-                            city={item.city}
-                            suburb={item.suburb}
-                            image={item.image || ''}
-                            href={item.href}
-                            price={item.priceFrom}
-                            bedrooms={item.bedrooms}
-                            bathrooms={item.bathrooms}
-                            area={item.unitSize}
-                            yardSize={item.yardSize}
-                            listingType={item.listingType}
-                            propertyType={item.propertyType}
-                            badgeLabel={
-                              item.listingType === 'rent' ? 'For rent' : 'For sale · Off-plan'
-                            }
-                          />
-                        ) : (
-                          <SimpleDevelopmentUnitCard
-                            id={item.id}
-                            title={item.title}
-                            developmentName={item.developmentName || 'Featured Development'}
-                            city={item.city}
-                            suburb={item.suburb}
-                            image={item.image || ''}
-                            href={item.href}
-                            priceFrom={item.priceFrom}
-                            priceTo={item.priceTo}
-                            listingType={item.listingType}
-                            bedrooms={item.bedrooms}
-                            bathrooms={item.bathrooms}
-                            unitSize={item.unitSize}
-                            yardSize={item.yardSize}
-                            badgeLabel="New development"
-                          />
-                        )
-                      ) : (
-                        <SimpleDevelopmentCard
-                          id={item.id}
-                          title={item.title}
-                          city={item.city}
-                          suburb={item.suburb}
-                          priceRange={{ min: item.priceFrom, max: item.priceTo }}
-                          image={getPrimaryDevelopmentImageUrl(item.image) || ''}
-                          slug={item.kind === 'development' ? item.id : undefined}
-                          href={item.href}
-                          bedrooms={item.bedrooms}
-                          bedroomRange={item.bedroomRange}
-                          listingType={item.listingType}
-                          status={item.status}
-                          availabilityState={item.availabilityState}
-                          publisherName={item.publisherName}
-                        />
-                      )}
+                      ) : null}
                     </div>
                   </CarouselItem>
                 ))}
@@ -441,15 +352,11 @@ export function LocationTrendingFeedSection({
             className="rounded-xl border border-slate-100 border-dashed bg-white py-10 text-center text-slate-500"
             role="status"
           >
-            {activeTab === 'developments' && sourceItems.length > 0 && items.length === 0
-              ? `No photo-ready public developments are listed in ${locationName} right now.`
-              : activeTab === 'buy'
-                ? `No photo-ready homes or available development units for sale are listed in ${locationName} right now.`
+            {activeTab === 'buy'
+                ? `No photo-ready homes are listed in ${locationName} right now.`
                 : activeTab === 'rent'
-                  ? `No photo-ready homes or available development units for rent are listed in ${locationName} right now.`
-                  : activeTab === 'developments'
-                    ? `No public residential developments are listed in ${locationName} right now.`
-                    : 'No published inventory found for this location yet.'}
+                  ? `No photo-ready homes are listed in ${locationName} right now.`
+                  : 'No published inventory found for this location yet.'}
           </div>
         )}
       </div>

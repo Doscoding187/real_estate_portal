@@ -65,7 +65,7 @@ function homeData(overrides: Record<string, unknown> = {}) {
       id: 42,
       name: 'Harbour Heights',
       slug: 'harbour-heights',
-      location: { address: null, suburb: 'Sea Point', city: 'Cape Town', province: 'Western Cape' },
+      location: { address: null, canonicalPlaceId: null, locationLabels: ['Sea Point'] },
       transactionType: 'for_sale',
       approvalStatus: 'approved',
       isPublished: true,
@@ -157,7 +157,7 @@ describe('DevelopmentHome Slice 2 Market Readiness', () => {
     render(<DevelopmentHome />);
 
     expect(screen.getByRole('heading', { name: 'Harbour Heights', level: 1 })).toBeInTheDocument();
-    expect(screen.getByText('Sea Point, Cape Town, Western Cape')).toBeInTheDocument();
+    expect(screen.getByText('Sea Point')).toBeInTheDocument();
     expect(screen.getAllByText('Live').length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: 'Edit development' })).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Open leads' })[0]).toBeInTheDocument();

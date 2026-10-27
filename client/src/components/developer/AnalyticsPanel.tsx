@@ -227,8 +227,8 @@ export default function AnalyticsPanel() {
                       <th scope="row" className="py-3 pr-4 font-medium text-slate-950">
                         <span className="block">{development.identity.name}</span>
                         <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
-                          {development.identity.location.city},{' '}
-                          {development.identity.location.province}
+                          {development.identity.location.locationLabels.join(', ') ||
+                            'Place assignment pending review'}
                         </span>
                       </th>
                       <td className="px-3 py-3 tabular-nums">

@@ -7,10 +7,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SimpleDevelopmentCard } from '@/components/SimpleDevelopmentCard';
-import { DeveloperProvinceSelect } from '@/components/development/DeveloperProvinceSelect';
+import {
+  CanonicalPlaceSelector,
+  type CanonicalPlaceSelection,
+} from '@/components/location/CanonicalPlaceSelector';
 import { trpc } from '@/lib/trpc';
 import { getPrimaryDevelopmentImageUrl } from '@/lib/mediaUtils';
-import { developerDiscoveryHref, readDeveloperProvince } from '@shared/developerDiscovery';
+import { developerDiscoveryHref, readDeveloperPlace } from '@shared/developerDiscovery';
 
 const PAGE_SIZE = 12;
 interface PublicProjectPreview {
@@ -18,8 +21,7 @@ interface PublicProjectPreview {
   name: string;
   slug?: string | null;
   canonicalRoute?: string;
-  city: string;
-  suburb?: string | null;
+  locationLabels: string[];
   images: unknown;
   priceFrom: number | null;
   priceTo: number | null;
@@ -50,10 +52,11 @@ export default function DeveloperPublisherPage() {
   const [, params] = useRoute('/developer/:slug');
   const [, setLocation] = useLocation();
   const search = useSearch();
-  const scope = readDeveloperProvince(search);
+  const scope = readDeveloperPlace(search);
+  const [placeSelection, setPlaceSelection] = useState<CanonicalPlaceSelection | null>(null);
   const slug = params?.slug || '';
   const [page, setPage] = useState(0);
-  useEffect(() => setPage(0), [slug, scope.province, scope.invalid]);
+  useEffect(() => setPage(0), [slug, scope.canonicalPlaceId, scope.invalid]);
   const profileQuery = trpc.developer.getPublicDeveloperBySlug.useQuery(
     { slug },
     { enabled: !!slug, retry: false },
@@ -62,7 +65,7 @@ export default function DeveloperPublisherPage() {
   const projectsQuery = trpc.developer.getPublicDevelopmentsForPublisher.useQuery(
     {
       cataloguePublisherId: profile?.cataloguePublisherId || 0,
-      province: scope.province,
+      canonicalPlaceId: scope.canonicalPlaceId,
       limit: PAGE_SIZE + 1,
       offset: page * PAGE_SIZE,
     },
@@ -74,11 +77,14 @@ export default function DeveloperPublisherPage() {
   useEffect(() => {
     if (profile && window.location.hash === '#developments')
       document.getElementById('developments')?.scrollIntoView({ block: 'start' });
-  }, [profile, scope.province]);
-  const directoryHref = developerDiscoveryHref('/developers', scope.province);
-  const changeProvince = (province?: string) => {
+  }, [profile, scope.canonicalPlaceId]);
+  const directoryHref = developerDiscoveryHref('/developers', scope.canonicalPlaceId);
+  const changePlace = (selection: CanonicalPlaceSelection | null) => {
+    setPlaceSelection(selection);
     setPage(0);
-    setLocation(developerDiscoveryHref(`/developer/${slug}`, province, true));
+    setLocation(
+      developerDiscoveryHref(`/developer/${slug}`, selection?.canonicalPlaceId, true),
+    );
   };
   if (profileQuery.isLoading)
     return (
@@ -108,7 +114,7 @@ export default function DeveloperPublisherPage() {
           </h1>
           <p className="mt-3 text-sm text-slate-600">
             {unavailable
-              ? 'Please try again. Your selected project province is still here.'
+              ? 'Please try again. Your selected canonical Place is still here.'
               : 'This developer profile is not currently available.'}
           </p>
           <div className="mt-5 flex flex-wrap justify-center gap-3">
@@ -252,25 +258,34 @@ export default function DeveloperPublisherPage() {
                 className="flex items-start gap-2 text-xl font-bold leading-snug text-slate-900 md:text-2xl"
               >
                 <Building2 className="mt-1 h-5 w-5 shrink-0 text-indigo-600" aria-hidden="true" />
-                Published projects{scope.province ? ` in ${scope.province}` : ''}
+                Published projects{scope.canonicalPlaceId ? ' at the selected Place' : ''}
               </h2>
               <p className="mt-2 text-sm text-slate-600">
                 Open a development to compare its unit types, pricing and current availability.
               </p>
             </div>
-            <div className="w-full text-slate-700 sm:w-56">
-              <DeveloperProvinceSelect
-                province={scope.province}
-                invalid={scope.invalid}
-                onChange={changeProvince}
+            <div className="w-full text-slate-700 sm:w-80">
+              <CanonicalPlaceSelector
+                value={placeSelection}
+                onChange={changePlace}
+                purpose="search"
+                label="Project Place"
+                placeholder="Search approved Places"
+                hint="Only projects with this exact reviewed Place assignment match."
               />
+              {scope.canonicalPlaceId && !placeSelection && !scope.invalid ? (
+                <Button type="button" variant="ghost" size="sm" onClick={() => changePlace(null)}>
+                  Clear selected Place
+                </Button>
+              ) : null}
             </div>
           </div>
           {scope.invalid ? (
             <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-6">
-              <h3 className="font-semibold text-slate-900">Choose a supported project province</h3>
+              <h3 className="font-semibold text-slate-900">Choose a canonical project Place</h3>
               <p className="mt-2 text-sm text-slate-600">
-                This location could not be used. Choose a province above to see projects.
+                This location link is invalid or uses retired text geography. Choose an
+                approved Place above to see matching projects.
               </p>
             </div>
           ) : projectsQuery.isError ? (
@@ -282,7 +297,7 @@ export default function DeveloperPublisherPage() {
                 Published projects could not be loaded
               </h3>
               <p className="mt-2 text-sm text-slate-600">
-                Please try again. Your developer and selected province are still here.
+                Please try again. Your developer and selected Place are still here.
               </p>
               <Button
                 variant="outline"
@@ -315,8 +330,7 @@ export default function DeveloperPublisherPage() {
                     key={project.id}
                     id={String(project.id)}
                     title={project.name}
-                    city={project.city}
-                    suburb={project.suburb || undefined}
+                    locationLabel={project.locationLabels?.join(', ') || 'Place assignment pending'}
                     image={getPrimaryDevelopmentImageUrl(project.images) || ''}
                     priceRange={projectPriceRange(project)}
                     listingType={project.transactionType === 'for_rent' ? 'rent' : 'sale'}
@@ -343,19 +357,19 @@ export default function DeveloperPublisherPage() {
               <h3 className="mt-3 text-lg font-semibold text-slate-900">
                 {page
                   ? 'No more published projects'
-                  : scope.province
-                    ? `No published projects in ${scope.province}`
+                  : scope.canonicalPlaceId
+                    ? 'No published projects at the selected canonical Place'
                     : 'No published projects listed yet'}
               </h3>
               <p className="mx-auto mt-2 max-w-lg text-sm leading-relaxed text-slate-600">
-                {scope.province
-                  ? 'Choose another province or view all published projects from this developer.'
+                {scope.canonicalPlaceId
+                  ? 'Choose another canonical Place or clear the Place filter to view all published projects from this developer.'
                   : 'Published projects will appear here when they become available on Property Listify.'}
               </p>
-              {scope.province && (
+              {scope.canonicalPlaceId && (
                 <Button
                   variant="outline"
-                  onClick={() => changeProvince()}
+                  onClick={() => changePlace(null)}
                   className="mt-4 min-h-[44px]"
                 >
                   View all published projects

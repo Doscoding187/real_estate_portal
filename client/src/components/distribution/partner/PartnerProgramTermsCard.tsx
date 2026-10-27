@@ -7,8 +7,7 @@ import { ProgramRequirementsDialog } from './ProgramRequirementsDialog';
 export type ProgramTermsItem = {
   developmentId: number;
   developmentName: string;
-  city?: string | null;
-  province?: string | null;
+  locationLabels?: string[];
   brand?: { cataloguePublisherId: number; brandName: string } | null;
   program: {
     programId: number;
@@ -60,8 +59,8 @@ export function PartnerProgramTermsCard({
   const [requirementsOpen, setRequirementsOpen] = useState(false);
 
   const locationLabel = useMemo(
-    () => [item.city, item.province].filter(Boolean).join(', ') || 'Location unavailable',
-    [item.city, item.province],
+    () => item.locationLabels?.join(', ') || 'Location unavailable',
+    [item.locationLabels],
   );
 
   return (

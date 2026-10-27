@@ -1,5 +1,5 @@
 import { db } from '../db';
-import { exploreContent, listings, developments } from '../../drizzle/schema';
+import { exploreContent, listings } from '../../drizzle/schema';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import type { FeedType } from '../../shared/types';
 import { cache, CacheKeys, CacheTTL } from '../lib/cache';
@@ -474,7 +474,6 @@ export class ExploreFeedService {
         .select({ content: exploreContent })
         .from(exploreContent)
         .leftJoin(listings, eq(exploreContent.referenceId, listings.id))
-        .leftJoin(developments, eq(exploreContent.referenceId, developments.id))
         .where(
           and(
             eq(exploreContent.contentType, 'video'),
@@ -484,8 +483,6 @@ export class ExploreFeedService {
               LOWER(COALESCE(${listings.city}, '')) LIKE ${`%${loc}%`}
               OR LOWER(COALESCE(${listings.suburb}, '')) LIKE ${`%${loc}%`}
               OR LOWER(COALESCE(${listings.province}, '')) LIKE ${`%${loc}%`}
-              OR LOWER(COALESCE(${developments.city}, '')) LIKE ${`%${loc}%`}
-              OR LOWER(COALESCE(${developments.province}, '')) LIKE ${`%${loc}%`}
             )`,
           ),
         )

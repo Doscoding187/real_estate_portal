@@ -20,7 +20,7 @@ import type { UnitType } from '@/hooks/useDevelopmentWizard';
 type DevelopmentPreviewData = {
   developmentData?: {
     name?: string;
-    location?: { address?: string; city?: string };
+    location?: { address?: string };
     media?: { heroImage?: { url?: string } };
   };
   overview?: {
@@ -172,7 +172,7 @@ export const DevelopmentPreview: React.FC = () => {
               >
                 <MapPin className={`${isMobile ? 'w-4 h-4' : 'w-5 h-5'}`} />
                 <span className="truncate">
-                  {developmentData?.location?.address}, {developmentData?.location?.city}
+                  {developmentData?.location?.address || 'Place assignment pending review'}
                 </span>
               </div>
             </div>

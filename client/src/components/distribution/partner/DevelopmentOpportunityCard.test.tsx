@@ -13,8 +13,7 @@ function buildItem(overrides: Record<string, unknown> = {}) {
     developmentId: 42,
     developmentName: 'Sky City',
     imageUrl: 'https://cdn.example/sky-city.jpg',
-    city: 'Soweto',
-    province: 'Gauteng',
+    locationLabels: ['Soweto'],
     campaign: { developmentType: 'residential', images: ['a', 'b'], description: 'Homes' },
     inventory: {
       modes: {
@@ -59,7 +58,7 @@ describe('DevelopmentOpportunityCard', () => {
     );
 
     expect(screen.getByText('Sky City')).toBeInTheDocument();
-    expect(screen.getByText('Soweto, Gauteng')).toBeInTheDocument();
+    expect(screen.getByText('Soweto')).toBeInTheDocument();
     expect(screen.getByTitle('Bedrooms')).toHaveTextContent('2 – 4 beds');
     expect(screen.getByTitle('House size')).toHaveTextContent('58 – 120.5 m²');
     expect(screen.getByTitle('Yard size')).toHaveTextContent('92 – 210 m²');

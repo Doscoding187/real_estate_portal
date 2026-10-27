@@ -197,7 +197,7 @@ describe('bounded Database Authority data adapters', () => {
           !('runtimeCompatibilityIds' in row) && !('environmentRuntimeCompatibilityIds' in row),
       ),
     ).toBe(true);
-    expect(SEARCH_TO_LEAD_SCENARIO_VERSION).toBe('search-to-lead-v5');
+    expect(SEARCH_TO_LEAD_SCENARIO_VERSION).toBe('search-to-lead-v8');
     expect(SEARCH_TO_LEAD_SCENARIO_DIGEST).toMatch(/^[a-f0-9]{64}$/);
     expect(CANONICAL_FOUNDATION_VERSION).toBe('canonical-launch-foundation-v1');
     expect(CANONICAL_FOUNDATION_DIGEST).toMatch(/^[a-f0-9]{64}$/);
@@ -405,9 +405,7 @@ describe('bounded Database Authority data adapters', () => {
     ]);
     expect(plan.products.every(product => product.state === 'missing')).toBe(true);
     expect(plan.pending.filter(item => item.action === 'insert_plan')).toHaveLength(3);
-    expect(plan.migrationHead).toBe(
-      '0153_distribution_referrer_search_assessments.sql',
-    );
+    expect(plan.migrationHead).toBe('0157_developments_canonical_place_only.sql');
   });
 
   it('fails closed when a protected commercial row conflicts with canonical authority', async () => {
@@ -473,9 +471,6 @@ describe('bounded Database Authority data adapters', () => {
           'developer_id',
           'name',
           'developmentType',
-          'city',
-          'province',
-          'suburb',
           'slug',
           'isPublished',
           'approval_status',

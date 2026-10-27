@@ -1,4 +1,5 @@
-import { and, asc, desc, eq, gt, ne, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, ne, sql } from 'drizzle-orm';
+import { TRPCError } from '@trpc/server';
 import { getDb } from '../db-connection';
 import {
   cataloguePublishers,
@@ -6,6 +7,7 @@ import {
   developments,
   unitTypes,
 } from '../../drizzle/schema';
+import { isPlaceId } from '../../drizzle/schema/placeAuthority';
 import type {
   DevelopmentDerivedListing,
   DevelopmentDerivedListingSearchResults,
@@ -13,11 +15,11 @@ import type {
   SearchCardResult,
   SortOption,
 } from '../../shared/types';
-import {
-  getSearchAreaQueryMembers,
-  type PublicSearchQueryBoundary,
-} from './searchAreaQueryBoundary';
 import { publicDevelopmentEligibilityConditions } from './publicDevelopmentEligibility';
+import {
+  listDevelopmentIdsForCanonicalPlace,
+  listDevelopmentPlaceGeography,
+} from './developmentPlaceAssignmentService';
 import { buildDevelopmentCardHighlights } from '../../shared/listing-highlight-registry';
 import { hasHomePropertyPhoto } from '../../shared/homePropertyPhoto';
 
@@ -25,10 +27,7 @@ interface DevelopmentDerivedListingFilters {
   /** Homepage units must have their own representative photos and available stock. */
   requireUnitPhoto?: boolean;
   requireAvailableStock?: boolean;
-  province?: string;
-  city?: string;
-  suburb?: string[];
-  locations?: string[];
+  canonicalPlaceId: string;
   bounds?: {
     south: number;
     north: number;
@@ -45,15 +44,6 @@ interface DevelopmentDerivedListingFilters {
   maxBathrooms?: number;
   minArea?: number;
   maxArea?: number;
-}
-
-interface DevelopmentDerivedListingFilterCounts {
-  total: number;
-  byType: Record<string, number>;
-  byBedrooms: Record<string, number>;
-  byLocation: Array<{ name: string; slug: string; count: number }>;
-  byPropertyType: Record<string, number>;
-  byPriceRange: Array<{ range: string; count: number }>;
 }
 
 function parseJsonArray(value: unknown): any[] {
@@ -233,97 +223,6 @@ function uniqueLabels(values: string[]): string[] {
         .filter(Boolean)
         .map(toSentenceCaseLabel),
     ),
-  );
-}
-
-function slugifyText(value: string): string {
-  return value
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w\s-]/g, '')
-    .replace(/[\s_-]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-}
-
-function normalizeLocationText(value: string): string {
-  return value.toLowerCase().replace(/-/g, ' ').replace(/\s+/g, ' ').trim();
-}
-
-function matchesLocationSlugs(
-  row: { city?: unknown; suburb?: unknown; province?: unknown },
-  locations?: string[],
-): boolean {
-  if (!locations?.length) return true;
-
-  const haystacks = [row.suburb, row.city, row.province]
-    .map(value => normalizeLocationText(String(value || '')))
-    .filter(Boolean);
-
-  return locations.some(location => {
-    const normalizedLocation = normalizeLocationText(location);
-    if (!normalizedLocation) return false;
-    return haystacks.some(haystack => haystack.includes(normalizedLocation));
-  });
-}
-
-function matchesNormalizedField(value: unknown, expected?: string): boolean {
-  if (!expected) return true;
-  return normalizeLocationText(String(value || '')) === normalizeLocationText(expected);
-}
-
-function matchesNormalizedFieldSet(value: unknown, expectedValues?: string[]): boolean {
-  if (!expectedValues?.length) return true;
-  const normalizedValue = normalizeLocationText(String(value || ''));
-  if (!normalizedValue) return false;
-
-  return expectedValues.some(expected => normalizedValue === normalizeLocationText(expected));
-}
-
-function matchesQueryBoundary(
-  row: { province?: unknown; city?: unknown; suburb?: unknown },
-  boundary: PublicSearchQueryBoundary,
-): boolean {
-  if (boundary.kind === 'canonical_members') {
-    return getSearchAreaQueryMembers(boundary).some(member => {
-      if (member.scopeKind === 'province') {
-        return (
-          Boolean(member.provinceName) && matchesNormalizedField(row.province, member.provinceName)
-        );
-      }
-      if (member.scopeKind === 'metro_city') {
-        return Boolean(member.cityName) && matchesNormalizedField(row.city, member.cityName);
-      }
-      return (
-        Boolean(member.cityName && member.suburbName) &&
-        matchesNormalizedField(row.city, member.cityName) &&
-        matchesNormalizedField(row.suburb, member.suburbName)
-      );
-    });
-  }
-
-  if (boundary.level === 'province') {
-    return matchesNormalizedFieldSet(
-      row.province,
-      boundary.members.map(member => member.provinceName),
-    );
-  }
-
-  if (boundary.level === 'city') {
-    return (
-      matchesNormalizedField(row.province, boundary.parentName) &&
-      matchesNormalizedFieldSet(
-        row.city,
-        boundary.members.map(member => member.cityName || ''),
-      )
-    );
-  }
-
-  return (
-    matchesNormalizedField(row.city, boundary.parentName) &&
-    matchesNormalizedFieldSet(
-      row.suburb,
-      boundary.members.map(member => member.suburbName || ''),
-    )
   );
 }
 
@@ -624,10 +523,10 @@ function buildSort(sortOption: SortOption) {
       return (a: DevelopmentDerivedListing, b: DevelopmentDerivedListing) => b.price - a.price;
     case 'suburb_asc':
       return (a: DevelopmentDerivedListing, b: DevelopmentDerivedListing) =>
-        a.suburb.localeCompare(b.suburb);
+        a.locationLabels.join(', ').localeCompare(b.locationLabels.join(', '));
     case 'suburb_desc':
       return (a: DevelopmentDerivedListing, b: DevelopmentDerivedListing) =>
-        b.suburb.localeCompare(a.suburb);
+        b.locationLabels.join(', ').localeCompare(a.locationLabels.join(', '));
     case 'date_asc':
       return (a: DevelopmentDerivedListing, b: DevelopmentDerivedListing) =>
         new Date(a.listedDate).getTime() - new Date(b.listedDate).getTime();
@@ -643,7 +542,7 @@ function buildDevelopmentSearchCardResult(item: DevelopmentDerivedListing): Sear
   const identityName = String(
     item.developerBrand?.brandName || item.development?.name || 'Developer',
   ).trim();
-  const location = [item.suburb, item.city, item.province].filter(Boolean).join(', ');
+  const location = item.locationLabels.join(', ');
   const cataloguePublisherId = Number(item.developerBrand?.id || 0);
 
   return {
@@ -656,9 +555,11 @@ function buildDevelopmentSearchCardResult(item: DevelopmentDerivedListing): Sear
         : `/development/${item.developmentId}/unit/${item.unitTypeId}`),
     title: item.title,
     location,
-    city: item.city,
-    suburb: item.suburb,
-    province: item.province,
+    city: '',
+    suburb: '',
+    province: '',
+    ...(item.canonicalPlaceId ? { canonicalPlaceId: item.canonicalPlaceId } : {}),
+    locationLabels: item.locationLabels,
     price: item.price,
     image: String(item.image || item.images?.[0]?.url || '').trim(),
     images: Array.isArray(item.images) ? item.images : [],
@@ -708,14 +609,23 @@ export class DevelopmentDerivedListingService {
     sortOption: SortOption = 'date_desc',
     page: number = 1,
     pageSize: number = 12,
-    searchAreaBoundary?: PublicSearchQueryBoundary,
   ): Promise<DevelopmentDerivedListingSearchResults> {
+    if (!isPlaceId(filters.canonicalPlaceId)) {
+      throw new TRPCError({ code: 'BAD_REQUEST', message: 'A canonical Place ID is required.' });
+    }
+
     const db = await getDb();
     if (!db) {
       throw new Error('Database unavailable');
     }
 
     const conditions = [publicDevelopmentEligibilityConditions(), eq(unitTypes.isActive, 1)];
+    const matchingDevelopmentIds = await listDevelopmentIdsForCanonicalPlace(
+      filters.canonicalPlaceId,
+    );
+    conditions.push(
+      matchingDevelopmentIds.length ? inArray(developments.id, matchingDevelopmentIds) : sql`1 = 0`,
+    );
     if (filters.requireAvailableStock) {
       conditions.push(gt(unitTypes.availableUnits, 0), ne(developments.status, 'sold-out'));
     }
@@ -738,9 +648,6 @@ export class DevelopmentDerivedListingService {
         developmentStatus: developments.status,
         developmentType: developments.developmentType,
         transactionType: developments.transactionType,
-        city: developments.city,
-        suburb: developments.suburb,
-        province: developments.province,
         developmentDescription: developments.description,
         developmentTagline: developments.tagline,
         developmentAmenities: developments.amenities,
@@ -802,6 +709,11 @@ export class DevelopmentDerivedListingService {
       .where(and(...conditions))
       .orderBy(desc(developments.createdAt), asc(unitTypes.displayOrder));
 
+    const developmentIds = Array.from(
+      new Set<number>(rows.map(row => Number(row.developmentId)).filter(Number.isSafeInteger)),
+    );
+    const geographyByDevelopment = await listDevelopmentPlaceGeography(developmentIds);
+
     const mapped = rows
       .map(row => {
         const unitPhoto = filters.requireUnitPhoto ? getUnitPhoto(row.unitBaseMedia) : null;
@@ -822,30 +734,6 @@ export class DevelopmentDerivedListingService {
           if (searchableArea === null) return null;
           if (filters.minArea !== undefined && searchableArea < filters.minArea) return null;
           if (filters.maxArea !== undefined && searchableArea > filters.maxArea) return null;
-        }
-
-        if (searchAreaBoundary) {
-          // Development records currently expose legacy suburb text rather
-          // than a canonical suburb foreign key. Match only the exact names
-          // resolved from the server-owned canonical member IDs and the
-          // resolved parent city; never widen to a text or parent search.
-          if (!matchesQueryBoundary(row, searchAreaBoundary)) return null;
-        } else {
-          if (!matchesNormalizedField(row.province, filters.province)) {
-            return null;
-          }
-
-          if (!matchesNormalizedField(row.city, filters.city)) {
-            return null;
-          }
-
-          if (!matchesNormalizedFieldSet(row.suburb, filters.suburb)) {
-            return null;
-          }
-
-          if (!matchesLocationSlugs(row, filters.locations)) {
-            return null;
-          }
         }
 
         const propertyType = mapStructuralTypeToPropertyType(
@@ -901,6 +789,10 @@ export class DevelopmentDerivedListingService {
         }
 
         const listedDate = new Date(row.unitCreatedAt || row.developmentCreatedAt || new Date());
+        const geography = geographyByDevelopment.get(Number(row.developmentId)) ?? {
+          canonicalPlaceId: null,
+          locationLabels: [],
+        };
         const mediaSignals = getMediaSignals(row.unitBaseMedia, row.developmentImages);
         if (unitPhoto) mediaSignals.image = unitPhoto;
         const stageBadge = deriveStageBadge({
@@ -940,9 +832,8 @@ export class DevelopmentDerivedListingService {
           title,
           price,
           priceTo: priceTo ?? undefined,
-          city: row.city,
-          suburb: row.suburb || row.city,
-          province: row.province,
+          canonicalPlaceId: geography.canonicalPlaceId,
+          locationLabels: geography.locationLabels,
           propertyType,
           listingType,
           transactionType: String(row.transactionType || 'for_sale') as
@@ -1000,63 +891,6 @@ export class DevelopmentDerivedListingService {
       page,
       pageSize,
       hasMore: offset + pageSize < total,
-    };
-  }
-
-  async getFilterCounts(
-    filters: DevelopmentDerivedListingFilters,
-  ): Promise<DevelopmentDerivedListingFilterCounts> {
-    const { items } = await this.searchListings(filters, 'date_desc', 1, 100000);
-
-    const byPropertyType: Record<string, number> = {};
-    const byBedrooms: Record<string, number> = {};
-    const locationMap = new Map<string, { name: string; slug: string; count: number }>();
-    const currentSuburbs = new Set((filters.suburb || []).map(value => value.toLowerCase()));
-
-    items.forEach(item => {
-      byPropertyType[item.propertyType] = (byPropertyType[item.propertyType] || 0) + 1;
-
-      if ((item.bedrooms || 0) > 0) {
-        const key = String(item.bedrooms);
-        byBedrooms[key] = (byBedrooms[key] || 0) + 1;
-      }
-
-      const locationName = String(item.suburb || item.city || '').trim();
-      const locationSlug = slugifyText(locationName);
-      if (locationName && locationSlug && !currentSuburbs.has(locationName.toLowerCase())) {
-        const existing = locationMap.get(locationSlug);
-        if (existing) {
-          existing.count += 1;
-        } else {
-          locationMap.set(locationSlug, {
-            name: locationName,
-            slug: locationSlug,
-            count: 1,
-          });
-        }
-      }
-    });
-
-    const byPriceRange = [
-      { range: 'Under R1M', min: 0, max: 1000000 },
-      { range: 'R1M - R2M', min: 1000000, max: 2000000 },
-      { range: 'R2M - R3M', min: 2000000, max: 3000000 },
-      { range: 'R3M - R5M', min: 3000000, max: 5000000 },
-      { range: 'Over R5M', min: 5000000, max: Number.MAX_SAFE_INTEGER },
-    ].map(({ range, min, max }) => ({
-      range,
-      count: items.filter(item => item.price >= min && item.price <= max).length,
-    }));
-
-    return {
-      total: items.length,
-      byType: { ...byPropertyType },
-      byBedrooms,
-      byLocation: Array.from(locationMap.values())
-        .sort((left, right) => right.count - left.count || left.name.localeCompare(right.name))
-        .slice(0, 12),
-      byPropertyType,
-      byPriceRange,
     };
   }
 }

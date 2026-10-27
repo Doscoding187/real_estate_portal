@@ -1,5 +1,5 @@
 {
-  "version": 10,
+  "version": 11,
   "canonicalAuthority": {
     "productionCommand": "pnpm db:release:apply",
     "testCommand": "pnpm db:migrate:test",
@@ -1723,6 +1723,38 @@
       "purpose": "Stores search-only referrer assessment filters and Developer projection snapshots separately from financial check fits.",
       "approvedFiles": [
         "server/migrations/0153_distribution_referrer_search_assessments.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0154_development_phases_development_id_id_unique.sql",
+      "classification": "canonical active",
+      "purpose": "Adds the composite phase ownership key required for Development-to-Place assignment integrity.",
+      "approvedFiles": [
+        "server/migrations/0154_development_phases_development_id_id_unique.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0155_development_place_assignments.sql",
+      "classification": "canonical active",
+      "purpose": "Adds evidenced, review-attributed canonical Place associations for Development sites and phases.",
+      "approvedFiles": [
+        "server/migrations/0155_development_place_assignments.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0156_distribution_check_fit_location_label.sql",
+      "classification": "canonical active",
+      "purpose": "Retires city and province snapshots from check-fit matches and keeps one display-only location label.",
+      "approvedFiles": [
+        "server/migrations/0156_distribution_check_fit_location_label.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0157_developments_canonical_place_only.sql",
+      "classification": "canonical active",
+      "purpose": "Removes retired Development text and numeric geography columns after consumers move to reviewed Place assignments.",
+      "approvedFiles": [
+        "server/migrations/0157_developments_canonical_place_only.sql"
       ]
     }
   ],

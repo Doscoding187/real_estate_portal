@@ -10,6 +10,7 @@ import { systemRouter } from './_core/systemRouter';
 import { protectedProcedure, publicProcedure, router } from './_core/trpc';
 import * as db from './db';
 import { TRPCError } from '@trpc/server';
+import { isPlaceId } from '../drizzle/schema/placeAuthority';
 import { adminRouter } from './adminRouter';
 import { agencyRouter } from './agencyRouter';
 import { canvassingRouter } from './canvassingRouter';
@@ -27,11 +28,7 @@ import { priceInsightsRouter } from './priceInsightsRouter';
 import { requireUser } from './_core/requireUser';
 import { getActiveDistributionIdentityFlags } from './services/distributionIdentityProjection';
 import { validatePublicSearchInput } from '../shared/publicSearchValidation';
-import {
-  BUY_PUBLIC_PROPERTY_TYPES,
-  PUBLIC_PROPERTY_TYPES,
-  RENT_PUBLIC_PROPERTY_TYPES,
-} from '../shared/property-taxonomy';
+import { PUBLIC_PROPERTY_TYPES } from '../shared/property-taxonomy';
 import {
   COMMERCIAL_PUBLIC_JOURNEY_HANDOFF_MESSAGE,
   COMMERCIAL_INVENTORY_MANAGEMENT_MESSAGE,
@@ -414,7 +411,12 @@ const appRouterConfig = {
       .input(
         z
           .object({
-            canonicalPlaceId: z.string().trim().max(40).optional(),
+            canonicalPlaceId: z
+              .string()
+              .trim()
+              .max(40)
+              .refine(isPlaceId, 'Choose an approved canonical Place')
+              .optional(),
             province: z.string().trim().max(120).optional(),
             city: z.string().trim().max(120).optional(),
             suburb: z.array(z.string().trim().max(120)).max(10).optional(),
@@ -478,16 +480,11 @@ const appRouterConfig = {
       .input(
         z
           .object({
-            locationId: z.string().trim().min(1).optional(),
-            locationIds: z.array(z.string().trim().min(1)).max(10).optional(),
-            searchAreaId: z.string().trim().min(1).optional(),
-            searchAreaIds: z.array(z.string().trim().min(1)).max(10).optional(),
-            province: z.string().optional(),
-            city: z.string().optional(),
-            suburb: z.union([z.string(), z.array(z.string())]).optional(),
-            locations: z.array(z.string()).max(10).optional(),
-            /** Compatibility-only input from the former DiscoverProperties handoff. */
-            search: z.string().trim().max(120).optional(),
+            canonicalPlaceId: z
+              .string()
+              .trim()
+              .refine(isPlaceId, 'Choose an approved canonical Place')
+              .optional(),
             developmentType: z.enum(['residential', 'commercial', 'mixed_use', 'land']).optional(),
             developmentStatus: z.enum(['launching-soon', 'selling', 'sold-out']).optional(),
             transactionType: z.enum(['for_sale', 'for_rent']).optional(),
@@ -501,10 +498,8 @@ const appRouterConfig = {
               .optional(),
             page: z.number().int().min(0).max(PUBLIC_SEARCH_MAX_PAGE_INDEX).optional(),
             pageSize: z.number().int().min(1).max(50).optional(),
-            /** Legacy vocabulary is translated at this procedure boundary. */
-            limit: z.number().int().min(1).max(50).optional(),
-            offset: z.number().int().min(0).optional(),
           })
+          .strict()
           .superRefine((input, context) => {
             if (isCommercialMarketingPropertyType(input.developmentType)) {
               context.addIssue({
@@ -513,23 +508,28 @@ const appRouterConfig = {
                 message: COMMERCIAL_PUBLIC_JOURNEY_HANDOFF_MESSAGE,
               });
             }
-            // Journey-neutral public-search invariants (contradictory ranges,
-            // mixed geography authorities) apply to Developments exactly as
-            // they do to the Buy/Rent inventory journey.
-            const issue = validatePublicSearchInput(input);
-            if (issue) {
+          })
+          .superRefine((input, context) => {
+            if (
+              input.minPrice !== undefined &&
+              input.maxPrice !== undefined &&
+              input.minPrice > input.maxPrice
+            ) {
               context.addIssue({
                 code: z.ZodIssueCode.custom,
-                path: [issue.path],
-                message: issue.message,
+                path: ['maxPrice'],
+                message: 'Maximum price must be greater than or equal to minimum price.',
               });
             }
-
-            if (input.searchAreaId || input.searchAreaIds?.length) {
+            if (
+              input.minBedrooms !== undefined &&
+              input.maxBedrooms !== undefined &&
+              input.minBedrooms > input.maxBedrooms
+            ) {
               context.addIssue({
                 code: z.ZodIssueCode.custom,
-                path: ['searchAreaId'],
-                message: 'Search Areas are not available for the Developments journey yet.',
+                path: ['maxBedrooms'],
+                message: 'Maximum bedrooms must be greater than or equal to minimum bedrooms.',
               });
             }
           }),
@@ -539,79 +539,6 @@ const appRouterConfig = {
         const { publicDevelopmentSearchService } =
           await import('./services/publicDevelopmentSearchService');
         return publicDevelopmentSearchService.search(input);
-      }),
-
-    searchDevelopmentListings: publicProcedure
-      .input(
-        z
-          .object({
-            province: z.string().optional(),
-            city: z.string().optional(),
-            suburb: z.array(z.string()).optional(),
-            locations: z.array(z.string()).optional(),
-            propertyType: z.enum(PUBLIC_PROPERTY_TYPES).optional(),
-            listingType: z.enum(['sale', 'rent']).optional(),
-            minPrice: z.number().optional(),
-            maxPrice: z.number().optional(),
-            minBedrooms: z.number().optional(),
-            maxBedrooms: z.number().optional(),
-            minBathrooms: z.number().optional(),
-            limit: z.number().default(20),
-            offset: z.number().default(0),
-            sortOption: z
-              .enum([
-                'price_asc',
-                'price_desc',
-                'date_desc',
-                'date_asc',
-                'suburb_asc',
-                'suburb_desc',
-              ])
-              .optional(),
-          })
-          .superRefine((input, context) => {
-            if (input.propertyType !== 'commercial') return;
-            context.addIssue({
-              code: z.ZodIssueCode.custom,
-              path: ['propertyType'],
-              message:
-                'Commercial leasing is available through the dedicated Commercial journey only.',
-            });
-          }),
-      )
-      .query(async ({ input }) => {
-        const { developmentDerivedListingService } =
-          await import('./services/developmentDerivedListingService');
-
-        const genericPropertyTypes = input.propertyType
-          ? [input.propertyType]
-          : input.listingType === 'rent'
-            ? RENT_PUBLIC_PROPERTY_TYPES
-            : input.listingType === 'sale'
-              ? BUY_PUBLIC_PROPERTY_TYPES
-              : Array.from(new Set([...BUY_PUBLIC_PROPERTY_TYPES, ...RENT_PUBLIC_PROPERTY_TYPES]));
-        const filters = {
-          province: input.province,
-          city: input.city,
-          suburb: input.suburb,
-          locations: input.locations,
-          propertyType: genericPropertyTypes as any,
-          listingType: input.listingType as any,
-          minPrice: input.minPrice,
-          maxPrice: input.maxPrice,
-          minBedrooms: input.minBedrooms,
-          maxBedrooms: input.maxBedrooms,
-          minBathrooms: input.minBathrooms,
-        };
-
-        const page = Math.floor(input.offset / input.limit) + 1;
-
-        return await developmentDerivedListingService.searchListings(
-          filters,
-          (input.sortOption as any) || 'date_desc',
-          page,
-          input.limit,
-        );
       }),
 
     // Get filter counts for search refinement
@@ -626,21 +553,19 @@ const appRouterConfig = {
               locations: z.array(z.string()).optional(),
               propertyType: z.string().optional(),
               listingType: z.string().optional(),
-              listingSource: z.enum(['manual', 'development']).optional(),
               minPrice: z.number().optional(),
               maxPrice: z.number().optional(),
               minBedrooms: z.number().optional(),
               maxBedrooms: z.number().optional(),
               locationId: z.string().optional(),
             })
+            .strict()
             .optional(),
         }),
       )
       .query(async ({ input }) => {
         try {
           const { propertySearchService } = await import('./services/propertySearchService');
-          const { developmentDerivedListingService } =
-            await import('./services/developmentDerivedListingService');
           const filters = input.filters || {};
           if (filters.propertyType === 'commercial') {
             return {
@@ -661,72 +586,9 @@ const appRouterConfig = {
             listingType: filters.listingType as any,
           };
 
-          if (filters.listingSource === 'manual') {
-            return await propertySearchService.getFilterCounts(normalizedFilters, {
-              publicOnly: true,
-            });
-          }
-
-          if (filters.listingSource === 'development') {
-            return await developmentDerivedListingService.getFilterCounts(normalizedFilters);
-          }
-
-          const [manualCounts, developmentCounts] = await Promise.all([
-            propertySearchService.getFilterCounts(normalizedFilters, { publicOnly: true }),
-            developmentDerivedListingService.getFilterCounts(normalizedFilters),
-          ]);
-
-          const mergeCountMaps = (
-            left: Record<string, number>,
-            right: Record<string, number>,
-          ): Record<string, number> => {
-            const merged = { ...left };
-            Object.entries(right).forEach(([key, value]) => {
-              merged[key] = (merged[key] || 0) + Number(value || 0);
-            });
-            return merged;
-          };
-
-          const locationMap = new Map<string, { name: string; slug: string; count: number }>();
-          [...manualCounts.byLocation, ...developmentCounts.byLocation].forEach(item => {
-            const existing = locationMap.get(item.slug);
-            if (existing) {
-              existing.count += Number(item.count || 0);
-            } else {
-              locationMap.set(item.slug, {
-                name: item.name,
-                slug: item.slug,
-                count: Number(item.count || 0),
-              });
-            }
+          return await propertySearchService.getFilterCounts(normalizedFilters, {
+            publicOnly: true,
           });
-
-          const priceRangeMap = new Map<string, number>();
-          [...manualCounts.byPriceRange, ...developmentCounts.byPriceRange].forEach(item => {
-            priceRangeMap.set(
-              item.range,
-              (priceRangeMap.get(item.range) || 0) + Number(item.count || 0),
-            );
-          });
-
-          return {
-            total: Number(manualCounts.total || 0) + Number(developmentCounts.total || 0),
-            byType: mergeCountMaps(manualCounts.byType, developmentCounts.byType),
-            byBedrooms: mergeCountMaps(manualCounts.byBedrooms, developmentCounts.byBedrooms),
-            byLocation: Array.from(locationMap.values())
-              .sort(
-                (left, right) => right.count - left.count || left.name.localeCompare(right.name),
-              )
-              .slice(0, 12),
-            byPropertyType: mergeCountMaps(
-              manualCounts.byPropertyType,
-              developmentCounts.byPropertyType,
-            ),
-            byPriceRange: Array.from(priceRangeMap.entries()).map(([range, count]) => ({
-              range,
-              count,
-            })),
-          };
         } catch (error) {
           console.error('Error getting filter counts:', safeErrorSummary(error));
           return {
@@ -990,7 +852,11 @@ const appRouterConfig = {
           if (!sourceListing) {
             throw new TRPCError({ code: 'NOT_FOUND', message: 'Source listing not found' });
           }
-          await assertListingContentCustody(sourceListing, user, 'Not authorized to archive this listing');
+          await assertListingContentCustody(
+            sourceListing,
+            user,
+            'Not authorized to archive this listing',
+          );
           // A public property is a projection of its authored listing. Preserve
           // the source and durable history by routing removal through the
           // canonical archive lifecycle instead of deleting the projection.

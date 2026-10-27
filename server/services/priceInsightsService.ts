@@ -1,7 +1,6 @@
 import { db } from '../db';
 import { sql } from 'drizzle-orm';
 import { properties } from '../../drizzle/schema/listings';
-import { developments, unitTypes } from '../../drizzle/schema/developments';
 import { provinces, cities, suburbs, locations } from '../../drizzle/schema/locations';
 import { excludeLandFromGenericPublicProjection } from './landLaunchContainmentService';
 import { safeErrorSummary } from '../_core/safeError';
@@ -92,25 +91,6 @@ class PriceInsightsService {
           AND ${properties.price} > 0
           AND ${excludeLandFromGenericPublicProjection()}
         
-        UNION ALL
-        
-        SELECT 
-          CAST(${unitTypes.basePriceFrom} AS SIGNED) as priceAmount,
-          CAST(${unitTypes.unitSize} AS SIGNED) as areaM2,
-          ${provinces.id} as provinceId,
-          ${provinces.name} as provinceName,
-          ${cities.id} as cityId,
-          ${cities.name} as cityName,
-          ${suburbs.id} as suburbId,
-          ${suburbs.name} as suburbName
-        FROM ${unitTypes}
-        JOIN ${developments} ON ${unitTypes.developmentId} = ${developments.id}
-        JOIN ${cities} ON ${cities.name} = ${developments.city}
-        JOIN ${provinces} ON ${provinces.id} = ${cities.provinceId}
-        LEFT JOIN ${suburbs} ON ${suburbs.name} = ${developments.suburb} AND ${suburbs.cityId} = ${cities.id}
-        WHERE ${unitTypes.isActive} = 1 
-          AND ${developments.status} IN ('selling', 'now-selling', 'launching-soon')
-          AND ${unitTypes.basePriceFrom} > 0
       )
     `;
   }

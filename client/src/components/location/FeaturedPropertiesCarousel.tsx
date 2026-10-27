@@ -43,7 +43,7 @@ export function FeaturedPropertiesCarousel({ location }: FeaturedPropertiesCarou
               Properties for sale in {location.name}
             </h2>
             <p className="mt-2 text-slate-600 max-w-3xl">
-              Explore current homes and new-development opportunities from published inventory.
+              Explore current homes for sale from published property listings.
             </p>
           </div>
 

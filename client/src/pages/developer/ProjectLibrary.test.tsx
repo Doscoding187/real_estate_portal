@@ -68,8 +68,8 @@ import ProjectLibrary from './ProjectLibrary';
 const project = {
   id: 41,
   name: 'Maple Grove',
-  city: 'Johannesburg',
-  province: 'Gauteng',
+  canonicalPlaceId: null,
+  locationLabels: ['Johannesburg'],
   isPublished: 1,
 };
 
