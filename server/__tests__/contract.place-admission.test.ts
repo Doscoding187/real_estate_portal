@@ -598,7 +598,6 @@ describe('Place admission: schema alignment', () => {
     for (const tableName of [
       'listings',
       'properties',
-      'developments',
       'explore_content',
       'land_parcels',
       'commercial_assets',
@@ -620,6 +619,27 @@ describe('Place admission: schema alignment', () => {
         }),
       ]);
     }
+    const developmentAssignments = normalized.tables.find(
+      table => table.name === 'development_place_assignments',
+    );
+    expect(
+      (developmentAssignments?.foreignKeys ?? []).filter(
+        key => key.name === 'place_id->place.place_id',
+      ),
+    ).toEqual([
+      expect.objectContaining({
+        columns: ['place_id'],
+        referencedTable: 'place',
+        referencedColumns: ['place_id'],
+        onDelete: 'restrict',
+        onUpdate: 'restrict',
+      }),
+    ]);
+    expect(
+      (normalized.tables.find(table => table.name === 'developments')?.foreignKeys ?? []).filter(
+        key => key.referencedTable === 'place',
+      ),
+    ).toEqual([]);
     for (const tableName of [
       'provinces',
       'cities',

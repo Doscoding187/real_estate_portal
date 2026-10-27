@@ -201,9 +201,6 @@ jobs:
       - name: Check admitted Place boundary provenance
         run: pnpm place:boundary-currency:check
 
-      - name: Probe canonical Place discovery and selection
-        run: pnpm place:admission:probe
-
       - name: Verify national Place package neutrality
         run: pnpm place:admission:territory-neutrality
 
@@ -333,6 +330,9 @@ jobs:
 
       - name: Verify admitted Place integration fixtures
         run: pnpm db:places:verify-national
+
+      - name: Probe canonical Place admission on the disposable target
+        run: pnpm place:admission:probe
 
       - name: Require dependent admitted Place identities
         run: pnpm vitest run --project server --minWorkers=1 --maxWorkers=1 server/__tests__/contract.place-executable-foundation.test.ts -t 'requires the admitted Place fixture identities'

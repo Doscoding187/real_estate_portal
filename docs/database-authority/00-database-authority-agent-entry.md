@@ -115,9 +115,7 @@ pnpm db:scenario:verify
 ```
 
 Canonical commercial reference data uses the protected release authority.
-Canonical Place packages are materialized only through the registered Place
-adapter, and OSM-only packages remain disposable-only until the founder gate is
-cleared. `productionSeedAuthority` remains `none`.
+Canonical Place packages are materialized only through the registered Place adapter, and OSM-only packages remain disposable-only until the founder gate is cleared. `productionSeedAuthority` remains `none`.
 For staging or production, the supported sequence is explicit:
 
 ```text
@@ -129,8 +127,7 @@ release:plan
 → readiness/deployment smoke checks
 ```
 
-The retired numeric geography adapter is not available. Place release uses
-`--adapter=places`; plan and verify are read-only. The commercial apply command
+The retired numeric geography adapter is not available; Place release uses `--adapter=places`, and plan and verify are read-only. The commercial apply command
 uses the canonical commercial adapter, requires protected release approval and
 an exact target acknowledgement, runs transactionally under a named MySQL
 lock, and is idempotent. Missing approved products or entitlements are inserted;
