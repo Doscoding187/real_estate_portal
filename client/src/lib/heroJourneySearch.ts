@@ -86,9 +86,9 @@ function haveCompatibleCanonicalParents(
   if (scopeKind === 'province') return true;
 
   return Boolean(
-    current.parentCanonicalLocationId &&
-      candidate.parentCanonicalLocationId &&
-      current.parentCanonicalLocationId === candidate.parentCanonicalLocationId,
+    current.parentCanonicalPlaceId &&
+      candidate.parentCanonicalPlaceId &&
+      current.parentCanonicalPlaceId === candidate.parentCanonicalPlaceId,
   );
 }
 
@@ -103,9 +103,6 @@ export function resolveCanonicalLocationSelection(
   maxLocations = 5,
 ): LocationSelectionResolution {
   const currentLocations = [...selectedLocations];
-  if (currentLocations.some(location => location.type === 'area')) {
-    return { locations: currentLocations, outcome: 'invalid' };
-  }
   const candidateSelection = addStructuredLocation(candidate);
 
   if (!candidateSelection) {
@@ -113,7 +110,7 @@ export function resolveCanonicalLocationSelection(
   }
 
   const candidateScope = candidateSelection.scope;
-  const candidateIdentity = candidateScope.canonicalLocationId;
+  const candidateIdentity = candidateScope.canonicalPlaceId;
   const existingSelections = currentLocations.map(location => ({
     location,
     selection: addStructuredLocation(location),
@@ -122,7 +119,7 @@ export function resolveCanonicalLocationSelection(
   if (
     existingSelections.some(({ selection }) => {
       if (!selection) return false;
-      return selection.scope.canonicalLocationId === candidateIdentity;
+      return selection.scope.canonicalPlaceId === candidateIdentity;
     })
   ) {
     return { locations: [...currentLocations], outcome: 'duplicate' };

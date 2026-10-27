@@ -32,6 +32,25 @@ const PLACE_PROJECTIONS = new Map([
   [GAUTENG_PLACE_ID, { scope: 'province', label: 'Gauteng', type: 'province', city: '' }],
 ]);
 
+function projectedPlaces(placeIds: readonly string[]) {
+  const executions = new Map<string, unknown>();
+  const labels = new Map<string, unknown>();
+  for (const placeId of placeIds) {
+    const projection = PLACE_PROJECTIONS.get(placeId);
+    if (!projection) continue;
+    executions.set(placeId, { placeId, scope: projection.scope });
+    labels.set(placeId, {
+      canonicalPlaceId: placeId,
+      label: projection.label,
+      placeType: projection.type,
+      scope: projection.scope,
+      city: projection.city,
+      province: 'Gauteng',
+    });
+  }
+  return { executions, labels };
+}
+
 function createCaller() {
   return agentRouter.createCaller({
     user: null,
@@ -120,7 +139,7 @@ const baseAgentRow = {
   licenseNumber: 'PG 123456',
   yearsExperience: 12,
   areasServed: JSON.stringify([
-    { canonicalLocationId: SANDTON_PLACE_ID, label: 'Sandton, Johannesburg, Gauteng' },
+    { canonicalPlaceId: SANDTON_PLACE_ID, label: 'Sandton, Johannesburg, Gauteng' },
   ]),
   languages: 'English, isiZulu',
   isVerified: 1,
@@ -205,7 +224,7 @@ describe('public agent discovery projection', () => {
 
     expect(agents).toHaveLength(1);
     expect(agents[0].areasServed).toEqual([
-      { canonicalLocationId: SANDTON_PLACE_ID, label: 'Sandton, Johannesburg, Gauteng' },
+      { canonicalPlaceId: SANDTON_PLACE_ID, label: 'Sandton, Johannesburg, Gauteng' },
     ]);
     expect(Array.isArray(agents[0].areasServed)).toBe(true);
   });
@@ -216,22 +235,7 @@ describe('public agent web presence projection', () => {
     vi.clearAllMocks();
     mockLoadCanonicalPlaceSearchProjection.mockImplementation(
       async (_database: unknown, options: { placeIds: readonly string[] }) => {
-        const executions = new Map<string, unknown>();
-        const labels = new Map<string, unknown>();
-        for (const placeId of options.placeIds) {
-          const projection = PLACE_PROJECTIONS.get(placeId);
-          if (!projection) continue;
-          executions.set(placeId, { placeId, scope: projection.scope });
-          labels.set(placeId, {
-            canonicalPlaceId: placeId,
-            label: projection.label,
-            placeType: projection.type,
-            scope: projection.scope,
-            city: projection.city,
-            province: 'Gauteng',
-          });
-        }
-        return { executions, labels };
+        return projectedPlaces(options.placeIds);
       },
     );
   });
@@ -273,7 +277,7 @@ describe('public agent web presence projection', () => {
     mockGetDb.mockResolvedValue(
       recordingDb(
         presenceBatches(makePresenceRow(JSON.stringify([
-          { canonicalLocationId: SANDTON_PLACE_ID, label: 'Client label is ignored' },
+          { canonicalPlaceId: SANDTON_PLACE_ID, label: 'Client label is ignored' },
         ])), [ACTIVE_MEMBERSHIP], [
           {
             id: 11,
@@ -291,13 +295,14 @@ describe('public agent web presence projection', () => {
     const profile = await createCaller().getPublicProfileBySlug({ slug: 'jane-agent' });
 
     expect(profile?.areasServed).toEqual([
-      { canonicalLocationId: SANDTON_PLACE_ID, label: 'Client label is ignored' },
+      { canonicalPlaceId: SANDTON_PLACE_ID, label: 'Client label is ignored' },
     ]);
     expect(profile?.canonicalAreas).toEqual([
       {
-        canonicalLocationId: SANDTON_PLACE_ID,
+        canonicalPlaceId: SANDTON_PLACE_ID,
         name: 'Sandton, Johannesburg, Gauteng',
         type: 'suburb',
+        url: '/gauteng/city-of-johannesburg/sandton',
       },
     ]);
   });
@@ -306,7 +311,7 @@ describe('public agent web presence projection', () => {
     mockGetDb.mockResolvedValue(
       recordingDb(
         presenceBatches(makePresenceRow(JSON.stringify([
-          { canonicalLocationId: JOHANNESBURG_PLACE_ID, label: 'Client city label' },
+          { canonicalPlaceId: JOHANNESBURG_PLACE_ID, label: 'Client city label' },
         ])), [ACTIVE_MEMBERSHIP], [
           {
             id: 31,
@@ -323,9 +328,10 @@ describe('public agent web presence projection', () => {
 
     expect(profile?.canonicalAreas).toEqual([
       {
-        canonicalLocationId: JOHANNESBURG_PLACE_ID,
+        canonicalPlaceId: JOHANNESBURG_PLACE_ID,
         name: 'Johannesburg, Gauteng',
         type: 'city',
+        url: '/gauteng/johannesburg',
       },
     ]);
   });
@@ -334,7 +340,7 @@ describe('public agent web presence projection', () => {
     mockGetDb.mockResolvedValue(
       recordingDb(
         presenceBatches(makePresenceRow(JSON.stringify([
-          { canonicalLocationId: GAUTENG_PLACE_ID, label: 'Client province label' },
+          { canonicalPlaceId: GAUTENG_PLACE_ID, label: 'Client province label' },
         ])), [ACTIVE_MEMBERSHIP], [
           { id: 5, name: 'Western Cape', slug: 'western-cape' },
         ]),
@@ -345,9 +351,10 @@ describe('public agent web presence projection', () => {
 
     expect(profile?.canonicalAreas).toEqual([
       {
-        canonicalLocationId: GAUTENG_PLACE_ID,
+        canonicalPlaceId: GAUTENG_PLACE_ID,
         name: 'Gauteng',
         type: 'province',
+        url: '/gauteng',
       },
     ]);
   });
@@ -371,7 +378,7 @@ describe('public agent web presence projection', () => {
     mockGetDb.mockResolvedValue(
       recordingDb(
         presenceBatches(makePresenceRow(JSON.stringify([
-          { canonicalLocationId: SANDTON_PLACE_ID, label: 'Sandton, Johannesburg, Gauteng' },
+          { canonicalPlaceId: SANDTON_PLACE_ID, label: 'Sandton, Johannesburg, Gauteng' },
         ]))),
       ).db,
     );
@@ -380,9 +387,10 @@ describe('public agent web presence projection', () => {
 
     expect(profile?.canonicalAreas).toEqual([
       {
-        canonicalLocationId: SANDTON_PLACE_ID,
+        canonicalPlaceId: SANDTON_PLACE_ID,
         name: 'Sandton, Johannesburg, Gauteng',
         type: null,
+        url: null,
       },
     ]);
   });
@@ -391,7 +399,7 @@ describe('public agent web presence projection', () => {
     mockGetDb.mockResolvedValue(
       recordingDb(
         presenceBatches(makePresenceRow(JSON.stringify([
-          { canonicalLocationId: UNAVAILABLE_PLACE_ID, label: 'Parklands, Sandton, Gauteng' },
+          { canonicalPlaceId: UNAVAILABLE_PLACE_ID, label: 'Parklands, Sandton, Gauteng' },
         ])), [ACTIVE_MEMBERSHIP], [
           {
             id: 61,
@@ -410,9 +418,10 @@ describe('public agent web presence projection', () => {
 
     expect(profile?.canonicalAreas).toEqual([
       {
-        canonicalLocationId: UNAVAILABLE_PLACE_ID,
+        canonicalPlaceId: UNAVAILABLE_PLACE_ID,
         name: 'Parklands, Sandton, Gauteng',
         type: null,
+        url: null,
       },
     ]);
   });
@@ -421,8 +430,8 @@ describe('public agent web presence projection', () => {
     mockGetDb.mockResolvedValue(
       recordingDb(
         presenceBatches(makePresenceRow(JSON.stringify([
-          { canonicalLocationId: SANDTON_PLACE_ID, label: 'Client label' },
-          { canonicalLocationId: SANDTON_PLACE_ID, label: 'Forged duplicate label' },
+          { canonicalPlaceId: SANDTON_PLACE_ID, label: 'Client label' },
+          { canonicalPlaceId: SANDTON_PLACE_ID, label: 'Forged duplicate label' },
         ])), [ACTIVE_MEMBERSHIP], [
           {
             id: 11,
@@ -440,13 +449,17 @@ describe('public agent web presence projection', () => {
     const profile = await createCaller().getPublicProfileBySlug({ slug: 'jane-agent' });
 
     expect(profile?.canonicalAreas).toHaveLength(1);
-    expect(profile?.canonicalAreas?.[0].canonicalLocationId).toBe(SANDTON_PLACE_ID);
+    expect(profile?.canonicalAreas?.[0].canonicalPlaceId).toBe(SANDTON_PLACE_ID);
   });
 });
 
 describe('public agency affiliation via canonical memberships', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockLoadCanonicalPlaceSearchProjection.mockImplementation(
+      async (_database: unknown, options: { placeIds: readonly string[] }) =>
+        projectedPlaces(options.placeIds),
+    );
   });
 
   it('exposes the agency for a single current active membership', async () => {

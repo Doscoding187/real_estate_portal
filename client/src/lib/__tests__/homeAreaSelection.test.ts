@@ -1,13 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { needsHomeAreaClarification } from '@/lib/homeAreaSelection';
-import { hasCanonicalLocationIdentity } from '@/lib/locationDiscovery';
+import { hasCanonicalPlaceIdentity } from '@/lib/locationDiscovery';
 import { buildSelectedDiscoverHref } from '@/lib/publicDiscoveryRoutes';
 import { EMPTY_HOME_SEARCH_FILTERS } from '@/contexts/HomeSearchContext';
 import type { LocationNode } from '@/types/location';
 
 const city: LocationNode = {
-  id: 'pl-place-01-000000000000000000000001',
-  canonicalLocationId: 'pl-place-01-000000000000000000000001',
+  canonicalPlaceId: 'pl-place-01-000000000000000000000001',
   factualType: 'city',
   type: 'city',
   name: 'Johannesburg',
@@ -17,15 +16,14 @@ const city: LocationNode = {
 };
 
 const locality: LocationNode = {
-  id: 'pl-place-01-000000000000000000000002',
-  canonicalLocationId: 'pl-place-01-000000000000000000000002',
+  canonicalPlaceId: 'pl-place-01-000000000000000000000002',
   factualType: 'suburb',
   type: 'suburb',
   name: 'Rosebank',
   slug: 'rosebank',
   provinceSlug: 'gauteng',
   citySlug: 'johannesburg',
-  parentCanonicalLocationId: city.canonicalLocationId,
+  parentCanonicalPlaceId: city.canonicalPlaceId,
   canonicalPath: '/gauteng/johannesburg/rosebank',
 };
 
@@ -37,9 +35,9 @@ describe('homepage Place selection and handoff', () => {
   });
 
   it('accepts Place IDs and rejects the retired runtime geography IDs', () => {
-    expect(hasCanonicalLocationIdentity(city)).toBe(true);
+    expect(hasCanonicalPlaceIdentity(city)).toBe(true);
     expect(
-      hasCanonicalLocationIdentity({ ...city, id: 'city:12', canonicalLocationId: 'city:12' }),
+      hasCanonicalPlaceIdentity({ ...city, canonicalPlaceId: 'city:12' }),
     ).toBe(false);
   });
 
@@ -51,7 +49,7 @@ describe('homepage Place selection and handoff', () => {
         EMPTY_HOME_SEARCH_FILTERS,
       );
       const url = new URL(href!, 'http://localhost');
-      expect(url.searchParams.get('canonicalPlaceId')).toBe(locality.canonicalLocationId);
+      expect(url.searchParams.get('canonicalPlaceId')).toBe(locality.canonicalPlaceId);
       for (const key of ['locationId', 'locationIds', 'city', 'province', 'suburb']) {
         expect(url.searchParams.has(key)).toBe(false);
       }

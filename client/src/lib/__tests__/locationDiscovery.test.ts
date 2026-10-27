@@ -1,11 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildLocationDiscoveryPath, hasCanonicalLocationIdentity } from '../locationDiscovery';
+import { buildLocationDiscoveryPath, hasCanonicalPlaceIdentity } from '../locationDiscovery';
 import type { LocationNode } from '@/types/location';
 
 const location = (overrides: Partial<LocationNode>): LocationNode => ({
-  id: 'pl-place-01-21f154cd5d0954c29ec7525f',
-  canonicalLocationId: 'pl-place-01-21f154cd5d0954c29ec7525f',
+  canonicalPlaceId: 'pl-place-01-21f154cd5d0954c29ec7525f',
   slug: 'johannesburg',
   name: 'Johannesburg',
   type: 'city',
@@ -19,8 +18,7 @@ describe('buildLocationDiscoveryPath', () => {
     expect(
       buildLocationDiscoveryPath(
         location({
-          id: 'pl-place-01-2bfd89dfb3b792235d492939',
-          canonicalLocationId: 'pl-place-01-2bfd89dfb3b792235d492939',
+          canonicalPlaceId: 'pl-place-01-2bfd89dfb3b792235d492939',
           slug: 'hiltonia',
           name: 'Hiltonia',
           type: 'suburb',
@@ -37,15 +35,13 @@ describe('buildLocationDiscoveryPath', () => {
         location({ canonicalPath: 'https://example.test/gauteng/johannesburg' }),
       ),
     ).toBeUndefined();
-    expect(buildLocationDiscoveryPath(location({ type: 'area' }))).toBeUndefined();
   });
 
-  it('rejects numeric runtime handles and display text as identities', () => {
-    expect(hasCanonicalLocationIdentity(location({ id: 'city:12', canonicalLocationId: 'city:12' }))).toBe(
-      false,
-    );
+  it('rejects malformed Place IDs and objects that offer only a generic id', () => {
+    expect(hasCanonicalPlaceIdentity(location({ canonicalPlaceId: 'city:12' }))).toBe(false);
+    expect(hasCanonicalPlaceIdentity(location({ canonicalPlaceId: undefined }))).toBe(false);
     expect(
-      hasCanonicalLocationIdentity(location({ id: 'Sandton', canonicalLocationId: undefined })),
+      hasCanonicalPlaceIdentity({ id: 'pl-place-01-21f154cd5d0954c29ec7525f' } as unknown as LocationNode),
     ).toBe(false);
   });
 });

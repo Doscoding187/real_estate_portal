@@ -24,7 +24,7 @@ function scopeFromLocation(location: LocationNode): PlaceSearchScope {
 
 function initialPlace(locations: LocationNode[]): CanonicalPlaceSelection | null {
   const location = locations[0];
-  const canonicalPlaceId = location?.canonicalLocationId || location?.id;
+  const canonicalPlaceId = location?.canonicalPlaceId;
   if (!location || !isCanonicalPlaceId(canonicalPlaceId)) return null;
   return {
     canonicalPlaceId,
@@ -33,7 +33,7 @@ function initialPlace(locations: LocationNode[]): CanonicalPlaceSelection | null
     scope: scopeFromLocation(location),
     administrativeContext: location.selectionContextLabel || null,
     canonicalPath: location.canonicalPath || null,
-    parentPlaceId: location.parentCanonicalLocationId || null,
+    parentPlaceId: location.parentCanonicalPlaceId || null,
   };
 }
 
@@ -42,17 +42,15 @@ function locationFromPlace(place: CanonicalPlaceSelection): LocationNode {
   const type: LocationNode['type'] =
     place.scope === 'province' ? 'province' : place.scope === 'metro_city' ? 'city' : 'suburb';
   return {
-    id: place.canonicalPlaceId,
-    canonicalLocationId: place.canonicalPlaceId,
+    canonicalPlaceId: place.canonicalPlaceId,
     factualType: place.placeType,
     name: place.label,
     slug: segments[segments.length - 1] || place.canonicalPlaceId,
     type,
     ...(segments[0] ? { provinceSlug: segments[0] } : {}),
     ...(type === 'suburb' && segments.length > 2 ? { citySlug: segments[1] } : {}),
-    ...(place.parentPlaceId ? { parentCanonicalLocationId: place.parentPlaceId } : {}),
+    ...(place.parentPlaceId ? { parentCanonicalPlaceId: place.parentPlaceId } : {}),
     ...(place.canonicalPath ? { canonicalPath: place.canonicalPath } : {}),
-    selectionKind: 'canonical_location',
     selectionTypeLabel: place.placeType.replace(/_/g, ' '),
     ...(place.administrativeContext
       ? { selectionContextLabel: place.administrativeContext }

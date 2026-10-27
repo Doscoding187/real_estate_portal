@@ -184,7 +184,7 @@ export function DiscoverProperties({
   const broadConfirmed =
     needsHomeAreaClarification(selection) &&
     Boolean(selection.locations[0]) &&
-    homeSearch?.confirmedBroadId === selection.locations[0]?.id;
+    homeSearch?.confirmedBroadPlaceId === selection.locations[0]?.canonicalPlaceId;
   const chooseCategory = (type: 'sale' | 'rent' | 'developments', category?: string) => {
     if (type === 'developments') {
       if (developmentPlace) {
@@ -201,7 +201,7 @@ export function DiscoverProperties({
     if (
       href &&
       (!needsHomeAreaClarification(selection) ||
-        homeSearch.confirmedBroadId === selection.locations[0]?.id)
+        homeSearch.confirmedBroadPlaceId === selection.locations[0]?.canonicalPlaceId)
     ) {
       setLocation(href);
       return;
@@ -618,8 +618,10 @@ export function DiscoverProperties({
             initialSelection={selection}
             onConfirm={next => {
               homeSearch.setLocations(next.locations);
-              homeSearch.setConfirmedBroadId(
-                needsHomeAreaClarification(next) ? (next.locations[0]?.id ?? null) : null,
+              homeSearch.setConfirmedBroadPlaceId(
+                needsHomeAreaClarification(next)
+                  ? (next.locations[0]?.canonicalPlaceId ?? null)
+                  : null,
               );
               const href = buildSelectedDiscoverHref(
                 picker.type,

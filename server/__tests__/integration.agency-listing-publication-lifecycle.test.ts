@@ -694,7 +694,7 @@ describeWithDb('agency full operating journey acceptance', () => {
 
     const location = await canonicalSandtonLocation();
     const canonicalCoverage = {
-      canonicalLocationId: location.canonicalPlaceId,
+      canonicalPlaceId: location.canonicalPlaceId,
       label: location.label,
     };
     const rejectedTextCoverageResponse = await fetch(`${baseUrl}/api/agent/profile`, {

@@ -4,8 +4,7 @@ import { trpc } from '@/lib/trpc';
 import { LocationNode } from '@/types/location';
 import { isCanonicalPlaceId } from '../../../shared/placeAuthority';
 
-interface DatabaseLocationSuggestion {
-  id: string;
+interface CanonicalPlaceSuggestion {
   name: string;
   type: 'province' | 'city' | 'suburb';
   slug: string;
@@ -13,8 +12,8 @@ interface DatabaseLocationSuggestion {
   cityName?: string;
   provinceSlug: string;
   citySlug?: string;
-  canonicalLocationId: string;
-  parentCanonicalLocationId?: string;
+  canonicalPlaceId: string;
+  parentCanonicalPlaceId?: string;
   canonicalPath?: string;
   selectionTypeLabel?: string;
   selectionContextLabel?: string;
@@ -65,8 +64,8 @@ export function LocationAutosuggest({
 
   const {
     data: placeDiscovery,
-    isLoading: isDatabaseSearchLoading,
-    error: databaseSearchError,
+    isLoading: isPlaceDiscoveryLoading,
+    error: placeDiscoveryError,
   } = trpc.placeAuthority.discover.useQuery(
     { query: debouncedQuery },
     {
@@ -74,7 +73,7 @@ export function LocationAutosuggest({
       enabled: debouncedQuery.length >= 2,
     },
   );
-  const databaseSuggestions: DatabaseLocationSuggestion[] = (placeDiscovery?.results || [])
+  const placeSuggestions: CanonicalPlaceSuggestion[] = (placeDiscovery?.results || [])
     .filter(candidate => candidate.searchEligible && isCanonicalPlaceId(candidate.placeId))
     .flatMap(candidate => {
       const path = candidate.canonicalPath || undefined;
@@ -90,14 +89,13 @@ export function LocationAutosuggest({
       if (!type) return [];
       return [
         {
-          id: candidate.placeId,
           name: candidate.preferredPublicLabel || candidate.matchedName,
           type,
           slug: segments[segments.length - 1] || candidate.placeId,
           provinceSlug: segments[0] || '',
           citySlug: segments.length > 2 ? segments[1] : undefined,
-          canonicalLocationId: candidate.placeId,
-          parentCanonicalLocationId:
+          canonicalPlaceId: candidate.placeId,
+          parentCanonicalPlaceId:
             candidate.context.cityPlaceId || candidate.context.provincePlaceId || undefined,
           ...(path ? { canonicalPath: path } : {}),
           selectionTypeLabel: candidate.placeType.replace(/_/g, ' '),
@@ -105,7 +103,7 @@ export function LocationAutosuggest({
         },
       ];
     });
-  const suggestionCount = databaseSuggestions.length;
+  const suggestionCount = placeSuggestions.length;
 
   useEffect(() => {
     const trimmedQuery = query.trim();
@@ -129,9 +127,9 @@ export function LocationAutosuggest({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleDatabaseLocationSelect = (location: DatabaseLocationSuggestion) => {
+  const handlePlaceSelect = (location: CanonicalPlaceSuggestion) => {
     if (selectedLocations.length >= maxLocations) return;
-    if (!onSelect || !isCanonicalPlaceId(location.canonicalLocationId)) return;
+    if (!onSelect || !isCanonicalPlaceId(location.canonicalPlaceId)) return;
     if (
       location.canonicalPath &&
       (!location.canonicalPath.startsWith('/') ||
@@ -147,15 +145,14 @@ export function LocationAutosuggest({
     activeInputRef.current?.focus();
 
     onSelect({
-      id: location.canonicalLocationId,
+      canonicalPlaceId: location.canonicalPlaceId,
       name: location.name,
       slug: location.slug,
       type: location.type,
-      canonicalLocationId: location.canonicalLocationId,
       provinceSlug: location.provinceSlug,
       ...(location.citySlug ? { citySlug: location.citySlug } : {}),
-      ...(location.parentCanonicalLocationId
-        ? { parentCanonicalLocationId: location.parentCanonicalLocationId }
+      ...(location.parentCanonicalPlaceId
+        ? { parentCanonicalPlaceId: location.parentCanonicalPlaceId }
         : {}),
       ...(location.canonicalPath ? { canonicalPath: location.canonicalPath } : {}),
       ...(location.selectionTypeLabel ? { selectionTypeLabel: location.selectionTypeLabel } : {}),
@@ -166,9 +163,9 @@ export function LocationAutosuggest({
   };
 
   const handleSuggestionSelect = (index: number) => {
-    const suggestion = databaseSuggestions[index];
+    const suggestion = placeSuggestions[index];
     if (suggestion) {
-      handleDatabaseLocationSelect(suggestion);
+      handlePlaceSelect(suggestion);
       return;
     }
   };
@@ -228,7 +225,7 @@ export function LocationAutosuggest({
         {renderSelectedLocations &&
           selectedLocations.map((loc, index) => (
             <div
-              key={`${loc.id}-${index}`}
+              key={`${loc.canonicalPlaceId}-${index}`}
               className="flex items-center gap-1.5 bg-blue-700 text-white text-sm px-3 py-1.5 rounded-md whitespace-nowrap shadow-sm animate-in fade-in zoom-in duration-200"
               onClick={e => e.stopPropagation()}
             >
@@ -268,7 +265,7 @@ export function LocationAutosuggest({
             selectedIndex >= 0 ? `${listboxId}-option-${selectedIndex}` : undefined
           }
           aria-describedby={inputAriaDescribedBy}
-          aria-busy={isDatabaseSearchLoading}
+          aria-busy={isPlaceDiscoveryLoading}
           placeholder={
             showPlaceholder
               ? placeholder
@@ -291,7 +288,7 @@ export function LocationAutosuggest({
 
         {/* Right Icon */}
         <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-          {isDatabaseSearchLoading ? (
+          {isPlaceDiscoveryLoading ? (
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
           ) : showIcon ? (
             <MapPin className="h-4 w-4 text-muted-foreground" />
@@ -300,19 +297,19 @@ export function LocationAutosuggest({
       </div>
 
       <div role="status" aria-live="polite" className="sr-only">
-        {isDatabaseSearchLoading
-          ? 'Loading location suggestions'
-          : databaseSearchError
+        {isPlaceDiscoveryLoading
+          ? 'Loading Place suggestions'
+          : placeDiscoveryError
             ? 'Canonical Place suggestions are unavailable.'
-            : suggestionCount > 0
-              ? `${suggestionCount} location suggestions available`
+          : suggestionCount > 0
+              ? `${suggestionCount} Place suggestions available`
               : debouncedQuery.length >= 2
                 ? 'No locations found'
                 : ''}
       </div>
 
       {/* Suggestions Dropdown */}
-      {showSuggestions && !isLimitReached && databaseSuggestions.length > 0 && (
+      {showSuggestions && !isLimitReached && placeSuggestions.length > 0 && (
         <div
           id={listboxId}
           role="listbox"
@@ -320,17 +317,18 @@ export function LocationAutosuggest({
           className="absolute z-[9999] top-full left-0 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-80 overflow-y-auto animate-in fade-in slide-in-from-top-1 duration-200"
         >
           {/* Canonical Place results from the admitted Place Authority. */}
-          {databaseSuggestions.map((location, index) => {
+          {placeSuggestions.map((location, index) => {
             const suggestionIndex = index;
-            const context = [location.cityName, location.provinceName].filter(Boolean).join(', ');
+            const context = location.selectionContextLabel ||
+              [location.cityName, location.provinceName].filter(Boolean).join(', ');
             return (
               <div
-                key={`database-${location.type}-${location.id}`}
+                key={`place-${location.canonicalPlaceId}`}
                 id={`${listboxId}-option-${suggestionIndex}`}
                 role="option"
                 aria-selected={suggestionIndex === selectedIndex}
                 tabIndex={-1}
-                onClick={() => handleDatabaseLocationSelect(location)}
+                onClick={() => handlePlaceSelect(location)}
                 onMouseEnter={() => setSelectedIndex(suggestionIndex)}
                 className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${
                   suggestionIndex === selectedIndex ? 'bg-blue-50' : 'hover:bg-gray-50'
@@ -353,11 +351,11 @@ export function LocationAutosuggest({
 
       {/* No results or limit message */}
       {showSuggestions &&
-        !isDatabaseSearchLoading &&
-        (databaseSuggestions.length === 0 && debouncedQuery.length >= 2 ? (
+        !isPlaceDiscoveryLoading &&
+        (placeSuggestions.length === 0 && debouncedQuery.length >= 2 ? (
           <div className="absolute z-[9999] w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-4">
             <p className="text-sm text-gray-500 text-center">
-              {databaseSearchError
+              {placeDiscoveryError
                 ? 'Canonical Place suggestions are unavailable.'
                 : 'No locations found'}
             </p>

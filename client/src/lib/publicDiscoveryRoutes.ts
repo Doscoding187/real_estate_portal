@@ -19,8 +19,8 @@ export const DISCOVER_PROPERTY_TYPE_BY_LABEL = {
 type CanonicalBrowsePlace = Pick<CanonicalPlaceSelection, 'canonicalPlaceId' | 'scope'>;
 
 function placeFromLocation(location: LocationNode): CanonicalBrowsePlace | null {
-  const canonicalPlaceId = location.canonicalLocationId || location.id;
-  if (!isCanonicalPlaceId(canonicalPlaceId) || location.type === 'area') return null;
+  const canonicalPlaceId = location.canonicalPlaceId;
+  if (!isCanonicalPlaceId(canonicalPlaceId)) return null;
   const scope: PlaceSearchScope =
     location.type === 'province' ? 'province' : location.type === 'city' ? 'metro_city' : 'locality';
   return { canonicalPlaceId, scope };
@@ -37,7 +37,7 @@ function buildPlaceBrowseHref(
   }
   const journey = listingType === 'rent' ? 'rent' : 'buy';
   const scope = place
-    ? { kind: place.scope, canonicalLocationId: place.canonicalPlaceId }
+    ? { kind: place.scope, canonicalPlaceId: place.canonicalPlaceId }
     : undefined;
   const href = buildTransactionalGeographyHref({
       journey,

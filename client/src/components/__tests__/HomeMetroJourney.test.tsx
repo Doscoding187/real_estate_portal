@@ -6,10 +6,9 @@ import { HomeSearchProvider } from '@/contexts/HomeSearchContext';
 import { EnhancedHero } from '@/components/EnhancedHero';
 import { HomeAreaPicker } from '@/components/HomeAreaPicker';
 
-const { navigate, placeLookup, areaLookup, current } = vi.hoisted(() => ({
+const { navigate, placeLookup, current } = vi.hoisted(() => ({
   navigate: vi.fn(),
   placeLookup: vi.fn(),
-  areaLookup: vi.fn(),
   current: { location: null as LocationNode | null },
 }));
 vi.mock('wouter', () => ({ useLocation: () => ['/', navigate] }));
@@ -17,7 +16,6 @@ vi.mock('@/lib/trpc', () => ({
   trpc: {
     placeAuthority: {
       discover: { useQuery: (...args: unknown[]) => placeLookup(...args) },
-      discoverSearchAreas: { useQuery: (...args: unknown[]) => areaLookup(...args) },
     },
   },
 }));
@@ -39,7 +37,7 @@ const cases = [
 ] as const;
 function discovery(location: LocationNode): CanonicalPlaceOption {
   return {
-    placeId: location.id,
+    placeId: location.canonicalPlaceId,
     preferredPublicLabel: location.name,
     matchedName: location.name,
     matchedNameRole: 'preferred_public',
@@ -54,7 +52,6 @@ function discovery(location: LocationNode): CanonicalPlaceOption {
 beforeEach(() => {
   navigate.mockClear();
   placeLookup.mockReturnValue({ data: undefined, isFetching: false, isError: false });
-  areaLookup.mockReturnValue({ data: undefined, isFetching: false, isError: false });
 });
 afterEach(cleanup);
 describe.each(['buy', 'rent'] as const)('Country-wide homepage %s scope clarification', journey => {
@@ -62,8 +59,7 @@ describe.each(['buy', 'rent'] as const)('Country-wide homepage %s scope clarific
     'clarifies %s before opening its full scope, even without finer suggestions',
     (name, id, province, factualType) => {
       const location: LocationNode = {
-        id: `pl-place-01-${Number(id).toString(16).padStart(24, '0')}`,
-        canonicalLocationId: `pl-place-01-${Number(id).toString(16).padStart(24, '0')}`,
+        canonicalPlaceId: `pl-place-01-${Number(id).toString(16).padStart(24, '0')}`,
         type: 'city',
         factualType,
         name,
@@ -81,20 +77,18 @@ describe.each(['buy', 'rent'] as const)('Country-wide homepage %s scope clarific
       fireEvent.click(screen.getByRole('button', { name: 'Search', exact: true }));
       expect(navigate).not.toHaveBeenCalled();
       const dialog = screen.getByRole('dialog');
-      expect(within(dialog).getByText(`Choose an area in ${name}`)).toBeInTheDocument();
+      expect(within(dialog).getByText('Choose a Place')).toBeInTheDocument();
       expect(within(dialog).queryByRole('option')).toBeNull();
-      fireEvent.click(within(dialog).getByRole('button', { name: 'Search this place' }));
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Search this Place' }));
       const url = new URL(navigate.mock.calls[0][0], 'http://localhost');
       expect(url.pathname).toBe(journey === 'buy' ? '/property-for-sale' : '/property-to-rent');
-      expect(url.searchParams.get('canonicalPlaceId')).toBe(location.id);
-      expect(url.searchParams.has('searchAreaId')).toBe(false);
+      expect(url.searchParams.get('canonicalPlaceId')).toBe(location.canonicalPlaceId);
     },
   );
 });
 it('keeps municipality-context town selection on its exact Place identity', async () => {
   const alberton: LocationNode = {
-    id: 'pl-place-01-00000000000000000000000c',
-    canonicalLocationId: 'pl-place-01-00000000000000000000000c',
+    canonicalPlaceId: 'pl-place-01-00000000000000000000000c',
     type: 'city',
     factualType: 'town',
     name: 'Alberton',
@@ -113,11 +107,9 @@ it('keeps municipality-context town selection on its exact Place identity', asyn
     <HomeAreaPicker
       open
       onOpenChange={vi.fn()}
-      initialSelection={{ locations: [], searchArea: null }}
-      cityHint="Ekurhuleni"
+      initialSelection={{ locations: [] }}
       journey="buy"
       onConfirm={confirm}
-      onExplore={vi.fn()}
     />,
   );
   fireEvent.change(screen.getByRole('combobox', { name: 'Search a city, town, suburb or locality' }), {
@@ -125,11 +117,10 @@ it('keeps municipality-context town selection on its exact Place identity', asyn
   });
   fireEvent.click(await screen.findByRole('option', { name: /Alberton.*Ekurhuleni/ }));
   expect(confirm).not.toHaveBeenCalled();
-  fireEvent.click(screen.getByRole('button', { name: 'Search this place' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Search this Place' }));
   expect(confirm).toHaveBeenCalledWith(
     expect.objectContaining({
-      locations: [expect.objectContaining({ id: 'pl-place-01-00000000000000000000000c', name: 'Alberton' })],
-      searchArea: null,
+      locations: [expect.objectContaining({ canonicalPlaceId: 'pl-place-01-00000000000000000000000c', name: 'Alberton' })],
     }),
   );
 });

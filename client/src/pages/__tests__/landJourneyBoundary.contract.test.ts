@@ -7,11 +7,14 @@ const detail = readFileSync(resolve(process.cwd(), 'client/src/pages/LandDetail.
 const review = readFileSync(resolve(process.cwd(), 'client/src/pages/admin/LandReviewWorkspace.tsx'), 'utf8');
 
 describe('Land UI boundary contracts', () => {
-  it('authors Land through canonical province and city selections, not free-text geography alone', () => {
-    expect(authoring).toContain('trpc.location.getLocationHierarchy.useQuery');
-    expect(authoring).toContain('provinceId: Number(form.provinceId)');
-    expect(authoring).toContain('cityId: Number(form.cityId)');
-    expect(authoring).toContain('disabled={create.isPending || !form.provinceId || !form.cityId}');
+  it('selects Land geography through the canonical Place authority', () => {
+    expect(authoring).toContain('<CanonicalPlaceSelector value={canonicalPlace}');
+    expect(authoring).toContain('label="Canonical Place"');
+    expect(authoring).toContain('LAND_CANONICAL_ASSIGNMENT_BLOCKER');
+    expect(authoring).toContain('disabled title={LAND_CANONICAL_ASSIGNMENT_BLOCKER}');
+    expect(authoring).not.toContain('trpc.location.getLocationHierarchy.useQuery');
+    expect(authoring).not.toContain('provinceId');
+    expect(authoring).not.toContain('cityId');
     expect(authoring).not.toContain('identifierHash');
   });
 

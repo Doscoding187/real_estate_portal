@@ -15,9 +15,8 @@ describe('ListingNavbar canonical Place selection', () => {
       transactionType: 'for-sale',
       selectedLocations: [
         {
-          id: sandtonId,
-          canonicalLocationId: sandtonId,
-          parentCanonicalLocationId: johannesburgId,
+          canonicalPlaceId: sandtonId,
+          parentCanonicalPlaceId: johannesburgId,
           name: 'Sandton',
           slug: 'sandton',
           type: 'suburb',

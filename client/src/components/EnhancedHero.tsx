@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -57,7 +57,7 @@ import {
   resolveCanonicalLocationSelection,
 } from '@/lib/heroJourneySearch';
 import { RENT_PUBLIC_PROPERTY_TYPES } from '@shared/property-taxonomy';
-import { buildLocationDiscoveryPath, hasCanonicalLocationIdentity } from '@/lib/locationDiscovery';
+import { buildLocationDiscoveryPath, hasCanonicalPlaceIdentity } from '@/lib/locationDiscovery';
 import {
   buildConsumerJourneyUrl,
   LAND_PUBLIC_CLASSIFICATION_OPTIONS,
@@ -78,7 +78,6 @@ export interface EnhancedHeroProps {
   heroMode?: 'standard' | 'province' | 'city';
   navigationItems?: { label: string; path: string; active?: boolean }[];
   customShortcuts?: { label: string; icon?: unknown; path?: string; filters?: unknown }[];
-  initialSearchQuery?: string;
   activeTab?: string;
   onTabChange?: (tab: string) => void;
 }
@@ -501,18 +500,17 @@ export function EnhancedHero({
   title,
   subtitle,
   backgroundImage,
-  initialSearchQuery = '',
   activeTab: controlledTab,
   onTabChange,
 }: EnhancedHeroProps) {
   const [, setLocation] = useLocation();
   const [internalTab, setInternalTab] = useState('');
-  const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
   const homeSearch = useHomeSearch();
   const [areaPickerOpen, setAreaPickerOpen] = useState(false);
-  const [localConfirmedBroadId, setLocalConfirmedBroadId] = useState<string | null>(null);
-  const confirmedBroadId = homeSearch?.confirmedBroadId ?? localConfirmedBroadId;
-  const setConfirmedBroadId = homeSearch?.setConfirmedBroadId ?? setLocalConfirmedBroadId;
+  const [localConfirmedBroadPlaceId, setLocalConfirmedBroadPlaceId] = useState<string | null>(null);
+  const confirmedBroadPlaceId = homeSearch?.confirmedBroadPlaceId ?? localConfirmedBroadPlaceId;
+  const setConfirmedBroadPlaceId =
+    homeSearch?.setConfirmedBroadPlaceId ?? setLocalConfirmedBroadPlaceId;
   const [localLocations, setLocalLocations] = useState<LocationNode[]>([]);
   const [developmentPlace, setDevelopmentPlace] = useState<CanonicalPlaceSelection | null>(null);
   const selectedLocations = homeSearch?.locations ?? localLocations;
@@ -534,7 +532,7 @@ export function EnhancedHero({
   const hasCanonicalLocations =
     selectedLocations.length > 0 &&
     selectedLocations.every(
-      location => location.type !== 'area' && hasCanonicalLocationIdentity(location),
+      location => hasCanonicalPlaceIdentity(location),
     );
   const canSubmitSearch =
     journey === 'developments'
@@ -583,10 +581,9 @@ export function EnhancedHero({
     setShowIntentResolver(false);
   };
   const selectCanonicalLocation = (location: LocationNode) => {
-    setConfirmedBroadId(null);
+    setConfirmedBroadPlaceId(null);
     const maxLocations = journey === 'plot_land' || !journey ? 5 : 1;
     const resolution = resolveCanonicalLocationSelection(selectedLocations, location, maxLocations);
-    setSearchQuery('');
     setSelectedLocations(resolution.locations);
     setShowIntentResolver(false);
     setLocationSelectionNotice(
@@ -692,7 +689,7 @@ export function EnhancedHero({
       // discovery page receives them as URL params.
       const search = new URLSearchParams();
       if (locations.length === 1) {
-        const id = locations[0].canonicalLocationId || locations[0].id;
+        const id = locations[0].canonicalPlaceId;
         if (id) search.set('canonicalPlaceId', id);
       }
       if (filters.market) search.set('market', String(filters.market));
@@ -710,7 +707,7 @@ export function EnhancedHero({
       homeSearch &&
       (journey === 'buy' || journey === 'rent') &&
       needsHomeAreaClarification(selection) &&
-      confirmedBroadId !== selectedLocations[0]?.id
+      confirmedBroadPlaceId !== selectedLocations[0]?.canonicalPlaceId
     ) {
       setAreaPickerOpen(true);
       return;
@@ -841,12 +838,11 @@ export function EnhancedHero({
                   inputAriaDescribedBy="homepage-journey-selection-prompt"
                   selectedLocations={selectedLocations}
                   onRemove={index => {
-                    setConfirmedBroadId(null);
+                    setConfirmedBroadPlaceId(null);
                     setSelectedLocations(items =>
                       items.filter((_, itemIndex) => itemIndex !== index),
                     );
                   }}
-                  onChange={setSearchQuery}
                   onSelect={selectCanonicalLocation}
                   onSubmit={submitSearch}
                   maxLocations={journey === 'plot_land' || !journey ? 5 : 1}
@@ -1057,8 +1053,10 @@ export function EnhancedHero({
           initialSelection={{ locations: selectedLocations }}
           onConfirm={selection => {
             setSelectedLocations(selection.locations);
-            setConfirmedBroadId(
-              needsHomeAreaClarification(selection) ? (selection.locations[0]?.id ?? null) : null,
+            setConfirmedBroadPlaceId(
+              needsHomeAreaClarification(selection)
+                ? (selection.locations[0]?.canonicalPlaceId ?? null)
+                : null,
             );
             setAreaPickerOpen(false);
             runSearch(selection.locations);

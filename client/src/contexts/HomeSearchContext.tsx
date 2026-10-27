@@ -50,8 +50,8 @@ type HomeSearchState = {
   setLocations: Dispatch<SetStateAction<LocationNode[]>>;
   filters: HomeSearchFilters;
   setFilters: Dispatch<SetStateAction<HomeSearchFilters>>;
-  confirmedBroadId: string | null;
-  setConfirmedBroadId: Dispatch<SetStateAction<string | null>>;
+  confirmedBroadPlaceId: string | null;
+  setConfirmedBroadPlaceId: Dispatch<SetStateAction<string | null>>;
   journey: string;
   onJourneyChange: (journey: string) => void;
 };
@@ -65,7 +65,7 @@ export function HomeSearchProvider({
   journey: string;
   onJourneyChange: (journey: string) => void;
 }) {
-  const [confirmedBroadId, setConfirmedBroadId] = useState<string | null>(null);
+  const [confirmedBroadPlaceId, setConfirmedBroadPlaceId] = useState<string | null>(null);
   const [locations, setLocations] = useState<LocationNode[]>([]);
   const [filters, setFilters] = useState<HomeSearchFilters>(EMPTY_HOME_SEARCH_FILTERS);
   return (
@@ -75,8 +75,8 @@ export function HomeSearchProvider({
         setLocations,
         filters,
         setFilters,
-        confirmedBroadId,
-        setConfirmedBroadId,
+        confirmedBroadPlaceId,
+        setConfirmedBroadPlaceId,
         journey,
         onJourneyChange,
       }}

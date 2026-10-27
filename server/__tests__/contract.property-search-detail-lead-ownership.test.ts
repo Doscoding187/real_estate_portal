@@ -236,7 +236,7 @@ describe('single-property search-detail-lead ownership contract', () => {
             slug: 'jane-agent',
             yearsExperience: 7,
             areasServed: JSON.stringify([
-              { canonicalLocationId: 'city:1', label: 'Johannesburg, Gauteng' },
+              { canonicalPlaceId: 'city:1', label: 'Johannesburg, Gauteng' },
             ]),
             rating: 4.8,
             reviewCount: 12,

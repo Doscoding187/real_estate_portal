@@ -13,8 +13,7 @@ import type { LocationNode } from '@/types/location';
 
 const PLACE_ID = 'pl-place-01-000000000000000000000001';
 const CITY: LocationNode = {
-  id: PLACE_ID,
-  canonicalLocationId: PLACE_ID,
+  canonicalPlaceId: PLACE_ID,
   name: 'Johannesburg',
   slug: 'johannesburg',
   type: 'city',
@@ -22,8 +21,7 @@ const CITY: LocationNode = {
   citySlug: 'johannesburg',
 };
 const LOCALITY: LocationNode = {
-  id: 'pl-place-01-000000000000000000000002',
-  canonicalLocationId: 'pl-place-01-000000000000000000000002',
+  canonicalPlaceId: 'pl-place-01-000000000000000000000002',
   name: 'Sandton',
   slug: 'sandton',
   type: 'suburb',
@@ -52,13 +50,13 @@ describe('canonical transactional search navigation', () => {
     const parsedUrl = new URL(url, 'https://listify.test');
     const intent = resolveSearchIntent(parsedUrl.pathname, {}, parsedUrl.searchParams);
 
-    expect(parsedUrl.searchParams.get('canonicalPlaceId')).toBe(LOCALITY.canonicalLocationId);
+    expect(parsedUrl.searchParams.get('canonicalPlaceId')).toBe(LOCALITY.canonicalPlaceId);
     expect(parsedUrl.searchParams.has('city')).toBe(false);
     expect(parsedUrl.searchParams.has('suburb')).toBe(false);
     expect(intent.transactionType).toBe('for-sale');
     expect(intent.geography).toEqual({
       level: 'canonical_place',
-      canonicalPlaceId: LOCALITY.canonicalLocationId,
+      canonicalPlaceId: LOCALITY.canonicalPlaceId,
     });
     expect(intent.filters).toMatchObject({
       propertyType: 'house',
@@ -90,7 +88,7 @@ describe('canonical transactional search navigation', () => {
       buildPropertySearchUrl({
         transactionType: 'for-sale',
         selectedLocations: [CITY],
-        searchScope: { kind: 'metro_city', canonicalLocationId: PLACE_ID },
+        searchScope: { kind: 'metro_city', canonicalPlaceId: PLACE_ID },
       }),
     ).toBe('/property-for-sale?searchError=invalid-place-authority');
   });
@@ -98,8 +96,7 @@ describe('canonical transactional search navigation', () => {
   it('replaces a selected Place in a single-place journey instead of forming an OR scope', () => {
     const nextPlace: LocationNode = {
       ...LOCALITY,
-      id: 'pl-place-01-000000000000000000000003',
-      canonicalLocationId: 'pl-place-01-000000000000000000000003',
+      canonicalPlaceId: 'pl-place-01-000000000000000000000003',
       name: 'Rosebank',
       slug: 'rosebank',
     };
@@ -116,7 +113,7 @@ describe('canonical transactional search navigation', () => {
       name: 'Sandton',
       slug: 'sandton',
       type: 'suburb',
-    };
+    } as unknown as LocationNode;
     expect(buildBuySearchUrl({ selectedLocations: [providerLocation] })).toBe(
       '/property-for-sale?searchError=invalid-place-authority',
     );

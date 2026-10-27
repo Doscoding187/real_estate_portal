@@ -77,7 +77,7 @@ const at = new Date('2026-07-16T10:00:00.000Z');
 
 const CANONICAL_AGENT_COVERAGE = JSON.stringify([
   {
-    canonicalLocationId: 'suburb:1',
+    canonicalPlaceId: 'suburb:1',
     label: 'Coverage suburb, Coverage city, Coverage province',
   },
 ]);

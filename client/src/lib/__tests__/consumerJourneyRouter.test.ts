@@ -6,44 +6,40 @@ import {
 } from '@/lib/consumerJourneyRouter';
 
 const sandton = {
-  id: 'pl-place-01-000000000000000000000001',
-  canonicalLocationId: 'pl-place-01-000000000000000000000001',
+  canonicalPlaceId: 'pl-place-01-000000000000000000000001',
   type: 'suburb' as const,
   name: 'Sandton',
   slug: 'sandton',
   provinceSlug: 'gauteng',
   citySlug: 'johannesburg',
-  parentCanonicalLocationId: 'pl-place-01-000000000000000000000002',
+  parentCanonicalPlaceId: 'pl-place-01-000000000000000000000002',
 };
 const johannesburg = {
-  id: 'pl-place-01-000000000000000000000002',
-  canonicalLocationId: 'pl-place-01-000000000000000000000002',
+  canonicalPlaceId: 'pl-place-01-000000000000000000000002',
   type: 'city' as const,
   name: 'Johannesburg',
   slug: 'johannesburg',
   provinceSlug: 'gauteng',
   citySlug: 'johannesburg',
-  parentCanonicalLocationId: 'pl-place-01-000000000000000000000010',
+  parentCanonicalPlaceId: 'pl-place-01-000000000000000000000010',
 };
 const capeTown = {
-  id: 'pl-place-01-000000000000000000000003',
-  canonicalLocationId: 'pl-place-01-000000000000000000000003',
+  canonicalPlaceId: 'pl-place-01-000000000000000000000003',
   type: 'city' as const,
   name: 'Cape Town',
   slug: 'cape-town',
   provinceSlug: 'western-cape',
   citySlug: 'cape-town',
-  parentCanonicalLocationId: 'pl-place-01-000000000000000000000011',
+  parentCanonicalPlaceId: 'pl-place-01-000000000000000000000011',
 };
 const pretoria = {
-  id: 'pl-place-01-000000000000000000000004',
-  canonicalLocationId: 'pl-place-01-000000000000000000000004',
+  canonicalPlaceId: 'pl-place-01-000000000000000000000004',
   type: 'city' as const,
   name: 'Pretoria',
   slug: 'pretoria',
   provinceSlug: 'gauteng',
   citySlug: 'pretoria',
-  parentCanonicalLocationId: 'pl-place-01-000000000000000000000010',
+  parentCanonicalPlaceId: 'pl-place-01-000000000000000000000010',
 };
 
 describe('consumer journey router', () => {

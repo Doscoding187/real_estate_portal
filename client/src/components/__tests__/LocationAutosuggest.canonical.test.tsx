@@ -59,14 +59,13 @@ describe('LocationAutosuggest canonical Place discovery', () => {
     fireEvent.click(screen.getByRole('option', { name: /Sandton/ }));
 
     expect(onSelect).toHaveBeenCalledWith({
-      id: sandtonId,
       name: 'Sandton',
       slug: 'sandton',
       type: 'suburb',
-      canonicalLocationId: sandtonId,
+      canonicalPlaceId: sandtonId,
       provinceSlug: 'gauteng',
       citySlug: 'johannesburg',
-      parentCanonicalLocationId: johannesburgId,
+      parentCanonicalPlaceId: johannesburgId,
       canonicalPath: '/gauteng/johannesburg/sandton',
       selectionTypeLabel: 'suburb',
       selectionContextLabel: 'Johannesburg',
@@ -87,8 +86,7 @@ describe('LocationAutosuggest canonical Place discovery', () => {
 
     expect(onSelect).toHaveBeenCalledWith(
       expect.objectContaining({
-        id: sandtonId,
-        canonicalLocationId: sandtonId,
+        canonicalPlaceId: sandtonId,
         canonicalPath: '/gauteng/johannesburg/sandton',
       }),
     );
@@ -126,8 +124,7 @@ describe('LocationAutosuggest canonical Place discovery', () => {
       <LocationAutosuggest
         selectedLocations={[
           {
-            id: sandtonId,
-            canonicalLocationId: sandtonId,
+            canonicalPlaceId: sandtonId,
             name: 'Sandton',
             slug: 'sandton',
             type: 'suburb',

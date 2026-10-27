@@ -1,6 +1,6 @@
 import {
   AGENT_COVERAGE_AREA_MAX,
-  parseCanonicalAgentCoverageLocationId,
+  parseCanonicalAgentCoveragePlaceId,
   type AgentCoverageArea,
 } from '../../shared/agentCoverageArea';
 import { loadCanonicalPlaceSearchProjection } from './canonicalPlaceSearchService';
@@ -30,23 +30,23 @@ export async function resolveSubmittedAgentCoverageAreas(
   const canonicalPlaceIds: string[] = [];
   const seen = new Set<string>();
   for (const value of values) {
-    const parsed = parseCanonicalAgentCoverageLocationId(value);
+    const parsed = parseCanonicalAgentCoveragePlaceId(value);
     if (!parsed) {
       throw new AgentCoverageAreaValidationError(
         'Choose coverage areas from the admitted canonical Place suggestions.',
       );
     }
-    if (seen.has(parsed.canonicalLocationId)) continue;
-    seen.add(parsed.canonicalLocationId);
-    canonicalPlaceIds.push(parsed.canonicalLocationId);
+    if (seen.has(parsed.canonicalPlaceId)) continue;
+    seen.add(parsed.canonicalPlaceId);
+    canonicalPlaceIds.push(parsed.canonicalPlaceId);
   }
 
   const projection = await loadCanonicalPlaceSearchProjection(undefined, {
     placeIds: canonicalPlaceIds,
   });
-  return canonicalPlaceIds.map(canonicalLocationId => {
-    const execution = projection.executions.get(canonicalLocationId);
-    const label = projection.labels.get(canonicalLocationId);
+  return canonicalPlaceIds.map(canonicalPlaceId => {
+    const execution = projection.executions.get(canonicalPlaceId);
+    const label = projection.labels.get(canonicalPlaceId);
     if (!execution || !label) {
       throw new AgentCoverageAreaValidationError(
         'Choose active, searchable coverage areas from the admitted canonical Place suggestions.',
@@ -58,6 +58,6 @@ export async function resolveSubmittedAgentCoverageAreas(
         : execution.scope === 'metro_city'
           ? [label.label, label.province]
           : [label.label];
-    return { canonicalLocationId, label: hierarchy.filter(Boolean).join(', ') };
+    return { canonicalPlaceId, label: hierarchy.filter(Boolean).join(', ') };
   });
 }

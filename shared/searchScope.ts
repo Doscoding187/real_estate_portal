@@ -32,15 +32,15 @@ export type SearchJourneyId = (typeof SEARCH_JOURNEY_IDS)[number];
 export type SearchScopeMember =
   | {
       kind: 'province';
-      canonicalLocationId: string;
+      canonicalPlaceId: string;
     }
   | {
       kind: 'metro_city';
-      canonicalLocationId: string;
+      canonicalPlaceId: string;
     }
   | {
       kind: 'locality';
-      canonicalLocationId: string;
+      canonicalPlaceId: string;
     };
 
 export interface MultiLocationSearchScope {
@@ -58,8 +58,7 @@ export type SearchScopeValidationErrorCode =
   | 'invalid_shape'
   | 'unsupported_scope_kind'
   | 'unknown_scope_field'
-  | 'invalid_canonical_location_id'
-  | 'canonical_level_mismatch'
+  | 'invalid_canonical_place_id'
   | 'multi_location_invalid'
   | 'multi_location_too_many'
   | 'multi_location_mixed_kinds';
@@ -116,7 +115,7 @@ function parseSearchScopeMember(
     };
   }
 
-  if (!hasOnlyKeys(value, ['kind', 'canonicalLocationId'])) {
+  if (!hasOnlyKeys(value, ['kind', 'canonicalPlaceId'])) {
     return {
       ok: false,
       error: {
@@ -128,11 +127,11 @@ function parseSearchScopeMember(
 
   // Place IDs carry identity; the scope kind is the level asserted by the
   // canonical Place projection.
-  if (!isCanonicalPlaceId(value.canonicalLocationId)) {
+  if (!isCanonicalPlaceId(value.canonicalPlaceId)) {
     return {
       ok: false,
       error: {
-        code: 'invalid_canonical_location_id',
+        code: 'invalid_canonical_place_id',
         message: 'Search scope members require canonical Place identities.',
       },
     };
@@ -141,13 +140,13 @@ function parseSearchScopeMember(
     ok: true,
     member: {
       kind: value.kind,
-      canonicalLocationId: value.canonicalLocationId,
+      canonicalPlaceId: value.canonicalPlaceId,
     },
   };
 }
 
 export function searchScopeMemberIdentity(member: SearchScopeMember): string {
-  return `${member.kind}:${member.canonicalLocationId}`;
+  return `${member.kind}:${member.canonicalPlaceId}`;
 }
 
 export function canonicalizeSearchScopeMembers(
@@ -229,21 +228,21 @@ export function parseSearchScope(value: unknown): SearchScopeParseResult {
     };
   }
 
-  if (!hasOnlyKeys(value, ['kind', 'canonicalLocationId'])) {
+  if (!hasOnlyKeys(value, ['kind', 'canonicalPlaceId'])) {
     return invalid('unknown_scope_field', 'Canonical scope contains an unsupported field.');
   }
 
   // A Place Authority identity does not encode scope. The type is a projection
   // asserted by the Place package; the ID remains the sole request authority.
-  if (!isCanonicalPlaceId(value.canonicalLocationId)) {
+  if (!isCanonicalPlaceId(value.canonicalPlaceId)) {
     return invalid(
-      'invalid_canonical_location_id',
+      'invalid_canonical_place_id',
       'Canonical scope requires a valid canonical Place identity.',
     );
   }
   return {
     ok: true,
-    scope: { kind, canonicalLocationId: value.canonicalLocationId },
+    scope: { kind, canonicalPlaceId: value.canonicalPlaceId },
   };
 }
 

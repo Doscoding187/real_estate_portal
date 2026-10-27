@@ -76,7 +76,7 @@ function dbTimestamp(value: Date): string {
 
 async function canonicalSandtonCoverageArea() {
   return {
-    canonicalLocationId: CANONICAL_SANDTON_PLACE_ID,
+    canonicalPlaceId: CANONICAL_SANDTON_PLACE_ID,
     label: 'Sandton, Johannesburg, Gauteng',
   };
 }
@@ -294,7 +294,7 @@ describeWithDb('agency member workspace authority', () => {
       phone: '+27115550123',
       bio: 'A complete professional profile for agency workspace acceptance.',
       profileImage: 'https://example.test/member.jpg',
-      areasServed: [sandtonCoverage.canonicalLocationId],
+      areasServed: [sandtonCoverage.canonicalPlaceId],
       focus: 'sales',
       propertyTypes: ['house'],
     });

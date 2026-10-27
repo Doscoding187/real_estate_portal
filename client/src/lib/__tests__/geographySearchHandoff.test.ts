@@ -19,7 +19,7 @@ describe('canonical Place transactional handoff', () => {
       expect(
         buildTransactionalGeographyHref({
           journey: journey as never,
-          scope: { kind: 'metro_city', canonicalLocationId: johannesburgId },
+          scope: { kind: 'metro_city', canonicalPlaceId: johannesburgId },
         }),
       ).toBeUndefined();
     },
@@ -28,11 +28,11 @@ describe('canonical Place transactional handoff', () => {
   it('uses only the Place identity for sale and rent search', () => {
     const sale = buildTransactionalGeographyHref({
       journey: 'buy',
-      scope: { kind: 'metro_city', canonicalLocationId: johannesburgId },
+      scope: { kind: 'metro_city', canonicalPlaceId: johannesburgId },
     })!;
     const rent = buildTransactionalGeographyHref({
       journey: 'rent',
-      scope: { kind: 'locality', canonicalLocationId: hiltoniaId },
+      scope: { kind: 'locality', canonicalPlaceId: hiltoniaId },
     })!;
 
     expect(paramsFor(sale).get('canonicalPlaceId')).toBe(johannesburgId);
@@ -56,7 +56,7 @@ describe('canonical Place transactional handoff', () => {
     expect(
       buildTransactionalGeographyHref({
         journey: 'buy',
-        scope: { kind: 'metro_city', canonicalLocationId: 'city:12' },
+        scope: { kind: 'metro_city', canonicalPlaceId: 'city:12' },
       }),
     ).toBeUndefined();
     expect(
@@ -65,8 +65,8 @@ describe('canonical Place transactional handoff', () => {
         scope: {
           kind: 'multi_location',
           members: [
-            { kind: 'locality', canonicalLocationId: hiltoniaId },
-            { kind: 'locality', canonicalLocationId: johannesburgId },
+            { kind: 'locality', canonicalPlaceId: hiltoniaId },
+            { kind: 'locality', canonicalPlaceId: johannesburgId },
           ],
         },
       }),
@@ -76,25 +76,24 @@ describe('canonical Place transactional handoff', () => {
   it('maps canonical location nodes without using labels or slugs as authority', () => {
     expect(
       createCanonicalSearchLocation({
-        id: johannesburgId,
-        canonicalLocationId: johannesburgId,
+        canonicalPlaceId: johannesburgId,
         type: 'city',
       }),
     ).toEqual({
-      scope: { kind: 'metro_city', canonicalLocationId: johannesburgId },
+      scope: { kind: 'metro_city', canonicalPlaceId: johannesburgId },
     });
     expect(
       createCanonicalSearchLocation({
         id: 'Sandton',
         type: 'suburb',
-      }),
+      } as never),
     ).toBeUndefined();
   });
 
   it('round-trips only canonical Place identity through SearchIntent', () => {
     const href = buildTransactionalGeographyHref({
       journey: 'rent',
-      scope: { kind: 'metro_city', canonicalLocationId: johannesburgId },
+      scope: { kind: 'metro_city', canonicalPlaceId: johannesburgId },
     })!;
     const url = new URL(href, 'https://listify.test');
     const intent = resolveSearchIntent(url.pathname, {}, url.searchParams);

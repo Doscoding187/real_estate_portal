@@ -67,27 +67,25 @@ export function journeyForTransactionType(
 }
 
 /**
- * Converts one canonical LocationNode into the shared SearchScope contract.
+ * Converts one Place selection into the shared SearchScope contract.
  * Display labels and slugs do not participate in this conversion.
  */
 export function createCanonicalSearchLocation(
   location: Pick<
     LocationNode,
-    | 'id'
-    | 'canonicalLocationId'
+    | 'canonicalPlaceId'
     | 'type'
   >,
 ): CanonicalSearchLocation | undefined {
-  if (location.type === 'area') return undefined;
-  const placeId = location.canonicalLocationId || location.id;
+  const placeId = location.canonicalPlaceId;
   if (!isCanonicalPlaceId(placeId)) return undefined;
   if (location.type === 'province') {
-    return { scope: { kind: 'province', canonicalLocationId: placeId } };
+    return { scope: { kind: 'province', canonicalPlaceId: placeId } };
   }
   if (location.type === 'city') {
-    return { scope: { kind: 'metro_city', canonicalLocationId: placeId } };
+    return { scope: { kind: 'metro_city', canonicalPlaceId: placeId } };
   }
-  return { scope: { kind: 'locality', canonicalLocationId: placeId } };
+  return { scope: { kind: 'locality', canonicalPlaceId: placeId } };
 }
 
 /**
@@ -105,13 +103,13 @@ export function buildTransactionalGeographyHref(
 
   const scope = parsedScope?.scope;
   if (scope && scope.kind !== 'multi_location') {
-    if (!isCanonicalPlaceId(scope.canonicalLocationId)) return undefined;
+    if (!isCanonicalPlaceId(scope.canonicalPlaceId)) return undefined;
   }
   if (scope?.kind === 'multi_location') return undefined;
 
   const geography: SearchIntent['geography'] = { level: 'country' };
-  const placeScopeId = scope && isCanonicalPlaceId(scope.canonicalLocationId)
-    ? scope.canonicalLocationId
+  const placeScopeId = scope && isCanonicalPlaceId(scope.canonicalPlaceId)
+    ? scope.canonicalPlaceId
     : undefined;
   if (placeScopeId) {
     // Place identity is the only factual geography handle in a public request.

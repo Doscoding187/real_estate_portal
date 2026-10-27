@@ -130,7 +130,7 @@ describeWithDb('independent agent launch journey (publish → receive)', () => {
       approvedAt: new Date(),
       areasServed: JSON.stringify([
         {
-          canonicalLocationId: CANONICAL_PLACE_FIXTURE_ID,
+          canonicalPlaceId: CANONICAL_PLACE_FIXTURE_ID,
           label: 'Sandton, Johannesburg, Gauteng',
         },
       ]),

@@ -46,7 +46,7 @@ const ROLE_LABELS: Record<string, string> = {
   broker: 'Property Broker',
 };
 interface CanonicalAreaLink {
-  canonicalLocationId: string;
+  canonicalPlaceId: string;
   name: string;
   type: 'suburb' | 'city' | 'province' | null;
   url: string | null;
@@ -678,7 +678,7 @@ export default function AgentMicrosite() {
               <div className="as-area-picker" role="group" aria-label="Service areas">
                 {(showAllAreas ? areas : areas.slice(0, 4)).map(area => (
                   <article
-                    key={area.canonicalLocationId}
+                    key={area.canonicalPlaceId}
                     className="as-area-option"
                     data-testid="area-guide-card"
                     aria-label={area.name}

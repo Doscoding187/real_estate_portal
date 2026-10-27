@@ -551,7 +551,7 @@ describeWithDb('canonical membership maintenance (atomic unique-pair authority)'
     const agentId = await insertAgentProfile(memberUserId, agencyId, {
       areasServed: JSON.stringify([
         {
-          canonicalLocationId: CANONICAL_PLACE_FIXTURE_ID,
+          canonicalPlaceId: CANONICAL_PLACE_FIXTURE_ID,
           label: 'Canonical public recommendation fixture',
         },
       ]),

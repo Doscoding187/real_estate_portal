@@ -123,18 +123,17 @@ export type ConsumerJourneySearchInput = Omit<PropertySearchInput, 'transactionT
 
 function canonicalPlaceQuery(selectedLocations: readonly LocationNode[], max = 5) {
   if (selectedLocations.length === 0 || selectedLocations.length > max) return undefined;
-  const ids = selectedLocations.map(location => location.canonicalLocationId || location.id).filter(Boolean);
+  const ids = selectedLocations.map(location => location.canonicalPlaceId);
   if (
     ids.length !== selectedLocations.length ||
     ids.some(id => !isCanonicalPlaceId(id)) ||
     new Set(ids).size !== ids.length
   ) return undefined;
-  if (selectedLocations.some(location => location.type === 'area')) return undefined;
   if (selectedLocations.length > 1) {
     if (new Set(selectedLocations.map(location => location.type)).size !== 1) return undefined;
     const selectedType = selectedLocations[0].type;
     if (selectedType !== 'province') {
-      const parents = selectedLocations.map(location => location.parentCanonicalLocationId || '');
+      const parents = selectedLocations.map(location => location.parentCanonicalPlaceId || '');
       if (parents.some(parent => !parent) || new Set(parents).size !== 1) return undefined;
     }
   }

@@ -4,8 +4,7 @@ import { resolveSearchIntent } from '../searchIntent';
 import type { LocationNode } from '@/types/location';
 
 const midrand: LocationNode = {
-  id: 'pl-place-01-0614f47352b29b431aee83fd',
-  canonicalLocationId: 'pl-place-01-0614f47352b29b431aee83fd',
+  canonicalPlaceId: 'pl-place-01-0614f47352b29b431aee83fd',
   name: 'Midrand',
   slug: 'midrand',
   type: 'city',
@@ -19,35 +18,25 @@ describe('Place Authority geography selection handoff', () => {
     const href = buildBuySearchUrl({ selectedLocations: [midrand] });
     const url = new URL(href, 'https://property-listify.test');
 
-    expect(url.searchParams.get('canonicalPlaceId')).toBe(midrand.canonicalLocationId);
+    expect(url.searchParams.get('canonicalPlaceId')).toBe(midrand.canonicalPlaceId);
     expect(url.searchParams.get('locationId')).toBeNull();
     expect(url.searchParams.get('factualLocationId')).toBeNull();
 
     const intent = resolveSearchIntent(url.pathname, {}, url.searchParams);
     expect(intent.geography).toMatchObject({
       level: 'canonical_place',
-      canonicalPlaceId: midrand.canonicalLocationId,
+      canonicalPlaceId: midrand.canonicalPlaceId,
     });
     expect(intent.geography.locationId).toBeUndefined();
   });
 
-  it('keeps a public Search Area as a separate authority from a Place', async () => {
+  it('rejects Search Area input because only canonical Place scope is executable', async () => {
     const { buildTransactionalGeographyHref } = await import('../geographySearchHandoff');
-    const href = buildTransactionalGeographyHref({
-      journey: 'buy',
-      scope: { kind: 'search_area', searchAreaId: 'pl-sa-gp-01da060bb6c5807438a654e9' },
-      searchAreaAvailability: 'available',
-      filters: { minPrice: 100_000 },
-    })!;
-    const url = new URL(href, 'https://property-listify.test');
-
-    expect(url.pathname).toBe('/property-for-sale');
-    expect(url.searchParams.get('searchAreaId')).toBe('pl-sa-gp-01da060bb6c5807438a654e9');
-    expect(url.searchParams.get('canonicalPlaceId')).toBeNull();
-    expect(url.searchParams.get('locationId')).toBeNull();
-    expect(resolveSearchIntent(url.pathname, {}, url.searchParams).geography).toMatchObject({
-      level: 'search_area',
-      searchAreaId: 'pl-sa-gp-01da060bb6c5807438a654e9',
-    });
+    expect(
+      buildTransactionalGeographyHref({
+        journey: 'buy',
+        scope: { kind: 'search_area', searchAreaId: 'pl-sa-gp-01da060bb6c5807438a654e9' },
+      } as never),
+    ).toBeUndefined();
   });
 });

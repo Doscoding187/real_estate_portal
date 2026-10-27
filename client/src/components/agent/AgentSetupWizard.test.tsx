@@ -66,12 +66,11 @@ vi.mock('@/components/location/LocationAutocomplete', () => ({
       type="button"
       onClick={() =>
         onLocationSelect({
-          id: 34,
           name: 'Sandton',
-          type: 'suburb',
-          cityName: 'Johannesburg',
-          provinceName: 'Gauteng',
-          canonicalLocationId: 'pl-place-01-6a145c6d642ba208a2c12de7',
+          scope: 'locality',
+          placeType: 'suburb',
+          administrativeContext: 'Johannesburg, Gauteng',
+          canonicalPlaceId: 'pl-place-01-6a145c6d642ba208a2c12de7',
         })
       }
     >

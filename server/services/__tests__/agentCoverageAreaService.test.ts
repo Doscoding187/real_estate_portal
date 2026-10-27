@@ -10,7 +10,7 @@ vi.mock('../canonicalPlaceSearchService', () => ({
 
 import {
   parseAgentCoverageAreas,
-  parseCanonicalAgentCoverageLocationId,
+  parseCanonicalAgentCoveragePlaceId,
   serializeAgentCoverageAreas,
 } from '../../../shared/agentCoverageArea';
 import {
@@ -44,30 +44,35 @@ describe('agent coverage-area authority', () => {
   });
 
   it('accepts only an admitted canonical Place identity', () => {
-    expect(parseCanonicalAgentCoverageLocationId(SANDTON_ID)).toEqual({
-      canonicalLocationId: SANDTON_ID,
+    expect(parseCanonicalAgentCoveragePlaceId(SANDTON_ID)).toEqual({
+      canonicalPlaceId: SANDTON_ID,
     });
-    expect(parseCanonicalAgentCoverageLocationId('suburb:34')).toBeNull();
-    expect(parseCanonicalAgentCoverageLocationId('Sandton, Johannesburg, Gauteng')).toBeNull();
-    expect(parseCanonicalAgentCoverageLocationId('pl-place-01-not-a-place-id')).toBeNull();
+    expect(parseCanonicalAgentCoveragePlaceId('suburb:34')).toBeNull();
+    expect(parseCanonicalAgentCoveragePlaceId('Sandton, Johannesburg, Gauteng')).toBeNull();
+    expect(parseCanonicalAgentCoveragePlaceId('pl-place-01-not-a-place-id')).toBeNull();
   });
 
-  it('fails closed for historic text and bare JSON label arrays', () => {
+  it('fails closed for legacy JSON keys, text and bare label arrays', () => {
     expect(parseAgentCoverageAreas('Sandton, Johannesburg, Gauteng')).toEqual([]);
     expect(parseAgentCoverageAreas(JSON.stringify(['Sandton']))).toEqual([]);
-    expect(parseAgentCoverageAreas(JSON.stringify({ canonicalLocationId: 'suburb:34' }))).toEqual([]);
+    expect(
+      parseAgentCoverageAreas(
+        JSON.stringify([{ canonicalLocationId: SANDTON_ID, label: 'Sandton, Johannesburg, Gauteng' }]),
+      ),
+    ).toEqual([]);
+    expect(parseAgentCoverageAreas(JSON.stringify([{ canonicalPlaceId: 'suburb:34', label: 'Sandton' }]))).toEqual([]);
   });
 
   it('serializes a single typed identity without treating an empty selection as coverage', () => {
     const serialized = serializeAgentCoverageAreas([
-      { canonicalLocationId: SANDTON_ID, label: 'Sandton, Johannesburg, Gauteng' },
+      { canonicalPlaceId: SANDTON_ID, label: 'Sandton, Johannesburg, Gauteng' },
     ]);
 
     expect(serialized).toBe(
-      `[{"canonicalLocationId":"${SANDTON_ID}","label":"Sandton, Johannesburg, Gauteng"}]`,
+      `[{"canonicalPlaceId":"${SANDTON_ID}","label":"Sandton, Johannesburg, Gauteng"}]`,
     );
     expect(parseAgentCoverageAreas(serialized)).toEqual([
-      { canonicalLocationId: SANDTON_ID, label: 'Sandton, Johannesburg, Gauteng' },
+      { canonicalPlaceId: SANDTON_ID, label: 'Sandton, Johannesburg, Gauteng' },
     ]);
     expect(serializeAgentCoverageAreas([])).toBeNull();
   });
@@ -78,7 +83,7 @@ describe('agent coverage-area authority', () => {
     expect(mockLoadPlaceProjection).toHaveBeenCalledTimes(1);
     expect(mockLoadPlaceProjection).toHaveBeenCalledWith(undefined, { placeIds: [SANDTON_ID] });
     expect(result).toEqual([
-      { canonicalLocationId: SANDTON_ID, label: 'Sandton, Johannesburg, Gauteng' },
+      { canonicalPlaceId: SANDTON_ID, label: 'Sandton, Johannesburg, Gauteng' },
     ]);
   });
 

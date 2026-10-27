@@ -23,7 +23,7 @@ vi.mock('@/components/LocationAutosuggest', () => ({
       <input
         ref={props.inputRef}
         aria-describedby={props.inputAriaDescribedBy}
-        aria-label="Search by city, suburb, or area"
+        aria-label="Search admitted Places"
         onChange={event => props.onChange?.(event.target.value)}
         onKeyDown={event => {
           if (event.key === 'Enter') props.onSubmit?.();
@@ -32,8 +32,8 @@ vi.mock('@/components/LocationAutosuggest', () => ({
         role="combobox"
       />
       {props.selectedLocations?.map((location: any) => (
-        <span key={location.id}>
-          <span data-testid={`selected-location-${location.id}`}>{location.name}</span>
+        <span key={location.canonicalPlaceId}>
+          <span data-testid={`selected-location-${location.canonicalPlaceId}`}>{location.name}</span>
           <button
             type="button"
             aria-label={`Remove ${location.name}`}
@@ -48,8 +48,7 @@ vi.mock('@/components/LocationAutosuggest', () => ({
         data-testid="select-johannesburg"
         onClick={() =>
           props.onSelect?.({
-            id: johannesburgId,
-            canonicalLocationId: johannesburgId,
+            canonicalPlaceId: johannesburgId,
             name: 'Johannesburg',
             slug: 'johannesburg',
             type: 'city',
@@ -65,15 +64,14 @@ vi.mock('@/components/LocationAutosuggest', () => ({
         data-testid="select-sandton"
         onClick={() =>
           props.onSelect?.({
-            id: sandtonId,
-            canonicalLocationId: sandtonId,
+            canonicalPlaceId: sandtonId,
             name: 'Sandton',
             slug: 'sandton',
             type: 'suburb',
             provinceSlug: 'gauteng',
             citySlug: 'johannesburg',
             canonicalPath: '/gauteng/johannesburg/sandton',
-            parentCanonicalLocationId: johannesburgId,
+            parentCanonicalPlaceId: johannesburgId,
           })
         }
       >
@@ -84,15 +82,14 @@ vi.mock('@/components/LocationAutosuggest', () => ({
         data-testid="select-rosebank"
         onClick={() =>
           props.onSelect?.({
-            id: rosebankId,
-            canonicalLocationId: rosebankId,
+            canonicalPlaceId: rosebankId,
             name: 'Rosebank',
             slug: 'rosebank',
             type: 'suburb',
             provinceSlug: 'gauteng',
             citySlug: 'johannesburg',
             canonicalPath: '/gauteng/johannesburg/rosebank',
-            parentCanonicalLocationId: johannesburgId,
+            parentCanonicalPlaceId: johannesburgId,
           })
         }
       >

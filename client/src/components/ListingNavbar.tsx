@@ -19,9 +19,8 @@ export interface ListingNavbarLocation {
   provinceSlug?: string;
   citySlug?: string;
   fullAddress: string;
-  id?: string;
-  canonicalLocationId?: string;
-  parentCanonicalLocationId?: string;
+  canonicalPlaceId: string;
+  parentCanonicalPlaceId?: string;
 }
 
 const EMPTY_LISTING_NAVBAR_LOCATIONS: ListingNavbarLocation[] = [];
@@ -31,14 +30,12 @@ function canonicalNavbarLocations(
 ): ListingNavbarLocation[] {
   const location = locations[0];
   if (!location) return [];
-  const identity = location.canonicalLocationId || location.id;
-  const selection = createCanonicalSearchLocation({ ...location, id: identity || '' });
-  if (!selection || !('canonicalLocationId' in selection.scope)) return [];
+  const selection = createCanonicalSearchLocation(location);
+  if (!selection) return [];
   return [
     {
       ...location,
-      id: selection.scope.canonicalLocationId,
-      canonicalLocationId: selection.scope.canonicalLocationId,
+      canonicalPlaceId: selection.scope.canonicalPlaceId,
     },
   ];
 }
@@ -101,7 +98,7 @@ export function ListingNavbar({
       canonicalNavbarLocations(defaultLocations)
         .map(
           location =>
-            `${location.canonicalLocationId || location.id || location.slug}:${location.name}:${location.type}:${location.parentCanonicalLocationId || ''}`,
+            `${location.canonicalPlaceId}:${location.name}:${location.type}:${location.parentCanonicalPlaceId || ''}`,
         )
         .join('|'),
     [defaultLocations],
@@ -112,7 +109,7 @@ export function ListingNavbar({
       const currentLocationKey = currentLocations
         .map(
           location =>
-            `${location.canonicalLocationId || location.id || location.slug}:${location.name}:${location.type}:${location.parentCanonicalLocationId || ''}`,
+            `${location.canonicalPlaceId}:${location.name}:${location.type}:${location.parentCanonicalPlaceId || ''}`,
         )
         .join('|');
 
@@ -147,11 +144,7 @@ export function ListingNavbar({
     const canonicalSelection = createCanonicalSearchLocation(loc);
     if (!canonicalSelection) return;
 
-    const canonicalLocationId =
-      'canonicalLocationId' in canonicalSelection.scope
-        ? canonicalSelection.scope.canonicalLocationId
-        : undefined;
-    if (!canonicalLocationId) return;
+    const canonicalPlaceId = canonicalSelection.scope.canonicalPlaceId;
 
     const newLocation: ListingNavbarLocation = {
       name: loc.name,
@@ -160,16 +153,15 @@ export function ListingNavbar({
       provinceSlug: loc.provinceSlug,
       citySlug: loc.citySlug,
       fullAddress: loc.name,
-      id: canonicalLocationId,
-      canonicalLocationId,
-      parentCanonicalLocationId: loc.parentCanonicalLocationId,
+      canonicalPlaceId,
+      parentCanonicalPlaceId: loc.parentCanonicalPlaceId,
     };
     setSelectedLocations([newLocation]);
   };
 
   const removeLocation = (identity: string) => {
     const nextLocations = selectedLocations.filter(
-      location => (location.canonicalLocationId || location.id || location.slug) !== identity,
+      location => location.canonicalPlaceId !== identity,
     );
     setSelectedLocations(nextLocations);
     if (listingType) {
@@ -187,7 +179,7 @@ export function ListingNavbar({
   const removeLocationAtIndex = (index: number) => {
     const location = selectedLocations[index];
     if (!location) return;
-    removeLocation(location.canonicalLocationId || location.id || location.slug);
+    removeLocation(location.canonicalPlaceId);
   };
 
   return (
@@ -256,7 +248,7 @@ export function ListingNavbar({
             <div className="flex items-center gap-2 overflow-x-auto no-scrollbar max-w-[50%] flex-shrink-0">
               {selectedLocations.map(loc => (
                 <div
-                  key={loc.canonicalLocationId || loc.id || loc.slug}
+                  key={loc.canonicalPlaceId}
                   className="flex-shrink-0 flex items-center bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded-full border border-blue-100 whitespace-nowrap"
                 >
                   <span>{loc.name}</span>
@@ -264,7 +256,7 @@ export function ListingNavbar({
                     type="button"
                     aria-label={`Remove ${loc.name}`}
                     className="ml-1 rounded-full p-0.5 hover:bg-blue-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-600"
-                    onClick={() => removeLocation(loc.canonicalLocationId || loc.id || loc.slug)}
+                    onClick={() => removeLocation(loc.canonicalPlaceId)}
                   >
                     <X className="h-3 w-3 hover:text-blue-900" aria-hidden="true" />
                   </button>
@@ -351,7 +343,7 @@ export function ListingNavbar({
             >
               {selectedLocations.map(location => (
                 <span
-                  key={location.canonicalLocationId || location.id || location.slug}
+                  key={location.canonicalPlaceId}
                   className="inline-flex shrink-0 items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-xs font-medium text-white"
                 >
                   <span className="max-w-[180px] truncate">{location.name}</span>
@@ -360,7 +352,7 @@ export function ListingNavbar({
                     className="rounded-full p-0.5 hover:bg-white/15 focus:outline-none focus:ring-2 focus:ring-white/70"
                     aria-label={`Remove ${location.name}`}
                     onClick={() =>
-                      removeLocation(location.canonicalLocationId || location.id || location.slug)
+                      removeLocation(location.canonicalPlaceId)
                     }
                   >
                     <X className="h-3 w-3" aria-hidden="true" />

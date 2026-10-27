@@ -438,7 +438,7 @@ type CanonicalSandtonLocation = {
 function serializedSandtonCoverage(location: CanonicalSandtonLocation): string {
   const coverage = serializeAgentCoverageAreas([
     {
-      canonicalLocationId: location.canonicalPlaceId,
+      canonicalPlaceId: location.canonicalPlaceId,
       label: location.label,
     },
   ]);

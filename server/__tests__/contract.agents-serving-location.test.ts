@@ -70,7 +70,7 @@ const baseAgent = {
   profileImage: 'amina.jpg',
   isVerified: 1,
   areasServed: JSON.stringify([
-    { canonicalLocationId: PLACE_ID, label: 'Bryanston, Sandton, Gauteng' },
+    { canonicalPlaceId: PLACE_ID, label: 'Bryanston, Sandton, Gauteng' },
   ]),
 };
 
@@ -163,7 +163,7 @@ describe('agents serving canonical Place authority', () => {
         {
           ...baseAgent,
           areasServed: JSON.stringify([
-            { canonicalLocationId: 'pl-place-01-000000000000000000000002', label: 'Bryanston Ext, Sandton City' },
+            { canonicalPlaceId: 'pl-place-01-000000000000000000000002', label: 'Bryanston Ext, Sandton City' },
           ]),
         },
       ],
@@ -178,7 +178,7 @@ describe('agents serving canonical Place authority', () => {
       'utf8',
     );
 
-    expect(source).toContain("JSON_OBJECT('canonicalLocationId'");
+    expect(source).toContain("JSON_OBJECT('canonicalPlaceId'");
     expect(source).not.toContain('LOWER(${agents.areasServed}) LIKE');
     expect(source).not.toContain('splitTextList(agent.areasServed)');
     expect(source).not.toContain('leftJoin(agencies, eq(agents.agencyId, agencies.id))');

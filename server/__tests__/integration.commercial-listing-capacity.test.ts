@@ -46,7 +46,7 @@ function timestampFromNow(days: number) {
 async function canonicalJohannesburgCoverage() {
   return JSON.stringify([
     {
-      canonicalLocationId: CANONICAL_JOHANNESBURG_PLACE_ID,
+      canonicalPlaceId: CANONICAL_JOHANNESBURG_PLACE_ID,
       label: 'Johannesburg, Gauteng',
     },
   ]);
