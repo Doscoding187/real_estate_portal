@@ -1,20 +1,20 @@
 # City scope membership implementation plan
 
-**Status:** Canonical admission rebuild committed as `47af2c618`; Phase 3 URL projection and
-the application-wide canonical Place cutover are implemented on the feature branch. Edward's
-2026-10-27 pre-launch direction retires legacy geography paths without redirects, aliases or
-fallbacks. Migrations through 0197 are authored on PR #693 and remain unapplied; Phase 4 database
-release remains unauthorized.
+**Status (2026-10-28):** Canonical admission rebuild `47af2c618` and the Phase 3 URL projection
+and application-wide canonical Place cutover are merged to `main` in PR #693
+(`cbff3e7b391838e652e9a6c9ada9459a44e126d5`). Edward's 2026-10-27 pre-launch direction retires
+legacy geography paths without redirects, aliases or fallbacks. Migrations through 0197 passed
+CI and were applied and verified against a disposable worktree database after merge. Phase 4
+release to a protected database remains unauthorized; Stats SA/DPME licensing sign-off also
+remains unresolved.
 **Founder confirmation:** Edward, 2026-10-23, confirmed the 13/48/2 disposition and the
 refined 351-edge evidence set.
-**Branch:** `feat/canonical-place-geography-phase3-20261027`
-**Base:** `origin/main`
 **Date:** 2026-10-23 (dry-run evidence added 2026-10-25)
 **Target:** disposable worktree target `listify_wt_suburb_first_search_20261022_53581aab324f`
 (fingerprint `840e8d36baa6bb48`). It was schema-congruent at migration head 0148 for the
-admission rebuild. On 2026-10-27 Database Authority reported expected head 0197 but the local
-database was unreachable; migration state and schema congruency could not be evaluated. No
-migration was applied for this cutover.
+admission rebuild. On 2026-10-27 Database Authority reported expected head 0197 but that local
+database was unreachable, so its migration state and schema congruency could not be evaluated
+then. The post-merge verification against a disposable worktree database is recorded in Section 7.
 
 ## 1. Decision
 
@@ -490,6 +490,23 @@ database write was performed for the application cutover.
 - Full-repository typecheck and the complete contract suite remain unverified for this cutover.
   Full-repository TypeScript checking previously exceeded the worktree's available memory; the
   focused consumer typecheck passed.
+
+### Post-merge verification (2026-10-28)
+
+- PR #693 merged as `cbff3e7b391838e652e9a6c9ada9459a44e126d5` from final head
+  `19fea28c1c1f85ebba9f308ef0368314696ecce8`. All required CI checks passed, including Unit &
+  Integration, DB Contract, Lint & TypeCheck, both builds, Canonical Place Authority, Geography
+  Journey Surface and Browser Journey.
+- Database Authority verified an exact disposable worktree target. Migrations applied from an
+  empty target through head 0197; the resulting schema was congruent. No protected or production
+  database was changed.
+- National Place prepare and verification passed for all 9 territories with zero identity drift
+  and expected counts matching stored counts. The Place admission probe passed 41/41 cases.
+- Database Authority static validation passed 743/743 checks; migration-tree contract passed 6/6;
+  schema sanity reported 225 tables and 198 migrations.
+- These checks establish the merged canonical implementation and disposable-target state. They
+  do not authorize a protected database release or publication. Phase 4 remains open pending its
+  separate approval, and publication remains blocked on Stats SA/DPME licensing sign-off.
 
 ## 8. Rollback
 
