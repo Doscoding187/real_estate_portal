@@ -1,16 +1,21 @@
 import { next } from '@vercel/functions';
+import { maintenanceResponseForRequest } from './server/maintenanceGate';
 import {
   probeDevelopmentSupersession,
   publicApiOrigin,
 } from './shared/developmentSupersessionRouting';
 
 export const config = {
-  matcher: '/development/:path*',
+  matcher: '/:path*',
 };
 
-export default async function developmentSupersessionMiddleware(
-  request: Request,
-): Promise<Response> {
+export default async function middleware(request: Request): Promise<Response> {
+  const maintenanceResponse = await maintenanceResponseForRequest(request, {
+    environment: process.env.VERCEL_ENV,
+    apiBaseUrl: publicApiOrigin(process.env),
+  });
+  if (maintenanceResponse) return maintenanceResponse;
+
   if (request.method !== 'GET' && request.method !== 'HEAD') return next();
 
   const target = await probeDevelopmentSupersession({

@@ -71,7 +71,7 @@ describe('Developer Engine S2 supersession authority contracts', () => {
 
     expect(vercel).toContain("outputDirectory: 'dist/public'");
     expect(vercel).toContain("dest: '/index.html'");
-    expect(middleware).toContain("matcher: '/development/:path*'");
+    expect(middleware).toContain("matcher: '/:path*'");
     expect(middleware).toContain('probeDevelopmentSupersession');
     expect(middleware).toContain('status: 307');
     expect(routing).toContain("method: 'HEAD'");
