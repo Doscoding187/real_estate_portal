@@ -47,6 +47,18 @@ vi.mock('@/lib/trpc', () => ({
           error: null,
         }),
       },
+      myProviderResponsePerformance: {
+        useQuery: () => ({
+          data: {
+            windowDays: 90,
+            measuredLeads: 4,
+            medianResponseSeconds: 7200,
+            sampleReady: true,
+          },
+          isLoading: false,
+          error: null,
+        }),
+      },
       myProviderLeads: {
         useQuery: () => ({
           data: [

@@ -85,7 +85,6 @@ const ServiceProviderReviewsPage = lazy(
 const NavLandingPage = lazy(() => import('./pages/NavLandingPage'));
 const AssistedOnboardingRequestPage = lazy(() => import('./pages/AssistedOnboardingRequestPage'));
 const ProDashboardPage = lazy(() => import('./pages/pro/ProDashboardPage'));
-const ProProfilePage = lazy(() => import('./pages/pro/ProProfilePage'));
 const ProviderOnboardingWizard = lazy(() =>
   import('./features/services/onboarding/ProviderOnboardingWizard').then(m => ({
     default: m.ProviderOnboardingWizard,
