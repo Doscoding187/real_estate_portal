@@ -53,8 +53,8 @@ function createIdentityGuardFixture() {
   const scratch = mkdtempSync(join(tmpdir(), 'place-identity-guard-'));
   for (const relative of [
     'data/place-admission-territories.v0.2',
-    'data/gauteng-source-authority-v0.3',
-    'data/gauteng-place-admission-v0.2',
+    territory.sourceAuthority.directory,
+    territory.admissionPackage.directory,
   ]) {
     mkdirSync(join(scratch, 'data'), { recursive: true });
     cpSync(join(packageRoot, relative), join(scratch, relative), { recursive: true });
@@ -82,9 +82,21 @@ const parentEvidence = JSON.parse(
   readFileSync(packagePaths.artifacts.parent_evidence_classification, 'utf8'),
 ) as { edges: any[]; tally: any; governed_input_count: number };
 const sourceManifest = JSON.parse(readFileSync(sourcePaths.manifest, 'utf8')) as {
-  compact_artifacts: { path: string; sha256: string }[];
+  compact_artifacts: { kind: string; path: string; sha256: string }[];
   source_snapshot_id: string;
 };
+const heldIdentityId = 'pl-geo-v01-za-gp-cdaee93a6835fd8f1544';
+const heldPriorPlaceId = 'pl-place-01-99dcb8ba9d808741e35b258e';
+const supportedFordsburgIdentityId = 'pl-geo-v01-za-gp-936e54828376d972dcf8';
+const supportedFordsburgPlaceId = 'pl-place-01-435b493de124264b676f708f';
+const sourceCandidates = readJsonl(sourcePaths.artifacts.candidate_dispositions);
+const sourceLinks = readJsonl(sourcePaths.artifacts.source_links);
+const externalMappings = readJsonl(packagePaths.artifacts.external_mappings);
+const holdEvidencePin = sourceManifest.compact_artifacts.find(
+  artifact => artifact.kind === 'reviewed_identity_hold',
+);
+if (!holdEvidencePin) throw new Error('the source authority does not pin the reviewed identity-hold evidence');
+const holdEvidence = readJsonl(join(packageRoot, holdEvidencePin.path));
 
 const placeIds = new Set(places.map(p => p.place_id));
 
@@ -98,7 +110,7 @@ describe('Place admission: source baseline', () => {
     );
   });
 
-  it('uses the reproducible v0.2 source, not the unrecoverable v0.1 factual files', () => {
+  it('uses the reproducible v0.2 source under its reviewed v0.4 authority', () => {
     const comparison = loaded.manifest.generated_from.comparison_baseline;
     expect(comparison.factual_identity_count).toBe(1480);
     expect(comparison.runtime_row_count).toBe(1414);
@@ -116,7 +128,7 @@ describe('Place admission: source baseline', () => {
 
 describe('Place admission: source identity is not Place identity', () => {
   it('admits fewer Places than source identities, and accounts for every difference', () => {
-    const identityCount = 1488;
+    const identityCount = 1487;
     const absorbed = places.reduce((sum, place) => sum + (place.source_identity_ids.length - 1), 0);
     expect(places.length + absorbed).toBe(identityCount);
     expect(places.length).toBeLessThan(identityCount);
@@ -128,6 +140,85 @@ describe('Place admission: source identity is not Place identity', () => {
     // Every source identity is mapped exactly once.
     const mapped = places.flatMap(place => place.source_identity_ids);
     expect(new Set(mapped).size).toBe(identityCount);
+  });
+
+  it('holds only the outlying Fordsburg candidate and preserves the supported suburb evidence', () => {
+    const heldPlaces = places.filter(place => place.source_identity_ids.includes(heldIdentityId));
+    expect(heldPlaces).toEqual([]);
+    expect(placeIds.has(heldPriorPlaceId)).toBe(false);
+
+    const candidate = ledger.find(row => row.source_identity_id === heldIdentityId);
+    expect(candidate).toMatchObject({
+      source_promotion_class: 'candidate_only',
+      is_accepted_source_identity: 0,
+      place_id: null,
+      disposition: 'quarantined_candidate',
+      human_review_required: 1,
+      priority_probe_review: 1,
+    });
+    expect(
+      sourceCandidates.find(row => row.candidate_location_id === heldIdentityId),
+    ).toMatchObject({
+      promotion_class: 'candidate_only',
+      factual_identity_status: 'candidate',
+      human_review_required: true,
+      priority_probe_review: true,
+      identity_hold_review_id: 'pl-geography-fordsburg-identity-hold-2026-10-28',
+    });
+
+    const searchableFordsburg = names.filter(
+      row => row.normalized_name === 'fordsburg' && row.is_searchable === 1,
+    );
+    expect(searchableFordsburg).toHaveLength(1);
+    expect(searchableFordsburg[0]).toMatchObject({
+      place_id: supportedFordsburgPlaceId,
+      source_identity_id: supportedFordsburgIdentityId,
+    });
+
+    const supportedPlace = places.find(place => place.place_id === supportedFordsburgPlaceId);
+    expect(supportedPlace).toMatchObject({
+      place_type: 'suburb',
+      source_identity_ids: [supportedFordsburgIdentityId],
+      search_eligible: 1,
+    });
+    const retainedParent = places.find(place =>
+      place.source_identity_ids.includes('pl-geo-v01-za-gp-8e70dc910ee8a62ab596'),
+    );
+    expect(retainedParent).toBeTruthy();
+    expect(
+      relationships.filter(
+        row =>
+          row.from_place_id === supportedFordsburgPlaceId &&
+          row.to_place_id === retainedParent?.place_id &&
+          row.relationship_type === 'settlement_within' &&
+          row.evidence_source === 'statsa2016-subplace',
+      ),
+    ).toHaveLength(1);
+    expect(
+      relationships.some(
+        row => row.from_place_id === heldPriorPlaceId || row.to_place_id === heldPriorPlaceId,
+      ),
+    ).toBe(false);
+
+    expect(sourceLinks.some(row => row.canonical_location_id === heldIdentityId)).toBe(false);
+    expect(externalMappings.some(row => row.source_identity_id === heldIdentityId)).toBe(false);
+    expect(holdEvidence).toHaveLength(1);
+    expect(holdEvidence[0].candidate.canonical_location_id).toBe(heldIdentityId);
+    expect(holdEvidence[0].candidate.preserved_source_links).toHaveLength(2);
+    expect(holdEvidence[0].candidate.preserved_source_links.map((row: any) => row.source).sort()).toEqual([
+      'geonames',
+      'nga_gns',
+    ]);
+    expect(holdEvidence[0].policy).toMatchObject({
+      merge_identities: false,
+      retire_identity: false,
+      preserve_prior_place_id_allocation: true,
+      preserve_source_link_provenance: true,
+    });
+
+    const allocations = loaded.registry.allocated as Record<string, string>;
+    expect(allocations[heldIdentityId]).toBe(heldPriorPlaceId);
+    expect(Object.values(allocations).filter(id => !placeIds.has(id))).toEqual([heldPriorPlaceId]);
   });
 
   it('merges only on recorded evidence, never on a name alone', () => {
@@ -161,7 +252,7 @@ describe('Place admission: source identity is not Place identity', () => {
     for (const row of ledger)
       byDisposition.set(row.disposition, (byDisposition.get(row.disposition) ?? 0) + 1);
     expect(byDisposition.get('admitted_as_place_primary')).toBe(places.length);
-    expect(byDisposition.get('quarantined_candidate')).toBe(2754);
+    expect(byDisposition.get('quarantined_candidate')).toBe(2755);
     expect(byDisposition.get('rejected_non_independent')).toBe(108);
     for (const row of ledger) {
       expect(row.disposition).toBeTruthy();
@@ -204,10 +295,15 @@ describe('Place admission: Place identity is assigned and stable', () => {
 
   it('reuses the committed registry so a rebuild never mints a new id', () => {
     const registry = loaded.registry.allocated as Record<string, string>;
+    expect(loaded.registry.registry_version).toBe(territory.admissionVersion);
     for (const place of places) {
       expect(registry[place.primary_source_identity_id]).toBe(place.place_id);
     }
-    expect(Object.keys(registry).length).toBe(places.length);
+    expect(Object.keys(registry).length).toBe(places.length + 1);
+    // The removed candidate keeps its former assignment reserved so a future
+    // reviewed re-admission can reuse its stable ID without remapping it.
+    expect(registry[heldIdentityId]).toBe(heldPriorPlaceId);
+    expect(placeIds.has(heldPriorPlaceId)).toBe(false);
   });
 
   it('regenerates deterministically and asserts it', () => {
@@ -231,7 +327,7 @@ describe('Place admission: Place identity is assigned and stable', () => {
     const repositoryRoot = createIdentityGuardFixture();
     try {
       const registryRelative =
-        'data/gauteng-place-admission-v0.2/gauteng_place_id_registry.v0.2.json';
+        `${territory.admissionPackage.directory}/${territory.admissionPackage.placeIdRegistry}`;
       const registryPath = join(repositoryRoot, registryRelative);
       const original = readFileSync(registryPath, 'utf8');
 
@@ -672,8 +768,8 @@ describe('Place admission: schema alignment', () => {
 });
 
 describe('Place admission: the identity guard, on the failure paths that lose allocations', () => {
-  const registryRelative = 'data/gauteng-place-admission-v0.2/gauteng_place_id_registry.v0.2.json';
-  const placesRelative = 'data/gauteng-place-admission-v0.2/gauteng_place_admission_v0.2.jsonl';
+  const registryRelative = `${territory.admissionPackage.directory}/${territory.admissionPackage.placeIdRegistry}`;
+  const placesRelative = packagePaths.artifacts.places;
 
   // Each process owns its damaged copy. Concurrent authority gates must never
   // back up, mutate or restore the shared committed identity registry.
@@ -757,8 +853,8 @@ describe('Place admission: the identity guard, on the failure paths that lose al
     try {
       for (const relative of [
         'data/place-admission-territories.v0.2',
-        'data/gauteng-source-authority-v0.3',
-        'data/gauteng-place-admission-v0.2',
+        territory.sourceAuthority.directory,
+        territory.admissionPackage.directory,
       ]) {
         mkdirSync(join(scratch, 'data'), { recursive: true });
         cpSync(join(packageRoot, relative), join(scratch, relative), { recursive: true });
@@ -771,7 +867,7 @@ describe('Place admission: the identity guard, on the failure paths that lose al
         damaged.allocated[first],
       ];
       writeFileSync(registryPath, JSON.stringify(damaged));
-      const directory = join(scratch, 'data/gauteng-place-admission-v0.2');
+      const directory = join(scratch, territory.admissionPackage.directory);
       const snapshot = () =>
         readdirSync(directory).map(file => [file, readFileSync(join(directory, file), 'utf8')]);
       const before = snapshot();

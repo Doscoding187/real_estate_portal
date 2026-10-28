@@ -187,6 +187,7 @@ const cases = [
   ['Diepkloof', 2, 'two distinct real-world Places preserved'],
   ['Waverley', 2, 'two distinct real-world Places preserved'],
   ['Sandton', 1, 'one Place despite a suburb/city classification difference'],
+  ['Fordsburg', 1, 'the supported suburb remains searchable while the outlying locality identity is held'],
   ['Midrand', 2, 'two contexts preserved'],
   ['Lyttelton', 1, 'one Place for the Lyttelton/Centurion referent'],
   ['Centurion', 1, 'Centurion resolves to that same Place'],

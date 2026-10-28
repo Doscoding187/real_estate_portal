@@ -1,8 +1,8 @@
 # Fordsburg duplicate identity review — 2026-10-28
 
-**Status:** Evidence review complete; admission correction requires an upstream source-authority disposition update.
+**Status:** Candidate-only hold implemented in Gauteng source authority v0.4 and Place admission v0.3; package and owned-disposable database verification passed.
 
-## Recommendation
+## Decision
 
 Keep the supported Fordsburg suburb as the admitted Place. Treat the second
 Fordsburg locality as a held candidate with no runtime Place until its identity is
@@ -16,7 +16,7 @@ and the fail-closed identity rules in the [Geography Coverage Contract](geograph
 
 ## Evidence
 
-The current `gauteng-place-admission-v0.2` package contains two active, searchable
+Before this hold, `gauteng-place-admission-v0.2` contained two active, searchable
 Places with the preferred name `Fordsburg`:
 
 | Record | Supported suburb | Outlying locality (proposed hold) |
@@ -48,7 +48,7 @@ factual-geography input, then regenerate a new versioned source and admission
 package. A one-row edit to generated admission files would be overwritten by the
 next deterministic build.
 
-The admission ledger currently records the locality as
+The v0.2 admission ledger recorded the locality as
 `admitted_as_place_primary` with `human_review_required=false`. A different
 Fordsburg candidate (`pl-geo-v01-za-gp-6ceb7ec8390662dad3c8`) is already
 quarantined because it lacks a bounded factual type; that row is not the admitted
@@ -68,24 +68,50 @@ Repository evidence:
   that fail admission gates to remain out of runtime; ambiguity is a first-class
   result and must not be collapsed ([contract lines 335–389](geography-coverage-contract.md#L335)).
 
-## Disposition boundary
+## Applied disposition
 
-To carry the hold into a new admitted package:
+The hold is now recorded in `data/gauteng-source-authority-v0.4/` and built into
+`data/gauteng-place-admission-v0.3/`. Source-authority v0.2/v0.3 and admission
+v0.2 remain unchanged. The v0.4 derivation pins its v0.3 input manifest and the
+reviewed v0.2 admission evidence, and carries a separate reviewed identity-hold
+artifact with the prior candidate, its two original source-link records and
+licensing attribution, and the previous admitted rows.
 
-1. Keep `pl-place-01-435b493de124264b676f708f` and its supported suburb type.
-2. Keep its reviewed `settlement_within` edge to Johannesburg unchanged.
-3. Record `pl-geo-v01-za-gp-cdaee93a6835fd8f1544` as candidate-only in the
-   governed source disposition and exclude it from factual geography, producing
-   no public Place row, searchable name, or parent edge.
-4. Retain its GeoNames and NGA GNS evidence and mappings for later research.
-5. Do not reuse or silently reassign either existing stable ID. Any later merge
-   or retirement needs its own reviewed data-quality decision.
+The source disposition marks `pl-geo-v01-za-gp-cdaee93a6835fd8f1544`
+`candidate_only`, requires human review, and flags it for a priority probe. It is
+absent from factual geography, public names, source links, Place rows,
+relationships, and external mappings. Its former Place ID,
+`pl-place-01-99dcb8ba9d808741e35b258e`, remains allocated but is not admitted.
+No identity was merged or retired.
 
-This review does not change the admission package or database. Database Authority
-resolved the exact target as a disposable worktree, but its MySQL service is
-unavailable; no materialization or database verification was attempted. The next
-workstream should issue a new versioned source-authority snapshot and admission
-package from the reviewed disposition, update the territory registry's pinned
-digests, and verify the exact prepared Place set on the owned disposable target.
-Protected release and publication remain gated by the existing licensing and
-release approvals.
+The supported suburb remains `pl-place-01-435b493de124264b676f708f`, with its
+reviewed `settlement_within` edge to Johannesburg unchanged. Fordsburg now has
+exactly one searchable Gauteng result.
+
+## Verification
+
+- Source derivation check passed byte-for-byte; all eight compact source
+  artifacts verify against source-authority v0.4's manifest.
+- Place admission build and `--check` passed: 1,487 source identities, 1,465
+  Places, 2,474 names, 1,815 relationships, 4,462 evidence rows, 2,969 external
+  mappings, 4,350 disposition rows, and 1,433 executable Places. The old Place
+  allocation is the sole reserved allocation outside the admitted Place set.
+- The national URL projection rebuilt and passed its reproducibility check.
+- Focused admission and canonical-place transaction suites passed. The
+  database-backed Place admission probe passed all 42 checks, including its
+  Fordsburg query (one result).
+- Database Authority applied the migration manifest through
+  `0197_drop_seller_prospects_province.sql` to the exact owned
+  `disposable-worktree` target. Physical schema congruency passed with all 40
+  check constraints enforced.
+- National Place preparation and verification passed: all nine provinces were
+  complete with zero identity drift. Gauteng stored 1,465 Places, 2,474 names,
+  1,815 relationships, 4,462 evidence rows, and 2,969 external mappings; its
+  package digest was `5864072963d11d97b29887efbb403a1bddcbf2b389c912ae935a4364ed72485c`.
+- The exact owned disposable database was created, prepared, verified, then
+  disposed through Database Authority. Place preparation did not activate a
+  consumer or perform publication. No protected database or geography release
+  was changed.
+
+The source package retains the earlier licensing review gate for government GIS
+terms and attribution. This identity hold does not sign off that separate gate.

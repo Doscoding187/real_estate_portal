@@ -128,7 +128,7 @@ describe('canonical Place preparation validates before commit', () => {
     const mock = transport();
     const input = { authority, decision: {}, connection: mock.connection };
     const first = await prepareCanonicalPlaces(input);
-    expect(first.written.places).toBe(1466);
+    expect(first.written.places).toBe(1465);
     const before = structuredClone(mock.state());
     const replay = await prepareCanonicalPlaces(input);
     expect(Object.values(replay.written)).toEqual([0, 0, 0, 0, 0]);

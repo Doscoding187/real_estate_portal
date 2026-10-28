@@ -3,7 +3,7 @@
   "projection_id": "property-listify-national-canonical-place-url-projection-v0.1",
   "source_registry": {
     "path": "data/place-admission-territories.v0.2/territory-registry.v0.2.json",
-    "sha256": "7f95c112ee9873851c127464a9b303ae0d565d632a30935197d55a2645f2a49c"
+    "sha256": "4d732e3f595f3f524444f5177a717fac84116a8c55963370e34a7f6f7178d03f"
   },
   "path_policy": {
     "version": "canonical-place-url-policy-v0.1",
@@ -59,21 +59,21 @@
     },
     {
       "territory_id": "za-gp",
-      "admission_version": "gauteng-place-admission-v0.2",
-      "package_manifest_path": "data/gauteng-place-admission-v0.2/gauteng_place_admission_manifest.v0.2.json",
-      "package_manifest_sha256": "c4b73e1e61eabb62904089ba51d15d8f19405c3b0faf59f3900349ddd227b701",
+      "admission_version": "gauteng-place-admission-v0.3",
+      "package_manifest_path": "data/gauteng-place-admission-v0.3/gauteng_place_admission_manifest.v0.3.json",
+      "package_manifest_sha256": "cd416f0085a1f9ad80dd9af1328cb2efdce5a7bab05c62b7eae70b67ad020a98",
       "package_artifacts": [
         {
-          "path": "data/gauteng-place-admission-v0.2/gauteng_place_admission_v0.2.jsonl",
-          "sha256": "6e98b5a49107f641f523d98344656e2f32aacfee8f5f5b0b725b08c1ef64b2c0"
+          "path": "data/gauteng-place-admission-v0.3/gauteng_place_admission_v0.3.jsonl",
+          "sha256": "f6898faf54590c44831f69831d740e154095b0f40038672a52f968628235346c"
         },
         {
-          "path": "data/gauteng-place-admission-v0.2/gauteng_place_names_v0.2.jsonl",
-          "sha256": "01d49768ddef3147948d5d07bc1f6d019433b46e4b0b4cef40278b4e6d6a5477"
+          "path": "data/gauteng-place-admission-v0.3/gauteng_place_names_v0.3.jsonl",
+          "sha256": "b7e05cac9cff16619824b874da3f89a5018d383c1c148f068fb508edf7608e30"
         },
         {
-          "path": "data/gauteng-place-admission-v0.2/gauteng_place_relationships_v0.2.jsonl",
-          "sha256": "1fbb8930f4b9653146fe273422ac2373d233dba49e3d6b3786a5313b15bf01db"
+          "path": "data/gauteng-place-admission-v0.3/gauteng_place_relationships_v0.3.jsonl",
+          "sha256": "e9bcc63f6b50ad4b194f2bb54becb9449e0d1371b4aeb0336a15336ca0118b73"
         }
       ]
     },
@@ -199,14 +199,14 @@
     }
   ],
   "summary": {
-    "route_entries": 14808,
+    "route_entries": 14807,
     "by_scope": {
       "province": 9,
       "metro_city": 701,
-      "locality": 14098
+      "locality": 14097
     },
     "settlement_context_localities": 351,
-    "administrative_context_localities": 12987,
+    "administrative_context_localities": 12986,
     "namespace_localities": 760,
     "collision_disambiguations": 787
   },
@@ -142233,30 +142233,6 @@
         "path_segment": "city-of-johannesburg"
       },
       "path_segment": "edenburg"
-    },
-    {
-      "place_id": "pl-place-01-99dcb8ba9d808741e35b258e",
-      "territory_id": "za-gp",
-      "preferred_public_name": "Fordsburg",
-      "place_type": "locality",
-      "search_scope": "locality",
-      "search_eligible": true,
-      "publication_eligible": false,
-      "verification_status": "provisional",
-      "lifecycle_status": "active",
-      "path": "/gauteng/city-of-johannesburg/fordsburg",
-      "province_place_id": "pl-place-01-131e3e75ad70424e0f9c869a",
-      "province_name": "Gauteng",
-      "province_slug": "gauteng",
-      "path_context": {
-        "place_id": "pl-place-01-503de72cc29aa712c0e5a597",
-        "name": "City of Johannesburg",
-        "place_type": "local_municipality",
-        "search_scope": null,
-        "relationship_type": "administratively_contains",
-        "path_segment": "city-of-johannesburg"
-      },
-      "path_segment": "fordsburg"
     },
     {
       "place_id": "pl-place-01-bbe8dbb14d11d1383a3a8d54",
