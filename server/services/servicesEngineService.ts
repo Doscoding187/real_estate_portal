@@ -264,7 +264,63 @@ type PublicProviderProfileResult = Omit<
 > & {
   services: Array<Omit<ProviderProfileResult['services'][number], 'isActive'>>;
   locations: Array<Omit<ProviderProfileResult['locations'][number], 'radiusKm'>>;
+  responsePerformance: LeadResponsePerformance;
 };
+
+export const SERVICE_LEAD_RESPONSE_WINDOW_DAYS = 90;
+export const SERVICE_LEAD_RESPONSE_MIN_SAMPLE = 3;
+
+export type LeadResponsePerformance = {
+  windowDays: number;
+  measuredLeads: number;
+  medianResponseSeconds: number;
+  sampleReady: boolean;
+};
+
+const SERVICE_LEAD_RESPONSE_EVENT_TYPES = [
+  'accepted',
+  'quoted',
+  'won',
+  'lost',
+  'status_changed',
+] as const;
+
+function toEpochMs(value: unknown): number | null {
+  if (value === null || value === undefined) return null;
+  const epoch = value instanceof Date ? value.getTime() : new Date(String(value)).getTime();
+  return Number.isFinite(epoch) ? epoch : null;
+}
+
+export function computeLeadResponsePerformance(
+  rows: Array<{ leadId: unknown; createdAt: unknown; firstResponseAt: unknown }>,
+  windowDays: number = SERVICE_LEAD_RESPONSE_WINDOW_DAYS,
+): LeadResponsePerformance {
+  const durations = rows
+    .map(row => {
+      const createdAt = toEpochMs(row.createdAt);
+      const firstResponseAt = toEpochMs(row.firstResponseAt);
+      if (createdAt === null || firstResponseAt === null) return null;
+      const duration = firstResponseAt - createdAt;
+      return Number.isFinite(duration) && duration >= 0 ? duration : null;
+    })
+    .filter((value): value is number => value !== null)
+    .sort((a, b) => a - b);
+
+  const measuredLeads = durations.length;
+  const medianMs =
+    measuredLeads === 0
+      ? 0
+      : measuredLeads % 2 === 1
+        ? durations[(measuredLeads - 1) / 2]
+        : (durations[measuredLeads / 2 - 1] + durations[measuredLeads / 2]) / 2;
+
+  return {
+    windowDays,
+    measuredLeads,
+    medianResponseSeconds: Math.round(medianMs / 1000),
+    sampleReady: measuredLeads >= SERVICE_LEAD_RESPONSE_MIN_SAMPLE,
+  };
+}
 
 function normalizeText(value: string | null | undefined): string | null {
   if (!value) return null;
@@ -1077,6 +1133,7 @@ export class ServicesEngineService {
   async getProviderPublicProfile(providerId: number): Promise<PublicProviderProfileResult | null> {
     const profile = await this.getProviderProfile(providerId, false);
     if (!profile?.isPublished) return null;
+    const responsePerformance = await this.getProviderLeadResponsePerformance(providerId);
 
     return {
       providerId: profile.providerId,
@@ -1106,7 +1163,53 @@ export class ServicesEngineService {
       })),
 
       reviews: profile.reviews,
+      responsePerformance,
     };
+  }
+
+  async getProviderLeadResponsePerformance(
+    providerId: number,
+    windowDays = SERVICE_LEAD_RESPONSE_WINDOW_DAYS,
+  ): Promise<LeadResponsePerformance> {
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+
+    const safeWindowDays = Math.max(
+      1,
+      Math.min(365, Number(windowDays) || SERVICE_LEAD_RESPONSE_WINDOW_DAYS),
+    );
+    const sinceMs = Date.now() - safeWindowDays * 24 * 60 * 60 * 1000;
+
+    const rows = await db
+      .select({
+        leadId: serviceLeads.id,
+        createdAt: serviceLeads.createdAt,
+        firstResponseAt: sql<string | Date | null>`MIN(${serviceLeadEvents.createdAt})`,
+      })
+      .from(serviceLeads)
+      .innerJoin(
+        serviceLeadEvents,
+        and(
+          eq(serviceLeadEvents.leadId, serviceLeads.id),
+          inArray(serviceLeadEvents.eventType, [...SERVICE_LEAD_RESPONSE_EVENT_TYPES]),
+        ),
+      )
+      .where(eq(serviceLeads.providerId, providerId))
+      .groupBy(serviceLeads.id, serviceLeads.createdAt);
+
+    return computeLeadResponsePerformance(
+      rows
+        .filter(row => {
+          const createdAt = new Date(String(row.createdAt || '')).getTime();
+          return Number.isFinite(createdAt) && createdAt >= sinceMs;
+        })
+        .map(row => ({
+          leadId: row.leadId,
+          createdAt: row.createdAt,
+          firstResponseAt: row.firstResponseAt,
+        })),
+      safeWindowDays,
+    );
   }
 
   async getProviderReviews(providerId: number, limit = 50) {

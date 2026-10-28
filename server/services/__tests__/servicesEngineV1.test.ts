@@ -67,6 +67,7 @@ function makeQuery(rows: unknown[] = []) {
     limit: vi.fn(),
     offset: vi.fn(),
     for: vi.fn(),
+    groupBy: vi.fn(),
   };
   for (const key of Object.keys(query)) {
     query[key]!.mockReturnValue(query);
@@ -1118,7 +1119,11 @@ const READY_PUBLICATION_BASE_ROW = {
   subscriptionStatus: 'trial',
 };
 
-function mockReadinessDb(baseRow: Record<string, unknown>, services: unknown[], locations: unknown[]) {
+function mockReadinessDb(
+  baseRow: Record<string, unknown>,
+  services: unknown[],
+  locations: unknown[],
+) {
   const readinessQueries = [makeQuery([baseRow]), makeQuery(services), makeQuery(locations)];
   const dbSelect = vi.fn(() => readinessQueries.shift() ?? makeQuery([]));
   return { dbSelect };
@@ -1126,9 +1131,11 @@ function mockReadinessDb(baseRow: Record<string, unknown>, services: unknown[], 
 
 describe('Services V1 reviewed publication authority', () => {
   it('keeps a newly onboarded provider out of the public directory', async () => {
-    const { dbSelect } = mockReadinessDb(READY_PUBLICATION_BASE_ROW, [{ isActive: 1 }], [
-      { province: 'Gauteng', city: 'Johannesburg', suburb: 'Sandton' },
-    ]);
+    const { dbSelect } = mockReadinessDb(
+      READY_PUBLICATION_BASE_ROW,
+      [{ isActive: 1 }],
+      [{ province: 'Gauteng', city: 'Johannesburg', suburb: 'Sandton' }],
+    );
     mockGetDb.mockResolvedValue({ select: dbSelect });
 
     const readiness = await servicesEngineService.getProviderPublicationReadiness(20);
@@ -1269,7 +1276,9 @@ describe('Services V1 reviewed publication authority', () => {
         .fn()
         .mockReturnValueOnce(makeQuery([{ id: 20 }]))
         .mockReturnValueOnce(
-          makeQuery([{ ...READY_PUBLICATION_BASE_ROW, verificationStatus: 'verified', directoryActive: 1 }]),
+          makeQuery([
+            { ...READY_PUBLICATION_BASE_ROW, verificationStatus: 'verified', directoryActive: 1 },
+          ]),
         )
         .mockReturnValueOnce(makeQuery([{ isActive: 1 }]))
         .mockReturnValueOnce(makeQuery([{ province: 'Gauteng' }])),
@@ -1304,7 +1313,9 @@ describe('Services V1 reviewed publication authority', () => {
         .fn()
         .mockReturnValueOnce(makeQuery([{ id: 20 }]))
         .mockReturnValueOnce(
-          makeQuery([{ ...READY_PUBLICATION_BASE_ROW, verificationStatus: 'verified', directoryActive: 1 }]),
+          makeQuery([
+            { ...READY_PUBLICATION_BASE_ROW, verificationStatus: 'verified', directoryActive: 1 },
+          ]),
         )
         .mockReturnValueOnce(makeQuery([{ isActive: 1 }]))
         .mockReturnValueOnce(makeQuery([{ province: 'Gauteng' }])),
@@ -1390,6 +1401,7 @@ describe('Services V1 reviewed publication authority', () => {
             },
           ]),
         )
+        .mockReturnValueOnce(makeQuery([]))
         .mockReturnValueOnce(makeQuery([])),
     };
     mockGetDb.mockResolvedValue(publicProfileDb);
@@ -1402,6 +1414,12 @@ describe('Services V1 reviewed publication authority', () => {
       publicationStatus: 'published',
       services: [{ code: 'plumbing' }],
       locations: [{ suburb: 'Sandton' }],
+      responsePerformance: {
+        windowDays: 90,
+        measuredLeads: 0,
+        medianResponseSeconds: 0,
+        sampleReady: false,
+      },
     });
 
     const directoryDb = {
@@ -1463,7 +1481,12 @@ describe('Services V1 reviewed publication authority', () => {
     mockGetDb.mockResolvedValue({
       select: vi.fn(() => makeQuery([])),
       transaction: vi.fn(
-        async (callback: (tx: { select: ReturnType<typeof vi.fn>; insert: typeof insert }) => Promise<unknown>) =>
+        async (
+          callback: (tx: {
+            select: ReturnType<typeof vi.fn>;
+            insert: typeof insert;
+          }) => Promise<unknown>,
+        ) =>
           callback({
             select: vi
               .fn()
@@ -1481,7 +1504,9 @@ describe('Services V1 reviewed publication authority', () => {
                   },
                 ]),
               )
-              .mockReturnValueOnce(makeQuery([{ category: 'home_improvement', code: 'plumbing', isActive: 1 }]))
+              .mockReturnValueOnce(
+                makeQuery([{ category: 'home_improvement', code: 'plumbing', isActive: 1 }]),
+              )
               .mockReturnValueOnce(makeQuery([{ province: 'Gauteng' }])),
             insert,
           }),
@@ -1582,7 +1607,12 @@ describe('Services V1 authoritative service replacement', () => {
     const { set, insert, update } = mockServiceReplacementDb(existingServiceRows);
 
     await servicesEngineService.replaceProviderServices(20, [
-      { id: 31, category: 'home_improvement', code: 'emergency-plumbing', displayName: 'Emergency plumbing' },
+      {
+        id: 31,
+        category: 'home_improvement',
+        code: 'emergency-plumbing',
+        displayName: 'Emergency plumbing',
+      },
       { id: 32, category: 'finance_legal', code: 'conveyancing', displayName: 'Conveyancing' },
     ]);
 
@@ -1590,7 +1620,10 @@ describe('Services V1 authoritative service replacement', () => {
     expect(set).toHaveBeenCalledTimes(2);
     expect(set).toHaveBeenNthCalledWith(
       1,
-      expect.objectContaining({ serviceCode: 'emergency-plumbing', displayName: 'Emergency plumbing' }),
+      expect.objectContaining({
+        serviceCode: 'emergency-plumbing',
+        displayName: 'Emergency plumbing',
+      }),
     );
     expect(insert).not.toHaveBeenCalled();
   });
@@ -1724,12 +1757,17 @@ describe('Services V1 authoritative coverage replacement', () => {
       providerCoversLocation(rows, { province: 'Gauteng', city: 'Pretoria', suburb: 'Arcadia' }),
     ).toBe(false);
     expect(
-      providerCoversLocation(rows, { province: 'Gauteng', city: 'Johannesburg', suburb: 'Sandton' }),
+      providerCoversLocation(rows, {
+        province: 'Gauteng',
+        city: 'Johannesburg',
+        suburb: 'Sandton',
+      }),
     ).toBe(true);
   });
 
   it('edits a coverage tuple in place without creating an active duplicate', async () => {
-    const { update, set, where, deleteFn, insert } = mockCoverageReplacementDb(existingCoverageRows);
+    const { update, set, where, deleteFn, insert } =
+      mockCoverageReplacementDb(existingCoverageRows);
 
     await servicesEngineService.replaceProviderLocations(20, [
       { id: 41, province: 'Gauteng', city: 'Johannesburg', suburb: 'Bryanston' },
@@ -1767,10 +1805,7 @@ describe('Services V1 bounded and deterministic reads', () => {
 
     await servicesEngineService.listProviderLeads(20, 25, 50);
 
-    expect(query.orderBy).toHaveBeenCalledWith(
-      desc(serviceLeads.createdAt),
-      desc(serviceLeads.id),
-    );
+    expect(query.orderBy).toHaveBeenCalledWith(desc(serviceLeads.createdAt), desc(serviceLeads.id));
   });
 
   it('bounds the eligible-provider candidate scan before in-memory filtering', async () => {
@@ -1795,9 +1830,8 @@ describe('Services V1 bounded and deterministic reads', () => {
           }),
         ]),
       ),
-      transaction: vi.fn(
-        async (callback: (tx: unknown) => Promise<unknown>) =>
-          callback({ select: vi.fn(), insert }),
+      transaction: vi.fn(async (callback: (tx: unknown) => Promise<unknown>) =>
+        callback({ select: vi.fn(), insert }),
       ),
     });
 
