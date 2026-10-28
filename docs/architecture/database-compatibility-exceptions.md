@@ -2,7 +2,14 @@
 
 **Authority:** `docs/architecture/database-authority-policy.md`
 
-## Current approved exceptions
+**Provider retirement record (2026-10-28):** Active application and database
+operations now support MySQL only. All `DBX-TIDB-*` entries below are historical
+approval evidence; their executable checks, recovery tools, and commands have
+been removed. They grant no current operation against TiDB. This code-authority
+change does not prove that the hosted application cutover is complete; see the
+current controlled production release packet for that status.
+
+## Compatibility exception records
 
 ### Exception ID: DBX-PLE-2B-property-taxonomy-enum-expansion
 
@@ -66,7 +73,7 @@ or an approved workstream removes it.
 
 ### Exception ID: DBX-TIDB-0001-sequenced-unique-index-replacement
 
-Status: Approved for the bounded production recovery of the 0001 zero-statement failure
+Status: Historical approval; executable recovery retired on 2026-10-28
 
 Owner: Property Listify senior product engineering
 
@@ -118,7 +125,7 @@ Removal workstream: Database cutover recovery closure.
 
 ### Exception ID: DBX-TIDB-0046-QUOTE-TERMS-RECOVERY-2026-09-04-Edward
 
-Status: Approved for the bounded production recovery of the 0046 zero-statement failure
+Status: Historical approval; executable recovery retired on 2026-10-28
 
 Owner: Property Listify senior product engineering
 
@@ -173,7 +180,7 @@ Removal workstream: Database cutover recovery closure.
 
 ### Exception ID: DBX-TIDB-INCREMENTAL-DDL-SEQUENCING-2026-09-04-Edward
 
-Status: Approved for the bounded pre-launch TiDB migration-lineage correction
+Status: Historical approval; TiDB-specific admission and recovery support retired on 2026-10-28
 
 Owner: Property Listify senior product engineering
 
@@ -236,7 +243,7 @@ Removal workstream: Database cutover recovery closure.
 
 ### Exception ID: DBX-TIDB-CHECK-CONSTRAINT-CONVERGENCE-2026-09-04-Edward
 
-Status: Approved for the bounded production convergence of CHECK constraints
+Status: Historical approval; TiDB-specific convergence support retired on 2026-10-28
 
 Owner: Property Listify senior product engineering
 

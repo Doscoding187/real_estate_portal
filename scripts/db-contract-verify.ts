@@ -2,7 +2,7 @@
 /**
  * DB Contract Verification Script
  *
- * Verifies that TiDB schema matches Drizzle schema expectations.
+ * Verifies that the canonical MySQL schema matches Drizzle expectations.
  * Prevents "wizard + DB desync" by failing fast on schema drift.
  *
  * Usage:

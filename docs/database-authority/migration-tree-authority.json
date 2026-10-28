@@ -130,7 +130,6 @@
       "scripts/show-create-unit-types.ts",
       "scripts/verify-schema.ts",
       "server/create-test-db.ts",
-      "server/migrations/recoverTidbCheckConstraintConvergence.ts",
       "server/scripts/apply-approval-schema.ts",
       "server/scripts/create-local-db.ts",
       "server/scripts/debug-schema.ts",
@@ -225,9 +224,7 @@
       ],
       "deferred schema executor": [],
       "controlled data repair": [],
-      "approved protected release recovery": [
-        "server/migrations/recoverTidbCheckConstraintConvergence.ts"
-      ],
+      "approved protected release recovery": [],
       "verification or diagnostic": [
         "scripts/db-contract-verify.ts",
         "scripts/schema-sanity-check.mjs"
@@ -242,9 +239,7 @@
       "scripts/db-verify-distribution-schema.ts",
       "scripts/schema-sanity-check.mjs"
     ],
-    "approvedProtectedReleaseRecoveries": [
-      "server/migrations/recoverTidbCheckConstraintConvergence.ts"
-    ],
+    "approvedProtectedReleaseRecoveries": [],
     "approvedLocalTestInitialization": [
       "docker/mysql-local/init/01-create-local-databases.sql",
       "scripts/testDbWorkflow.ts"
@@ -689,7 +684,7 @@
     {
       "path": "server/migrations/0001_public_search_to_lead_reliability_sequenced.sql",
       "classification": "canonical active",
-      "purpose": "Reviewed TiDB-safe additive consent, idempotency, and lead-delivery state for the public search-to-lead journey, with the unique index applied after its new columns."
+      "purpose": "Sequenced additive consent, idempotency, and lead-delivery state for the public search-to-lead journey, with the unique index applied after its new columns."
     },
     {
       "path": "server/migrations/0002_canonical_property_taxonomy.sql",
@@ -914,7 +909,7 @@
     {
       "path": "server/migrations/0046_commercial_office_quote_terms_sequenced.sql",
       "classification": "canonical active",
-      "purpose": "Adds explicit Commercial quote mode and VAT treatment for Office leasing through separately executable TiDB-safe column expansions."
+      "purpose": "Adds explicit Commercial quote mode and VAT treatment for Office leasing through separately executable column expansions."
     },
     {
       "path": "server/migrations/0047_commercial_gross_rental_component.sql",
@@ -1257,7 +1252,7 @@
     {
       "path": "server/migrations/0105_saved_searches_canonical_place_reference_fk.sql",
       "classification": "canonical active",
-      "purpose": "Place Authority Slice 3: adds the ON DELETE RESTRICT foreign key for saved_searches.place_id, sequenced after 0098 because TiDB refuses a single ALTER that both introduces a column and adds a dependent constraint.",
+      "purpose": "Place Authority Slice 3: adds the ON DELETE RESTRICT foreign key for saved_searches.place_id in a separately verifiable migration after the column introduction.",
       "approvedFiles": [
         "server/migrations/0105_saved_searches_canonical_place_reference_fk.sql"
       ]
@@ -1449,6 +1444,94 @@
       "purpose": "Persists the requested sale or rent mode, Developer projection revision, and immutable Distribution terms snapshot on each new referral."
     },
     {
+      "path": "server/migrations/_archived/**",
+      "classification": "archived historical",
+      "purpose": "Historical evidence only; the runner must never discover it.",
+      "approvedFiles": [
+        "server/migrations/_archived/add-residential-auction-workflow-v1.sql",
+        "server/migrations/_archived/add-residential-rental-flow-v1.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0001_add_ownership_columns.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0002_add_brand_status_tracking.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0003_create_audit_logs.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0004_configure_cascades.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0005_fix_production_schema_drift.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0006_add_agent_os_inventory_bridge.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0037_create_distribution_core_tables.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0038_create_distribution_program_workflow_engine.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0039_add_distribution_dual_commission_tracks.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0040_create_distribution_access_layer.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0040_harden_distribution_commission_snapshots.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0041_add_distribution_schema_readiness_items.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0042_create_services_engine.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0043_expand_service_lead_event_types.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0044_add_users_trial_columns.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0045_create_distribution_referral_accelerator.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0046_distribution_referral_assessment_locking.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0047_create_development_required_documents.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0047_create_distribution_execution_tables.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0048_allow_multiple_custom_required_documents.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0049_harden_development_required_documents_schema.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0050_add_brand_onboarding_defaults.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0051_add_development_required_document_categories.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0051_add_service_provider_role.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0052_add_unit_context_to_leads.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0052_add_user_onboarding_state.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0052_create_distribution_deal_documents.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0052_distribution_document_workflow_files.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0052_reconcile_showings_schema.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0053_add_consumer_dashboard_preferences.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0054_create_platform_team_registrations_and_analytics_events.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0054_reconcile_agent_profile_schema.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0055_add_distribution_brand_partnership_onboarding_defaults_json.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0055_create_distribution_identity_and_team_tables.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0056_reconcile_saved_search_scheduler_schema.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0057_create_analytics_events.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0058_create_distribution_docs_v2_tables.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0059_reconcile_distribution_deal_events.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0060_add_distribution_brochure_config.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0061_reconcile_agency_workspace_schema.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0062_create_provider_independent_billing.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0063_extend_showings_lifecycle.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0064_add_showings_creator.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0065_create_agency_deal_engine.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0066_create_agency_canvassing_mvp.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0067_close_seller_acquisition_loop.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0068_close_buyer_lead_loop.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0069_create_agency_mandate_operations_mvp.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0070_create_agency_commission_reconciliation_mvp.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0071_create_agency_listing_performance_mvp.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0072_add_listing_performance_contact_date.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0073_create_prospect_journey_tracker_mvp.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0074_activate_development_approval_queue.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0075_create_agency_agent_memberships.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/_archived/rejected-zero-statement/0001_public_search_to_lead_reliability.sql",
+      "classification": "archived historical",
+      "purpose": "Preserves the unchanged checksum evidence for the TiDB-incompatible same-ALTER unique-index migration rejected after a zero-statement production attempt; it is never executable authority."
+    },
+    {
+      "path": "server/migrations/_archived/rejected-zero-statement/0019_catalogue_publisher_authority_immutability.sql",
+      "classification": "archived historical",
+      "purpose": "Preserves the unchanged checksum evidence for the TiDB-incompatible trigger migration rejected after a zero-statement local attempt; it is never executable authority."
+    },
+    {
+      "path": "server/migrations/_archived/rejected-zero-statement/0046_commercial_office_quote_terms.sql",
+      "classification": "archived historical",
+      "purpose": "Preserves the unchanged checksum evidence for the TiDB-incompatible same-ALTER quote-terms migration rejected after a zero-statement production attempt; it is never executable authority."
+    },
+    {
+      "path": "server/migrations/migrationManifest.ts",
+      "classification": "canonical supporting",
+      "purpose": "Validates canonical MySQL migration membership, lineage, statement policy, and checksums before any plan or apply operation."
+    },
+    {
+      "path": "server/routes/SELECT id, name, userId.sql",
+      "classification": "documentation/example",
+      "purpose": "SQL query example, not a migration file."
+    },
+    {
       "path": "server/migrations/0133_distribution_application_requirement_document_fk_drop.sql",
       "classification": "canonical active",
       "purpose": "Drops the obsolete foreign key from Distribution application requirements to Developer-owned sales collateral.",
@@ -1537,6 +1620,11 @@
       ]
     },
     {
+      "path": "server/migrations/_archived/rejected-zero-statement/0142_distribution_deal_document_deliveries.sql",
+      "classification": "archived historical",
+      "purpose": "Preserves the unchanged checksum evidence for the local zero-statement delivery-table migration rejected because a foreign-key constraint name exceeded MySQL's 64-character identifier limit; it is never executable authority."
+    },
+    {
       "path": "server/migrations/0144_distribution_prospect_check_fits.sql",
       "classification": "canonical active",
       "purpose": "Records a referrer-owned prospect check fit under the approved purchase assumptions.",
@@ -1591,6 +1679,11 @@
       "approvedFiles": [
         "server/migrations/0150_service_provider_reviews_moderation_index.sql"
       ]
+    },
+    {
+      "path": "server/migrations/_archived/rejected-zero-statement/0151_service_provider_review_reports.sql",
+      "classification": "archived historical",
+      "purpose": "Preserves the unchanged checksum evidence for the rejected review-reports table migration whose foreign-key identifier exceeded MySQL's 64-character limit; it is never executable authority."
     },
     {
       "path": "server/migrations/0151_service_provider_review_reports_sequenced.sql",
@@ -1967,114 +2060,6 @@
       "approvedFiles": [
         "server/migrations/0197_drop_seller_prospects_province.sql"
       ]
-    },
-    {
-      "path": "server/migrations/_archived/**",
-      "classification": "archived historical",
-      "purpose": "Historical evidence only; the runner must never discover it.",
-      "approvedFiles": [
-        "server/migrations/_archived/add-residential-auction-workflow-v1.sql",
-        "server/migrations/_archived/add-residential-rental-flow-v1.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0001_add_ownership_columns.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0002_add_brand_status_tracking.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0003_create_audit_logs.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0004_configure_cascades.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0005_fix_production_schema_drift.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0006_add_agent_os_inventory_bridge.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0037_create_distribution_core_tables.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0038_create_distribution_program_workflow_engine.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0039_add_distribution_dual_commission_tracks.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0040_create_distribution_access_layer.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0040_harden_distribution_commission_snapshots.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0041_add_distribution_schema_readiness_items.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0042_create_services_engine.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0043_expand_service_lead_event_types.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0044_add_users_trial_columns.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0045_create_distribution_referral_accelerator.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0046_distribution_referral_assessment_locking.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0047_create_development_required_documents.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0047_create_distribution_execution_tables.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0048_allow_multiple_custom_required_documents.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0049_harden_development_required_documents_schema.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0050_add_brand_onboarding_defaults.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0051_add_development_required_document_categories.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0051_add_service_provider_role.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0052_add_unit_context_to_leads.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0052_add_user_onboarding_state.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0052_create_distribution_deal_documents.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0052_distribution_document_workflow_files.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0052_reconcile_showings_schema.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0053_add_consumer_dashboard_preferences.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0054_create_platform_team_registrations_and_analytics_events.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0054_reconcile_agent_profile_schema.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0055_add_distribution_brand_partnership_onboarding_defaults_json.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0055_create_distribution_identity_and_team_tables.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0056_reconcile_saved_search_scheduler_schema.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0057_create_analytics_events.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0058_create_distribution_docs_v2_tables.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0059_reconcile_distribution_deal_events.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0060_add_distribution_brochure_config.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0061_reconcile_agency_workspace_schema.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0062_create_provider_independent_billing.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0063_extend_showings_lifecycle.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0064_add_showings_creator.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0065_create_agency_deal_engine.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0066_create_agency_canvassing_mvp.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0067_close_seller_acquisition_loop.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0068_close_buyer_lead_loop.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0069_create_agency_mandate_operations_mvp.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0070_create_agency_commission_reconciliation_mvp.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0071_create_agency_listing_performance_mvp.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0072_add_listing_performance_contact_date.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0073_create_prospect_journey_tracker_mvp.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0074_activate_development_approval_queue.sql",
-        "server/migrations/_archived/pre-canonical-baseline/0075_create_agency_agent_memberships.sql"
-      ]
-    },
-    {
-      "path": "server/migrations/_archived/rejected-zero-statement/0001_public_search_to_lead_reliability.sql",
-      "classification": "archived historical",
-      "purpose": "Preserves the unchanged checksum evidence for the TiDB-incompatible same-ALTER unique-index migration rejected after a zero-statement production attempt; it is never executable authority."
-    },
-    {
-      "path": "server/migrations/_archived/rejected-zero-statement/0019_catalogue_publisher_authority_immutability.sql",
-      "classification": "archived historical",
-      "purpose": "Preserves the unchanged checksum evidence for the TiDB-incompatible trigger migration rejected after a zero-statement local attempt; it is never executable authority."
-    },
-    {
-      "path": "server/migrations/_archived/rejected-zero-statement/0046_commercial_office_quote_terms.sql",
-      "classification": "archived historical",
-      "purpose": "Preserves the unchanged checksum evidence for the TiDB-incompatible same-ALTER quote-terms migration rejected after a zero-statement production attempt; it is never executable authority."
-    },
-    {
-      "path": "server/migrations/_archived/rejected-zero-statement/0142_distribution_deal_document_deliveries.sql",
-      "classification": "archived historical",
-      "purpose": "Preserves the unchanged checksum evidence for the local zero-statement delivery-table migration rejected because a foreign-key constraint name exceeded MySQL's 64-character identifier limit; it is never executable authority."
-    },
-    {
-      "path": "server/migrations/_archived/rejected-zero-statement/0151_service_provider_review_reports.sql",
-      "classification": "archived historical",
-      "purpose": "Preserves the unchanged checksum evidence for the rejected review-reports table migration whose foreign-key identifier exceeded MySQL's 64-character limit; it is never executable authority."
-    },
-    {
-      "path": "server/migrations/migrationManifest.ts",
-      "classification": "canonical supporting",
-      "purpose": "Validates canonical migration membership, lineage, statement policy, and TiDB-safe additive DDL sequencing before any plan or apply operation."
-    },
-    {
-      "path": "server/migrations/recoverRejectedReleaseCommercialQuoteTermsMigration.ts",
-      "classification": "canonical supporting",
-      "purpose": "Provides the bounded protected release recovery for the reviewed zero-statement TiDB 0046 quote-terms failure; it changes only durable review evidence and never executes rejected SQL."
-    },
-    {
-      "path": "server/migrations/recoverTidbCheckConstraintConvergence.ts",
-      "classification": "canonical supporting",
-      "purpose": "Provides the one reviewed protected TiDB CHECK-constraint convergence: it verifies the canonical head and violation-free physical state, enables TiDB CHECK enforcement, and adds only the 22 canonical checks under the migration lock with durable evidence."
-    },
-    {
-      "path": "server/routes/SELECT id, name, userId.sql",
-      "classification": "documentation/example",
-      "purpose": "SQL query example, not a migration file."
     }
   ],
   "prohibitedPaths": [

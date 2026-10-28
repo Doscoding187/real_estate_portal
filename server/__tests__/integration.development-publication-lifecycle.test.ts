@@ -166,14 +166,17 @@ describeWithDb('Developer development publication lifecycle integration', () => 
     const db = await getDb();
     if (!db) return;
 
-    const developmentIds = fixtures.flatMap(fixture => fixture.developmentIds);
-    if (developmentIds.length > 0) {
-      // Assignments reference both the development and the reviewing user.
-      // Clear them before deleting any fixture user, including a reviewer
-      // whose fixture has no development of its own.
+    const fixtureUserIds = fixtures.map(fixture => fixture.userId);
+    if (fixtureUserIds.length > 0) {
       await db
         .delete(developmentPlaceAssignments)
-        .where(inArray(developmentPlaceAssignments.developmentId, developmentIds));
+        .where(inArray(developmentPlaceAssignments.reviewedByUserId, fixtureUserIds));
+    }
+    const fixtureDevelopmentIds = fixtures.flatMap(fixture => fixture.developmentIds);
+    if (fixtureDevelopmentIds.length > 0) {
+      await db
+        .delete(developmentPlaceAssignments)
+        .where(inArray(developmentPlaceAssignments.developmentId, fixtureDevelopmentIds));
     }
 
     while (fixtures.length > 0) {

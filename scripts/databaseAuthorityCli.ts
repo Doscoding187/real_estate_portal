@@ -6,18 +6,7 @@ import {
   type PlaceReleaseCommand,
 } from './placeReleaseCommand';
 import {
-  capturePreliminaryTiDbArchive,
-  captureFinalTiDbArchive,
-  openSourceArchive,
-} from '../server/_core/databaseAuthority/sourceArchive';
-import { randomBytes } from 'node:crypto';
-import {
-  mkdirSync,
-  lstatSync,
-  writeFileSync,
-  unlinkSync,
   readFileSync,
-  realpathSync,
 } from 'node:fs';
 import {
   releaseCanonicalPlaces,
@@ -37,9 +26,6 @@ import {
 } from '../server/_core/databaseAuthority/authorization';
 import { createAuthoritySqlConnection } from '../server/_core/databaseAuthority/connectionAuthority';
 import { provisionB08AzureInspectionIdentity } from '../server/_core/databaseAuthority/b08AzureInspectionIdentity';
-import { provisionB08TidbSourceReader } from '../server/_core/databaseAuthority/b08TidbSourceReader';
-import { inventoryB08TidbV1 } from '../server/_core/databaseAuthority/b08TidbV1Inventory';
-import { assessB08TidbV1ReadOnly } from '../server/_core/databaseAuthority/b08TidbV1Assessment';
 import {
   provisionB08AzureMigrationIdentity,
   verifyB08AzureMigrationIdentity,
@@ -120,8 +106,6 @@ import {
   normalizedPhysicalSchema,
   summarizeCheckConstraintEnforcement,
 } from '../server/_core/databaseAuthority/schemaCongruency';
-import { readTiDbCheckConstraintCapability } from '../server/_core/databaseAuthority/tidbCheckConstraintCapability';
-import { auditTidbStructuralAdmission } from '../server/_core/databaseAuthority/tidbStructuralAdmission';
 import {
   LOCAL_SERVICE_HOST,
   LOCAL_SERVICE_PORT,
@@ -137,10 +121,6 @@ import {
   type ResolvedDatabaseAuthority,
 } from '../server/_core/databaseAuthority/types';
 import { loadAndValidateMigrationManifest } from '../server/migrations/migrationManifest';
-import { runRejectedZeroStatementRecovery } from '../server/migrations/recoverRejectedZeroStatementMigration';
-import { runRejectedReleaseZeroStatementRecovery } from '../server/migrations/recoverRejectedReleaseZeroStatementMigration';
-import { runRejectedReleaseCommercialQuoteTermsRecovery } from '../server/migrations/recoverRejectedReleaseCommercialQuoteTermsMigration';
-import { runTidbCheckConstraintConvergence } from '../server/migrations/recoverTidbCheckConstraintConvergence';
 import { runSqlMigrations } from '../server/migrations/runSqlMigrations';
 
 type Command =
@@ -148,9 +128,6 @@ type Command =
   | 'manifest'
   | 'data:manifest'
   | 'b08:inspector:provision'
-  | 'b08:tidb-reader:provision'
-  | 'b08:tidb-v1:inventory'
-  | 'b08:tidb-v1:assess'
   | 'b08:inspect-metadata'
   | 'b08:migrator:provision'
   | 'b08:migrator:verify'
@@ -168,18 +145,8 @@ type Command =
   | 'places:verify'
   | 'places:prepare-national'
   | 'places:verify-national'
-  | 'migration-recovery:plan'
-  | 'migration-recovery:apply'
-  | 'release-migration-recovery:plan'
-  | 'release-migration-recovery:apply'
-  | 'release-commercial-quote-terms-recovery:plan'
-  | 'release-commercial-quote-terms-recovery:apply'
-  | 'release-tidb-check-constraint-convergence:plan'
-  | 'release-tidb-check-constraint-convergence:apply'
   | 'release:plan'
   | 'release:apply'
-  | 'source-archive:preliminary'
-  | 'source-archive:final'
   | 'release-reference:plan'
   | 'release-reference:inspect'
   | 'places:release-preview:prepare'
@@ -192,7 +159,6 @@ type Command =
   | 'legal-release:verify'
   | 'readiness'
   | 'schema:check'
-  | 'schema:tidb-audit'
   | 'platform-settings:prepare'
   | 'platform-settings:verify'
   | 'foundation:prepare'
@@ -287,7 +253,7 @@ function localServiceContextReport(): Extract<
   return {
     applicability: 'local',
     host: LOCAL_SERVICE_HOST,
-    port: LOCAL_SERVICE_PORT,
+    port: Number(LOCAL_SERVICE_PORT),
     directory: localServiceRoot(),
     dataDirectory: localServiceDataDir(),
     fingerprint: localServiceFingerprint(),
@@ -346,21 +312,6 @@ async function run(command: Command): Promise<void> {
 
   if (command === 'b08:inspector:provision') {
     print(await provisionB08AzureInspectionIdentity());
-    return;
-  }
-
-  if (command === 'b08:tidb-reader:provision') {
-    print(await provisionB08TidbSourceReader(requiredOption('ack')));
-    return;
-  }
-
-  if (command === 'b08:tidb-v1:inventory') {
-    print(await inventoryB08TidbV1());
-    return;
-  }
-
-  if (command === 'b08:tidb-v1:assess') {
-    print(await assessB08TidbV1ReadOnly());
     return;
   }
 
@@ -550,90 +501,6 @@ async function run(command: Command): Promise<void> {
     return;
   }
 
-  if (command === 'migration-recovery:plan' || command === 'migration-recovery:apply') {
-    const planOnly = command.endsWith(':plan');
-    const authority = authorityFor(planOnly ? 'migration-plan' : 'migration-apply');
-    const decision = authorizationFor(authority);
-    const result = await runRejectedZeroStatementRecovery({
-      mode: planOnly ? 'plan' : 'apply',
-      authority,
-      authorization: decision,
-      attemptId: requiredOption('attempt-id'),
-      approvalReference: requiredOption('approval-reference'),
-      approvalActor: requiredOption('approval-actor'),
-      expectedPlanDigest: planOnly ? undefined : requiredOption('plan-digest'),
-    });
-    print(result);
-    return;
-  }
-
-  if (
-    command === 'release-migration-recovery:plan' ||
-    command === 'release-migration-recovery:apply'
-  ) {
-    const planOnly = command.endsWith(':plan');
-    const authority = authorityFor(
-      planOnly ? 'release-plan' : 'release-apply',
-      planOnly ? 'read-only' : 'migration',
-    );
-    const decision = authorizationFor(authority, option('ack'));
-    const result = await runRejectedReleaseZeroStatementRecovery({
-      mode: planOnly ? 'plan' : 'apply',
-      authority,
-      authorization: decision,
-      attemptId: requiredOption('attempt-id'),
-      approvalReference: requiredOption('approval-reference'),
-      approvalActor: requiredOption('approval-actor'),
-      expectedPlanDigest: planOnly ? undefined : requiredOption('plan-digest'),
-    });
-    print(result);
-    return;
-  }
-
-  if (
-    command === 'release-commercial-quote-terms-recovery:plan' ||
-    command === 'release-commercial-quote-terms-recovery:apply'
-  ) {
-    const planOnly = command.endsWith(':plan');
-    const authority = authorityFor(
-      planOnly ? 'release-plan' : 'release-apply',
-      planOnly ? 'read-only' : 'migration',
-    );
-    const decision = authorizationFor(authority, option('ack'));
-    const result = await runRejectedReleaseCommercialQuoteTermsRecovery({
-      mode: planOnly ? 'plan' : 'apply',
-      authority,
-      authorization: decision,
-      approvalReference: requiredOption('approval-reference'),
-      approvalActor: requiredOption('approval-actor'),
-      expectedPlanDigest: planOnly ? undefined : requiredOption('plan-digest'),
-    });
-    print(result);
-    return;
-  }
-
-  if (
-    command === 'release-tidb-check-constraint-convergence:plan' ||
-    command === 'release-tidb-check-constraint-convergence:apply'
-  ) {
-    const planOnly = command.endsWith(':plan');
-    const authority = authorityFor(
-      planOnly ? 'release-plan' : 'release-apply',
-      planOnly ? 'read-only' : 'migration',
-    );
-    const decision = authorizationFor(authority, option('ack'));
-    const result = await runTidbCheckConstraintConvergence({
-      mode: planOnly ? 'plan' : 'apply',
-      authority,
-      authorization: decision,
-      approvalReference: requiredOption('approval-reference'),
-      approvalActor: requiredOption('approval-actor'),
-      expectedPlanDigest: planOnly ? undefined : requiredOption('plan-digest'),
-    });
-    print(result);
-    return;
-  }
-
   if (
     command === 'migration:plan' ||
     command === 'migration:apply' ||
@@ -668,81 +535,6 @@ async function run(command: Command): Promise<void> {
       applied: result.applied,
       freshSessionEvidence: result.freshSessionEvidence,
     });
-    return;
-  }
-
-  if (command === 'source-archive:preliminary' || command === 'source-archive:final') {
-    const final = command === 'source-archive:final';
-    let freeze: unknown;
-    if (final) {
-      const path = resolve(requiredOption('freeze-evidence'));
-      const stat = lstatSync(path);
-      if (
-        !stat.isFile() ||
-        stat.isSymbolicLink() ||
-        realpathSync(path) !== path ||
-        stat.uid !== process.getuid?.() ||
-        (stat.mode & 0o777) !== 0o600 ||
-        stat.size > 65536
-      )
-        throw new Error('Freeze evidence must be an owned, mode 0600 file without symbolic links.');
-      freeze = JSON.parse(readFileSync(path, 'utf8'));
-    }
-    const archiveDir = resolve(requiredOption('archive-dir'));
-    const keyDir = resolve(requiredOption('key-dir'));
-    if (
-      archiveDir === keyDir ||
-      archiveDir.startsWith(`${keyDir}/`) ||
-      keyDir.startsWith(`${archiveDir}/`)
-    )
-      throw new Error('Archive and key must use separate private directories.');
-    for (const path of [archiveDir, keyDir]) {
-      mkdirSync(path, { recursive: true, mode: 0o700 });
-      const stat = lstatSync(path);
-      if (
-        !stat.isDirectory() ||
-        stat.isSymbolicLink() ||
-        stat.uid !== process.getuid?.() ||
-        (stat.mode & 0o777) !== 0o700
-      )
-        throw new Error('Archive storage must be owned and mode 0700.');
-    }
-    if (realpathSync(archiveDir) !== archiveDir || realpathSync(keyDir) !== keyDir)
-      throw new Error('Archive storage paths must not contain symbolic links.');
-    const authority = authorityFor('read-only-connect', 'read-only');
-    const decision = authorizationFor(authority);
-    const key = randomBytes(32);
-    try {
-      const captured = final
-        ? await captureFinalTiDbArchive({ authority, decision, key, freeze })
-        : await capturePreliminaryTiDbArchive({ authority, decision, key });
-      const stamp = new Date().toISOString().replace(/[^0-9]/g, '');
-      const label = final ? 'final' : 'preliminary';
-      const keyPath = resolve(keyDir, `tidb-${label}-${stamp}.key`);
-      const archivePath = resolve(archiveDir, `tidb-${label}-${stamp}.enc`);
-      writeFileSync(keyPath, key, { mode: 0o600, flag: 'wx' });
-      try {
-        writeFileSync(archivePath, captured.encrypted, { mode: 0o600, flag: 'wx' });
-      } catch (error) {
-        unlinkSync(keyPath);
-        throw error;
-      }
-      const persisted = readFileSync(archivePath);
-      if (!persisted.equals(captured.encrypted))
-        throw new Error('Persisted archive differs from capture.');
-      openSourceArchive(persisted, readFileSync(keyPath));
-      writeFileSync(
-        `${archivePath}.evidence.json`,
-        JSON.stringify({ ...captured.evidence, persistedAuthenticatedReadback: true }, null, 2),
-        {
-          mode: 0o600,
-          flag: 'wx',
-        },
-      );
-      print({ ...captured.evidence, counts: undefined, archivePath, keyPath });
-    } finally {
-      key.fill(0);
-    }
     return;
   }
 
@@ -1108,14 +900,6 @@ async function run(command: Command): Promise<void> {
     return;
   }
 
-  if (command === 'schema:tidb-audit') {
-    // Offline audit: never resolves credentials or opens a connection.
-    const report = auditTidbStructuralAdmission(normalizedDesiredSchema(schema));
-    print(report);
-    if (!report.admitted) process.exitCode = 1;
-    return;
-  }
-
   const authority = authorityFor('diagnostics');
   const decision = authorizationFor(authority);
   const connection = await createAuthoritySqlConnection(authority, decision);
@@ -1124,22 +908,13 @@ async function run(command: Command): Promise<void> {
     const actual = await normalizedPhysicalSchema(connection, authority.context.provider, desired);
     const report = compareNormalizedSchemas(desired, actual);
     const physicalCheckEnforcement = summarizeCheckConstraintEnforcement(actual);
-    const checkConstraintEnforcement = await readTiDbCheckConstraintCapability(
-      connection,
-      authority.context.provider,
-    );
-    const congruent =
-      report.congruent &&
-      (!checkConstraintEnforcement.applicable || checkConstraintEnforcement.enabled === true);
+    const congruent = report.congruent && physicalCheckEnforcement.allEnforced;
     print({
       targetFingerprintHash: authority.context.targetFingerprintHash,
       targetClass: authority.context.targetClass,
       ...report,
       congruent,
-      checkConstraintEnforcement: {
-        ...checkConstraintEnforcement,
-        physical: physicalCheckEnforcement,
-      },
+      checkConstraintEnforcement: physicalCheckEnforcement,
       differences: report.differences.slice(0, 100),
       omittedDifferenceCount: Math.max(0, report.differences.length - 100),
     });
@@ -1191,9 +966,6 @@ const commands = new Set<Command>([
   'manifest',
   'data:manifest',
   'b08:inspector:provision',
-  'b08:tidb-reader:provision',
-  'b08:tidb-v1:inventory',
-  'b08:tidb-v1:assess',
   'b08:inspect-metadata',
   'b08:migrator:provision',
   'b08:migrator:verify',
@@ -1207,18 +979,8 @@ const commands = new Set<Command>([
   'worktree:ack',
   'migration:plan',
   'migration:apply',
-  'migration-recovery:plan',
-  'migration-recovery:apply',
-  'release-migration-recovery:plan',
-  'release-migration-recovery:apply',
-  'release-commercial-quote-terms-recovery:plan',
-  'release-commercial-quote-terms-recovery:apply',
-  'release-tidb-check-constraint-convergence:plan',
-  'release-tidb-check-constraint-convergence:apply',
   'release:plan',
   'release:apply',
-  'source-archive:preliminary',
-  'source-archive:final',
   'release-reference:plan',
   'release-reference:inspect',
   'places:release-preview:prepare',
@@ -1231,7 +993,6 @@ const commands = new Set<Command>([
   'legal-release:verify',
   'readiness',
   'schema:check',
-  'schema:tidb-audit',
   'platform-settings:prepare',
   'platform-settings:verify',
   'places:prepare',

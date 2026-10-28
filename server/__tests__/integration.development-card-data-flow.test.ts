@@ -57,6 +57,12 @@ describeWithDb('Development Card Data Flow Integration', () => {
     const db = await getDb();
     if (!db) return;
 
+    if (createdReviewerUserId) {
+      await db
+        .delete(developmentPlaceAssignments)
+        .where(eq(developmentPlaceAssignments.reviewedByUserId, createdReviewerUserId));
+    }
+
     if (createdDevelopmentId) {
       await db
         .delete(developmentApprovalQueue)

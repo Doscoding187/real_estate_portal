@@ -34,16 +34,6 @@ describe('database authority agent entry contract', () => {
     expect(manifest.requiredLocalVariables).toContain('LOCAL_DEMO_AGENCY_PASSWORD');
     expect(manifest.approvedLocalCommands).toContain('db:worktree:create');
     expect(manifest.approvedLocalCommands).toContain('db:authority:service:recover');
-    expect(manifest.approvedLocalCommands).toContain('db:migration-recovery:plan');
-    expect(manifest.approvedLocalCommands).toContain('db:migration-recovery:apply');
-    expect(manifest.releaseMigrationRecoveryCommands).toEqual([
-      'db:release-migration-recovery:plan',
-      'db:release-migration-recovery:apply',
-      'db:release-commercial-quote-terms-recovery:plan',
-      'db:release-commercial-quote-terms-recovery:apply',
-      'db:release-tidb-check-constraint-convergence:plan',
-      'db:release-tidb-check-constraint-convergence:apply',
-    ]);
     expect(manifest.migrationManifest).toBe('server/migrations/manifest.json');
     expect(manifest.migrationAttemptLedger).toBe('sql_migration_attempts');
     expect(manifest.consumerContractEntrypoint).toBe(

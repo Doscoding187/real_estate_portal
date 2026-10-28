@@ -15,7 +15,6 @@ import { dirname, join } from 'node:path';
 import { assessAuditCompleteness } from '../../tools/place-admission/audit-completeness.mjs';
 
 import { normalizedDesiredSchema } from '../_core/databaseAuthority/schemaCongruency';
-import { auditTidbStructuralAdmission } from '../_core/databaseAuthority/tidbStructuralAdmission';
 import * as schema from '../../drizzle/schema';
 import { PLACE_RELATIONSHIP_TYPES, PLACE_TYPES } from '../../drizzle/schema/placeAuthority';
 import {
@@ -658,8 +657,6 @@ describe('Place admission: schema alignment', () => {
     ]) {
       expect(desiredTableNames.has(tableName), tableName).toBe(false);
     }
-    const report = auditTidbStructuralAdmission(normalized);
-    expect(report.admitted).toBe(false); // pre-existing reviewed interactions remain
   });
 
   it('publishes a stable expected-dataset description for the materializer', () => {

@@ -34,10 +34,6 @@ import {
   normalizedPhysicalSchema,
   type SchemaCongruencyReport,
 } from './schemaCongruency';
-import {
-  readTiDbCheckConstraintCapability,
-  type TiDbCheckConstraintCapability,
-} from './tidbCheckConstraintCapability';
 import * as canonicalSchema from '../../../drizzle/schema';
 import {
   buildMigrationPlan,
@@ -200,20 +196,12 @@ function targetOwnershipLayer(
 
 export function schemaCongruencyReadinessLayer(
   report: SchemaCongruencyReport,
-  capability: TiDbCheckConstraintCapability,
 ): ReadinessLayer {
   if (!report.congruent) {
     return layer(
       'not-ready',
       'schema-not-congruent',
       `Physical schema differs from canonical digest ${report.desiredDigest}; ${report.differences.length} difference(s) found.`,
-    );
-  }
-  if (capability.applicable && !capability.enabled) {
-    return layer(
-      'not-ready',
-      'tidb-check-constraints-disabled',
-      `TiDB CHECK-constraint enforcement is disabled (${capability.variable}=${capability.value}).`,
     );
   }
   return layer(
@@ -236,13 +224,19 @@ async function schemaCongruencyLayer(
     );
   }
   try {
+    if (provider !== 'mysql') {
+      return layer(
+        'not-ready',
+        'unsupported-database-provider',
+        'Canonical readiness requires the supported MySQL provider.',
+      );
+    }
     const desired = normalizedDesiredSchema(canonicalSchema);
     const report = compareNormalizedSchemas(
       desired,
       await normalizedPhysicalSchema(connection, provider, desired),
     );
-    const capability = await readTiDbCheckConstraintCapability(connection, provider);
-    return schemaCongruencyReadinessLayer(report, capability);
+    return schemaCongruencyReadinessLayer(report);
   } catch (error) {
     return layer(
       'not-ready',

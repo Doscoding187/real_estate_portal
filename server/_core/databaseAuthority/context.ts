@@ -300,8 +300,10 @@ export function resolveDatabaseAuthority(input: {
     }
   }
 
+  // A MySQL URI does not make a retired MySQL-compatible service a supported
+  // provider. Keep its hosts unresolved so authorization fails closed.
   const provider =
-    parsed.protocol === 'mysql:' ? (/tidb/i.test(resolvedHost) ? 'tidb' : 'mysql') : 'unknown';
+    parsed.protocol === 'mysql:' && !/tidb/i.test(resolvedHost) ? 'mysql' : 'unknown';
   const dialect = parsed.protocol === 'mysql:' ? 'mysql' : 'unknown';
   let tlsRequired = !resolvedLocal;
   let certificateVerificationRequired = !resolvedLocal;

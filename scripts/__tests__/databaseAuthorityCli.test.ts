@@ -26,7 +26,7 @@ describe('database authority context diagnostic', () => {
       operation: 'read-only-connect',
       gitIdentity: identity('main'),
       explicitDatabaseUrl:
-        'mysql://sensitive-user:sensitive-password@tidb.example.com/listify_property_sa',
+        'mysql://sensitive-user:sensitive-password@unsupported.mysql.example.com/listify_property_sa',
       credentialClass: 'read-only',
       processEnv: { APP_ENV: 'production', NODE_ENV: 'production' },
     });

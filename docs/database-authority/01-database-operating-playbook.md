@@ -11,6 +11,12 @@ When this playbook conflicts with `AGENTS.md`, the Agent Entry Contract, the
 Authority Manifest, the Database Authority Policy, an approved exception, or
 the Database Change Protocol, those authorities win.
 
+**Supported provider:** MySQL only. The intended hosted product is Azure
+Database for MySQL. Azure SQL Database is SQL Server and is not compatible with
+the application's MySQL driver and schema. TiDB integration and recovery code
+are retired; historical TiDB records do not establish production cutover
+status.
+
 ## 1. The outcome we are protecting
 
 Property Listify has one canonical database model and one controlled path from
@@ -23,7 +29,7 @@ active migration manifest and immutable baseline
         ↓
 Database Authority plan/apply and durable ledgers
         ↓
-physical MySQL/TiDB schema and declared data roles
+physical MySQL schema and declared data roles
         ↓
 runtime consumers and readiness checks
 ```
@@ -89,8 +95,8 @@ VERIFY
 HAND OFF
 ```
 
-The following are not phase transitions: opening TiDB SQL Editor, entering a
-container, seeing a green build, seeing a successful deployment, or receiving
+The following are not phase transitions: opening a provider SQL console, entering
+a container, seeing a green build, seeing a successful deployment, or receiving
 a plausible-looking command from a previous conversation.
 
 ### Phase 0 — Classify
@@ -103,8 +109,8 @@ Choose exactly one primary route before reading broad database files:
 | Local data | Browser or manual validation needs canonical accounts/data | Owned disposable worktree target only |
 | Consumer | Runtime query, service, seed, fixture, API, or schema error | Reconcile consumer to canonical model |
 | Schema authority | Model, table, column, relationship, index, constraint, migration, ledger, or exception | Dedicated DB worktree and change protocol |
-| Protected release | Staging, production, Railway, TiDB, shared data, or live reference data | Read-only plan until separately approved |
-| Incident/recovery | Failed attempt, provider capability mismatch, repair, restore, import, or backfill | Stop; use a named reviewed recovery/exception contract |
+| Protected release | Staging, production, shared data, or live reference data | Read-only plan until separately approved |
+| Incident/recovery | Failed attempt, repair, restore, import, or backfill | Stop; preserve evidence and obtain a separately reviewed incident contract |
 
 Do not turn a consumer failure into a schema change merely to avoid an audit.
 Do not turn a release into a local migration because the protected plan is
@@ -141,7 +147,7 @@ its host, branch, or a dashboard label:
 | `disposable-worktree` | Owned local mutation | Feature migration, role data, and browser validation |
 | `disposable-test` | Isolated test mutation | CI/test-owner contract execution |
 | `staging` | Protected, approved only | Pre-production release verification |
-| `production` | Protected, approved only | Live release, reference data, or convergence |
+| `production` | Protected, approved only | Live release or reference data |
 | `unknown` / `shared-remote` | Deny | Stop and resolve authority; never guess |
 
 Credential class is a permission boundary, not a username suggestion:
@@ -179,8 +185,8 @@ URL.
 | Local schema | `db:migrate:plan` | `db:migrate:apply` on the owned disposable target |
 | Protected schema | `db:release:plan` | `db:release:apply` with exact approval, digest, and acknowledgement |
 | Commercial reference data | `db:release:reference:plan` | `db:release:reference:apply`, then `:verify` |
-| Failed migration/recovery | Named recovery `:plan` | Matching named recovery `:apply`; never generic retry |
-| Physical/provider convergence | Named capability/convergence `:plan` | Matching bounded `:apply`, then congruency/readiness |
+| Failed migration attempt | Preserve sanitized evidence | Stop; no standing recovery command exists |
+| Physical schema check | `db:schema:congruency` | MySQL physical schema inventory and canonical comparison |
 | Local data role | Role `:verify` or read-only readiness | Role `:prepare`, then role `:verify` on an owned disposable target |
 
 The exact command names, acknowledgement format, and exception scope are
@@ -245,13 +251,15 @@ Apply only through the named repository command for the classified operation:
 - local disposable migration through the local migration path;
 - protected schema release through `db:release:plan`/`db:release:apply`;
 - canonical commercial reference data through the `release:reference:*`
-  sequence; and
-- a reviewed incident through its exact bounded recovery or convergence path.
+  sequence.
+
+No incident recovery path is available until a separate MySQL-only contract is
+reviewed and approved.
 
 Use the exact accepted head, expected head, plan digest, approval evidence, and
 acknowledgement emitted for that operation. Do not hand-author provider DDL,
 edit a ledger, execute archived SQL, or use a generic retry/down-migration
-pattern. MySQL/TiDB DDL is not described as transactionally rolled back.
+pattern. MySQL DDL is not described as transactionally rolled back.
 
 ### Phase 6 — Verify
 
@@ -264,7 +272,7 @@ consumer question. Select the smallest sufficient set:
 | Local schema | Migration plan/apply, schema congruency, relevant role verifier, readiness |
 | Protected migration | Release plan/apply result, no blocked attempt, fresh plan/verify, congruency, readiness |
 | Commercial reference data | `release:reference:verify` plus application/readiness smoke |
-| Provider convergence | Capability state, bounded plan/apply evidence, per-object verification, congruency |
+| Physical schema | MySQL inventory, canonical schema comparison, readiness |
 | Deployment | Exact merged SHA, hosting deployment result, `/api/health`, then relevant readiness/consumer smoke |
 
 Do not substitute a liveness result for a schema result, or a schema result for
@@ -339,16 +347,12 @@ evidence. Do not reset, rebuild, or retry by changing the database name.
 3. Choose the next migration sequence only through a current manifest review.
 4. Declare parent/checksum, statement policy, target classes, preconditions,
    postconditions, consumer evidence, and forward-recovery behavior.
-5. Keep additive DDL independently verifiable. For TiDB, sequence newly added
-   columns before dependent indexes, keys, or constraints.
+5. Keep additive MySQL DDL independently verifiable.
 6. Run static manifest, model-inventory, authority, and focused contract gates.
 7. Open a PR. Do not apply a protected target from the feature worktree.
 
-For a TiDB target, run `pnpm db:schema:tidb-audit` before planning a provider
-convergence. Any CHECK/FK overlap is a review item; a successful MySQL test
-does not admit the same DDL on TiDB. Resolve every item in the plan evidence
-before requesting protected approval.
-
+The provider is fixed by repository authority. Do not add a provider audit,
+normalization path, or fallback for a second database engine.
 An unapplied migration is not production truth because it exists on a branch.
 An applied migration is not permission to alter its checksum or rewrite its
 history.
@@ -356,8 +360,8 @@ history.
 ## 6. Protected release recipe
 
 Use this only after the code PR is merged and the intended deployment commit is
-known. The operator should have preservation evidence (for example, a verified
-TiDB export or backup) before any approved live mutation.
+known. The operator should have preservation evidence appropriate to the MySQL target
+before any approved live mutation.
 
 ### Read-only preparation
 
@@ -365,8 +369,7 @@ TiDB export or backup) before any approved live mutation.
 2. Resolve the protected context and confirm the sanitized fingerprint/hash.
 3. Use the named release plan command with the explicit accepted old head and
    expected new head.
-4. Inspect pending order, checksums, attempt ledger state, provider capability,
-   and schema/data evidence.
+4. Inspect pending order, checksums, attempt ledger state, and schema/data evidence.
 5. If the plan is not exactly the reviewed plan, stop. Do not “make it fit.”
 
 ### Apply gate
@@ -380,8 +383,8 @@ TiDB export or backup) before any approved live mutation.
    only in the current protected process (use a hidden prompt; do not save it
    as a service variable).
 4. Apply once with the exact plan digest and acknowledgement.
-5. If the command fails, stop. Preserve its durable attempt ID and failure
-   digest and route to the named recovery contract.
+5. If the command fails, stop and preserve its durable attempt ID and failure
+   evidence. Do not retry; a new incident contract must be reviewed before recovery.
 
 ### Post-apply
 
@@ -396,36 +399,25 @@ TiDB export or backup) before any approved live mutation.
 
 | Signal | Correct response | Forbidden response |
 | --- | --- | --- |
-| Failed/running/blocked attempt | Preserve ID/digest; use named reviewed recovery | Retry or edit the ledger |
-| Zero-statement rejected migration | Archive evidence unchanged; use bounded replacement recovery | Replay archived SQL or recreate the database |
-| TiDB capability disabled | Plan provider convergence and count violations | Pretend migration history proves physical enforcement |
-| Missing physical object after successful head | Audit schema congruency and approved exception | Add manual object in SQL Editor |
+| Failed/running/blocked attempt | Preserve ID, failure evidence, target fingerprint, and accepted head; stop | Retry or edit the ledger |
+| Zero-statement rejected migration | Preserve historical archive/evidence and request a separately reviewed MySQL incident contract | Replay archived SQL or recreate the database |
+| Missing physical object after successful head | Audit MySQL schema congruency and the canonical migration record | Add a manual object in a SQL console |
 | Unknown/remote target | Stop and obtain exact operation/fingerprint approval | Guess from host, branch, or old variables |
-| Data mismatch or import/restore request | Use the exceptional repair/backfill contract | Copy live data into a worktree or overwrite live data |
-| Runtime/schema disagreement | Reconcile consumer to canonical model | Add fallback queries or empty defaults |
+| Data mismatch or import/restore request | Use the exceptional repair/backfill contract after review | Copy live data into a worktree or overwrite live data |
+| Runtime/schema disagreement | Reconcile the consumer to the canonical model | Add fallback queries or empty defaults |
 
-The two reviewed TiDB zero-statement recoveries and the CHECK-constraint
-convergence are named exceptions, not examples of a generic repair facility.
-Use the exact commands and scope in the Database Change Protocol and current
-manifest; never generalize their acknowledgement or target to another incident.
+No standing migration recovery command or provider-convergence workflow is
+available. The historical TiDB recovery exceptions remain documentary evidence;
+their executable code and commands are retired. Any new recovery must use a
+dedicated MySQL-only incident contract with separately reviewed code and
+operation-specific approval.
 
-## 8. TiDB-specific operating rules
+## 8. Unsupported database providers
 
-- TiDB is reached through the repository's MySQL-compatible connection
-  authority; platform selection is not a per-task design choice.
-- Provider capability is part of physical readiness. A successful migration head
-  does not prove that a disabled TiDB capability retained every intended
-  constraint.
-- `tidb_enable_check_constraint` must be checked by the named convergence
-  operation when the canonical contract requires enforced CHECK metadata.
-- Newly introduced columns and their dependent indexes, keys, and constraints
-  are separate independently verifiable transitions.
-- TiDB DDL failures are durable evidence. Do not assume an ordinary rollback.
-- TiDB Cloud export/backup output is preservation evidence, not permission to
-  import, replace, or merge a target.
-- TiDB SQL Editor is suitable only for documented read-only evidence checks in
-  an approved investigation. It is never the canonical schema, data, or ledger
-  executor.
+The active connection, migration, schema-inspection, and readiness paths accept
+MySQL only. Unknown providers fail closed. TiDB is not a staging or production
+option in the current repository authority; do not add a driver, connection
+creator, provider fallback, capability probe, or recovery command for it.
 
 ## 9. The junior operator stop list
 
