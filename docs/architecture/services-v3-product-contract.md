@@ -1,23 +1,24 @@
-# Property Listify Services V3 Growth Contract (Draft)
+# Property Listify Services V3 Growth Contract
 
-**Status:** **DRAFT — awaiting Edward's approval.** Nothing in this document is
-active direction until Edward approves the decision register in §3. Until then,
-`services-v1-product-contract.md` and `services-v2-product-contract.md` remain
-the only active Services contracts.
+**Status:** `SERVICES V3 — APPROVED, DELTA-1 IN DELIVERY`
+
+Approved by Edward on 2026-10-28 with five clarifications recorded here as
+founder decisions. Approval activated the §3 decision register; the
+clarifications are incorporated inline (§3.2, §3.3, §3.6, §3.7, §4.2) so the
+implementation does not return for them.
 
 **Owner:** Edward (product decisions) / product engineering (delivery)
 
 **Relationship to earlier contracts:**
 
 - V1 remains the authority for behaviour that is already shipped on the public
-  Services surface. This draft does not amend, weaken, or supersede V1. Any
+  Services surface. This contract does not amend, weaken, or supersede V1. Any
   change to shipped V1 behaviour remains an explicit V1 amendment.
-- V2 remains the active direction contract for the delivered Services product.
-  If this draft is approved, it **supersedes V2 §6 ("provider mini-site")
+- On approval this contract **supersedes V2 §6 ("provider mini-site")
   terminology** with the provider web presence model in §6 of this document —
   the same capability delta, restated under the growth-journey model. V2 §3
   (business model, ratings and reviews, Explore, property journey) is carried
-  forward by reference and is restated only where this draft extends it.
+  forward by reference and is restated only where this contract extends it.
 
 **Basis:** `services-v3-growth-journey-gap-assessment-2026-10-28.md` (§3 gaps,
 §4 deltas, §5 priorities, §6 guardrails, §7 open decisions), verified against
@@ -74,9 +75,9 @@ enquiry authority, a second trust authority, or a second CRM.
 
 ## 3. Decision register
 
-Each decision is **Proposed — awaiting Edward's approval**. The register is
-written so that approval of this document activates all of them without
-re-decision; objections can be raised per item.
+All decisions below were **approved by Edward on 2026-10-28** together with the
+five clarifications that are incorporated inline. They are active engineering
+direction for the Services workstream.
 
 ### 3.1 Structuring basis (supersedes V2 §6 vocabulary)
 
@@ -99,20 +100,31 @@ schema only when provider behaviour evidences it.
 
 ### 3.2 Provider web presence (DELTA-1)
 
-**Decision: evolve the existing profile page into the provider's public
-homepage, adding per-service detail pages and brand surfaces on existing
-data first.** No second identity, trust, contact, or service authority may be
-created. The full specification, including what it must not become, is §6.
+**Decision (approved; next implementation priority): evolve the existing
+profile page into the provider's public homepage, adding per-service detail
+pages and brand surfaces on existing data first.** No second identity, trust,
+contact, or service authority may be created; the existing identity,
+publication, eligibility, trust, and lead authorities are reused. No new
+database schema for this slice. The full specification, including what it must
+not become, is §6.
 
-Per-service detail pages are the first net-new surface: each published
-service renders on its own canonical, sitemap-listed page with the enquiry
-action, so a consumer searching "plumbing Pretoria" can land directly on the
-plumbing page of a provider who covers Pretoria.
+Per-service detail pages are the first net-new surface: each published service
+renders on its own canonical, sitemap-listed page with the enquiry action, so
+a consumer searching "plumbing Pretoria" can land directly on the plumbing
+page of a provider who covers Pretoria.
+
+**F clar. — page-content standard.** These pages are a customer-conversion
+experience, not merely routing and SEO plumbing. A per-service page must
+communicate the offering (what the service is, price range when published),
+its relevant listed coverage, whatever trust evidence the computed-truth
+ladder actually provides, and a clear enquiry action; it must work well on
+mobile; and it must carry the correct service context into the existing lead
+system when the enquiry fires.
 
 ### 3.3 Campaign landing pages with provider-attributed capture (DELTA-2)
 
-**Decision: provider-owned campaign URLs are approved as direction**, with
-these contract clauses:
+**Decision (approved; next planned capability after DELTA-1).** Provider-owned
+campaign URLs enable service-specific marketing under these contract clauses:
 
 1. **Attribution honesty.** A campaign request is the existing
    `createLeadFromJourney` request with a structured campaign context
@@ -121,22 +133,34 @@ these contract clauses:
    request authority.
 2. **`noindex` by default.** Campaign landing routes are excluded from
    indexing unless Edward explicitly approves indexability for a specific
-   campaign class; each campaign stage records its indexability decision.
-   Doorway-page hygiene is a contract clause: no thin indexable keyword
-   variants, ever.
-3. **Sequencing.** DELTA-2 is built after DELTA-1 (P1 order); landing pages
-   without an excellent base presence are thin.
+   page class; each page class records its indexability decision. The pages
+   must first be genuinely useful to the consumer who lands on them; the
+   guardrail is that this must not grow into thousands of thin, indexable
+   SEO pages — useful pages first, then deliberate, class-level indexing
+   decisions.
+3. **Sequencing.** DELTA-2 is built after DELTA-1; landing pages without an
+   excellent base presence are thin.
 4. **Platform remains the attribution system of record.** Campaign capture
    deepens attribution; it never moves lead custody out of the platform.
 
-### 3.4 Trust ladder
+### 3.4 Trust ladder and growth measurement
 
-**Decision: trust claims remain "computed truth only", now with two live
-rungs.** Verified-request ratings (V2 §3.3, in force) and measured first
-response (DELTA-3, shipped — median only from `service_lead_events`, sample
-gated at >= 3 measured requests). Neither rung may be fabricated, and the
-ladder does not gain new rungs — no years in business, insurance badges, or
+**Decision (clar. — trust).** Trust claims remain "computed truth only", now
+with two live rungs: verified-request ratings (V2 §3.3, in force) and measured
+first response (DELTA-3, shipped — median only from `service_lead_events`,
+sample gated at >= 3 measured requests). Neither rung may be fabricated, and
+the ladder does not gain new rungs — no years in business, insurance badges, or
 match scores — without a new contract clause that states its evidence basis.
+
+**Decision (clar. — measurement).** Growth is measured, and the product must
+help the business understand the journey from discovery through enquiry,
+response, and recorded outcome — a practical baseline of page visits, enquiry
+submissions, response times, and recorded outcomes. Page-visit and discovery
+analytics may need their own event vocabulary and slice; until then existing
+attribution (`bySource`, context capture, `service_lead_events`) and the DELTA-3
+response measurement are the baseline. No invented trust scores and no claim
+that every enquiry is a qualified lead, and no promise of guaranteed leads or
+business results.
 
 ### 3.5 Commercial posture
 
@@ -145,18 +169,19 @@ paid placement, no lead fees, no tier merchandising; the entitlement schema
 surface is preserved for the future. DELTA-11 (commercial model) stays a
 founder decision behind research.
 
-### 3.6 Retain-or-hand-over ordering
+### 3.6 Retain-and-hand-over (clar.)
 
-**Decision (recommendation): DELTA-8 first, then DELTA-9, as recorded in the
-gap assessment §5.** Rationale: platform-only operators (the current cohort)
-lose leads to silence before they lose anything to absent CRM export, and a
-delivered reminder/alert domain is the prerequisite for a mature workspace;
-DELTA-9's POPIA consent semantics and export-boundary records can then be
-designed against real delivery behaviour. **If Edward judges the CRM-carrying
-segment materially larger or commercially nearer, invert the order** — DELTA-9
-is contract + POPIA review and is safe to build first. Either way, the retired
-phase-0 notification engine stays retired; DELTA-8 is a fresh design with a
-defined owner, channel, and delivery contract.
+**Decision (approved): DELTA-8 (reminders and alerts) is delivered before
+DELTA-9 (export and handover), unless implementation evidence demonstrates a
+material reason to change the order.** The handover requirement is preserved
+and must not be deferred indefinitely: Property Listify remains the
+authoritative system for enquiry records and attribution, while providers must
+ultimately be able to work leads through the platform workspace **or transfer
+them into their own business systems**. Not every CRM integration is an MVP
+obligation, but reliable export and handover stays part of the product
+direction with appropriate privacy and consent controls. The retired phase-0
+notification engine stays retired; DELTA-8 is a fresh design with a defined
+owner, channel, and delivery contract.
 
 ### 3.7 Hygiene disposition
 
@@ -175,18 +200,22 @@ MVP surfaces, verified-request reviews, sitemap/JSON-LD/slug infrastructure
 (DELTA-4), measured response performance (DELTA-3), and the filtered lead
 workspace (DELTA-7). This contract adds no authority that contradicts it.
 
-### 4.2 Approved next build (pending §3 approval): DELTA-1
+### 4.2 Approved next build — DELTA-1 (in delivery)
 
-| #    | Requirement                                                                                                           | Notes                                                                          |
-| ---- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| P1-1 | Per-service detail pages between profile and enquiry, on existing `service_provider_services` data                    | Code-only; canonical URLs from the shared slug authority                       |
-| P1-2 | Brand-surface upgrades on the profile (homepage treatment) using existing data                                        | No schema; imagery stays provider-supplied metadata until DELTA-5 evidences it |
-| P1-3 | Reuse of the single enquiry action with source/context attribution intact                                             | V1 enquiry privacy unchanged                                                   |
-| P1-4 | Sitemap child participation and per-page `applySeo` (title/description/canonical/social)                              | Builds on DELTA-4 infrastructure                                               |
-| P1-5 | Contract tests: eligibility reuse (no weaker public bar than the directory), canonical paths, no new trust vocabulary | Engine-side selection must go through publication/eligibility authority        |
+| #    | Requirement                                                                                                                     | Notes                                                                          |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| P1-1 | Per-service detail pages between profile and enquiry, on existing `service_provider_services` data                              | Code-only; canonical URLs from the shared slug authority                       |
+| P1-2 | Brand-surface upgrades on the profile (homepage treatment) using existing data                                                  | No schema; imagery stays provider-supplied metadata until DELTA-5 evidences it |
+| P1-3 | Reuse of the single enquiry action with source/context attribution intact; correct service context carried into the lead system | V1 enquiry privacy unchanged                                                   |
+| P1-4 | Sitemap child participation and per-page `applySeo` (title/description/canonical/social)                                        | Builds on DELTA-4 infrastructure                                               |
+| P1-5 | Contract tests: eligibility reuse (no weaker public bar than the directory), canonical paths, no new trust vocabulary           | Engine-side selection must go through publication/eligibility authority        |
+| P1-6 | Mobile-first treatment on the new pages (§3.2 standard), rendering offering, coverage, trust evidence, and enquiry clearly      | Assessed as a conversion experience, not routing/SEO plumbing                  |
 
-DELTA-2 (campaign capture, §3.3) is the following approved build, requiring
-its own context-vocabulary design note before code.
+DELTA-2 (campaign capture, §3.3) is the following approved planned build,
+requiring its own context-vocabulary design note before code. The remaining
+schema work (media library, case studies, multi-branch), expanded geographical
+discovery, and the commercial model stay evidence-led and separately gated —
+they are not prerequisites for DELTA-1 and must not hold launch momentum.
 
 ### 4.3 Evidence-gated and deferred
 
@@ -197,14 +226,14 @@ its own context-vocabulary design note before code.
 | DELTA-11 commercial model                     | V2 §3.1 research gate                                                                                             |
 | Multi-branch (V2 MINI-5)                      | Evidenced requirements from real provider behaviour                                                               |
 
-### 4.4 Decisions consolidated for Edward
+### 4.4 Decisions consolidated for Edward — resolved 2026-10-28
 
-| #   | Decision                                                              | State                                                                                                                                                         |
-| --- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A   | Approve this contract as the Services V3 direction (activates §3)     | Open — this document                                                                                                                                          |
-| B   | Confirm DELTA-1 as the next build                                     | Recommendation: yes, as P1-1..5                                                                                                                               |
-| C   | DELTA-8 before DELTA-9                                                | Recommendation: keep §3.6 order; inversion is safe and supported if the CRM segment is nearer                                                                 |
-| D   | P0 ordering and hygiene-sweep disposition (gap assessment §7.2, §7.4) | Already executed under Edward's per-slice approvals: DELTA-4 → DELTA-3 → DELTA-7 (+ hygiene fold). No further decision needed; recorded here for completeness |
+| #   | Decision                                                              | State                                                                                  |
+| --- | --------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| A   | Approve this contract as the Services V3 direction (activates §3)     | **Approved** with the five clarifications incorporated (§3.2, §3.3, §3.6, §3.4, §4.2)  |
+| B   | Confirm DELTA-1 as the next build                                     | **Approved** — DELTA-1 in delivery (P1-1..6)                                           |
+| C   | DELTA-8 before DELTA-9                                                | **Retained** (§3.6); DELTA-9 requirements must not be deferred indefinitely            |
+| D   | P0 ordering and hygiene-sweep disposition (gap assessment §7.2, §7.4) | **Recorded as complete**, subject to existing implementation evidence and test results |
 
 ## 5. Boundaries this workstream must not cross (V3 additions and restatements)
 
@@ -229,7 +258,7 @@ its own context-vocabulary design note before code.
 
 ## 6. Provider web presence specification
 
-**Status:** specification for DELTA-1 (approved-pending build) plus
+**Status:** specification for DELTA-1 (approved build, in delivery) plus
 evidence-gated depth. This section restates V2 §6 under the §3.1 vocabulary
 mapping; the capability obligations of V2 §6.1 are preserved verbatim in
 meaning.
