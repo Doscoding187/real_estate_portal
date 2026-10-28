@@ -16,6 +16,19 @@ export type PublicPropertyGuideArea = {
 
 const INVENTORY_QUERY_BATCH_SIZE = 8;
 
+/**
+ * Some city guide identities describe the same geographic extent as an
+ * administrative municipality, while their locality membership is recorded
+ * on the municipality node. This is guide navigation policy only: it does not
+ * create a settlement relationship or widen exact-locality search.
+ */
+const CITY_GUIDE_ADMINISTRATIVE_EXTENTS: Readonly<Record<string, string>> = {
+  // Johannesburg city guide → City of Johannesburg local municipality.
+  'pl-place-01-21f154cd5d0954c29ec7525f': 'pl-place-01-503de72cc29aa712c0e5a597',
+  // Pretoria city guide → City of Tshwane local municipality.
+  'pl-place-01-d0401eba0f556a60bb02e528': 'pl-place-01-b903aa4e24582a26d57c7e2e',
+};
+
 function searchHref(mode: PropertyGuideMode, placeId: string): string {
   const route = mode === 'sale' ? '/property-for-sale' : '/property-to-rent';
   return `${route}?canonicalPlaceId=${encodeURIComponent(placeId)}`;
@@ -61,6 +74,29 @@ export async function publicPropertyGuideAreas(
         ),
       );
     localityIds = [...new Set<string>((children as { placeId: string }[]).map(row => row.placeId))];
+
+    const administrativeExtentId = CITY_GUIDE_ADMINISTRATIVE_EXTENTS[canonicalPlaceId];
+    if (administrativeExtentId) {
+      const administrativeChildren = await database
+        .select({ placeId: placeRelationship.fromPlaceId })
+        .from(placeRelationship)
+        .innerJoin(place, eq(place.placeId, placeRelationship.fromPlaceId))
+        .where(
+          and(
+            eq(placeRelationship.toPlaceId, administrativeExtentId),
+            eq(placeRelationship.relationshipType, 'administratively_contains'),
+            eq(place.lifecycleStatus, 'active'),
+            eq(place.searchEligible, 1),
+            eq(place.searchScope, 'locality'),
+          ),
+        );
+      localityIds = [
+        ...new Set([
+          ...localityIds,
+          ...(administrativeChildren as { placeId: string }[]).map(row => row.placeId),
+        ]),
+      ];
+    }
   } else {
     const provinceProjection = await loadCanonicalPlaceSearchProjection(database, {
       placeIds: [canonicalPlaceId],
