@@ -146,7 +146,7 @@ describe('Slice 3: discovery resolves canonical identity', () => {
     }
   });
 
-  it('returns distinct canonical identities for the two admitted Diepkloof Places', async () => {
+  it('returns distinct canonical identities for all admitted Diepkloof Places', async () => {
     const response = await discoverPlaces('Diepkloof', { recordCoverage: false });
     const ids = new Set(response.results.map(r => r.placeId));
     expect([...ids].sort()).toEqual([...requiredDiepkloofPlaceIds].sort());
