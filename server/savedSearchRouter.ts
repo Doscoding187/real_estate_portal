@@ -13,6 +13,8 @@ import {
 } from './lib/savedSearchContract';
 import { savedSearchNotificationEngine } from './services/savedSearchNotificationEngine';
 import { verifySavedSearchDeliveryActionToken } from './services/savedSearchDeliveryActionTokenService';
+import { executePlace } from './services/placeDiscoveryService';
+import { isCanonicalPlaceId } from '../shared/placeAuthority';
 
 function getUserId(ctx: { user: { id: number } | null }) {
   return requireUser(ctx).id;
@@ -162,9 +164,47 @@ export const savedSearchRouter = router({
         notificationFrequency: savedSearchNotificationFrequencySchema.default('never'),
         emailEnabled: z.boolean().default(true),
         inAppEnabled: z.boolean().default(true),
-      }),
+        placeId: z.string().max(40).optional(),
+      }).strict(),
     )
     .mutation(async ({ ctx, input }) => {
+      const retiredGeographyKeys = [
+        'province',
+        'city',
+        'suburb',
+        'location',
+        'slug',
+        'locationId',
+        'locationIds',
+        'locations',
+        'factualLocationId',
+        'searchAreaIds',
+        'searchAreaId',
+        'canonicalPlaceId',
+      ];
+      if (retiredGeographyKeys.some(key => Object.prototype.hasOwnProperty.call(input.criteria, key))) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Saved searches accept a canonical Place ID or no geographic scope.',
+        });
+      }
+
+      const hasPlace = input.placeId !== undefined;
+      let persistedPlaceId: string | null = null;
+      if (hasPlace) {
+        if (!isCanonicalPlaceId(input.placeId)) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Choose an admitted Place ID.' });
+        }
+        const execution = await executePlace(input.placeId);
+        if (!execution.ok) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: `Saved search Place is unavailable: ${execution.reason}.`,
+          });
+        }
+        persistedPlaceId = input.placeId;
+      }
+
       const db = await getDb();
       if (!db)
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
@@ -173,6 +213,7 @@ export const savedSearchRouter = router({
         userId: getUserId(ctx),
         name: input.name,
         criteria: serializeSavedSearchCriteria(input.criteria, input),
+        placeId: persistedPlaceId,
         notificationFrequency: input.notificationFrequency,
       });
 

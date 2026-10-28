@@ -33,7 +33,6 @@ export interface VideoMetadata {
   tags: string[];
   lifestyleCategories: string[];
   price?: number;
-  location?: string;
   beds?: number;
   baths?: number;
 }
@@ -61,8 +60,8 @@ export function validateVideoMetadata(metadata: VideoMetadata): {
   if (!metadata.tags || metadata.tags.length === 0) {
     errors.push('At least one tag is required');
   }
-  if (!metadata.propertyId && !metadata.developmentId) {
-    errors.push('Video must be linked to a property or development');
+  if (Boolean(metadata.propertyId) === Boolean(metadata.developmentId)) {
+    errors.push('Video must be linked to exactly one property or development');
   }
 
   return { valid: errors.length === 0, errors };
@@ -141,9 +140,8 @@ export async function createExploreVideo(
   const dv = validateVideoDuration(duration);
   if (!dv.valid) throw new Error(dv.error);
 
-  // Extract location & price info
-  let locationLat: number | null = null;
-  let locationLng: number | null = null;
+  // Copy location identity only from the selected canonical property record.
+  let canonicalPlaceId: string | null = null;
   let priceMin: number | null = null;
   let priceMax: number | null = null;
 
@@ -156,8 +154,7 @@ export async function createExploreVideo(
 
     if (!property) throw new Error('Property not found');
 
-    locationLat = property.latitude ? Number(property.latitude) : null;
-    locationLng = property.longitude ? Number(property.longitude) : null;
+    canonicalPlaceId = property.canonicalPlaceId ?? null;
     priceMin = property.price ?? null;
     priceMax = property.price ?? null;
   } else if (metadata.developmentId) {
@@ -169,8 +166,7 @@ export async function createExploreVideo(
 
     if (!development) throw new Error('Development not found');
 
-    locationLat = development.latitude ? Number(development.latitude) : null;
-    locationLng = development.longitude ? Number(development.longitude) : null;
+    canonicalPlaceId = development.canonicalPlaceId ?? null;
     priceMin = (development as any).priceFrom ?? null;
     priceMax = (development as any).priceTo ?? null;
   }
@@ -181,6 +177,7 @@ export async function createExploreVideo(
       contentType: 'video',
       videoFormat: 'short', // change to 'walkthrough', 'ad', etc. when needed
       referenceId: metadata.propertyId ?? metadata.developmentId ?? null,
+      canonicalPlaceId,
       creatorId: publisher.creatorId,
       creatorType: publisher.creatorType,
       agencyId: publisher.agencyId,
@@ -192,12 +189,9 @@ export async function createExploreVideo(
       metadata: JSON.stringify({
         beds: metadata.beds,
         baths: metadata.baths,
-        location: metadata.location,
       }),
       tags: JSON.stringify(metadata.tags),
       lifestyleCategories: JSON.stringify(metadata.lifestyleCategories),
-      locationLat,
-      locationLng,
       priceMin,
       priceMax,
       viewCount: 0,

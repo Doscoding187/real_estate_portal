@@ -164,16 +164,6 @@ const searchResult = {
   page: 0,
   pageSize: 12,
   hasMore: false,
-  locationContext: {
-    type: 'city',
-    name: 'Johannesburg',
-    slug: 'johannesburg',
-    confidence: 'exact',
-    fallbackLevel: 'none',
-    originalIntent: 'Johannesburg',
-    hierarchy: { province: 'Gauteng', city: 'Johannesburg' },
-    ids: { provinceId: 1, cityId: 12 },
-  },
   locationState: 'resolved',
   sourceCounts: { manual: 2, development: 1 },
 };
@@ -360,25 +350,6 @@ async function installBuyFixture(page: Page, onLeadCapture?: () => void) {
               headOfficeLocation: 'Johannesburg',
               logoUrl: null,
               stats: { totalProjects: 3, experience: 12 },
-            },
-          ]);
-        case 'locationPages.getPopularCities':
-          return trpcResult([
-            {
-              id: 12,
-              name: 'Johannesburg',
-              slug: 'johannesburg',
-              provinceName: 'Gauteng',
-              provinceSlug: 'gauteng',
-              listingCount: 3,
-            },
-            {
-              id: 13,
-              name: 'Cape Town',
-              slug: 'cape-town',
-              provinceName: 'Western Cape',
-              provinceSlug: 'western-cape',
-              listingCount: 2,
             },
           ]);
         case 'location.searchDiscoverySuggestions':

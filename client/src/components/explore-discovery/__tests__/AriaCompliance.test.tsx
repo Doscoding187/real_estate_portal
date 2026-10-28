@@ -64,11 +64,10 @@ vi.mock('@/lib/trpc', () => ({
  * Requirements: 5.2
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { PropertyCard } from '../cards/PropertyCard';
 import { VideoCard } from '../cards/VideoCard';
-import { NeighbourhoodCard } from '../cards/NeighbourhoodCard';
 import { InsightCard } from '../cards/InsightCard';
 
 describe('ARIA Compliance - Card Components', () => {
@@ -158,59 +157,6 @@ describe('ARIA Compliance - Card Components', () => {
 
       const durationStatus = screen.getByRole('status', { name: /video duration/i });
       expect(durationStatus).toBeInTheDocument();
-    });
-  });
-
-  describe('NeighbourhoodCard', () => {
-    const mockNeighbourhood = {
-      id: 1,
-      name: 'Sandton',
-      city: 'Johannesburg',
-      imageUrl: 'https://example.com/image.jpg',
-      propertyCount: 150,
-      avgPrice: 3500000,
-      priceChange: 5.2,
-      followerCount: 1200,
-      highlights: ['Shopping', 'Schools'],
-    };
-
-    it('should have proper article role', () => {
-      render(
-        <NeighbourhoodCard
-          neighbourhood={mockNeighbourhood}
-          onClick={() => {}}
-          onFollow={() => {}}
-        />,
-      );
-
-      const article = screen.getByRole('article');
-      expect(article).toBeInTheDocument();
-    });
-
-    it('should have aria-pressed for follow button', () => {
-      render(
-        <NeighbourhoodCard
-          neighbourhood={mockNeighbourhood}
-          onClick={() => {}}
-          onFollow={() => {}}
-        />,
-      );
-
-      const followButton = screen.getByRole('button', { name: /follow neighbourhood/i });
-      expect(followButton).toHaveAttribute('aria-pressed');
-    });
-
-    it('should have list role for statistics', () => {
-      render(
-        <NeighbourhoodCard
-          neighbourhood={mockNeighbourhood}
-          onClick={() => {}}
-          onFollow={() => {}}
-        />,
-      );
-
-      const statsList = screen.getByRole('list', { name: /neighbourhood statistics/i });
-      expect(statsList).toBeInTheDocument();
     });
   });
 

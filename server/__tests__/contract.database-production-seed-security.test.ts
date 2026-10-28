@@ -155,7 +155,8 @@ describe('database production seed security authority', () => {
       'docker/mysql-local/init/01-create-local-databases.sql',
       'scripts/testDbWorkflow.ts',
     ]);
-    expect(roleManifest).toContain("key: 'reference.geography'");
+    expect(roleManifest).toContain("key: 'reference.places'");
+    expect(roleManifest).not.toContain("key: 'reference.geography'");
     expect(roleManifest).toContain("key: 'foundation.launch-access'");
     expect(roleManifest).toContain("key: 'demo.listing-preview-authentication'");
     expect(roleManifest).toContain("key: 'demo.homepage-journey-preview'");

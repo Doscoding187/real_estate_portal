@@ -2,7 +2,7 @@
 
 Status: integration candidate for senior review. Hosted CI follows review. Production application is separately approved. This runbook grants no mutation authority.
 
-The authority manifest registers `--adapter=places` on the existing protected reference release commands. `--adapter=geography` still addresses the older numeric catalog and cannot materialise Place authority. Local `places:prepare-national` loads the complete admitted storage packages on disposable targets; it is not a production release command.
+The authority manifest registers `--adapter=places` on the existing protected reference release commands. The former numeric geography adapter has been removed. Local `places:prepare-national` loads the complete admitted storage packages on disposable targets; it is not a production release command.
 
 The Place release policy is `admitted-national-non-osm-only-v1`. It reads and verifies all nine committed admission packages, their source artifacts and registry pins. D3 holds all 720 `osm_only_odbl_provisional` Places, 807 names, 720 relationships, 736 evidence rows and 750 mappings. There is no flag to clear that hold. Remaining admitted assertions are copied unchanged: 16,944 Places, 25,618 names, 16,935 relationships, 79,189 evidence rows and 19,042 mappings. Every released non-province Place must have a single bounded evidenced chain to one of the nine released province roots. Raw relationship search authorization and SEO eligibility are unchanged. A founder decision about the held set requires a new governed policy candidate; an operation approval cannot override licensing.
 

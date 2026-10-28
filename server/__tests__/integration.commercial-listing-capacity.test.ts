@@ -1,18 +1,15 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { and, eq, inArray, isNull } from 'drizzle-orm';
-import { encodeCanonicalLocationId } from '../../shared/locationAuthority';
+import { CANONICAL_JOHANNESBURG_PLACE_ID } from './helpers/canonicalPlaceFixture';
 import {
   agencies,
   agencyBranding,
   agents,
   billableAccounts,
-  cities,
   listingApprovalQueue,
   listings,
   plans,
-  provinces,
   properties,
-  suburbs,
   subscriptions,
   users,
 } from '../../drizzle/schema';
@@ -47,25 +44,10 @@ function timestampFromNow(days: number) {
 }
 
 async function canonicalJohannesburgCoverage() {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-  const [location] = await db
-    .select({
-      provinceName: provinces.name,
-      cityId: cities.id,
-      cityName: cities.name,
-    })
-    .from(provinces)
-    .innerJoin(cities, eq(cities.provinceId, provinces.id))
-    .where(and(eq(provinces.slug, 'gauteng'), eq(cities.slug, 'johannesburg')))
-    .limit(1);
-  if (!location) {
-    throw new Error('Canonical Gauteng/Johannesburg data is required by this fixture.');
-  }
   return JSON.stringify([
     {
-      canonicalLocationId: encodeCanonicalLocationId('city', Number(location.cityId)),
-      label: [location.cityName, location.provinceName].join(', '),
+      canonicalPlaceId: CANONICAL_JOHANNESBURG_PLACE_ID,
+      label: 'Johannesburg, Gauteng',
     },
   ]);
 }

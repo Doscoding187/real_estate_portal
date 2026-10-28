@@ -5,7 +5,6 @@ import { trpc } from '@/lib/trpc';
 import {
   formatCategoryLabel,
   getCategoryMeta,
-  parseServiceLocationInput,
   serviceCategoryFromSlug,
   serviceJourneyContextFromSearch,
   slugifyLocationSegment,
@@ -17,6 +16,12 @@ import {
   buildServiceRequestPath,
   type ServiceCategory,
 } from '@/features/services/catalog';
+import {
+  CanonicalPlaceSelector,
+  type CanonicalPlaceSelection,
+} from '@/components/location/CanonicalPlaceSelector';
+import { canonicalPlaceSelectionFromResolved } from '@/lib/canonicalPlaceSelection';
+import { isCanonicalPlaceId } from '@shared/placeAuthority';
 import { servicesUi } from '@/features/services/design';
 import {
   ServicesResultsPanel,
@@ -62,15 +67,27 @@ export default function ServicesCategoryPage() {
   const serviceTopic = getServiceTopicPage(slugifyLocationSegment(categoryParam));
   const parsedCategory = serviceCategoryFromSlug(categoryParam);
   const category = parsedCategory || ('home_improvement' as ServiceCategory);
+  const rawPlaceId = new URLSearchParams(search).get('canonicalPlaceId');
+  const initialPlaceId = isCanonicalPlaceId(rawPlaceId) ? rawPlaceId : null;
+  const resolvedPlaceQuery = trpc.placeAuthority.resolveSearchPlace.useQuery(
+    { placeId: initialPlaceId || '' },
+    { enabled: Boolean(initialPlaceId), refetchOnWindowFocus: false },
+  );
+  const resolvedPlace = useMemo(
+    () => canonicalPlaceSelectionFromResolved(resolvedPlaceQuery.data),
+    [resolvedPlaceQuery.data],
+  );
+  const [placeOverride, setPlaceOverride] = useState<CanonicalPlaceSelection | null | undefined>(
+    undefined,
+  );
+  const placeSelection = placeOverride === undefined ? resolvedPlace : placeOverride;
+  const invalidPlaceAuthority = rawPlaceId !== null && !isCanonicalPlaceId(rawPlaceId);
 
   const initialQuery = useMemo(() => {
     const queryParams = new URLSearchParams(search);
     return {
       query: queryParams.get('query') || undefined,
       requestUnmatched: queryParams.get('request') === 'unmatched',
-      city: queryParams.get('city') || undefined,
-      suburb: queryParams.get('suburb') || undefined,
-      province: queryParams.get('province') || undefined,
       propertyId: queryParams.get('propertyId') || undefined,
       listingId: queryParams.get('listingId') || undefined,
       developmentId: queryParams.get('developmentId') || undefined,
@@ -91,16 +108,11 @@ export default function ServicesCategoryPage() {
 
   const journeyContext = {
     ...serviceJourneyContextFromSearch(search),
-    city: initialQuery.city,
-    suburb: initialQuery.suburb,
-    province: initialQuery.province,
   };
 
   const [filters, setFilters] = useState<ServicesResultFilters>({
     category,
-    location: [initialQuery.suburb, initialQuery.city, initialQuery.province]
-      .filter(Boolean)
-      .join(', '),
+    canonicalPlaceId: initialPlaceId,
     minPrice: initialQuery.minPrice ? String(initialQuery.minPrice) : '',
     maxPrice: initialQuery.maxPrice ? String(initialQuery.maxPrice) : '',
     availability: initialQuery.availability,
@@ -111,20 +123,18 @@ export default function ServicesCategoryPage() {
     {
       category: filters.category,
       query: initialQuery.query,
-      city: initialQuery.city,
-      suburb: initialQuery.suburb,
-      province: initialQuery.province,
+      canonicalPlaceId: initialPlaceId || undefined,
       minPrice: initialQuery.minPrice,
       maxPrice: initialQuery.maxPrice,
       availability: initialQuery.availability,
       sort: initialQuery.sort,
       limit: 20,
     },
-    { enabled: Boolean(parsedCategory) },
+    { enabled: Boolean(parsedCategory) && !invalidPlaceAuthority },
   );
   const providers = (providersQuery.data || []) as ProviderDirectoryItem[];
   const categoryMeta = getCategoryMeta(category);
-  const hasLocation = Boolean(initialQuery.city || initialQuery.suburb || initialQuery.province);
+  const hasLocation = Boolean(initialPlaceId);
 
   useEffect(() => {
     const categoryLabel = formatCategoryLabel(category);
@@ -138,9 +148,7 @@ export default function ServicesCategoryPage() {
   useEffect(() => {
     setFilters({
       category,
-      location: [initialQuery.suburb, initialQuery.city, initialQuery.province]
-        .filter(Boolean)
-        .join(', '),
+      canonicalPlaceId: initialPlaceId,
       minPrice: initialQuery.minPrice ? String(initialQuery.minPrice) : '',
       maxPrice: initialQuery.maxPrice ? String(initialQuery.maxPrice) : '',
       availability: initialQuery.availability,
@@ -148,14 +156,16 @@ export default function ServicesCategoryPage() {
     });
   }, [
     category,
-    initialQuery.suburb,
-    initialQuery.city,
-    initialQuery.province,
+    initialPlaceId,
     initialQuery.minPrice,
     initialQuery.maxPrice,
     initialQuery.availability,
     initialQuery.sort,
   ]);
+
+  useEffect(() => {
+    setPlaceOverride(undefined);
+  }, [search]);
 
   if (serviceTopic && !parsedCategory) {
     return <ServiceTopicPage topic={serviceTopic} />;
@@ -188,12 +198,8 @@ export default function ServicesCategoryPage() {
 
   function applyFilters(next: ServicesResultFilters) {
     setFilters(next);
-    const location = parseServiceLocationInput(next.location);
-    const nextPath = buildServiceLocationPath(next.category, location, {
+    const nextPath = buildServiceLocationPath(next.category, next.canonicalPlaceId, {
       ...journeyContext,
-      suburb: undefined,
-      city: undefined,
-      province: undefined,
     });
     setLocation(withResultSearchParams(nextPath, next));
   }
@@ -201,14 +207,17 @@ export default function ServicesCategoryPage() {
   function resetFilters() {
     const cleared: ServicesResultFilters = {
       category,
-      location: '',
+      canonicalPlaceId: null,
       minPrice: '',
       maxPrice: '',
       availability: 'any',
       sort: 'relevance',
     };
     setFilters(cleared);
-    setLocation(buildServiceCategoryPath(category, journeyContext));
+    setPlaceOverride(null);
+    setLocation(
+      buildServiceCategoryPath(category, { ...journeyContext, canonicalPlaceId: undefined }),
+    );
   }
 
   function profileHref(provider: ProviderDirectoryItem) {
@@ -280,6 +289,17 @@ export default function ServicesCategoryPage() {
           </div>
         )}
 
+        {invalidPlaceAuthority && (
+          <div className="mx-auto mt-6 w-full max-w-7xl px-4 md:px-6">
+            <div
+              role="alert"
+              className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900"
+            >
+              This Place selection is invalid. Choose an approved Place to search within a location.
+            </div>
+          </div>
+        )}
+
         <div className="mx-auto w-full max-w-7xl px-4 py-8 md:px-6 md:py-10">
           <ServicesResultsPanel
             filters={filters}
@@ -290,12 +310,14 @@ export default function ServicesCategoryPage() {
             error={Boolean(providersQuery.error)}
             summary={
               hasLocation
-                ? `Showing ${providers.length} provider${providers.length === 1 ? '' : 's'} in ${[initialQuery.suburb, initialQuery.city, initialQuery.province].filter(Boolean).join(', ')} for ${categoryMeta.label}`
+                ? `Showing ${providers.length} provider${providers.length === 1 ? '' : 's'} in ${placeSelection?.label || 'the selected Place'} for ${categoryMeta.label}`
                 : `Showing ${providers.length} published ${categoryMeta.label} provider${providers.length === 1 ? '' : 's'}`
             }
             emptyMessage="No published providers match this service and location yet. Try another area or browse the wider category directory."
             profileHref={profileHref}
             onContact={startRequest}
+            placeSelection={placeSelection}
+            onPlaceChange={place => setPlaceOverride(place)}
           />
         </div>
 

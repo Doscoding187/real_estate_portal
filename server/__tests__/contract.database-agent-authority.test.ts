@@ -105,17 +105,15 @@ describe('database authority agent entry contract', () => {
       ['pnpm', ['db:worktree:create']],
       ['pnpm', ['db:migrate:plan']],
       ['pnpm', ['db:migrate:apply']],
-      ['pnpm', ['db:reference:prepare']],
+      ['pnpm', ['db:places:prepare-national']],
       ['pnpm', ['db:foundation:prepare']],
       ['pnpm', ['db:scenario:prepare']],
       ['pnpm', ['db:readiness', '--', '--purpose=location-discovery']],
     ]);
     expect(consumerContractCommandSequence()).toEqual([
       ['pnpm', ['db:migrate:test']],
-      ['pnpm', ['db:reference:prepare']],
-      ['pnpm', ['db:reference:verify']],
-      ['pnpm', ['db:places:prepare', '--', '--territory=za-gp']],
-      ['pnpm', ['db:places:verify', '--', '--territory=za-gp']],
+      ['pnpm', ['db:places:prepare-national']],
+      ['pnpm', ['db:places:verify-national']],
       ['pnpm', ['db:foundation:prepare']],
       ['pnpm', ['db:foundation:verify']],
       ['pnpm', ['db:scenario:prepare']],
@@ -217,18 +215,18 @@ describe('database authority agent entry contract', () => {
     expect(dbJob).toContain('MYSQL_DATABASE: listify_test');
     expect(dbJob).toContain('- 3306:3306');
     expect(testJob).toContain('pnpm db:migrate:test');
-    expect(testJob).toContain('pnpm db:reference:prepare');
-    expect(testJob).toContain('pnpm db:reference:verify');
+    expect(testJob).toContain('pnpm db:places:prepare-national');
+    expect(testJob).toContain('pnpm db:places:verify-national');
     expect(testJob).toContain('pnpm db:foundation:prepare');
     expect(testJob).toContain('pnpm db:foundation:verify');
     expect(testJob.indexOf('pnpm db:migrate:test')).toBeLessThan(
-      testJob.indexOf('pnpm db:reference:prepare'),
+      testJob.indexOf('pnpm db:places:prepare-national'),
     );
-    expect(testJob.indexOf('pnpm db:reference:prepare')).toBeLessThan(
-      testJob.indexOf('pnpm db:reference:verify'),
+    expect(testJob.indexOf('pnpm db:places:prepare-national')).toBeLessThan(
+      testJob.indexOf('pnpm db:places:verify-national'),
     );
-    expect(testJob.indexOf('pnpm db:reference:verify')).toBeLessThan(testJob.indexOf('Run tests'));
-    expect(testJob.indexOf('pnpm db:reference:verify')).toBeLessThan(
+    expect(testJob.indexOf('pnpm db:places:verify-national')).toBeLessThan(testJob.indexOf('Run tests'));
+    expect(testJob.indexOf('pnpm db:places:verify-national')).toBeLessThan(
       testJob.indexOf('pnpm db:foundation:prepare'),
     );
     expect(testJob.indexOf('pnpm db:foundation:prepare')).toBeLessThan(

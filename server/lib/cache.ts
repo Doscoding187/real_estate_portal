@@ -106,8 +106,8 @@ export const CacheKeys = {
   recommendedFeed: (userId: number | undefined, limit: number, offset: number) =>
     `feed:recommended:${userId || 'guest'}:${limit}:${offset}`,
 
-  areaFeed: (location: string, limit: number, offset: number) =>
-    `feed:area:${location}:${limit}:${offset}`,
+  areaFeed: (canonicalPlaceId: string, limit: number, offset: number) =>
+    `feed:area:${canonicalPlaceId}:${limit}:${offset}`,
 
   categoryFeed: (category: string, limit: number, offset: number) =>
     `feed:category:${category}:${limit}:${offset}`,

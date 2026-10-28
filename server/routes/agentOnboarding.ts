@@ -7,7 +7,7 @@ import { TRPCError } from '@trpc/server';
 import { AgentCoverageAreaValidationError } from '../services/agentCoverageAreaService';
 import {
   AGENT_COVERAGE_AREA_MAX,
-  CANONICAL_AGENT_COVERAGE_LOCATION_ID_PATTERN,
+  CANONICAL_AGENT_COVERAGE_PLACE_ID_PATTERN,
 } from '../../shared/agentCoverageArea';
 
 const router = Router();
@@ -35,7 +35,7 @@ export const agentProfileSchema = z
     yearsExperience: z.number().int().min(0).max(80).optional(),
     focus: z.enum(['sales', 'rentals', 'both']).optional(),
     areasServed: z
-      .array(z.string().trim().regex(CANONICAL_AGENT_COVERAGE_LOCATION_ID_PATTERN))
+      .array(z.string().trim().regex(CANONICAL_AGENT_COVERAGE_PLACE_ID_PATTERN))
       .max(AGENT_COVERAGE_AREA_MAX)
       .optional(),
     specializations: z.array(z.string().trim().min(1)).max(50).optional(),

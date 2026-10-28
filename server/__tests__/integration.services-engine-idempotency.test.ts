@@ -14,6 +14,7 @@ import {
   users,
 } from '../../drizzle/schema';
 import { servicesEngineService } from '../services/servicesEngineService';
+import { CANONICAL_SANDTON_PLACE_ID } from './helpers/canonicalPlaceFixture';
 
 const describeDatabase = process.env.DATABASE_URL ? describe : describe.skip;
 
@@ -95,9 +96,7 @@ describeDatabase('services engine durable lead idempotency', () => {
     });
     await db.insert(serviceProviderLocations).values({
       providerId,
-      province: 'Gauteng',
-      city: 'Johannesburg',
-      suburb: 'Sandton',
+      canonicalPlaceId: CANONICAL_SANDTON_PLACE_ID,
     });
 
     const input = {
@@ -109,9 +108,7 @@ describeDatabase('services engine durable lead idempotency', () => {
       sourceSurface: 'directory' as const,
       intentStage: 'general' as const,
       serviceCode: 'removals',
-      province: 'Gauteng',
-      city: 'Johannesburg',
-      suburb: 'Sandton',
+      canonicalPlaceId: CANONICAL_SANDTON_PLACE_ID,
       notes: 'Concurrent retry proof',
     };
     const [first, second] = await Promise.all([

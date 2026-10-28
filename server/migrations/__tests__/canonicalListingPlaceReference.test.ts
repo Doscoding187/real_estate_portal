@@ -42,6 +42,6 @@ describe('Canonical Listing Place persistence expansion', () => {
       expect(entry.statementPolicy).toBe('single-ddl');
       expect(entry.statementCount).toBe(1);
     }
-    expect(manifest.expectedHead.filename).toBe('0157_developments_canonical_place_only.sql');
+    expect(manifest.expectedHead.filename).toBe('0197_drop_seller_prospects_province.sql');
   });
 });

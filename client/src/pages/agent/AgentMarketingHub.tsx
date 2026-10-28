@@ -1000,7 +1000,7 @@ export default function AgentMarketingHub() {
                           {profile?.areasServed?.length ? (
                             profile.areasServed.map(area => (
                               <Badge
-                                key={area.canonicalLocationId}
+                                key={area.canonicalPlaceId}
                                 className="bg-slate-100 text-slate-700"
                               >
                                 {area.label}

@@ -13,9 +13,7 @@ export function SubscriptionPlanStep({ state, onNext, onBack }: SubscriptionPlan
   const hasActiveService = state.services.some(
     service => service.isActive && service.displayName.trim().length > 0,
   );
-  const hasCoverage = state.locations.some(location =>
-    Boolean(location.suburb.trim() || location.city.trim() || location.province),
-  );
+  const hasCoverage = state.locations.some(location => Boolean(location.place?.canonicalPlaceId));
   const canFinish = hasActiveService && hasCoverage;
 
   function finishSetup() {

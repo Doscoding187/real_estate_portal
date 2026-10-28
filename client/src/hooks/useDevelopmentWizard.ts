@@ -2128,7 +2128,17 @@ const createActions = (
       set(state => ({
         developmentData: {
           ...state.developmentData,
-          location: normalizeDevelopmentData(state.developmentData, { location: loc }).location,
+          location: (() => {
+            const normalized = { ...state.developmentData.location, ...loc };
+            return {
+              address: normalized.address ?? '',
+              latitude: normalized.latitude ?? '',
+              longitude: normalized.longitude ?? '',
+              postalCode: normalized.postalCode,
+              gpsAccuracy: normalized.gpsAccuracy,
+              noOfficialStreet: normalized.noOfficialStreet,
+            };
+          })(),
         },
       })),
 

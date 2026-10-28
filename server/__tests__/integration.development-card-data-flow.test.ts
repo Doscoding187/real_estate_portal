@@ -192,21 +192,21 @@ describeWithDb('Development Card Data Flow Integration', () => {
     expect(matched).toBeTruthy();
     expect(matched).toMatchObject({
       kind: 'development',
-      title: '2 Bed Apartment',
+      href: `/development/${createdDevelopment.slug}`,
+      title: developmentName,
       canonicalPlaceId: 'pl-place-01-dee61758ef3bda7cd1a258ad',
       locationLabels: ['Sandton'],
       price: 1200000,
-      description: 'Card-flow test unit type',
+      description,
       listingType: 'sale',
       listingSource: 'development',
       transactionType: 'for_sale',
       contactRole: 'developer',
       developmentId: createdDevelopmentId,
-      unitTypeId: expect.any(String),
       development: {
         id: createdDevelopmentId,
         name: developmentName,
-        status: 'selling',
+        slug: createdDevelopment.slug,
       },
       developerBrand: {
         brandName: builderName,

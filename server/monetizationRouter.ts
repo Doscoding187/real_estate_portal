@@ -10,7 +10,8 @@ import { router, publicProcedure, protectedProcedure } from './_core/trpc';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { getDb } from './db-connection';
-import { findAgentsServingLocation } from './services/agentPublicProfileService';
+import { findAgentsServingPlace } from './services/agentPublicProfileService';
+import { PLACE_ID_REGEX } from '../shared/placeAuthority';
 
 const notImplementedError = () => {
   throw new TRPCError({
@@ -21,49 +22,24 @@ const notImplementedError = () => {
 
 export const monetizationRouter = router({
   createTargetingRule: protectedProcedure
-    .input(
-      z.object({
-        targetType: z.enum(['hero_ad', 'featured_developer', 'recommended_agent']),
-        targetId: z.number(),
-        locationType: z.enum(['province', 'city', 'suburb']),
-        locationId: z.number(),
-        ranking: z.number().default(0),
-        status: z.enum(['active', 'scheduled', 'expired', 'paused']).default('scheduled'),
-        metadata: z.any(),
-        startDate: z.string().optional(),
-        endDate: z.string().optional(),
-      }),
-    )
+    .input(z.object({}).strict())
     .mutation(async () => notImplementedError()),
 
   getAllRules: protectedProcedure.query(async () => {
     return notImplementedError();
   }),
 
-  getHeroAd: publicProcedure
-    .input(
-      z.object({
-        locationType: z.enum(['province', 'city', 'suburb']),
-        locationId: z.number(),
-      }),
-    )
-    .query(async () => notImplementedError()),
+  getHeroAd: publicProcedure.input(z.object({}).strict()).query(async () => notImplementedError()),
 
   getFeaturedDevelopers: publicProcedure
-    .input(
-      z.object({
-        locationType: z.enum(['province', 'city', 'suburb']),
-        locationId: z.number(),
-      }),
-    )
+    .input(z.object({}).strict())
     .query(async () => notImplementedError()),
 
   getRecommendedAgents: publicProcedure
     .input(
       z.object({
-        locationType: z.enum(['province', 'city', 'suburb']),
-        locationId: z.number(),
-      }),
+        canonicalPlaceId: z.string().regex(PLACE_ID_REGEX),
+      }).strict(),
     )
     .query(async ({ input }) => {
       const db = await getDb();
@@ -74,7 +50,7 @@ export const monetizationRouter = router({
         });
       }
       try {
-        return await findAgentsServingLocation(db, input.locationType, input.locationId);
+        return await findAgentsServingPlace(db, input.canonicalPlaceId);
       } catch (error) {
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',

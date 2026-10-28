@@ -226,7 +226,6 @@ Demonstrates:
 
 **Files Added:**
 - `client/src/store/exploreFiltersStore.ts` - Zustand filter store
-- `client/src/hooks/useFilterUrlSync.ts` - URL synchronization
 - `client/src/components/explore-discovery/MobileFilterBottomSheet.tsx` - Mobile bottom sheet
 
 **Files Modified:**
@@ -325,7 +324,6 @@ Demonstrates:
 - `client/src/hooks/__tests__/useVideoPreload.test.ts`
 - `client/src/hooks/__tests__/useMapFeedSync.test.ts`
 - `client/src/hooks/__tests__/useThrottle.test.ts`
-- `client/src/hooks/__tests__/useFilterUrlSync.test.ts`
 - `client/src/hooks/__tests__/useImagePreload.test.ts`
 - `client/src/hooks/__tests__/useOnlineStatus.test.ts`
 - `client/src/hooks/__tests__/useKeyboardNavigation.test.ts`

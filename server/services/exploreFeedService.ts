@@ -1,9 +1,11 @@
 import { db } from '../db';
-import { exploreContent, listings } from '../../drizzle/schema';
+import { exploreContent } from '../../drizzle/schema';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import type { FeedType } from '../../shared/types';
 import { cache, CacheKeys, CacheTTL } from '../lib/cache';
 import { TRPCError } from '@trpc/server';
+import { isCanonicalPlaceId } from '../../shared/placeAuthority';
+import { loadCanonicalPlaceSearchProjection } from './canonicalPlaceSearchService';
 
 /* ------------------ TYPES ------------------ */
 
@@ -11,7 +13,7 @@ export interface FeedOptions {
   userId?: number;
   limit?: number;
   offset?: number;
-  location?: string;
+  canonicalPlaceId?: string;
   category?: string;
   agentId?: number;
   developerId?: number;
@@ -121,7 +123,6 @@ function makeEmptyFeedDebugTag() {
 
 async function logRecommendedEmptyDiagnostics(params: {
   tag: string;
-  location?: string;
   seed?: string | null;
   limit: number;
   offset: number;
@@ -133,7 +134,6 @@ async function logRecommendedEmptyDiagnostics(params: {
 }) {
   const {
     tag,
-    location,
     seed,
     limit,
     offset,
@@ -193,38 +193,15 @@ async function logRecommendedEmptyDiagnostics(params: {
       .limit(1),
   );
 
-  let nearYou: number | undefined;
-  if (location) {
-    nearYou = await safeCount(
-      db
-        .select({ n: sql<number>`COUNT(DISTINCT ${exploreContent.id})` })
-        .from(exploreContent)
-        .leftJoin(listings, eq(exploreContent.referenceId, listings.id))
-        .where(
-          and(
-            ...commonWhere,
-            sql`(
-              COALESCE(${listings.city}, '') = ${location}
-              OR COALESCE(${listings.suburb}, '') = ${location}
-              OR COALESCE(${listings.province}, '') = ${location}
-            )`,
-          ),
-        )
-        .limit(1),
-    );
-  }
-
   console.warn('[Explore] EMPTY RECOMMENDED FEED DIAGNOSTICS', {
     tag,
     limit,
     offset,
-    location,
     seed,
     counts: {
       base,
       mediaGate,
       featured,
-      nearYou,
       new: newest,
       ranked,
     },
@@ -246,7 +223,7 @@ export class ExploreFeedService {
     return [];
   }
   async getRecommendedFeed(options: FeedOptions): Promise<FeedResult> {
-    const { userId, limit = 20, offset = 0, location, seed, seenIds, useCache: explicitUseCache } = options;
+    const { userId, limit = 20, offset = 0, seed, seenIds, useCache: explicitUseCache } = options;
     try {
       const cacheKey = CacheKeys.recommendedFeed(userId, limit, offset);
       const seedNormalized = normalizeSeed(seed);
@@ -257,8 +234,7 @@ export class ExploreFeedService {
         explicitUseCache !== false &&
         process.env.NODE_ENV === 'production' &&
         !seedNormalized &&
-        normalizedSeenIds.length === 0 &&
-        !location;
+        normalizedSeenIds.length === 0;
 
       if (useCache) {
         const cached = await cache.get<FeedResult>(cacheKey);
@@ -279,9 +255,9 @@ export class ExploreFeedService {
       if (notInSeen) commonBase.push(notInSeen);
 
       const takeFeatured = Math.min(2, limit);
-      const takeNearYou = location ? Math.min(2, Math.max(0, limit - takeFeatured)) : 0;
-      const takeNew = Math.min(2, Math.max(0, limit - takeFeatured - takeNearYou));
-      const takeRanked = Math.max(0, limit - takeFeatured - takeNearYou - takeNew);
+      const takeNearYou = 0;
+      const takeNew = Math.min(2, Math.max(0, limit - takeFeatured));
+      const takeRanked = Math.max(0, limit - takeFeatured - takeNew);
 
       const featuredWhere = [...commonBase, eq(exploreContent.isFeatured, 1)];
 
@@ -294,38 +270,7 @@ export class ExploreFeedService {
             .limit(takeFeatured)
         : [];
 
-      // Near You
-      const nearYouWhere: any[] = [...commonBase];
-
-      if (featuredRows.length > 0) {
-        nearYouWhere.push(
-          sql`${exploreContent.id} NOT IN (${sql.join(
-            featuredRows.map(r => sql`${r.id}`),
-            sql`,`,
-          )})`,
-        );
-      }
-
-      if (location) {
-        nearYouWhere.push(
-          sql`(
-            COALESCE(${listings.city}, '') = ${location}
-            OR COALESCE(${listings.suburb}, '') = ${location}
-            OR COALESCE(${listings.province}, '') = ${location}
-          )`,
-        );
-      }
-
-      const nearYouRows =
-        takeNearYou && location
-          ? await db
-              .select({ content: exploreContent })
-              .from(exploreContent)
-              .leftJoin(listings, eq(exploreContent.referenceId, listings.id))
-              .where(and(...nearYouWhere))
-              .orderBy(desc(exploreContent.createdAt))
-              .limit(takeNearYou)
-          : [];
+      const nearYouRows: { content: typeof exploreContent.$inferSelect }[] = [];
 
       // New (last 24h)
       const newWhere: any[] = [
@@ -423,13 +368,11 @@ export class ExploreFeedService {
           limit,
           offset,
           seed,
-          location,
           excludeIdsCount: excludeIds.length,
         });
 
         await logRecommendedEmptyDiagnostics({
           tag: debugTag ?? 'n/a',
-          location,
           seed: seedNormalized,
           limit,
           offset,
@@ -466,35 +409,43 @@ export class ExploreFeedService {
   // The other feed methods remain unchanged
   // ────────────────────────────────────────────────
 
-  async getAreaFeed({ location, limit = 20, offset = 0 }: FeedOptions): Promise<FeedResult> {
-    if (!location) throw new Error('Location required');
-    const loc = location.toLowerCase();
+  async getAreaFeed({ canonicalPlaceId, limit = 20, offset = 0 }: FeedOptions): Promise<FeedResult> {
+    if (!isCanonicalPlaceId(canonicalPlaceId)) throw new Error('One canonical Place ID is required');
     try {
+      const placeProjection = await loadCanonicalPlaceSearchProjection(undefined, {
+        placeIds: [canonicalPlaceId],
+      });
+      const label = placeProjection.labels.get(canonicalPlaceId);
+      if (!label || !placeProjection.executions.has(canonicalPlaceId)) {
+        return {
+          items: [],
+          shorts: [],
+          feedType: 'area',
+          hasMore: false,
+          offset,
+          metadata: { canonicalPlaceId, scopeAvailable: false },
+        };
+      }
       const rows = await db
-        .select({ content: exploreContent })
+        .select()
         .from(exploreContent)
-        .leftJoin(listings, eq(exploreContent.referenceId, listings.id))
         .where(
           and(
             eq(exploreContent.contentType, 'video'),
             eq(exploreContent.isActive, 1),
             hasPlayableMedia,
-            sql`(
-              LOWER(COALESCE(${listings.city}, '')) LIKE ${`%${loc}%`}
-              OR LOWER(COALESCE(${listings.suburb}, '')) LIKE ${`%${loc}%`}
-              OR LOWER(COALESCE(${listings.province}, '')) LIKE ${`%${loc}%`}
-            )`,
+            eq(exploreContent.canonicalPlaceId, canonicalPlaceId),
           ),
         )
         .orderBy(desc(exploreContent.createdAt))
         .limit(limit)
         .offset(offset);
 
-      const items = rows.map(r => transformShort(r.content));
+      const items = rows.map(transformShort);
 
       if (process.env.NODE_ENV !== 'production' && items.length === 0) {
         console.warn('[Explore] EMPTY AREA FEED DEBUG', {
-          location,
+          canonicalPlaceId,
           limit,
           offset,
           returned: items.length,
@@ -507,7 +458,7 @@ export class ExploreFeedService {
         feedType: 'area',
         hasMore: rows.length === limit,
         offset: offset + rows.length,
-        metadata: { location },
+        metadata: { canonicalPlaceId, label: label.label },
       };
     } catch (error) {
       if (isMissingExploreSchema(error)) throwExploreUnavailable(error);

@@ -1,15 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+const PLACE_ID = 'pl-place-01-000000000000000000000001';
 const {
   mockLoadPlaceProjection,
-  mockResolvePublicLocation,
   mockSearchProperties,
-  mockSearchListings,
+  mockSearchDevelopments,
 } = vi.hoisted(() => ({
   mockLoadPlaceProjection: vi.fn(),
-  mockResolvePublicLocation: vi.fn(),
   mockSearchProperties: vi.fn(),
-  mockSearchListings: vi.fn(),
+  mockSearchDevelopments: vi.fn(),
 }));
 
 vi.mock('../canonicalPlaceSearchService', async importOriginal => ({
@@ -17,72 +16,54 @@ vi.mock('../canonicalPlaceSearchService', async importOriginal => ({
   loadCanonicalPlaceSearchProjection: mockLoadPlaceProjection,
 }));
 
-vi.mock('../locationResolverService', () => ({
-  locationResolver: {
-    resolvePublicLocation: mockResolvePublicLocation,
-  },
-}));
-
 vi.mock('../propertySearchService', () => ({
-  propertySearchService: {
-    searchProperties: mockSearchProperties,
-  },
+  propertySearchService: { searchProperties: mockSearchProperties },
 }));
 
-vi.mock('../developmentDerivedListingService', () => ({
-  developmentDerivedListingService: {
-    searchListings: mockSearchListings,
-  },
+vi.mock('../publicDevelopmentSearchService', () => ({
+  publicDevelopmentSearchService: { search: mockSearchDevelopments },
 }));
 
 import { publicSearchService } from '../publicSearchService';
 import { PUBLIC_SEARCH_MAX_PAGE_INDEX } from '../../../shared/publicSearchPagination';
-import {
-  BUY_PUBLIC_PROPERTY_TYPES,
-  RENT_PUBLIC_PROPERTY_TYPES,
-} from '../../../shared/property-taxonomy';
+import { BUY_PUBLIC_PROPERTY_TYPES, RENT_PUBLIC_PROPERTY_TYPES } from '../../../shared/property-taxonomy';
 
-const resolvedLocation = {
-  status: 'resolved' as const,
-  location: {
-    level: 'city' as const,
-    province: { id: 1, name: 'Gauteng', slug: 'gauteng', code: 'GP' },
-    city: {
-      id: 12,
-      name: 'Johannesburg',
-      slug: 'johannesburg',
-      provinceId: 1,
-    },
-    confidence: 'exact' as const,
-    fallbackLevel: 'none' as const,
-    originalIntent: 'johannesburg, gauteng',
-  },
-};
-
-const resolvedSuburb = {
-  status: 'resolved' as const,
-  location: {
-    level: 'suburb' as const,
-    province: { id: 1, name: 'Gauteng', slug: 'gauteng', code: 'GP' },
-    city: { id: 12, name: 'Johannesburg', slug: 'johannesburg', provinceId: 1 },
-    suburb: { id: 34, name: 'Sandton', slug: 'sandton', cityId: 12 },
-    confidence: 'exact' as const,
-    fallbackLevel: 'none' as const,
-    originalIntent: 'sandton, johannesburg, gauteng',
-  },
-};
+function projection(scope: 'province' | 'metro_city' | 'locality') {
+  return {
+    executions: new Map([
+      [PLACE_ID, {
+        placeId: PLACE_ID,
+        scope,
+        provincePlaceId: scope === 'province' ? PLACE_ID : 'pl-place-01-000000000000000000000002',
+        cityPlaceId: scope === 'metro_city' ? PLACE_ID : null,
+        localityPlaceId: scope === 'locality' ? PLACE_ID : null,
+        contextAncestorPlaceIds: [],
+      }],
+    ]),
+    labels: new Map([[PLACE_ID, {
+      canonicalPlaceId: PLACE_ID,
+      label: 'Approved Place',
+      scope,
+      province: 'Gauteng',
+      city: '',
+      locality: '',
+    }]]),
+  };
+}
 
 function card(kind: 'property' | 'development', id: string, price: number) {
   return {
     kind,
     id,
-    href: kind === 'property' ? `/property/${id}` : `/development/demo/unit/${id}`,
+    href: kind === 'property' ? `/property/${id}` : `/development/${id}`,
     title: id,
-    location: 'Johannesburg, Gauteng',
-    city: 'Johannesburg',
-    province: 'Gauteng',
+    location: 'Approved Place',
+    city: '',
+    suburb: '',
+    province: '',
+    canonicalPlaceId: PLACE_ID,
     price,
-    image: null,
+    image: '',
     images: [],
     propertyType: 'house',
     listingType: 'sale',
@@ -91,457 +72,205 @@ function card(kind: 'property' | 'development', id: string, price: number) {
   };
 }
 
-describe('publicSearchService contract', () => {
+function developmentItem(id = 1) {
+  return {
+    id,
+    name: `Development ${id}`,
+    slug: `development-${id}`,
+    canonicalRoute: `/development/development-${id}`,
+    description: null,
+    images: ['https://example.test/development.jpg'],
+    canonicalPlaceId: PLACE_ID,
+    locationLabels: ['Approved Place'],
+    developmentType: 'residential',
+    transactionType: 'for_sale',
+    status: 'selling',
+    nature: 'new',
+    completionDate: null,
+    createdAt: '2026-07-01T00:00:00.000Z',
+    isFeatured: false,
+    rating: null,
+    highlights: ['Pool'],
+    publisher: {
+      id: 15,
+      name: 'Reviewed Publisher',
+      logoUrl: null,
+      authorityKind: 'developer_first_party',
+      slug: 'reviewed-publisher',
+    },
+    priceFrom: 4,
+    priceTo: 4,
+    bedroomRange: { min: 2, max: 2 },
+    unitTypes: [{ id: 'unit-1', label: 'Two bedroom', bedrooms: 2, bathrooms: 1, priceFrom: 4, priceTo: 4, availableUnits: 1, totalUnits: 1, availabilityState: 'available' }],
+    unitTypeCount: 1,
+    availableUnitTypeCount: 1,
+    availableUnits: 1,
+    totalUnits: 1,
+    availabilityState: 'available',
+  } as const;
+}
+
+describe('publicSearchService canonical Place contract', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockResolvePublicLocation.mockResolvedValue(resolvedLocation);
+    mockLoadPlaceProjection.mockResolvedValue(projection('locality'));
     mockSearchProperties.mockResolvedValue({
       cards: [card('property', 'p-1', 1), card('property', 'p-2', 2), card('property', 'p-3', 3)],
       total: 3,
     });
-    mockSearchListings.mockResolvedValue({
-      cards: [card('development', 'd-1', 4), card('development', 'd-2', 5)],
-      total: 2,
+    mockSearchDevelopments.mockResolvedValue({
+      items: [developmentItem()],
+      total: 1,
+      page: 0,
+      pageSize: 12,
+      hasMore: false,
+      locationState: 'resolved',
+      unpricedHiddenCount: 0,
     });
   });
 
   it.each(['province', 'metro_city', 'locality'] as const)(
-    'routes approved %s inventory without expanding empty geography',
+    'uses the reviewed %s scope projection for inventory',
     async scope => {
-      const id = 'pl-place-01-000000000000000000000001';
-      const projection = {
-        executions: new Map([
-          [
-            id,
-            {
-              placeId: id,
-              scope,
-              provincePlaceId: scope === 'province' ? id : 'province',
-              cityPlaceId: scope === 'metro_city' ? id : null,
-              localityPlaceId: scope === 'locality' ? id : null,
-              contextAncestorPlaceIds: [],
-            },
-          ],
-        ]),
-        labels: new Map([
-          [
-            id,
-            {
-              canonicalPlaceId: id,
-              label: 'Approved Place',
-              scope,
-              province: 'Gauteng',
-              city: '',
-              locality: '',
-            },
-          ],
-        ]),
-      };
-      mockLoadPlaceProjection.mockResolvedValue(projection);
-      await publicSearchService.searchInventory({ canonicalPlaceId: id, listingType: 'sale' });
-      expect(mockLoadPlaceProjection).toHaveBeenCalledWith(undefined, { placeIds: [id] });
-      const [filters, , , , , options] = mockSearchProperties.mock.calls[0];
-      expect(filters.canonicalPlaceIds).toEqual(scope === 'province' ? undefined : [id]);
-      expect(options.provincePlaceId).toBe(scope === 'province' ? id : undefined);
+      mockLoadPlaceProjection.mockResolvedValueOnce(projection(scope));
+      await publicSearchService.searchInventory({ canonicalPlaceId: PLACE_ID, listingType: 'sale' });
+
+      expect(mockLoadPlaceProjection).toHaveBeenCalledWith(undefined, { placeIds: [PLACE_ID] });
+      const [filters, , , , options] = mockSearchProperties.mock.calls[0];
+      expect(filters.canonicalPlaceIds).toEqual(scope === 'province' ? undefined : [PLACE_ID]);
+      expect(options.provincePlaceId).toBe(scope === 'province' ? PLACE_ID : undefined);
       expect(options.publicOnly).toBe(true);
-      expect(mockSearchListings).toHaveBeenCalledWith(
-        expect.objectContaining({ canonicalPlaceId: id }),
-        'date_desc',
-        1,
-        12,
+      expect(mockSearchDevelopments).toHaveBeenCalledWith(
+        expect.objectContaining({
+          canonicalPlaceId: PLACE_ID,
+          transactionType: 'for_sale',
+          page: 0,
+          pageSize: 12,
+        }),
       );
-      expect(mockResolvePublicLocation).not.toHaveBeenCalled();
     },
   );
 
-  it('requires one canonical Place before searching Development inventory', async () => {
-    const result = await publicSearchService.searchInventory({
+  it('fails closed for absent, malformed, or unresolved Place authority', async () => {
+    const missing = await publicSearchService.searchInventory({
+      listingType: 'sale',
+      listingSource: 'development',
+    });
+    expect(missing).toMatchObject({ cards: [], total: 0, locationState: 'unavailable' });
+
+    await expect(publicSearchService.searchInventory({
+      canonicalPlaceId: 'sandton',
+      listingType: 'sale',
+    })).rejects.toThrow('Choose a valid canonical Place identity');
+
+    mockLoadPlaceProjection.mockResolvedValueOnce({ executions: new Map(), labels: new Map() });
+    const unresolved = await publicSearchService.searchInventory({
+      canonicalPlaceId: PLACE_ID,
+      listingType: 'sale',
+    });
+    expect(unresolved).toMatchObject({ cards: [], total: 0, locationState: 'unavailable' });
+    expect(mockSearchProperties).not.toHaveBeenCalled();
+    expect(mockSearchDevelopments).not.toHaveBeenCalled();
+  });
+
+  it('rejects text and retired geography handles before searching', async () => {
+    await expect(publicSearchService.searchInventory({
       city: 'Johannesburg',
+      listingType: 'sale',
+    } as never)).rejects.toThrow('Use one canonical Place identity');
+    await expect(publicSearchService.searchInventory({
+      locationId: 'suburb:34',
+      listingType: 'sale',
+    } as never)).rejects.toThrow('Use one canonical Place identity');
+    expect(mockSearchProperties).not.toHaveBeenCalled();
+    expect(mockSearchDevelopments).not.toHaveBeenCalled();
+  });
+
+  it('projects Development cards from canonical public facts and keeps labels display-only', async () => {
+    const result = await publicSearchService.searchInventory({
+      canonicalPlaceId: PLACE_ID,
       listingType: 'sale',
       listingSource: 'development',
     });
 
-    expect(result).toMatchObject({ cards: [], total: 0, locationState: 'unavailable' });
-    expect(result.locationMessage).toContain('approved canonical Place');
-    expect(mockSearchListings).not.toHaveBeenCalled();
+    expect(mockSearchDevelopments).toHaveBeenCalledWith(
+      expect.objectContaining({ canonicalPlaceId: PLACE_ID, page: 0, pageSize: 12 }),
+    );
+    expect(result.cards).toEqual([
+      expect.objectContaining({
+        kind: 'development',
+        id: '1',
+        canonicalPlaceId: PLACE_ID,
+        location: 'Approved Place',
+        city: '',
+        suburb: '',
+        province: '',
+      }),
+    ]);
   });
 
-  it('does not widen an unresolved public location into a different search', async () => {
-    mockResolvePublicLocation.mockResolvedValueOnce({
-      status: 'unresolved',
-      location: null,
-      message: 'That city is unavailable.',
-    });
+  it('pins unscoped Buy and Rent searches to the public property-type universes', async () => {
+    await publicSearchService.searchInventory({ listingType: 'sale', listingSource: 'manual' });
+    expect(mockSearchProperties).toHaveBeenCalledWith(
+      expect.objectContaining({ propertyType: BUY_PUBLIC_PROPERTY_TYPES }),
+      'date_desc', 1, 12, expect.objectContaining({ publicOnly: true }),
+    );
+    expect(mockSearchDevelopments).not.toHaveBeenCalled();
 
-    const result = await publicSearchService.searchInventory({
-      city: 'missing-city',
-      listingType: 'sale',
-    });
+    mockSearchProperties.mockClear();
+    await publicSearchService.searchInventory({ listingType: 'rent', listingSource: 'manual' });
+    expect(mockSearchProperties).toHaveBeenCalledWith(
+      expect.objectContaining({ propertyType: RENT_PUBLIC_PROPERTY_TYPES }),
+      'date_desc', 1, 12, expect.objectContaining({ publicOnly: true }),
+    );
+  });
 
-    expect(result).toMatchObject({
-      cards: [],
-      total: 0,
-      locationState: 'unresolved',
-      locationMessage: 'That city is unavailable.',
-    });
+  it('rejects unsupported and Commercial journeys', async () => {
+    await expect(publicSearchService.searchInventory({ listingType: 'shared_living' as never }))
+      .rejects.toThrow('Buy or Rent');
+    await expect(publicSearchService.searchInventory({
+      listingType: 'rent',
+      propertyType: 'commercial',
+    })).rejects.toThrow('dedicated Commercial journey');
     expect(mockSearchProperties).not.toHaveBeenCalled();
-    expect(mockSearchListings).not.toHaveBeenCalled();
   });
 
-  it('does not use typed location text to match Development inventory', async () => {
-    mockSearchProperties.mockResolvedValueOnce({
-      cards: [card('property', 'p-1', 1), card('property', 'p-2', 2)],
-      total: 3,
-    });
-    const result = await publicSearchService.searchInventory({
-      city: 'johannesburg',
-      province: 'gauteng',
-      listingType: 'sale',
-      page: 1,
-      pageSize: 2,
-    });
-
-    expect(mockSearchProperties).toHaveBeenCalledWith(
-      expect.objectContaining({ city: 'johannesburg', province: 'gauteng' }),
-      'date_desc',
-      2,
-      2,
-      undefined,
-      { publicOnly: true },
-    );
-    expect(mockSearchListings).not.toHaveBeenCalled();
-    expect(result).toMatchObject({
-      total: 3,
-      page: 1,
-      pageSize: 2,
-      hasMore: false,
-      locationState: 'resolved',
-      locationContext: {
-        type: 'city',
-        ids: { provinceId: 1, cityId: 12 },
-      },
-    });
-    expect(result.cards).toHaveLength(2);
-    expect(result.sourceCounts).toEqual({ manual: 3, development: 0 });
-  });
-
-  it('does not run Development inventory from a text-scoped map search', async () => {
-    await publicSearchService.searchInventory({
-      city: 'johannesburg',
-      province: 'gauteng',
-      listingType: 'sale',
-      minLat: -26.2,
-      maxLat: -26,
-      minLng: 28,
-      maxLng: 28.1,
-    });
-
-    const expectedBounds = {
-      south: -26.2,
-      north: -26,
-      west: 28,
-      east: 28.1,
-    };
-
-    expect(mockSearchProperties).toHaveBeenCalledWith(
-      expect.objectContaining({ bounds: expectedBounds }),
-      'date_desc',
-      1,
-      12,
-      undefined,
-      { publicOnly: true },
-    );
-    expect(mockSearchListings).not.toHaveBeenCalled();
-  });
-
-  it('keeps the final accepted page reachable but never advertises an invalid next page', async () => {
-    mockSearchProperties.mockResolvedValueOnce({ cards: [], total: 50_000 });
-
-    const result = await publicSearchService.searchInventory({
-      page: PUBLIC_SEARCH_MAX_PAGE_INDEX,
-      pageSize: 12,
-      listingType: 'sale',
-    });
-
-    expect(mockSearchProperties).toHaveBeenCalledWith(
-      expect.anything(),
-      'date_desc',
-      PUBLIC_SEARCH_MAX_PAGE_INDEX + 1,
-      12,
-      undefined,
-      { publicOnly: true },
-    );
-    expect(result).toMatchObject({
-      page: PUBLIC_SEARCH_MAX_PAGE_INDEX,
-      total: 50_000,
-      hasMore: false,
-    });
-  });
-
-  it('canonicalizes available-page overflow and preserves coherent page metadata', async () => {
+  it('canonicalizes available-page overflow and keeps page metadata coherent', async () => {
     const firstPage = await publicSearchService.searchInventory({
-      listingType: 'sale',
-      page: 0,
-      pageSize: 2,
+      listingType: 'sale', listingSource: 'manual', page: 0, pageSize: 2,
     });
     const lastPage = await publicSearchService.searchInventory({
-      listingType: 'sale',
-      page: 2,
-      pageSize: 2,
+      listingType: 'sale', listingSource: 'manual', page: 2, pageSize: 2,
     });
-    const oneBeyondLastPage = await publicSearchService.searchInventory({
-      listingType: 'sale',
-      page: 3,
-      pageSize: 2,
+    const nextPage = await publicSearchService.searchInventory({
+      listingType: 'sale', listingSource: 'manual', page: 3, pageSize: 2,
     });
     const veryLargePage = await publicSearchService.searchInventory({
-      listingType: 'sale',
-      page: 101,
-      pageSize: 2,
+      listingType: 'sale', listingSource: 'manual', page: PUBLIC_SEARCH_MAX_PAGE_INDEX + 10, pageSize: 2,
     });
 
     expect(firstPage).toMatchObject({ page: 0, total: 3, pageSize: 2 });
     expect(lastPage).toMatchObject({ page: 1, total: 3, pageSize: 2 });
-    expect(oneBeyondLastPage).toMatchObject({ page: 1, total: 3, pageSize: 2 });
-    expect(veryLargePage).toMatchObject({ page: 1, total: 3, pageSize: 2 });
-    expect(oneBeyondLastPage.hasMore).toBe(false);
-    expect(veryLargePage.hasMore).toBe(false);
+    expect(nextPage).toMatchObject({ page: 1, total: 3, pageSize: 2, hasMore: false });
+    expect(veryLargePage).toMatchObject({ page: 1, total: 3, pageSize: 2, hasMore: false });
   });
 
-  it('canonicalizes an overflow page to zero for an empty result universe', async () => {
+  it('normalizes a non-finite result universe to page zero', async () => {
     mockSearchProperties.mockResolvedValue({ cards: [], total: 0 });
-    mockSearchListings.mockResolvedValue({ cards: [], total: 0 });
-
     const result = await publicSearchService.searchInventory({
-      listingType: 'sale',
-      page: 101,
-      pageSize: 12,
+      listingType: 'sale', listingSource: 'manual', page: 101, pageSize: 12,
     });
-
-    expect(result).toMatchObject({
-      cards: [],
-      total: 0,
-      page: 0,
-      pageSize: 12,
-      hasMore: false,
-    });
+    expect(result).toMatchObject({ cards: [], total: 0, page: 0, pageSize: 12, hasMore: false });
   });
 
-  it('retains safe normalization for negative, zero, and fractional pages', async () => {
-    const negative = await publicSearchService.searchInventory({
-      listingType: 'sale',
-      page: -1.5,
-      pageSize: 2,
-    });
-    const zero = await publicSearchService.searchInventory({
-      listingType: 'sale',
-      page: 0,
-      pageSize: 2,
-    });
-    const fractional = await publicSearchService.searchInventory({
-      listingType: 'sale',
-      page: 1.9,
-      pageSize: 2,
-    });
-
-    expect(negative.page).toBe(0);
-    expect(zero.page).toBe(0);
-    expect(fractional.page).toBe(1);
-  });
-
-  it('keeps a geography-only public inventory request neutral', async () => {
-    const result = await publicSearchService.searchInventory({
-      city: 'johannesburg',
-      page: 101,
-    });
-
-    expect(result).toMatchObject({
-      cards: [],
-      total: 0,
-      page: 0,
-      locationState: 'unavailable',
-    });
-    expect(result.locationMessage).toContain('Buy or Rent');
-    expect(mockResolvePublicLocation).not.toHaveBeenCalled();
+  it('rejects partial or reversed map bounds without issuing a query', async () => {
+    await expect(publicSearchService.searchInventory({
+      listingType: 'sale', listingSource: 'manual', minLat: -26, maxLat: -25,
+    })).rejects.toThrow('Map bounds must include');
+    await expect(publicSearchService.searchInventory({
+      listingType: 'sale', listingSource: 'manual', minLat: -25, maxLat: -26,
+      minLng: 28, maxLng: 29,
+    })).rejects.toThrow('Map bounds must be complete and ordered');
     expect(mockSearchProperties).not.toHaveBeenCalled();
-    expect(mockSearchListings).not.toHaveBeenCalled();
-  });
-
-  it('pins generic Buy and Rent source searches to their public type universes', async () => {
-    await publicSearchService.searchInventory({ listingType: 'sale' });
-    expect(mockSearchProperties).toHaveBeenCalledWith(
-      expect.objectContaining({ propertyType: BUY_PUBLIC_PROPERTY_TYPES }),
-      'date_desc',
-      1,
-      12,
-      undefined,
-      { publicOnly: true },
-    );
-    expect(mockSearchListings).not.toHaveBeenCalled();
-
-    mockSearchProperties.mockClear();
-    mockSearchListings.mockClear();
-    await publicSearchService.searchInventory({ listingType: 'rent' });
-    expect(mockSearchProperties).toHaveBeenCalledWith(
-      expect.objectContaining({ propertyType: RENT_PUBLIC_PROPERTY_TYPES }),
-      'date_desc',
-      1,
-      12,
-      undefined,
-      { publicOnly: true },
-    );
-    expect(mockSearchListings).not.toHaveBeenCalled();
-  });
-
-  it('rejects unsupported runtime journeys instead of treating them as Rent', async () => {
-    for (const listingType of [
-      'shared_living',
-      'developments',
-      'plot_land',
-      'commercial',
-      'unknown',
-    ]) {
-      await expect(
-        publicSearchService.searchInventory({
-          city: 'johannesburg',
-          listingType: listingType as never,
-        }),
-      ).rejects.toThrow('Buy or Rent');
-    }
-
-    expect(mockSearchProperties).not.toHaveBeenCalled();
-    expect(mockSearchListings).not.toHaveBeenCalled();
-  });
-
-  it('hands an explicit Commercial property request to the dedicated journey', async () => {
-    await expect(
-      publicSearchService.searchInventory({
-        listingType: 'rent',
-        propertyType: 'commercial',
-      }),
-    ).rejects.toThrow('dedicated Commercial journey');
-
-    expect(mockSearchProperties).not.toHaveBeenCalled();
-    expect(mockSearchListings).not.toHaveBeenCalled();
-  });
-
-  it('does not turn a Commercial property request without a journey into a generic empty Buy/Rent result', async () => {
-    await expect(
-      publicSearchService.searchInventory({ propertyType: 'commercial' }),
-    ).rejects.toThrow('dedicated Commercial journey');
-
-    expect(mockSearchProperties).not.toHaveBeenCalled();
-    expect(mockSearchListings).not.toHaveBeenCalled();
-  });
-
-  it('uses the same canonical locality and filter boundary for the selected Rent sources', async () => {
-    mockResolvePublicLocation.mockResolvedValueOnce(resolvedSuburb);
-
-    const result = await publicSearchService.searchInventory({
-      locationId: 'suburb:34',
-      listingType: 'rent',
-      minArea: 70,
-      maxArea: 120,
-      minPrice: 5_000,
-      maxBathrooms: 3,
-      sortOption: 'price_asc',
-    });
-
-    expect(mockSearchProperties).toHaveBeenCalledWith(
-      expect.objectContaining({
-        listingType: 'rent',
-        canonicalLocation: { provinceId: 1, cityId: 12, suburbId: 34 },
-        minFloorSize: 70,
-        maxFloorSize: 120,
-        minPrice: 5_000,
-        maxBathrooms: 3,
-      }),
-      'price_asc',
-      1,
-      12,
-      undefined,
-      { publicOnly: true },
-    );
-    expect(mockSearchListings).not.toHaveBeenCalled();
-    expect(result.total).toBe(3);
-  });
-
-  it('routes explicit public size filters to their matching canonical measurements', async () => {
-    mockResolvePublicLocation.mockResolvedValueOnce(resolvedSuburb);
-
-    await publicSearchService.searchInventory({
-      locationId: 'suburb:34',
-      listingType: 'sale',
-      minFloorSize: 80,
-      maxFloorSize: 140,
-      minErfSize: 300,
-      maxErfSize: 900,
-      minLandSize: 10_000,
-      maxLandSize: 25_000,
-    });
-
-    expect(mockSearchProperties).toHaveBeenCalledWith(
-      expect.objectContaining({
-        minFloorSize: 80,
-        maxFloorSize: 140,
-        minErfSize: 300,
-        maxErfSize: 900,
-        minLandSize: 10_000,
-        maxLandSize: 25_000,
-      }),
-      'date_desc',
-      1,
-      12,
-      undefined,
-      { publicOnly: true },
-    );
-  });
-
-  it('keeps the inventory boundary and count stable when page or sort changes', async () => {
-    const first = await publicSearchService.searchInventory({
-      city: 'johannesburg',
-      province: 'gauteng',
-      listingType: 'sale',
-      page: 0,
-      pageSize: 2,
-      sortOption: 'date_desc',
-    });
-    const firstFilters = mockSearchProperties.mock.calls[0][0];
-
-    const second = await publicSearchService.searchInventory({
-      city: 'johannesburg',
-      province: 'gauteng',
-      listingType: 'sale',
-      page: 1,
-      pageSize: 2,
-      sortOption: 'price_asc',
-    });
-    const secondFilters = mockSearchProperties.mock.calls[1][0];
-
-    expect(secondFilters).toEqual(firstFilters);
-    expect(second.total).toBe(first.total);
-    expect(second.locationContext).toEqual(first.locationContext);
-    expect(mockSearchProperties.mock.calls[1][1]).toBe('price_asc');
-    expect(mockSearchProperties.mock.calls[1][2]).toBe(2);
-    expect(mockSearchProperties.mock.calls[1][3]).toBe(2);
-  });
-
-  it('normalizes an unsupported runtime sort without widening the search', async () => {
-    await publicSearchService.searchInventory({
-      city: 'johannesburg',
-      province: 'gauteng',
-      listingType: 'sale',
-      sortOption: 'unsupported-sort' as never,
-    });
-
-    expect(mockSearchProperties).toHaveBeenCalledWith(
-      expect.objectContaining({ city: 'johannesburg', province: 'gauteng' }),
-      'date_desc',
-      1,
-      12,
-      undefined,
-      { publicOnly: true },
-    );
-    expect(mockSearchListings).not.toHaveBeenCalled();
   });
 });

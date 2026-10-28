@@ -11,9 +11,9 @@ describe('useServicesLocation', () => {
     const { result } = renderHook(() => useServicesLocation());
 
     act(() => {
-      result.current.setLocation('/services/home-improvement?city=Cape+Town');
+      result.current.setLocation('/services/home-improvement?canonicalPlaceId=pl-place-01-000000000000000000000001');
     });
 
-    expect(result.current.search).toBe('?city=Cape+Town');
+    expect(result.current.search).toBe('?canonicalPlaceId=pl-place-01-000000000000000000000001');
   });
 });

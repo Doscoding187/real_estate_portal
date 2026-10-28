@@ -14,8 +14,8 @@ import {
 } from 'drizzle-orm/mysql-core';
 import { sql } from 'drizzle-orm';
 import { users } from './core';
-import { cities, provinces, suburbs } from './locations';
 import { listings } from './listings';
+import { place } from './placeAuthority';
 
 /** Canonical commercial inventory. Marketing listings are deliberately linked, never embedded. */
 export const commercialAssets = mysqlTable(
@@ -32,9 +32,10 @@ export const commercialAssets = mysqlTable(
     ]).notNull(),
     name: varchar({ length: 255 }).notNull(),
     address: text(),
-    provinceId: int('province_id').references(() => provinces.id, { onDelete: 'set null' }),
-    cityId: int('city_id').references(() => cities.id, { onDelete: 'set null' }),
-    suburbId: int('suburb_id').references(() => suburbs.id, { onDelete: 'set null' }),
+    canonicalPlaceId: varchar('canonical_place_id', { length: 40 }).references(
+      () => place.placeId,
+      { onDelete: 'restrict', onUpdate: 'restrict' },
+    ),
     lifecycleStatus: mysqlEnum('lifecycle_status', ['active', 'retired'])
       .default('active')
       .notNull(),
@@ -62,7 +63,7 @@ export const commercialAssets = mysqlTable(
     locationConfirmedAt: timestamp('location_confirmed_at', { mode: 'string' }),
   },
   table => [
-    index('idx_commercial_assets_geography').on(table.provinceId, table.cityId, table.suburbId),
+    index('idx_commercial_assets_canonical_place').on(table.canonicalPlaceId),
     index('idx_commercial_assets_kind_status').on(table.assetKind, table.lifecycleStatus),
     index('idx_commercial_assets_location_confirmation').on(table.locationConfirmationState),
   ],

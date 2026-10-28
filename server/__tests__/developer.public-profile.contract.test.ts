@@ -128,12 +128,15 @@ describe('developer public profile contract', () => {
     });
   });
 
-  it('rejects unsupported provinces and invalid pagination before querying projects', async () => {
+  it('rejects retired text geography and invalid pagination before querying projects', async () => {
     const caller = developerRouter.createCaller({
       req: { headers: {} },
       res: {},
       user: null,
     } as any);
+    await expect(
+      caller.getPublicDevelopmentsForPublisher({ cataloguePublisherId: 44, province: 'Gauteng' } as never),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
     await expect(
       caller.getPublicDevelopmentsForPublisher({
         cataloguePublisherId: 44,

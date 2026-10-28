@@ -392,6 +392,7 @@ describe('development search-detail-lead public journey contract', () => {
           },
           priceFrom: null,
           priceTo: null,
+          listingType: 'rent',
           bedroomRange: { min: 2, max: 3 },
           unitTypes: [],
           unitTypeCount: 0,
@@ -505,10 +506,33 @@ describe('development search-detail-lead public journey contract', () => {
       cards: [
         {
           id: '501',
+          title: 'Family home with garden',
+          href: '/property/501',
+          kind: 'property',
+          canonicalPlaceId: 'pl-place-01-000000000000000000000001',
+          locationLabels: ['Sandton', 'Johannesburg'],
+          price: 3_850_000,
+          image: '/media/family-home.jpg',
+          bedrooms: 4,
+          bathrooms: 3,
+          area: 238,
+          yardSize: 520,
+          propertyType: 'house',
           parking: { compactValue: '4' },
         },
         {
           id: '502',
+          title: 'City apartment',
+          href: '/property/502',
+          kind: 'property',
+          canonicalPlaceId: 'pl-place-01-000000000000000000000001',
+          locationLabels: ['Rosebank', 'Johannesburg'],
+          price: 1_850_000,
+          image: '/media/city-apartment.jpg',
+          bedrooms: 2,
+          bathrooms: 2,
+          area: 96,
+          propertyType: 'apartment',
           parking: { compactValue: '1' },
         },
       ],
@@ -525,7 +549,7 @@ describe('development search-detail-lead public journey contract', () => {
 
     const result = await caller.developer.getHomeTrendingFeed({
       tab: 'buy',
-      province: 'Gauteng',
+      canonicalPlaceId: 'pl-place-01-000000000000000000000001',
       limit: 10,
     });
 
@@ -547,11 +571,13 @@ describe('development search-detail-lead public journey contract', () => {
       ]),
     );
     expect(mockSearchProperties).toHaveBeenCalledWith(
-      expect.objectContaining({ listingType: 'sale', province: 'Gauteng' }),
+      expect.objectContaining({
+        listingType: 'sale',
+        canonicalPlaceIds: ['pl-place-01-000000000000000000000001'],
+      }),
       'date_desc',
       1,
-      20,
-      undefined,
+      10,
       { publicOnly: true, requirePhoto: true },
     );
   });
@@ -573,24 +599,26 @@ describe('development search-detail-lead public journey contract', () => {
 
     const result = await caller.developer.getHomeTrendingFeed({
       tab: 'buy',
-      province: 'Gauteng',
+      canonicalPlaceId: 'pl-place-01-000000000000000000000001',
       limit: 10,
     });
 
     expect(result.items).toEqual([]);
     expect(result.meta).toMatchObject({
-      requestedScope: 'province',
-      selectedScope: 'province',
+      canonicalPlaceId: 'pl-place-01-000000000000000000000001',
+      requestedScope: 'canonical_place',
+      selectedScope: 'canonical_place',
       usedFallback: false,
       fallbackLevel: 'none',
     });
     expect(mockSearchProperties).toHaveBeenCalledTimes(1);
     expect(mockSearchProperties).toHaveBeenCalledWith(
-      expect.objectContaining({ province: 'Gauteng' }),
+      expect.objectContaining({
+        canonicalPlaceIds: ['pl-place-01-000000000000000000000001'],
+      }),
       'date_desc',
       1,
-      20,
-      undefined,
+      10,
       { publicOnly: true, requirePhoto: true },
     );
   });

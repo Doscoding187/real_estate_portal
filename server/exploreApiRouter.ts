@@ -2,8 +2,8 @@
  * Explore API Router (legacy compatibility boundary)
  *
  * V3 Explore tables are not exported from schema:
- * - exploreDiscoveryVideos, exploreNeighbourhoods, exploreCategories
- * - exploreNeighbourhoodFollows, exploreCreatorFollows
+ * - exploreDiscoveryVideos, exploreCategories
+ * - exploreCreatorFollows
  * - exploreSavedProperties, exploreEngagements
  *
  * V3 endpoints that have no canonical persistence are explicitly unavailable;
@@ -111,72 +111,12 @@ export const exploreApiRouter = router({
     }),
 
   /**
-   * Get discovery videos - V3 (STUBBED)
-   * exploreDiscoveryVideos table not available
-   */
-  getDiscoveryVideos: publicProcedure
-    .input(
-      z.object({
-        categoryId: z.number().optional(),
-        neighbourhoodId: z.number().optional(),
-        limit: z.number().default(20),
-        cursor: z.number().optional(),
-      }),
-    )
-    .query(async () => {
-      throw retiredExploreCapability('Explore discovery videos');
-    }),
-
-  /**
-   * Get neighbourhoods - V3 (STUBBED)
-   * exploreNeighbourhoods table not available
-   */
-  getNeighbourhoods: publicProcedure
-    .input(
-      z.object({
-        city: z.string().optional(),
-        province: z.string().optional(),
-        limit: z.number().default(20),
-      }),
-    )
-    .query(async () => {
-      throw retiredExploreCapability('Explore neighbourhood follows');
-    }),
-
-  /**
    * Get categories - V3 (STUBBED)
    * exploreCategories table not available
    */
   getCategories: publicProcedure.query(async () => {
     throw retiredExploreCapability('Explore category discovery');
   }),
-
-  /**
-   * Follow neighbourhood - V3 (STUBBED)
-   * exploreNeighbourhoodFollows table not available
-   */
-  followNeighbourhood: protectedProcedure
-    .input(
-      z.object({
-        neighbourhoodId: z.number(),
-      }),
-    )
-    .mutation(async () => {
-      throw retiredExploreCapability('Neighbourhood follows');
-    }),
-
-  /**
-   * Unfollow neighbourhood - V3 (STUBBED)
-   */
-  unfollowNeighbourhood: protectedProcedure
-    .input(
-      z.object({
-        neighbourhoodId: z.number(),
-      }),
-    )
-    .mutation(async () => {
-      throw retiredExploreCapability('Neighbourhood follows');
-    }),
 
   /**
    * Follow creator - V3 (STUBBED)
@@ -292,15 +232,6 @@ export const exploreApiRouter = router({
     }),
 
   /**
-   * Toggle neighbourhood follow - stabilization stub
-   */
-  toggleNeighbourhoodFollow: protectedProcedure
-    .input(z.object({ neighbourhoodId: z.number().int() }))
-    .mutation(async () => {
-      throw retiredExploreCapability('Neighbourhood follows');
-    }),
-
-  /**
    * Toggle save property - stabilization stub
    */
   toggleSaveProperty: protectedProcedure
@@ -314,20 +245,6 @@ export const exploreApiRouter = router({
       throw retiredExploreCapability('Explore property saves');
     }),
 
-  /**
-   * Get followed items - stabilization stub
-   */
-  getFollowedItems: protectedProcedure
-    .input(
-      z
-        .object({
-          limit: z.number().int().min(1).max(100).optional(),
-        })
-        .optional(),
-    )
-    .query(async () => {
-      throw retiredExploreCapability('Followed Explore items');
-    }),
   /**
    * Track engagement - V3 (STUBBED)
    * exploreEngagements table not available

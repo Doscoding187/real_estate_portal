@@ -276,7 +276,7 @@ describe('database local lifecycle authority', () => {
   it('keeps the legacy orchestrator fail-closed while compatibility exports remain', () => {
     const workflow = read('scripts/localDbWorkflow.ts');
     expect(workflow).toContain('localDbWorkflow direct execution is retired');
-    expect(workflow).toContain("['pnpm', ['db:reference:prepare']]");
+    expect(workflow).toContain("['pnpm', ['db:places:prepare-national']]");
     expect(workflow).toContain("['pnpm', ['db:scenario:prepare']]");
     expect(workflow).not.toContain('listify_local');
     expect(workflow).not.toContain('mysql2');

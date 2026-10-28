@@ -1,16 +1,20 @@
 import { useEffect, useState } from 'react';
-import { BadgeCheck, Filter, RotateCcw, Search, SlidersHorizontal } from 'lucide-react';
+import { BadgeCheck, Filter, RotateCcw, SlidersHorizontal } from 'lucide-react';
 import { servicesUi } from '@/features/services/design';
 import { SERVICE_CATEGORIES, type ServiceCategory } from '@/features/services/catalog';
 import { ProviderShowcaseRow } from './ProviderShowcaseCard';
 import type { ProviderDirectoryItem } from './ProviderCard';
+import {
+  CanonicalPlaceSelector,
+  type CanonicalPlaceSelection,
+} from '@/components/location/CanonicalPlaceSelector';
 
 export type ServicesSort = 'relevance' | 'rating' | 'name';
 export type ServicesAvailability = 'any' | 'accepting';
 
 export type ServicesResultFilters = {
   category: ServiceCategory;
-  location: string;
+  canonicalPlaceId: string | null;
   minPrice: string;
   maxPrice: string;
   availability: ServicesAvailability;
@@ -31,6 +35,8 @@ type ServicesResultsPanelProps = {
   onContact: (providerId: number) => void;
   /** The result count line shown under the heading. */
   summary: string;
+  placeSelection: CanonicalPlaceSelection | null;
+  onPlaceChange: (place: CanonicalPlaceSelection | null) => void;
 };
 
 /**
@@ -53,6 +59,8 @@ export function ServicesResultsPanel({
   profileHref,
   onContact,
   summary,
+  placeSelection,
+  onPlaceChange,
 }: ServicesResultsPanelProps) {
   const [draft, setDraft] = useState<ServicesResultFilters>(filters);
   const [isRailOpen, setIsRailOpen] = useState(false);
@@ -85,7 +93,7 @@ export function ServicesResultsPanel({
           onClick={() => {
             const cleared: ServicesResultFilters = {
               category: filters.category,
-              location: '',
+              canonicalPlaceId: null,
               minPrice: '',
               maxPrice: '',
               availability: 'any',
@@ -119,19 +127,16 @@ export function ServicesResultsPanel({
         </select>
       </label>
 
-      <label className="block">
-        <span className="block text-[12px] font-semibold text-[#4B5C6B]">Location</span>
-        <div className="mt-2 flex h-11 items-center rounded-xl border border-[#E3EBF0] px-3 transition focus-within:border-[#168363]">
-          <Search className="mr-2 h-4 w-4 shrink-0 text-[#A8B4BF]" aria-hidden="true" />
-          <input
-            aria-label="Location"
-            value={draft.location}
-            onChange={event => setDraft(current => ({ ...current, location: event.target.value }))}
-            placeholder="Suburb, city or province"
-            className="w-full bg-transparent text-sm text-[#0B1B2A] outline-none placeholder:text-[#A8B4BF]"
-          />
-        </div>
-      </label>
+      <CanonicalPlaceSelector
+        value={placeSelection}
+        onChange={place => {
+          onPlaceChange(place);
+          setDraft(current => ({ ...current, canonicalPlaceId: place?.canonicalPlaceId ?? null }));
+        }}
+        label="Location"
+        purpose="search"
+        placeholder="Choose an approved Place"
+      />
 
       <fieldset>
         <legend className="text-[12px] font-semibold text-[#4B5C6B]">Price range (ZAR)</legend>

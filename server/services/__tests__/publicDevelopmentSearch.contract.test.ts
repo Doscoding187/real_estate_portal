@@ -26,10 +26,10 @@ describe('public Developments search authority', () => {
   });
 
   it('keeps generic global search out of the dedicated Commercial journey', () => {
-    const globalSearch = readRepoFile('server/services/globalSearchService.ts');
+    const router = readRepoFile('server/routers.ts');
 
-    expect(globalSearch).toContain("ne(developments.developmentType, 'commercial')");
-    expect(globalSearch).toContain("ne(properties.propertyType, 'commercial')");
+    expect(router).toContain('rejectGenericCommercialPublicSearch(input.developmentType)');
+    expect(router).toContain('isCommercialMarketingPropertyType(input.propertyType)');
   });
 
   it('keeps the router and consumer page on one development-first query entry point', () => {

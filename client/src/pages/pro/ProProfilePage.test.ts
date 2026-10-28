@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { linesToLocations, linesToServices } from './ProProfilePage';
+import { coverageAreasToPayload, linesToServices } from './ProProfilePage';
 
 describe('ProProfilePage structured editor preservation', () => {
   it('keeps service metadata that the compact editor does not expose', () => {
@@ -86,19 +86,6 @@ describe('ProProfilePage structured editor preservation', () => {
         isActive: true,
       },
     ]);
-    const [location] = linesToLocations('Sandton, Johannesburg, Gauteng', [
-      {
-        id: 23,
-        suburb: 'Sandton',
-        city: 'Johannesburg',
-        province: 'Gauteng',
-        countryCode: 'ZA',
-        postalCode: null,
-        radiusKm: 25,
-        isPrimary: true,
-      },
-    ]);
-
     expect(service).toEqual({
       id: 17,
       category: 'home_improvement',
@@ -110,63 +97,26 @@ describe('ProProfilePage structured editor preservation', () => {
       currency: 'ZAR',
       isActive: true,
     });
-    expect(location?.postalCode).toBeUndefined();
   });
 
-  it('matches a location by the complete normalized geographic tuple', () => {
-    const existing = [
+  it('serializes selected canonical identities without using display labels as identity', () => {
+    expect(coverageAreasToPayload([
       {
         id: 23,
-        suburb: 'Sandton',
-        city: 'Johannesburg',
-        province: 'Gauteng',
-        countryCode: 'ZA',
-        postalCode: '2196',
-        radiusKm: 40,
+        place: {
+          canonicalPlaceId: 'pl-place-01-000000000000000000000001',
+          label: 'Sandton, City of Johannesburg, Gauteng',
+          placeType: 'suburb',
+          scope: 'locality',
+          administrativeContext: 'City of Johannesburg, Gauteng',
+        },
         isPrimary: true,
       },
-      {
-        id: 24,
-        suburb: 'Arcadia',
-        city: 'Pretoria',
-        province: 'Gauteng',
-        countryCode: 'ZA',
-        postalCode: '0008',
-        radiusKm: 20,
-        isPrimary: false,
-      },
-    ];
-
-    expect(linesToLocations('Sandton, Johannesburg, Gauteng', existing)[0]).toMatchObject({
-      id: 23,
-      postalCode: '2196',
-      radiusKm: 40,
-    });
-  });
-
-  it('keeps canonical location metadata that the compact editor does not expose', () => {
-    const existing = [
+      { place: null, isPrimary: false },
+    ])).toEqual([
       {
         id: 23,
-        suburb: 'Sandton',
-        city: 'Johannesburg',
-        province: 'Gauteng',
-        countryCode: 'ZA',
-        postalCode: '2196',
-        radiusKm: 40,
-        isPrimary: true,
-      },
-    ];
-
-    expect(linesToLocations('Sandton, Johannesburg, Gauteng', existing)).toEqual([
-      {
-        id: 23,
-        suburb: 'Sandton',
-        city: 'Johannesburg',
-        province: 'Gauteng',
-        countryCode: 'ZA',
-        postalCode: '2196',
-        radiusKm: 40,
+        canonicalPlaceId: 'pl-place-01-000000000000000000000001',
         isPrimary: true,
       },
     ]);

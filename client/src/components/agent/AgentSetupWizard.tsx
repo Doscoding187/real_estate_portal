@@ -11,25 +11,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { ArrowLeft, ArrowRight, CheckCircle2, Upload, X } from 'lucide-react';
 import { LocationAutocomplete } from '@/components/location/LocationAutocomplete';
+import type { CanonicalPlaceOption } from '@/components/location/LocationAutocomplete';
 import { apiFetch } from '@/lib/api';
 import type { AgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
 import { getAgentProfileCompletionDescription } from '@/lib/agentJourney';
 import { useCommercialProductAvailability } from '@/hooks/useCommercialProductAvailability';
 import {
-  parseCanonicalAgentCoverageLocationId,
+  parseCanonicalAgentCoveragePlaceId,
   type AgentCoverageArea,
 } from '@shared/agentCoverageArea';
 
 const TOTAL_STEPS = 5;
-
-type LocationOption = {
-  id: number;
-  name: string;
-  type: 'province' | 'city' | 'suburb';
-  provinceName?: string;
-  cityName?: string;
-  canonicalLocationId?: string;
-};
 
 function splitCsv(value: string) {
   return value
@@ -42,24 +34,20 @@ function joinCsv(values: string[] = []) {
   return values.join(', ');
 }
 
-function formatCoverageLabel(location: LocationOption) {
-  if (location.type === 'suburb') {
-    return [location.name, location.cityName, location.provinceName].filter(Boolean).join(', ');
-  }
-
-  if (location.type === 'city') {
-    return [location.name, location.provinceName].filter(Boolean).join(', ');
+function formatCoverageLabel(location: CanonicalPlaceOption) {
+  if (location.scope !== 'province') {
+    return [location.name, location.administrativeContext].filter(Boolean).join(', ');
   }
 
   return location.name;
 }
 
-function coverageAreaFromLocation(location: LocationOption): AgentCoverageArea | null {
-  const canonical = parseCanonicalAgentCoverageLocationId(location.canonicalLocationId);
+function coverageAreaFromLocation(location: CanonicalPlaceOption): AgentCoverageArea | null {
+  const canonical = parseCanonicalAgentCoveragePlaceId(location.canonicalPlaceId);
   if (!canonical) return null;
 
   return {
-    canonicalLocationId: canonical.canonicalLocationId,
+    canonicalPlaceId: canonical.canonicalPlaceId,
     label: formatCoverageLabel(location),
   };
 }
@@ -180,7 +168,7 @@ export function AgentSetupWizard() {
     phone: formData.phone.trim(),
     whatsapp: formData.whatsapp.trim() || undefined,
     profileImage: formData.profileImage.trim() || undefined,
-    areasServed: selectedCoverageAreas.map(area => area.canonicalLocationId),
+    areasServed: selectedCoverageAreas.map(area => area.canonicalPlaceId),
     focus: formData.focus,
     specializations: splitCsv(formData.specializations),
     propertyTypes: splitCsv(formData.propertyTypes),
@@ -206,16 +194,16 @@ export function AgentSetupWizard() {
     }
 
     setSelectedCoverageAreas(prev =>
-      prev.some(area => area.canonicalLocationId === nextArea.canonicalLocationId)
+      prev.some(area => area.canonicalPlaceId === nextArea.canonicalPlaceId)
         ? prev
         : [...prev, nextArea].slice(0, 20),
     );
     setAreaSearch('');
   };
 
-  const removeCoverageArea = (canonicalLocationId: string) => {
+  const removeCoverageArea = (canonicalPlaceId: string) => {
     setSelectedCoverageAreas(prev =>
-      prev.filter(area => area.canonicalLocationId !== canonicalLocationId),
+      prev.filter(area => area.canonicalPlaceId !== canonicalPlaceId),
     );
   };
 
@@ -501,7 +489,7 @@ export function AgentSetupWizard() {
                   <LocationAutocomplete
                     value={areaSearch}
                     onValueChange={setAreaSearch}
-                    onLocationSelect={location => addCoverageArea(location as LocationOption)}
+                    onLocationSelect={location => addCoverageArea(location)}
                     placeholder="Search suburb, city, or province"
                     type="all"
                   />
@@ -513,13 +501,13 @@ export function AgentSetupWizard() {
                     <div className="flex flex-wrap gap-2">
                       {selectedCoverageAreas.map(area => (
                         <span
-                          key={area.canonicalLocationId}
+                          key={area.canonicalPlaceId}
                           className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700"
                         >
                           {area.label}
                           <button
                             type="button"
-                            onClick={() => removeCoverageArea(area.canonicalLocationId)}
+                            onClick={() => removeCoverageArea(area.canonicalPlaceId)}
                             className="rounded-full text-slate-400 transition hover:text-slate-700"
                             aria-label={`Remove ${area.label}`}
                           >

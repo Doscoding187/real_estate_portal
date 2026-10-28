@@ -1,10 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 
-const { getDbMock, eligibilityMock, insertMock, valuesMock } = vi.hoisted(() => ({
+const { getDbMock, eligibilityMock, insertMock, valuesMock, geographyMock } = vi.hoisted(() => ({
   getDbMock: vi.fn(),
   eligibilityMock: vi.fn(),
   insertMock: vi.fn(),
   valuesMock: vi.fn(),
+  geographyMock: vi.fn(),
 }));
 
 vi.mock('../db', () => ({ getDb: getDbMock }));
@@ -16,6 +17,9 @@ vi.mock('../services/explorePublishingEligibilityService', () => ({
       : 'Your account is not approved to publish to Explore.',
   assertExploreReferenceOwnership: vi.fn(),
   ExplorePublishingAuthorizationError: class ExplorePublishingAuthorizationError extends Error {},
+}));
+vi.mock('../services/developmentPlaceAssignmentService', () => ({
+  listDevelopmentPlaceGeography: geographyMock,
 }));
 vi.mock('../services/exploreFeedService', () => ({
   exploreFeedService: {
@@ -38,6 +42,7 @@ import { exploreRouter } from '../exploreRouter';
 const uploadInput = {
   title: 'A property tour',
   mediaUrls: ['https://cdn.example.com/tour.mp4'],
+  listingId: 1,
 };
 
 function caller(user: { id: number; role: string; agencyId?: number } | null) {
@@ -79,14 +84,20 @@ describe('Explore publishing boundary', () => {
       agentId: null,
       developerId: null,
     });
+    geographyMock.mockResolvedValue(
+      new Map([[55, { canonicalPlaceId: 'pl-place-01-000000000000000000000001' }]]),
+    );
 
     const result = await caller({ id: 9, role: 'super_admin' }).uploadShort({
       ...uploadInput,
-      agencyId: 999,
-      creatorType: 'developer',
-    } as any);
+      listingId: undefined,
+      developmentId: 55,
+    });
 
     expect(result).toMatchObject({ success: true, contentId: 77, publicationState: 'inactive' });
+    expect(valuesMock).toHaveBeenCalledWith(
+      expect.objectContaining({ canonicalPlaceId: 'pl-place-01-000000000000000000000001' }),
+    );
     expect(valuesMock).toHaveBeenCalledWith(
       expect.objectContaining({
         creatorId: 9,

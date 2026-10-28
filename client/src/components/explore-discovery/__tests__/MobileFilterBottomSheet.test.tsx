@@ -63,7 +63,7 @@ describe('MobileFilterBottomSheet', () => {
       expect(screen.getByText('Price Range')).toBeInTheDocument();
       expect(screen.getByText('Bedrooms')).toBeInTheDocument();
       expect(screen.getByText('Bathrooms')).toBeInTheDocument();
-      expect(screen.getByText('Location')).toBeInTheDocument();
+      expect(screen.queryByText('Location')).not.toBeInTheDocument();
     });
   });
 
@@ -155,7 +155,7 @@ describe('MobileFilterBottomSheet', () => {
 
       expect(screen.getByLabelText('Minimum price')).toBeInTheDocument();
       expect(screen.getByLabelText('Maximum price')).toBeInTheDocument();
-      expect(screen.getByLabelText('Location')).toBeInTheDocument();
+      expect(screen.queryByLabelText('Location')).not.toBeInTheDocument();
     });
 
     it('should have role="group" for filter sections', () => {
@@ -196,15 +196,6 @@ describe('MobileFilterBottomSheet', () => {
       await userEvent.type(minPriceInput, '100000');
 
       expect(minPriceInput).toHaveValue(100000);
-    });
-
-    it('should allow typing in location input', async () => {
-      render(<MobileFilterBottomSheet isOpen={true} onClose={mockOnClose} onApply={mockOnApply} />);
-
-      const locationInput = screen.getByLabelText('Location');
-      await userEvent.type(locationInput, 'Sandton');
-
-      expect(locationInput).toHaveValue('Sandton');
     });
 
     it('should show reset button when filters are active', () => {
@@ -260,8 +251,8 @@ describe('MobileFilterBottomSheet', () => {
       expect(screen.getByPlaceholderText('No min')).toBeInTheDocument();
       expect(screen.getByPlaceholderText('No max')).toBeInTheDocument();
 
-      // Location
-      expect(screen.getByPlaceholderText('Enter location...')).toBeInTheDocument();
+      // Geography is selected from canonical Place search, not this filter panel.
+      expect(screen.queryByPlaceholderText('Enter location...')).not.toBeInTheDocument();
     });
   });
 });

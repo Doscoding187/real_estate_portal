@@ -1,6 +1,7 @@
 import {
   canonicalPlaceFixtureLocation,
   CANONICAL_PLACE_FIXTURE_ID,
+  CANONICAL_SANDTON_PLACE_ID,
 } from './helpers/canonicalPlaceFixture';
 import { randomUUID } from 'node:crypto';
 import { createServer, type Server } from 'node:http';
@@ -29,7 +30,6 @@ vi.mock('../_core/email', () => ({
 }));
 
 import { COOKIE_NAME } from '../../shared/const';
-import { encodeCanonicalLocationId } from '../../shared/locationAuthority';
 import { parseAgentCoverageAreas } from '../../shared/agentCoverageArea';
 import type { AppRouter } from '../routers';
 import {
@@ -51,11 +51,8 @@ import {
   leads,
   plans,
   propertyImages,
-  cities,
-  provinces,
   properties,
   showings,
-  suburbs,
   subscriptions,
   notifications,
   users,
@@ -260,28 +257,10 @@ async function insertUser(
 }
 
 async function canonicalSandtonLocation() {
-  const [location] = await db
-    .select({
-      provinceId: provinces.id,
-      provinceName: provinces.name,
-      cityId: cities.id,
-      cityName: cities.name,
-      suburbId: suburbs.id,
-      suburbName: suburbs.name,
-    })
-    .from(provinces)
-    .innerJoin(cities, eq(cities.provinceId, provinces.id))
-    .innerJoin(suburbs, eq(suburbs.cityId, cities.id))
-    .where(
-      and(
-        eq(provinces.slug, 'gauteng'),
-        eq(cities.slug, 'johannesburg'),
-        eq(suburbs.slug, 'sandton'),
-      ),
-    )
-    .limit(1);
-  if (!location) throw new Error('Canonical Gauteng/Johannesburg/Sandton data is required.');
-  return location;
+  return {
+    canonicalPlaceId: CANONICAL_SANDTON_PLACE_ID,
+    label: 'Sandton, Gauteng',
+  };
 }
 
 async function cleanup() {
@@ -714,10 +693,9 @@ describeWithDb('agency full operating journey acceptance', () => {
     expect(individualSubscription).toBeUndefined();
 
     const location = await canonicalSandtonLocation();
-    const canonicalSuburbId = encodeCanonicalLocationId('suburb', Number(location.suburbId));
     const canonicalCoverage = {
-      canonicalLocationId: canonicalSuburbId,
-      label: [location.suburbName, location.cityName, location.provinceName].join(', '),
+      canonicalPlaceId: location.canonicalPlaceId,
+      label: location.label,
     };
     const rejectedTextCoverageResponse = await fetch(`${baseUrl}/api/agent/profile`, {
       method: 'POST',
@@ -747,7 +725,7 @@ describeWithDb('agency full operating journey acceptance', () => {
         licenseNumber: `PL-${suffix}`,
         yearsExperience: 5,
         focus: 'sales',
-        areasServed: [canonicalSuburbId],
+        areasServed: [location.canonicalPlaceId],
         specializations: ['Residential sales'],
         propertyTypes: ['house'],
         languages: ['English'],
@@ -985,7 +963,7 @@ describeWithDb('agency full operating journey acceptance', () => {
     ).toEqual([]);
 
     const privateSearch = await publicApi.properties.searchPublicInventory.query({
-      locationId: canonicalSuburbId,
+      canonicalPlaceId: CANONICAL_SANDTON_PLACE_ID,
       propertyType: 'house',
       listingType: 'sale',
       listingSource: 'manual',
@@ -997,7 +975,7 @@ describeWithDb('agency full operating journey acceptance', () => {
 
     await expect(
       publicApi.properties.searchPublicInventory.query({
-        locationId: canonicalSuburbId,
+        locationId: CANONICAL_SANDTON_PLACE_ID,
         city: 'johannesburg',
         propertyType: 'house',
         listingType: 'sale',
@@ -1048,9 +1026,6 @@ describeWithDb('agency full operating journey acceptance', () => {
         ownerId: properties.ownerId,
         agentId: properties.agentId,
         canonicalPlaceId: properties.canonicalPlaceId,
-        provinceId: properties.provinceId,
-        cityId: properties.cityId,
-        suburbId: properties.suburbId,
       })
       .from(properties)
       .where(eq(properties.sourceListingId, created.listingId))
@@ -1062,9 +1037,6 @@ describeWithDb('agency full operating journey acceptance', () => {
       status: 'available',
       ownerId: member.id,
       agentId: created.agentId,
-      provinceId: null,
-      cityId: null,
-      suburbId: null,
     });
     if (!property)
       throw new Error('Approval did not create the canonical public property projection.');
@@ -1096,17 +1068,16 @@ describeWithDb('agency full operating journey acceptance', () => {
     expect(publicDetail.property.detailPresentation.location.label).toContain('North Riding');
 
     // Legacy numeric geography must never bridge into canonical Place inventory.
-    const legacyScopedSearch = await publicApi.properties.searchPublicInventory.query({
-      locationId: canonicalSuburbId,
-      propertyType: 'house',
-      listingType: 'sale',
-      listingSource: 'manual',
-      page: 0,
-      pageSize: 50,
-    });
-    expect(legacyScopedSearch.cards.some(card => card.propertyId === Number(property.id))).toBe(
-      false,
-    );
+    await expect(
+      publicApi.properties.searchPublicInventory.query({
+        locationId: CANONICAL_SANDTON_PLACE_ID,
+        propertyType: 'house',
+        listingType: 'sale',
+        listingSource: 'manual',
+        page: 0,
+        pageSize: 50,
+      }),
+    ).rejects.toMatchObject({ data: { code: 'BAD_REQUEST' } });
     const unrelatedMedia = await uploadImages('unrelated-bryanston');
     const unrelatedListing = await memberApi.listing.create.mutate({
       ...listingInput,
@@ -1228,7 +1199,7 @@ describeWithDb('agency full operating journey acceptance', () => {
       { province: 'gauteng' },
       { city: 'johannesburg' },
       { suburb: ['north-riding'] },
-      { locationId: canonicalSuburbId },
+      { locationId: CANONICAL_SANDTON_PLACE_ID },
       { locationIds: ['suburb:1', 'suburb:2'] },
       { searchAreaId: 'sandton-core' },
       { searchAreaIds: ['sandton-core', 'rosebank-core'] },

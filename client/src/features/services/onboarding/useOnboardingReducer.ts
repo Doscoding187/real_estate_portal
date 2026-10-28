@@ -6,7 +6,8 @@
  */
 
 import { useReducer } from 'react';
-import { type ServiceCategory, type SAProvince } from '../catalog';
+import { type ServiceCategory } from '../catalog';
+import type { CanonicalPlaceSelection } from '@/components/location/CanonicalPlaceSelector';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -28,12 +29,7 @@ export type ServiceRow = {
 export type LocationRow = {
   id: string;
   recordId?: number;
-  suburb: string;
-  city: string;
-  province: SAProvince | '';
-  countryCode: string;
-  postalCode: string;
-  radiusKm: string; // string for input binding, defaults to '25'
+  place: CanonicalPlaceSelection | null;
   isPrimary: boolean;
 };
 
@@ -68,7 +64,12 @@ export type OnboardingAction =
   | { type: 'UPDATE_SERVICE'; id: string; field: keyof ServiceRow; value: string | boolean }
   | { type: 'ADD_LOCATION' }
   | { type: 'REMOVE_LOCATION'; id: string }
-  | { type: 'UPDATE_LOCATION'; id: string; field: keyof LocationRow; value: string }
+  | {
+      type: 'UPDATE_LOCATION';
+      id: string;
+      field: keyof LocationRow;
+      value: string | boolean | CanonicalPlaceSelection | null;
+    }
   | { type: 'SET_ERROR'; step: number; message: string }
   | { type: 'CLEAR_ERROR'; step: number }
   | { type: 'SET_PENDING'; step: number | null };
@@ -94,12 +95,7 @@ function makeServiceRow(): ServiceRow {
 function makeLocationRow(): LocationRow {
   return {
     id: crypto.randomUUID(),
-    suburb: '',
-    city: '',
-    province: '',
-    countryCode: 'ZA',
-    postalCode: '',
-    radiusKm: '25',
+    place: null,
     isPrimary: true,
   };
 }
@@ -138,12 +134,7 @@ export function isOnboardingStatePristine(state: OnboardingState) {
 
   const hasEditedLocationRows =
     state.locations.length !== 1 ||
-    state.locations[0]?.suburb !== '' ||
-    state.locations[0]?.city !== '' ||
-    state.locations[0]?.province !== '' ||
-    state.locations[0]?.countryCode !== 'ZA' ||
-    state.locations[0]?.postalCode !== '' ||
-    state.locations[0]?.radiusKm !== '25' ||
+    state.locations[0]?.place !== null ||
     state.locations[0]?.isPrimary !== true;
 
   return !(

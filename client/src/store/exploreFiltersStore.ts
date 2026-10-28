@@ -26,7 +26,6 @@ interface FilterState {
 
   minBathrooms: number | null;
 
-  location: string | null;
   agencyId: number | null;
 
   ownershipType: OwnershipType | null;
@@ -47,7 +46,6 @@ interface FilterState {
   setMinBedrooms: (count: number | null) => void;
   setMaxBedrooms: (count: number | null) => void;
   setMinBathrooms: (count: number | null) => void;
-  setLocation: (location: string | null) => void;
   setAgencyId: (id: number | null) => void;
   setOwnershipType: (type: OwnershipType | null) => void;
   setStructuralType: (type: StructuralType | null) => void;
@@ -76,7 +74,6 @@ const INITIAL_STATE = {
 
   minBathrooms: null as number | null,
 
-  location: null as string | null,
   agencyId: null as number | null,
 
   ownershipType: null as OwnershipType | null,
@@ -129,7 +126,6 @@ export const useExploreFiltersStore = create<FilterState>()(
           bathrooms: count,
         }),
 
-      setLocation: location => set({ location }),
       setAgencyId: id => set({ agencyId: id }),
 
       setOwnershipType: type => set({ ownershipType: type }),
@@ -198,9 +194,6 @@ export const useExploreFiltersStore = create<FilterState>()(
           s.bathrooms !== null || (s.bathrooms === null && s.minBathrooms !== null);
         if (hasBathrooms) count++;
 
-        // Location
-        if (s.location) count++;
-
         // Agency
         if (s.agencyId !== null) count++;
 
@@ -218,7 +211,15 @@ export const useExploreFiltersStore = create<FilterState>()(
     {
       name: 'explore-filters',
       // Keep persisted state stable across code changes
-      version: 1,
+      version: 2,
+      migrate: persistedState => {
+        if (!persistedState || typeof persistedState !== 'object') return persistedState;
+        const { location: _retiredTextLocation, ...currentFilters } = persistedState as Record<
+          string,
+          unknown
+        >;
+        return currentFilters;
+      },
       // Only persist the data fields (not actions)
       partialize: state => ({
         propertyType: state.propertyType,
@@ -231,7 +232,6 @@ export const useExploreFiltersStore = create<FilterState>()(
 
         minBathrooms: state.minBathrooms,
 
-        location: state.location,
         agencyId: state.agencyId,
 
         ownershipType: state.ownershipType,

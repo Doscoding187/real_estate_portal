@@ -28,6 +28,8 @@ export type CanonicalDevelopmentCatalogue = {
     | 'isPublished'
     | 'approvalStatus'
   >;
+  /** Exact Place exposed by one accepted, executable site assignment. */
+  canonicalPlaceId: string | null;
   publisher: Pick<
     CanonicalPublisherRow,
     | 'id'

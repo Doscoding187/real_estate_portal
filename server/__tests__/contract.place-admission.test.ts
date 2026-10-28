@@ -591,21 +591,71 @@ describe('Place admission: schema alignment', () => {
     }
   });
 
-  it('keeps admission from creating unreviewed domain Place assignments', () => {
+  it('uses canonical Place foreign keys and omits the retired location hierarchy', () => {
     const normalized = normalizedDesiredSchema(schema);
     const desiredTableNames = new Set(normalized.tables.map(t => t.name));
-    // Listing convergence is separately reviewed; admission alone cannot assign
-    // any other domain or silently rewrite the transitional catalog.
-    for (const tableName of ['developments', 'land_parcels', 'commercial_assets', 'sl_places']) {
+    for (const tableName of [
+      'listings',
+      'properties',
+      'explore_content',
+      'land_parcels',
+      'commercial_assets',
+      'sl_places',
+    ]) {
       const table = normalized.tables.find(t => t.name === tableName);
       expect(
-        (table?.foreignKeys ?? []).filter(key => key.name.includes('->place.')).length,
+        (table?.foreignKeys ?? []).filter(
+          key => key.name === 'canonical_place_id->place.place_id',
+        ),
         tableName,
-      ).toBe(0);
+      ).toEqual([
+        expect.objectContaining({
+          columns: ['canonical_place_id'],
+          referencedTable: 'place',
+          referencedColumns: ['place_id'],
+          onDelete: 'restrict',
+          onUpdate: 'restrict',
+        }),
+      ]);
     }
-    // The three-level tables are still present and unchanged in shape.
-    for (const tableName of ['provinces', 'cities', 'suburbs', 'locations']) {
-      expect(desiredTableNames.has(tableName)).toBe(true);
+    const developmentAssignments = normalized.tables.find(
+      table => table.name === 'development_place_assignments',
+    );
+    expect(
+      (developmentAssignments?.foreignKeys ?? []).filter(
+        key => key.name === 'place_id->place.place_id',
+      ),
+    ).toEqual([
+      expect.objectContaining({
+        columns: ['place_id'],
+        referencedTable: 'place',
+        referencedColumns: ['place_id'],
+        onDelete: 'restrict',
+        onUpdate: 'restrict',
+      }),
+    ]);
+    expect(
+      (normalized.tables.find(table => table.name === 'developments')?.foreignKeys ?? []).filter(
+        key => key.referencedTable === 'place',
+      ),
+    ).toEqual([]);
+    for (const tableName of [
+      'provinces',
+      'cities',
+      'suburbs',
+      'locations',
+      'location_provider_mappings',
+      'location_search_cache',
+      'amenities',
+      'city_price_analytics',
+      'suburb_price_analytics',
+      'price_analytics',
+      'price_predictions',
+      'market_insights_cache',
+      'location_searches',
+      'recent_searches',
+    ]) {
+      expect(desiredTableNames.has(tableName), tableName).toBe(false);
     }
   });
 

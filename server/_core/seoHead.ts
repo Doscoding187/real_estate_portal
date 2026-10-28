@@ -1,22 +1,12 @@
-import { cityGuideInitialHtml } from '../../shared/cityGuideHtml';
 import {
   COUNTRY_DISCOVERY_DESCRIPTION,
   COUNTRY_DISCOVERY_PATH,
   COUNTRY_DISCOVERY_TITLE,
-  COUNTRY_PROVINCES,
-  countryDiscoveryInitialHtml,
 } from '../../shared/countryDiscovery';
-import { getCityGuideContent } from '../../shared/cityGuideContent';
-import { PROVINCE_SLUGS } from '../../shared/location-contract';
-import { provinceGuideInitialHtml } from '../../shared/provinceGuideHtml';
-import { getProvinceGuideContent } from '../../shared/provinceGuideContent';
-import { suburbGuideInitialHtml } from '../../shared/suburbGuideHtml';
 import {
-  isPublishedSuburbGuide,
-  isSuburbGuidePilot,
-  suburbGuideDescription,
-  suburbGuideTitle,
-} from '../../shared/suburbGuidePolicy';
+  canonicalPlaceUrlByPath,
+  canonicalPlaceUrlByPlaceId,
+} from '../services/canonicalPlaceUrlService';
 
 const CANONICAL_PUBLIC_ORIGIN = 'https://www.propertylistifysa.co.za';
 const DEFAULT_SITE_NAME = 'Property Listify';
@@ -62,48 +52,6 @@ function absoluteUrl(pathname: string): string {
   return new URL(pathname, CANONICAL_PUBLIC_ORIGIN).toString();
 }
 
-function buildAreaSeoData(
-  transactionLabel: 'Sale' | 'Rent',
-  segments: string[],
-): SeoPageData | null {
-  const [province, city, suburb] = segments.map(humanizeSegment);
-  const canonicalPath = `/${
-    transactionLabel === 'Sale' ? 'property-for-sale' : 'property-to-rent'
-  }/${segments.join('/')}`;
-
-  if (province && city && suburb) {
-    return {
-      title: `Property for ${transactionLabel} in ${suburb}, ${city}, ${province} | ${DEFAULT_SITE_NAME}`,
-      description: `Browse property for ${transactionLabel.toLowerCase()} in ${suburb}, ${city}, ${province}, including homes, apartments, and new developments on ${DEFAULT_SITE_NAME}.`,
-      canonicalUrl: absoluteUrl(canonicalPath),
-      robots: 'index, follow',
-      siteName: DEFAULT_SITE_NAME,
-    };
-  }
-
-  if (province && city) {
-    return {
-      title: `Property for ${transactionLabel} in ${city}, ${province} | ${DEFAULT_SITE_NAME}`,
-      description: `Explore property for ${transactionLabel.toLowerCase()} in ${city}, ${province}, including residential listings, rentals, and developments on ${DEFAULT_SITE_NAME}.`,
-      canonicalUrl: absoluteUrl(canonicalPath),
-      robots: 'index, follow',
-      siteName: DEFAULT_SITE_NAME,
-    };
-  }
-
-  if (province) {
-    return {
-      title: `Property for ${transactionLabel} in ${province} | ${DEFAULT_SITE_NAME}`,
-      description: `Find property for ${transactionLabel.toLowerCase()} across ${province}, including houses, apartments, and developments on ${DEFAULT_SITE_NAME}.`,
-      canonicalUrl: absoluteUrl(canonicalPath),
-      robots: 'index, follow',
-      siteName: DEFAULT_SITE_NAME,
-    };
-  }
-
-  return null;
-}
-
 export function resolveSeoPageData(requestUrl: string): SeoPageData {
   const parsedUrl = new URL(requestUrl, CANONICAL_PUBLIC_ORIGIN);
   const pathname = normalizePathname(parsedUrl.pathname);
@@ -119,54 +67,22 @@ export function resolveSeoPageData(requestUrl: string): SeoPageData {
     };
   }
 
-  const guide = pathSegments.length === 1 ? getProvinceGuideContent(pathSegments[0]) : undefined;
-  if (guide)
+  const placeRoute = canonicalPlaceUrlByPath(pathname);
+  if (placeRoute) {
+    const context = placeRoute.path_context?.name;
+    const placeLabel = placeRoute.preferred_public_name;
     return {
-      title: guide.title,
-      description: guide.description,
-      canonicalUrl: absoluteUrl(`/${guide.slug}`),
+      title: `${placeLabel} property search | ${DEFAULT_SITE_NAME}`,
+      description: context
+        ? `Explore property listings in ${placeLabel}, ${context}, ${placeRoute.province_name}.`
+        : `Explore property listings in ${placeLabel}, ${placeRoute.province_name}.`,
+      canonicalUrl: absoluteUrl(placeRoute.path),
       robots:
-        guide.status === 'published' && !parsedUrl.search ? 'index, follow' : 'noindex, follow',
-      siteName: DEFAULT_SITE_NAME,
-    };
-
-  const cityGuide =
-    pathSegments.length === 2 ? getCityGuideContent(pathSegments[0], pathSegments[1]) : undefined;
-  if (cityGuide)
-    return {
-      title: cityGuide.title,
-      description: cityGuide.description,
-      canonicalUrl: absoluteUrl(`/${cityGuide.provinceSlug}/${cityGuide.slug}`),
-      robots:
-        cityGuide.status === 'published' && !parsedUrl.search ? 'index, follow' : 'noindex, follow',
-      siteName: DEFAULT_SITE_NAME,
-    };
-
-  const suburbGuide =
-    pathSegments.length === 3 && PROVINCE_SLUGS.includes(pathSegments[0].toLowerCase())
-      ? {
-          provinceSlug: pathSegments[0].toLowerCase(),
-          citySlug: pathSegments[1].toLowerCase(),
-          suburbSlug: pathSegments[2].toLowerCase(),
-        }
-      : undefined;
-  if (suburbGuide) {
-    const suburbName = humanizeSegment(suburbGuide.suburbSlug);
-    const cityName = humanizeSegment(suburbGuide.citySlug);
-    const indexable =
-      isPublishedSuburbGuide(
-        suburbGuide.provinceSlug,
-        suburbGuide.citySlug,
-        suburbGuide.suburbSlug,
-      ) && !parsedUrl.search;
-
-    return {
-      title: suburbGuideTitle(suburbName),
-      description: suburbGuideDescription(suburbName, cityName),
-      canonicalUrl: absoluteUrl(
-        `/${suburbGuide.provinceSlug}/${suburbGuide.citySlug}/${suburbGuide.suburbSlug}`,
-      ),
-      robots: indexable ? 'index, follow' : 'noindex, follow',
+        placeRoute.publication_eligible &&
+        placeRoute.verification_status === 'verified' &&
+        !parsedUrl.search
+          ? 'index, follow'
+          : 'noindex, follow',
       siteName: DEFAULT_SITE_NAME,
     };
   }
@@ -276,30 +192,26 @@ export function resolveSeoPageData(requestUrl: string): SeoPageData {
     };
   }
 
-  if (pathSegments[0] === 'property-for-sale') {
-    return (
-      buildAreaSeoData('Sale', pathSegments.slice(1)) || {
-        title: `Property for Sale in South Africa | ${DEFAULT_SITE_NAME}`,
-        description:
-          'Browse homes, apartments, and developments for sale across South Africa on Property Listify.',
-        canonicalUrl: absoluteUrl(pathname),
-        robots: 'index, follow',
-        siteName: DEFAULT_SITE_NAME,
-      }
-    );
+  if (pathname === '/property-for-sale') {
+    return {
+      title: `Property for Sale in South Africa | ${DEFAULT_SITE_NAME}`,
+      description:
+        'Browse homes, apartments, and developments for sale across South Africa on Property Listify.',
+      canonicalUrl: absoluteUrl(pathname),
+      robots: parsedUrl.search ? 'noindex, follow' : 'index, follow',
+      siteName: DEFAULT_SITE_NAME,
+    };
   }
 
-  if (pathSegments[0] === 'property-to-rent') {
-    return (
-      buildAreaSeoData('Rent', pathSegments.slice(1)) || {
-        title: `Property to Rent in South Africa | ${DEFAULT_SITE_NAME}`,
-        description:
-          'Browse houses, apartments, and rentals across South Africa on Property Listify.',
-        canonicalUrl: absoluteUrl(pathname),
-        robots: 'index, follow',
-        siteName: DEFAULT_SITE_NAME,
-      }
-    );
+  if (pathname === '/property-to-rent') {
+    return {
+      title: `Property to Rent in South Africa | ${DEFAULT_SITE_NAME}`,
+      description:
+        'Browse houses, apartments, and rentals across South Africa on Property Listify.',
+      canonicalUrl: absoluteUrl(pathname),
+      robots: parsedUrl.search ? 'noindex, follow' : 'index, follow',
+      siteName: DEFAULT_SITE_NAME,
+    };
   }
 
   if (pathname === '/agents') {
@@ -333,18 +245,16 @@ export function resolveSeoPageData(requestUrl: string): SeoPageData {
     title: DEFAULT_TITLE,
     description: DEFAULT_DESCRIPTION,
     canonicalUrl: absoluteUrl(pathname),
-    robots: 'index, follow',
+    robots: 'noindex, follow',
     siteName: DEFAULT_SITE_NAME,
   };
 }
 
 /**
- * Structured data for the delivered guide document. It mirrors the shape the rendered page
- * emits, using only facts that are already authored or canonical, so a crawler that does not
- * execute JavaScript still receives the guide's place and breadcrumb data. The rendered page
- * replaces these nodes after boot.
+ * Structured data for the delivered country and canonical Place documents. It uses only
+ * canonical projection facts, so crawlers and the rendered page share one route authority.
  */
-function guideStructuredData(pathname: string): Record<string, unknown>[] | undefined {
+function canonicalDiscoveryStructuredData(pathname: string): Record<string, unknown>[] | undefined {
   const segments = pathname.split('/').filter(Boolean);
 
   if (segments.length === 1 && segments[0] === 'south-africa') {
@@ -362,17 +272,6 @@ function guideStructuredData(pathname: string): Record<string, unknown>[] | unde
           },
         ],
       },
-      {
-        '@context': 'https://schema.org',
-        '@type': 'ItemList',
-        name: 'South African provinces',
-        itemListElement: COUNTRY_PROVINCES.map((province, index) => ({
-          '@type': 'ListItem',
-          position: index + 1,
-          name: province.name,
-          url: absoluteUrl(province.path),
-        })),
-      },
     ];
   }
 
@@ -387,98 +286,45 @@ function guideStructuredData(pathname: string): Record<string, unknown>[] | unde
     })),
   });
 
-  if (segments.length === 1) {
-    const guide = getProvinceGuideContent(segments[0]);
-    if (!guide) return undefined;
-    return [
-      breadcrumb([
-        { name: 'Home', url: '/' },
-        { name: 'Explore', url: '/' },
-        { name: guide.name, url: `/${guide.slug}` },
-      ]),
-      {
-        '@context': 'https://schema.org',
-        '@type': 'AdministrativeArea',
-        name: guide.name,
-        description: guide.description,
-        url: absoluteUrl(`/${guide.slug}`),
-      },
-    ];
+  const entry = canonicalPlaceUrlByPath(pathname);
+  if (!entry) return undefined;
+  const breadcrumbs = [
+    { name: 'Home', url: '/' },
+    { name: 'South Africa', url: COUNTRY_DISCOVERY_PATH },
+  ];
+  if (entry.search_scope !== 'province') {
+    breadcrumbs.push({ name: entry.province_name, url: `/${entry.province_slug}` });
   }
-
-  if (segments.length === 2) {
-    const guide = getCityGuideContent(segments[0], segments[1]);
-    if (!guide) return undefined;
-    return [
-      breadcrumb([
-        { name: 'Home', url: '/' },
-        { name: guide.provinceName, url: `/${guide.provinceSlug}` },
-        { name: guide.name, url: `/${guide.provinceSlug}/${guide.slug}` },
-      ]),
-      {
-        '@context': 'https://schema.org',
-        '@type': 'City',
-        name: guide.name,
-        description: guide.description,
-        url: absoluteUrl(`/${guide.provinceSlug}/${guide.slug}`),
-      },
-    ];
+  const contextRoute = entry.path_context
+    ? canonicalPlaceUrlByPlaceId(entry.path_context.place_id)
+    : null;
+  if (contextRoute) {
+    breadcrumbs.push({
+      name: contextRoute.preferred_public_name,
+      url: contextRoute.path,
+    });
   }
-
-  if (segments.length === 3 && PROVINCE_SLUGS.includes(segments[0].toLowerCase())) {
-    const provinceSlug = segments[0].toLowerCase();
-    const citySlug = segments[1].toLowerCase();
-    const suburbSlug = segments[2].toLowerCase();
-    if (!isSuburbGuidePilot(provinceSlug, citySlug, suburbSlug)) return undefined;
-    const cityGuide = getCityGuideContent(provinceSlug, citySlug);
-    if (!cityGuide) return undefined;
-    const suburbName = humanizeSegment(suburbSlug);
-    const cityName = humanizeSegment(citySlug);
-    return [
-      breadcrumb([
-        { name: 'Home', url: '/' },
-        { name: cityGuide.provinceName, url: `/${provinceSlug}` },
-        { name: cityGuide.name, url: `/${provinceSlug}/${citySlug}` },
-        { name: suburbName, url: `/${provinceSlug}/${citySlug}/${suburbSlug}` },
-      ]),
-      {
-        '@context': 'https://schema.org',
-        '@type': 'Place',
-        name: suburbName,
-        url: absoluteUrl(`/${provinceSlug}/${citySlug}/${suburbSlug}`),
-        address: {
-          '@type': 'PostalAddress',
-          addressLocality: cityName,
-          addressRegion: cityGuide.provinceName,
-          addressCountry: 'ZA',
-        },
-        containedInPlace: {
-          '@type': 'City',
-          name: cityName,
-          url: absoluteUrl(`/${provinceSlug}/${citySlug}`),
-        },
+  breadcrumbs.push({ name: entry.preferred_public_name, url: entry.path });
+  return [
+    breadcrumb(breadcrumbs),
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Place',
+      name: entry.preferred_public_name,
+      url: absoluteUrl(entry.path),
+      additionalType: entry.place_type,
+      address: {
+        '@type': 'PostalAddress',
+        addressRegion: entry.province_name,
+        addressCountry: 'ZA',
       },
-    ];
-  }
-
-  return undefined;
+    },
+  ];
 }
 
 export function injectSeoHead(template: string, requestUrl: string): string {
   const seo = resolveSeoPageData(requestUrl);
-  const initialHtml =
-    countryDiscoveryInitialHtml(requestUrl) ||
-    provinceGuideInitialHtml(requestUrl) ||
-    cityGuideInitialHtml(requestUrl) ||
-    suburbGuideInitialHtml(requestUrl);
-  const document = initialHtml
-    ? template.replace(
-        /<div id="root">[\s\S]*?<\/div>/,
-        () => `<div id="root">${initialHtml}</div>`,
-      )
-    : template;
-
-  const withHead = document
+  const withHead = template
     .replace(/<title>[\s\S]*?<\/title>/i, `<title>${escapeHtml(seo.title)}</title>`)
     .replace(
       /<meta\s+name="description"\s+content="[^"]*"\s*\/?>/i,
@@ -522,7 +368,7 @@ export function injectSeoHead(template: string, requestUrl: string): string {
     );
 
   const structuredData: Record<string, unknown>[] =
-    guideStructuredData(new URL(requestUrl, CANONICAL_PUBLIC_ORIGIN).pathname) ?? [];
+    canonicalDiscoveryStructuredData(new URL(requestUrl, CANONICAL_PUBLIC_ORIGIN).pathname) ?? [];
   if (!structuredData.length) return withHead;
 
   // The rendered page replaces these nodes on boot, so the delivered document and the page

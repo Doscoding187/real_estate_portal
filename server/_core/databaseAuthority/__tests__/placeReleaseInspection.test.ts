@@ -61,18 +61,7 @@ function fixture(columns: string[] = []) {
           })),
         ];
       }
-      if (sql.includes('FROM cities'))
-        return [
-          [
-            {
-              id: 211,
-              name: 'North Riding',
-              slug: 'north-riding',
-              status: 'verified',
-              province_code: 'GP',
-            },
-          ],
-        ];
+      expect(sql).not.toMatch(/FROM (cities|suburbs|provinces|locations)/);
       if (sql.startsWith('SELECT')) return [[]];
       throw new Error('Unapproved query');
     },
@@ -84,16 +73,16 @@ function fixture(columns: string[] = []) {
   return { authority, decision, connection, statements, flags };
 }
 describe('protected read-only Place release census', () => {
-  it('reads ledger, schema and the bounded reported legacy locality without reading private listing data', async () => {
+  it('reads the migration ledger and canonical schema without querying retired geography tables', async () => {
     const f = fixture();
     const report = await inspectPlaceReleaseTarget(f);
     expect(report.databaseMutation).toBe(false);
     expect(report.physicalTables).toEqual([]);
-    expect(report.legacyNorthRiding[0].id).toBe(211);
     expect(f.statements.every(s => s.startsWith('SELECT') || s === 'SHOW GRANTS')).toBe(true);
     expect(
       f.statements.some(s => /FROM listings|FROM properties|privateAddress|GET_LOCK/.test(s)),
     ).toBe(false);
+    expect(f.statements.some(s => /FROM (cities|suburbs|provinces|locations)/.test(s))).toBe(false);
   });
   it.each(['wrongIdentity', 'mutationGrant'] as const)(
     'refuses %s before reading application data',
@@ -101,7 +90,7 @@ describe('protected read-only Place release census', () => {
       const f = fixture();
       f.flags[flag] = true;
       await expect(inspectPlaceReleaseTarget(f)).rejects.toThrow(/identity|grants/);
-      expect(f.statements.some(s => s.includes('FROM cities'))).toBe(false);
+      expect(f.statements.some(s => /FROM (cities|suburbs|provinces|locations)/.test(s))).toBe(false);
     },
   );
   it('rejects cloned authorization before any database read', async () => {
@@ -116,7 +105,7 @@ describe('protected read-only Place release census', () => {
 describe('physical canonical reference columns', () => {
   it.each([
     [],
-    ['listings', 'properties', 'saved_searches'],
+    ['listings', 'properties', 'developments', 'explore_content', 'land_parcels', 'commercial_assets', 'sl_places', 'saved_searches'],
     ['listings'],
     ['properties', 'saved_searches'],
   ])(

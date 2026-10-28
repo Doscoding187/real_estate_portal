@@ -793,17 +793,6 @@ export interface ImageUrls {
 export interface PropertyFilters {
   /** Internal, validated Place membership. Empty membership must return no rows. */
   canonicalPlaceIds?: string[];
-  // Location
-  province?: string;
-  city?: string;
-  suburb?: string[];
-  locations?: string[];
-  /** Canonical public location identity; public search must not widen this to text. */
-  canonicalLocation?: {
-    provinceId: number;
-    cityId?: number;
-    suburbId?: number;
-  };
 
   // Basic filters
   propertyType?: Property['propertyType'][];
@@ -899,64 +888,6 @@ export interface SearchResults {
       suburbId?: number;
     };
   };
-}
-
-export interface DevelopmentDerivedListing {
-  id: string;
-  unitTypeId: string;
-  developmentId: number;
-  rankingScore?: number;
-  href?: string;
-  title: string;
-  price: number;
-  priceTo?: number;
-  canonicalPlaceId: string | null;
-  /** Display-only names from the reviewed canonical Place assignment. */
-  locationLabels: string[];
-  propertyType: Property['propertyType'];
-  listingType: Property['listingType'];
-  transactionType: 'for_sale' | 'for_rent' | 'auction';
-  listingSource: 'development';
-  bedrooms?: number;
-  bathrooms?: number;
-  floorSize?: number;
-  erfSize?: number;
-  parkingCount?: number;
-  parkingType?: string;
-  description?: string;
-  highlights?: string[];
-  image?: string | null;
-  images?: ImageUrls[];
-  badges?: string[];
-  availableUnits?: number;
-  totalUnits?: number;
-  completionDate?: string | null;
-  listedDate: Date;
-  latitude?: number;
-  longitude?: number;
-  development: {
-    id: number;
-    name: string;
-    slug?: string | null;
-    status?: string | null;
-  };
-  developerBrand: {
-    id?: number | null;
-    brandName: string;
-    slug?: string | null;
-    logoUrl?: string | null;
-    publicContactEmail?: string | null;
-    publicContactPhone?: string | null;
-  };
-}
-
-export interface DevelopmentDerivedListingSearchResults {
-  items: DevelopmentDerivedListing[];
-  cards?: SearchCardResult[];
-  total: number;
-  page: number;
-  pageSize: number;
-  hasMore: boolean;
 }
 
 export interface SearchCardDevelopmentRef {
@@ -1062,6 +993,8 @@ export interface SavedSearch {
   userId: number;
   name: string;
   criteria: Record<string, unknown>;
+  /** Canonical Place Authority foreign key; when set it is the sole search geography. */
+  placeId?: string | null;
   notificationFrequency: 'instant' | 'daily' | 'weekly' | 'never';
   emailEnabled: boolean;
   inAppEnabled: boolean;

@@ -17,20 +17,14 @@ import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
 import { getAgentJourneyAction } from '@/lib/agentJourney';
-import { LocationAutocomplete } from '@/components/location/LocationAutocomplete';
 import {
-  parseCanonicalAgentCoverageLocationId,
+  LocationAutocomplete,
+  type CanonicalPlaceOption,
+} from '@/components/location/LocationAutocomplete';
+import {
+  parseCanonicalAgentCoveragePlaceId,
   type AgentCoverageArea,
 } from '@shared/agentCoverageArea';
-
-type LocationOption = {
-  id: number;
-  name: string;
-  type: 'province' | 'city' | 'suburb';
-  provinceName?: string;
-  cityName?: string;
-  canonicalLocationId?: string;
-};
 
 const AGENT_BIO_MAX_LENGTH = 1000;
 
@@ -45,24 +39,20 @@ function joinCsv(values: string[] = []) {
   return values.join(', ');
 }
 
-function formatCoverageLabel(location: LocationOption) {
-  if (location.type === 'suburb') {
-    return [location.name, location.cityName, location.provinceName].filter(Boolean).join(', ');
-  }
-
-  if (location.type === 'city') {
-    return [location.name, location.provinceName].filter(Boolean).join(', ');
+function formatCoverageLabel(location: CanonicalPlaceOption) {
+  if (location.scope !== 'province') {
+    return [location.name, location.administrativeContext].filter(Boolean).join(', ');
   }
 
   return location.name;
 }
 
-function coverageAreaFromLocation(location: LocationOption): AgentCoverageArea | null {
-  const canonical = parseCanonicalAgentCoverageLocationId(location.canonicalLocationId);
+function coverageAreaFromLocation(location: CanonicalPlaceOption): AgentCoverageArea | null {
+  const canonical = parseCanonicalAgentCoveragePlaceId(location.canonicalPlaceId);
   if (!canonical) return null;
 
   return {
-    canonicalLocationId: canonical.canonicalLocationId,
+    canonicalPlaceId: canonical.canonicalPlaceId,
     label: formatCoverageLabel(location),
   };
 }
@@ -203,7 +193,7 @@ export default function AgentSettings() {
       },
       slug: profileData.slug.trim() || undefined,
       profileImage: profileData.profileImage || undefined,
-      areasServed: profileData.areasServed.map(area => area.canonicalLocationId),
+      areasServed: profileData.areasServed.map(area => area.canonicalPlaceId),
     });
   };
 
@@ -472,7 +462,7 @@ export default function AgentSettings() {
                         value={areaSearch}
                         onValueChange={setAreaSearch}
                         onLocationSelect={location => {
-                          const nextArea = coverageAreaFromLocation(location as LocationOption);
+                          const nextArea = coverageAreaFromLocation(location);
                           if (!nextArea) {
                             toast.error(
                               'Choose a current location from the Property Listify suggestions.',
@@ -482,7 +472,7 @@ export default function AgentSettings() {
                           setProfileData(prev => ({
                             ...prev,
                             areasServed: prev.areasServed.some(
-                              area => area.canonicalLocationId === nextArea.canonicalLocationId,
+                              area => area.canonicalPlaceId === nextArea.canonicalPlaceId,
                             )
                               ? prev.areasServed
                               : [...prev.areasServed, nextArea].slice(0, 20),
@@ -500,7 +490,7 @@ export default function AgentSettings() {
                         <div className="flex flex-wrap gap-2">
                           {profileData.areasServed.map(area => (
                             <span
-                              key={area.canonicalLocationId}
+                              key={area.canonicalPlaceId}
                               className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700"
                             >
                               {area.label}
@@ -510,7 +500,7 @@ export default function AgentSettings() {
                                   setProfileData(prev => ({
                                     ...prev,
                                     areasServed: prev.areasServed.filter(
-                                      item => item.canonicalLocationId !== area.canonicalLocationId,
+                                      item => item.canonicalPlaceId !== area.canonicalPlaceId,
                                     ),
                                   }))
                                 }

@@ -69,7 +69,6 @@ describe('Demo Gate v1: super admin publishing smoke', () => {
       page: 1,
       pageSize: 12,
       hasMore: false,
-      locationContext: undefined,
     } as any);
 
     vi.spyOn(developmentService, 'listPublicDevelopments').mockResolvedValue([

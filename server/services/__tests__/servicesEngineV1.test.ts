@@ -9,11 +9,17 @@ import {
   serviceProviderServices,
 } from '../../../drizzle/schema';
 
-const { mockGetDb } = vi.hoisted(() => ({
+const { mockGetDb, mockLoadCanonicalPlaceSearchProjection, PLACE_SANDTON, PLACE_ARCADIA } = vi.hoisted(() => ({
   mockGetDb: vi.fn(),
+  mockLoadCanonicalPlaceSearchProjection: vi.fn(),
+  PLACE_SANDTON: 'pl-place-01-000000000000000000000001',
+  PLACE_ARCADIA: 'pl-place-01-000000000000000000000002',
 }));
 
 vi.mock('../../db', () => ({ getDb: mockGetDb }));
+vi.mock('../canonicalPlaceSearchService', () => ({
+  loadCanonicalPlaceSearchProjection: mockLoadCanonicalPlaceSearchProjection,
+}));
 
 import {
   canTransitionServiceLeadStatus,
@@ -101,9 +107,7 @@ function makeLeadRow(overrides: Record<string, unknown> = {}) {
     propertyId: null,
     listingId: null,
     developmentId: null,
-    geoProvince: 'Gauteng',
-    geoCity: 'Johannesburg',
-    geoSuburb: 'Sandton',
+    canonicalPlaceId: PLACE_SANDTON,
     notes: 'Need a repair before transfer.',
     contextJson: { serviceCode: 'plumbing' },
     status: 'new',
@@ -121,6 +125,45 @@ function makeLeadRow(overrides: Record<string, unknown> = {}) {
     ...overrides,
   };
 }
+
+function makeCanonicalPlaceProjection(placeIds: readonly string[]) {
+  const executions = new Map<string, any>();
+  const labels = new Map<string, any>();
+  const provincePlaceId = 'pl-place-01-000000000000000000000003';
+  const placeDetails = new Map([
+    [PLACE_SANDTON, { label: 'Sandton', city: 'Johannesburg' }],
+    [PLACE_ARCADIA, { label: 'Arcadia', city: 'Pretoria' }],
+  ]);
+  for (const placeId of placeIds) {
+    const details = placeDetails.get(placeId);
+    if (!details) continue;
+    executions.set(placeId, {
+      placeId,
+      scope: 'locality',
+      provincePlaceId,
+      cityPlaceId: 'pl-place-01-000000000000000000000004',
+      localityPlaceId: placeId,
+      contextAncestorPlaceIds: [],
+    });
+    labels.set(placeId, {
+      canonicalPlaceId: placeId,
+      label: details.label,
+      placeType: 'suburb',
+      scope: 'locality',
+      province: 'Gauteng',
+      city: details.city,
+      locality: details.label,
+    });
+  }
+  return { executions, labels };
+}
+
+beforeEach(() => {
+  mockLoadCanonicalPlaceSearchProjection.mockImplementation(
+    async (_database: unknown, options: { placeIds: readonly string[] }) =>
+      makeCanonicalPlaceProjection(options.placeIds),
+  );
+});
 
 describe('Services V1 authority rules', () => {
   it('publishes only active, verified, directory-active providers', () => {
@@ -150,41 +193,17 @@ describe('Services V1 authority rules', () => {
     ).toBe(false);
   });
 
-  it('does not treat a blank location row as valid provider coverage', () => {
-    expect(hasProviderCoverage({ province: null, city: null, suburb: null })).toBe(false);
-    expect(hasProviderCoverage({ province: 'Gauteng', city: null, suburb: null })).toBe(true);
-    expect(
-      providerCoversLocation(
-        [
-          { province: null, city: null, suburb: null },
-          { province: 'Gauteng', city: 'Johannesburg', suburb: null },
-        ],
-        { province: 'Gauteng', city: 'Johannesburg' },
-      ),
-    ).toBe(true);
-    expect(
-      providerCoversLocation([{ province: null, city: null, suburb: null }], {
-        province: 'Gauteng',
-      }),
-    ).toBe(false);
+  it('requires an admitted canonical Place for provider coverage', () => {
+    expect(hasProviderCoverage({ canonicalPlaceId: null })).toBe(false);
+    expect(hasProviderCoverage({ canonicalPlaceId: PLACE_SANDTON })).toBe(true);
+    expect(hasProviderCoverage({ canonicalPlaceId: 'Sandton' })).toBe(false);
   });
 
-  it('matches all supplied location fields without widening to a broader area', () => {
-    const locations = [{ province: 'Gauteng', city: 'Johannesburg', suburb: 'Sandton' }];
-
-    expect(
-      providerCoversLocation(locations, {
-        province: 'Gauteng',
-        city: 'Johannesburg',
-        suburb: 'Sandton',
-      }),
-    ).toBe(true);
-    expect(
-      providerCoversLocation(locations, {
-        province: 'Gauteng',
-        city: 'Pretoria',
-      }),
-    ).toBe(false);
+  it('matches provider coverage only for the exact canonical Place identity', () => {
+    const locations = [{ canonicalPlaceId: PLACE_SANDTON }];
+    expect(providerCoversLocation(locations, { canonicalPlaceId: PLACE_SANDTON })).toBe(true);
+    expect(providerCoversLocation(locations, { canonicalPlaceId: PLACE_ARCADIA })).toBe(false);
+    expect(providerCoversLocation(locations, { canonicalPlaceId: 'Sandton' })).toBe(false);
     expect(providerCoversLocation(locations, {})).toBe(true);
   });
 
@@ -392,30 +411,20 @@ describe('Services V1 provider edit preservation', () => {
     expect(updateSet).not.toHaveProperty('dashboardActive');
   });
 
-  it('preserves location fields omitted from a compact editor update', async () => {
-    const existing = [
-      {
-        id: 23,
-        countryCode: 'ZA',
-        province: 'Gauteng',
-        city: 'Johannesburg',
-        suburb: 'Sandton',
-        postalCode: '2196',
-        radiusKm: 40,
-        isPrimary: 1,
-      },
-    ];
-    const updateSet = vi.fn(() => ({ where: vi.fn().mockResolvedValue({ affectedRows: 1 }) }));
+  it('updates an owned coverage row with the selected canonical Place ID', async () => {
+    const existing = [{ id: 23, canonicalPlaceId: PLACE_SANDTON, isPrimary: 1 }];
+    const updateWhere = vi.fn().mockResolvedValue({ affectedRows: 1 });
+    const updateSet = vi.fn(() => ({ where: updateWhere }));
     const update = vi.fn(() => ({ set: updateSet }));
     const insert = vi.fn();
-    const existingQuery = makeSelectQuery(existing, true);
     const tx = {
       select: vi
         .fn()
         .mockReturnValueOnce(makeSelectQuery([{ id: 20 }], true))
-        .mockReturnValueOnce(existingQuery),
+        .mockReturnValueOnce(makeSelectQuery(existing, true)),
       update,
       insert,
+      delete: vi.fn(() => ({ where: vi.fn() })),
     };
     const db = {
       transaction: vi.fn(async callback => callback(tx)),
@@ -428,56 +437,45 @@ describe('Services V1 provider edit preservation', () => {
     mockGetDb.mockResolvedValue(db);
 
     await servicesEngineService.replaceProviderLocations(20, [
-      {
-        id: 23,
-        province: 'Gauteng',
-        city: 'Johannesburg',
-        suburb: 'Sandton',
-      },
+      { id: 23, canonicalPlaceId: PLACE_ARCADIA, isPrimary: true },
     ]);
 
-    expect(updateSet).toHaveBeenCalledWith(
-      expect.objectContaining({
-        countryCode: 'ZA',
-        postalCode: '2196',
-        radiusKm: 40,
-        isPrimary: 1,
-      }),
-    );
+    expect(updateSet).toHaveBeenCalledWith({
+      canonicalPlaceId: PLACE_ARCADIA,
+      isPrimary: 1,
+    });
     expect(insert).not.toHaveBeenCalled();
   });
 
-  it('rejects two submitted coverage rows that claim the same geographic tuple', async () => {
+  it('rejects duplicate canonical coverage identities before writing', async () => {
+    const transaction = vi.fn();
+    mockGetDb.mockResolvedValue({ transaction });
+
+    await expect(
+      servicesEngineService.replaceProviderLocations(20, [
+        { canonicalPlaceId: PLACE_SANDTON },
+        { canonicalPlaceId: PLACE_SANDTON },
+      ]),
+    ).rejects.toThrow('Coverage areas must be unique within a provider profile');
+
+    expect(transaction).not.toHaveBeenCalled();
+  });
+
+  it('moves a row to another Place and removes omitted coverage rows', async () => {
     const existing = [
-      {
-        id: 23,
-        countryCode: 'ZA',
-        province: 'Gauteng',
-        city: 'Johannesburg',
-        suburb: 'Sandton',
-        postalCode: '2196',
-        radiusKm: 40,
-        isPrimary: 1,
-      },
-      {
-        id: 24,
-        countryCode: 'ZA',
-        province: 'Gauteng',
-        city: 'Pretoria',
-        suburb: 'Arcadia',
-        postalCode: '0008',
-        radiusKm: 20,
-        isPrimary: 0,
-      },
+      { id: 23, canonicalPlaceId: PLACE_SANDTON, isPrimary: 1 },
+      { id: 24, canonicalPlaceId: PLACE_ARCADIA, isPrimary: 0 },
     ];
-    const update = vi.fn(() => ({ set: vi.fn() }));
-    const deleteFn = vi.fn(() => ({ where: vi.fn() }));
-    const existingQuery = makeSelectQuery(existing, true);
+    const updateWhere = vi.fn().mockResolvedValue({ affectedRows: 1 });
+    const updateSet = vi.fn(() => ({ where: updateWhere }));
+    const update = vi.fn(() => ({ set: updateSet }));
+    const deleteWhere = vi.fn().mockResolvedValue({ affectedRows: 1 });
+    const deleteFn = vi.fn(() => ({ where: deleteWhere }));
     const tx = {
       select: vi
         .fn()
         .mockReturnValueOnce(makeSelectQuery([{ id: 20 }], true))
-        .mockReturnValueOnce(existingQuery),
+        .mockReturnValueOnce(makeSelectQuery(existing, true)),
       update,
       delete: deleteFn,
       insert: vi.fn(),
@@ -486,163 +484,56 @@ describe('Services V1 provider edit preservation', () => {
       transaction: vi.fn(async callback => callback(tx)),
       select: vi.fn(() => ({
         from: vi.fn(() => ({
-          where: vi.fn(() => ({ orderBy: vi.fn().mockResolvedValue(existing) })),
+          where: vi.fn(() => ({ orderBy: vi.fn().mockResolvedValue([]) })),
         })),
       })),
     });
 
-    await expect(
-      servicesEngineService.replaceProviderLocations(20, [
-        {
-          id: 23,
-          province: 'Gauteng',
-          city: 'Pretoria',
-          suburb: 'Arcadia',
-        },
-        {
-          id: 24,
-          province: 'Gauteng',
-          city: 'Pretoria',
-          suburb: 'Arcadia',
-        },
-      ]),
-    ).rejects.toThrow('Coverage areas must be unique');
+    await servicesEngineService.replaceProviderLocations(20, [
+      { id: 23, canonicalPlaceId: PLACE_ARCADIA, isPrimary: true },
+    ]);
 
-    expect(update).not.toHaveBeenCalled();
-    expect(deleteFn).not.toHaveBeenCalled();
+    expect(updateSet).toHaveBeenCalledWith({
+      canonicalPlaceId: PLACE_ARCADIA,
+      isPrimary: 1,
+    });
+    expect(deleteFn).toHaveBeenCalledWith(serviceProviderLocations);
+    expect(deleteWhere).toHaveBeenCalledWith(eq(serviceProviderLocations.id, 24));
   });
 
-  it('moves coverage onto a tuple whose previous row is being removed', async () => {
+  it('matches an ID-less edit to the exact existing Place identity', async () => {
     const existing = [
-      {
-        id: 23,
-        countryCode: 'ZA',
-        province: 'Gauteng',
-        city: 'Johannesburg',
-        suburb: 'Sandton',
-        postalCode: '2196',
-        radiusKm: 40,
-        isPrimary: 1,
-      },
-      {
-        id: 24,
-        countryCode: 'ZA',
-        province: 'Gauteng',
-        city: 'Pretoria',
-        suburb: 'Arcadia',
-        postalCode: '0008',
-        radiusKm: 20,
-        isPrimary: 0,
-      },
+      { id: 23, canonicalPlaceId: PLACE_SANDTON, isPrimary: 1 },
+      { id: 24, canonicalPlaceId: PLACE_ARCADIA, isPrimary: 0 },
     ];
-    const where = vi.fn().mockResolvedValue({ affectedRows: 1 });
-    const updateSet = vi.fn(() => ({ where }));
+    const updateWhere = vi.fn().mockResolvedValue({ affectedRows: 1 });
+    const updateSet = vi.fn(() => ({ where: updateWhere }));
     const update = vi.fn(() => ({ set: updateSet }));
     const deleteWhere = vi.fn().mockResolvedValue({ affectedRows: 1 });
     const deleteFn = vi.fn(() => ({ where: deleteWhere }));
-    const insert = vi.fn();
-    const existingQuery = makeSelectQuery(existing, true);
     const tx = {
       select: vi
         .fn()
         .mockReturnValueOnce(makeSelectQuery([{ id: 20 }], true))
-        .mockReturnValueOnce(existingQuery),
+        .mockReturnValueOnce(makeSelectQuery(existing, true)),
       update,
       delete: deleteFn,
-      insert,
+      insert: vi.fn(),
     };
     mockGetDb.mockResolvedValue({
       transaction: vi.fn(async callback => callback(tx)),
       select: vi.fn(() => ({
         from: vi.fn(() => ({
-          where: vi.fn(() => ({ orderBy: vi.fn().mockResolvedValue(existing) })),
+          where: vi.fn(() => ({ orderBy: vi.fn().mockResolvedValue([]) })),
         })),
       })),
     });
 
     await servicesEngineService.replaceProviderLocations(20, [
-      {
-        id: 23,
-        province: 'Gauteng',
-        city: 'Pretoria',
-        suburb: 'Arcadia',
-      },
+      { canonicalPlaceId: PLACE_ARCADIA, isPrimary: true },
     ]);
 
-    expect(update).toHaveBeenCalledTimes(1);
-    expect(updateSet).toHaveBeenCalledWith(
-      expect.objectContaining({ city: 'Pretoria', suburb: 'Arcadia' }),
-    );
-    expect(deleteFn).toHaveBeenCalledWith(serviceProviderLocations);
-    expect(deleteWhere).toHaveBeenCalledWith(eq(serviceProviderLocations.id, 24));
-    expect(insert).not.toHaveBeenCalled();
-  });
-
-  it('matches an ID-less location update by the exact geographic tuple', async () => {
-    const existing = [
-      {
-        id: 23,
-        countryCode: 'ZA',
-        province: 'Gauteng',
-        city: 'Johannesburg',
-        suburb: 'Sandton',
-        postalCode: '2196',
-        radiusKm: 40,
-        isPrimary: 1,
-      },
-      {
-        id: 24,
-        countryCode: 'ZA',
-        province: 'Gauteng',
-        city: 'Pretoria',
-        suburb: 'Arcadia',
-        postalCode: '0008',
-        radiusKm: 20,
-        isPrimary: 0,
-      },
-    ];
-    const where = vi.fn().mockResolvedValue({ affectedRows: 1 });
-    const updateSet = vi.fn(() => ({ where }));
-    const update = vi.fn(() => ({ set: updateSet }));
-    const deleteWhere = vi.fn().mockResolvedValue({ affectedRows: 1 });
-    const deleteFn = vi.fn(() => ({ where: deleteWhere }));
-    const insert = vi.fn();
-    const existingQuery = makeSelectQuery(existing, true);
-    const tx = {
-      select: vi
-        .fn()
-        .mockReturnValueOnce(makeSelectQuery([{ id: 20 }], true))
-        .mockReturnValueOnce(existingQuery),
-      update,
-      delete: deleteFn,
-      insert,
-    };
-    const db = {
-      transaction: vi.fn(async callback => callback(tx)),
-      select: vi.fn(() => ({
-        from: vi.fn(() => ({
-          where: vi.fn(() => ({ orderBy: vi.fn().mockResolvedValue(existing) })),
-        })),
-      })),
-    };
-    mockGetDb.mockResolvedValue(db);
-
-    await servicesEngineService.replaceProviderLocations(20, [
-      {
-        province: 'Gauteng',
-        city: 'Pretoria',
-        suburb: 'Arcadia',
-        postalCode: '0008',
-        isPrimary: true,
-      },
-    ]);
-
-    expect(update).toHaveBeenCalledTimes(1);
-    expect(update).toHaveBeenCalledWith(serviceProviderLocations);
-    expect(where).toHaveBeenCalledWith(eq(serviceProviderLocations.id, 24));
-    expect(insert).not.toHaveBeenCalled();
-    // The row left out of the canonical set stops being published coverage.
-    expect(deleteFn).toHaveBeenCalledTimes(1);
+    expect(updateWhere).toHaveBeenCalledWith(eq(serviceProviderLocations.id, 24));
     expect(deleteWhere).toHaveBeenCalledWith(eq(serviceProviderLocations.id, 23));
   });
 
@@ -824,10 +715,7 @@ describe('Services V1 enquiry attribution', () => {
       [{ category: 'home_improvement', code: 'Plumbing', isActive: 1 }],
       true,
     );
-    const locationsQuery = makeSelectQuery(
-      [{ province: 'Gauteng', city: 'Johannesburg', suburb: 'Sandton' }],
-      true,
-    );
+    const locationsQuery = makeSelectQuery([{ canonicalPlaceId: PLACE_SANDTON }], true);
     const preflightQuery = makeSelectQuery([]);
 
     mockGetDb.mockResolvedValue({
@@ -859,7 +747,7 @@ describe('Services V1 enquiry attribution', () => {
         companyName: 'Provider Company',
         services: [{ category: 'home_improvement', code: 'Plumbing', displayName: 'Plumbing' }],
 
-        locations: [{ province: 'Gauteng', city: 'Johannesburg', suburb: 'Sandton' }],
+        locations: [{ canonicalPlaceId: PLACE_SANDTON, label: 'Sandton' }],
         reviews: [],
       } as never);
 
@@ -871,10 +759,7 @@ describe('Services V1 enquiry attribution', () => {
       category: 'home_improvement',
       sourceSurface: 'directory',
       intentStage: 'general',
-      province: 'Gauteng',
-      city: 'Johannesburg',
-
-      suburb: 'Sandton',
+      canonicalPlaceId: PLACE_SANDTON,
       serviceCode: 'plumbing',
       notes: 'Please call after work hours.',
     });
@@ -919,9 +804,7 @@ describe('Services V1 enquiry attribution', () => {
           },
 
           notes: 'Please call after work hours.',
-          geoProvince: 'gauteng',
-          geoCity: 'johannesburg',
-          geoSuburb: 'sandton',
+          canonicalPlaceId: PLACE_SANDTON,
           propertyId: null,
           listingId: null,
           developmentId: null,
@@ -948,7 +831,7 @@ describe('Services V1 enquiry attribution', () => {
         providerId: 20,
         companyName: 'Provider Company',
         services: [{ category: 'home_improvement', code: 'Plumbing', displayName: 'Plumbing' }],
-        locations: [{ province: 'Gauteng', city: 'Johannesburg', suburb: 'Sandton' }],
+        locations: [{ canonicalPlaceId: PLACE_SANDTON, label: 'Sandton' }],
         reviews: [],
       } as never);
 
@@ -959,9 +842,7 @@ describe('Services V1 enquiry attribution', () => {
       category: 'home_improvement',
       sourceSurface: 'directory',
       intentStage: 'general',
-      province: 'Gauteng',
-      city: 'Johannesburg',
-      suburb: 'Sandton',
+      canonicalPlaceId: PLACE_SANDTON,
       serviceCode: 'plumbing',
       notes: 'Please call after work hours.',
     });
@@ -1008,9 +889,7 @@ describe('Services V1 enquiry attribution', () => {
           category: 'home_improvement',
           sourceSurface: 'directory',
           intentStage: 'general',
-          province: 'Gauteng',
-          city: 'Johannesburg',
-          suburb: 'Sandton',
+          canonicalPlaceId: PLACE_SANDTON,
           serviceCode: 'plumbing',
           notes: 'Need a repair before transfer.',
           context,
@@ -1039,9 +918,7 @@ describe('Services V1 enquiry attribution', () => {
         category: 'home_improvement',
         sourceSurface: 'directory',
         intentStage: 'general',
-        province: 'Gauteng',
-        city: 'Johannesburg',
-        suburb: 'Sandton',
+        canonicalPlaceId: PLACE_SANDTON,
         serviceCode: 'plumbing',
         notes: 'Need a repair before transfer.',
         propertyId: 99,
@@ -1063,7 +940,6 @@ describe('Services V1 enquiry attribution', () => {
         serviceCode: 'plumbing',
         notes: '   ',
 
-        province: 'Gauteng',
       }),
     ).rejects.toThrow('project description');
 
@@ -1094,7 +970,6 @@ describe('Services V1 enquiry attribution', () => {
         category: 'home_improvement',
         sourceSurface: 'directory',
         intentStage: 'general',
-        province: 'Gauteng',
         serviceCode: 'plumbing',
         notes: 'Need a repair.',
       }),
@@ -1127,7 +1002,7 @@ function mockReadinessDb(baseRow: Record<string, unknown>, services: unknown[], 
 describe('Services V1 reviewed publication authority', () => {
   it('keeps a newly onboarded provider out of the public directory', async () => {
     const { dbSelect } = mockReadinessDb(READY_PUBLICATION_BASE_ROW, [{ isActive: 1 }], [
-      { province: 'Gauteng', city: 'Johannesburg', suburb: 'Sandton' },
+      { canonicalPlaceId: PLACE_SANDTON },
     ]);
     mockGetDb.mockResolvedValue({ select: dbSelect });
 
@@ -1164,7 +1039,7 @@ describe('Services V1 reviewed publication authority', () => {
         subscriptionStatus: 'cancelled',
       },
       [{ isActive: 0 }],
-      [{ province: null, city: null, suburb: null }],
+      [{ canonicalPlaceId: null }],
     );
     mockGetDb.mockResolvedValue({ select: dbSelect });
 
@@ -1188,7 +1063,7 @@ describe('Services V1 reviewed publication authority', () => {
         .mockReturnValueOnce(makeQuery([{ id: 20 }]))
         .mockReturnValueOnce(makeQuery([READY_PUBLICATION_BASE_ROW]))
         .mockReturnValueOnce(makeQuery([{ isActive: 0 }]))
-        .mockReturnValueOnce(makeQuery([{ province: 'Gauteng' }])),
+        .mockReturnValueOnce(makeQuery([{ canonicalPlaceId: PLACE_SANDTON }])),
       update,
       insert: vi.fn(() => ({ values: insertValues })),
     };
@@ -1218,7 +1093,7 @@ describe('Services V1 reviewed publication authority', () => {
         .mockReturnValueOnce(makeQuery([{ id: 20 }]))
         .mockReturnValueOnce(makeQuery([READY_PUBLICATION_BASE_ROW]))
         .mockReturnValueOnce(makeQuery([{ isActive: 1 }]))
-        .mockReturnValueOnce(makeQuery([{ province: 'Gauteng' }])),
+        .mockReturnValueOnce(makeQuery([{ canonicalPlaceId: PLACE_SANDTON }])),
       update,
       insert: vi.fn(() => ({ values: insertValues })),
     };
@@ -1272,7 +1147,7 @@ describe('Services V1 reviewed publication authority', () => {
           makeQuery([{ ...READY_PUBLICATION_BASE_ROW, verificationStatus: 'verified', directoryActive: 1 }]),
         )
         .mockReturnValueOnce(makeQuery([{ isActive: 1 }]))
-        .mockReturnValueOnce(makeQuery([{ province: 'Gauteng' }])),
+        .mockReturnValueOnce(makeQuery([{ canonicalPlaceId: PLACE_SANDTON }])),
       update,
       insert: vi.fn(() => ({ values: insertValues })),
     };
@@ -1307,7 +1182,7 @@ describe('Services V1 reviewed publication authority', () => {
           makeQuery([{ ...READY_PUBLICATION_BASE_ROW, verificationStatus: 'verified', directoryActive: 1 }]),
         )
         .mockReturnValueOnce(makeQuery([{ isActive: 1 }]))
-        .mockReturnValueOnce(makeQuery([{ province: 'Gauteng' }])),
+        .mockReturnValueOnce(makeQuery([{ canonicalPlaceId: PLACE_SANDTON }])),
       update,
       insert: vi.fn(() => ({ values: insertValues })),
     };
@@ -1380,12 +1255,7 @@ describe('Services V1 reviewed publication authority', () => {
           makeQuery([
             {
               id: 41,
-              countryCode: 'ZA',
-              province: 'Gauteng',
-              city: 'Johannesburg',
-              suburb: 'Sandton',
-              postalCode: null,
-              radiusKm: 25,
+              canonicalPlaceId: PLACE_SANDTON,
               isPrimary: 1,
             },
           ]),
@@ -1401,7 +1271,7 @@ describe('Services V1 reviewed publication authority', () => {
       isPublished: true,
       publicationStatus: 'published',
       services: [{ code: 'plumbing' }],
-      locations: [{ suburb: 'Sandton' }],
+      locations: [{ canonicalPlaceId: PLACE_SANDTON, label: 'Sandton' }],
     });
 
     const directoryDb = {
@@ -1442,10 +1312,7 @@ describe('Services V1 reviewed publication authority', () => {
           makeQuery([
             {
               providerId: 20,
-              province: 'Gauteng',
-              city: 'Johannesburg',
-              suburb: 'Sandton',
-              radiusKm: 25,
+              canonicalPlaceId: PLACE_SANDTON,
             },
           ]),
         ),
@@ -1482,7 +1349,7 @@ describe('Services V1 reviewed publication authority', () => {
                 ]),
               )
               .mockReturnValueOnce(makeQuery([{ category: 'home_improvement', code: 'plumbing', isActive: 1 }]))
-              .mockReturnValueOnce(makeQuery([{ province: 'Gauteng' }])),
+              .mockReturnValueOnce(makeQuery([{ canonicalPlaceId: PLACE_SANDTON }])),
             insert,
           }),
       ),
@@ -1500,9 +1367,7 @@ describe('Services V1 reviewed publication authority', () => {
         category: 'home_improvement',
         sourceSurface: 'directory',
         intentStage: 'general',
-        province: 'Gauteng',
-        city: 'Johannesburg',
-        suburb: 'Sandton',
+        canonicalPlaceId: PLACE_SANDTON,
         serviceCode: 'plumbing',
         notes: 'Need a repair.',
       }),
@@ -1637,28 +1502,8 @@ describe('Services V1 authoritative service replacement', () => {
 
 describe('Services V1 authoritative coverage replacement', () => {
   const existingCoverageRows = [
-    {
-      id: 41,
-      providerId: 20,
-      countryCode: 'ZA',
-      province: 'Gauteng',
-      city: 'Johannesburg',
-      suburb: 'Sandton',
-      postalCode: '2196',
-      radiusKm: 40,
-      isPrimary: 1,
-    },
-    {
-      id: 42,
-      providerId: 20,
-      countryCode: 'ZA',
-      province: 'Gauteng',
-      city: 'Pretoria',
-      suburb: 'Arcadia',
-      postalCode: '0008',
-      radiusKm: 20,
-      isPrimary: 0,
-    },
+    { id: 41, providerId: 20, canonicalPlaceId: PLACE_SANDTON, isPrimary: 1 },
+    { id: 42, providerId: 20, canonicalPlaceId: PLACE_ARCADIA, isPrimary: 0 },
   ];
 
   function mockCoverageReplacementDb(existing: unknown[], returned = existing) {
@@ -1670,11 +1515,7 @@ describe('Services V1 authoritative coverage replacement', () => {
       select: vi
         .fn()
         .mockReturnValueOnce(makeQuery([{ id: 20 }]))
-        .mockReturnValueOnce({
-          from: vi.fn(() => ({
-            where: vi.fn(() => ({ for: vi.fn().mockResolvedValue(existing) })),
-          })),
-        }),
+        .mockReturnValueOnce(makeQuery(existing)),
       update,
       delete: deleteFn,
       insert,
@@ -1688,75 +1529,62 @@ describe('Services V1 authoritative coverage replacement', () => {
       })),
     };
     mockGetDb.mockResolvedValue(db);
-    return { tx, update, set, where, insert, insertValues, deleteFn, deleteWhere };
+    return { update, set, where, insert, insertValues, deleteFn, deleteWhere };
   }
 
-  it('rejects a coverage ID that belongs to another provider', async () => {
+  it('rejects a coverage ID owned by a different provider', async () => {
     const { update, deleteFn, insert } = mockCoverageReplacementDb(existingCoverageRows);
-
     await expect(
       servicesEngineService.replaceProviderLocations(20, [
-        { id: 999, province: 'Gauteng', city: 'Johannesburg', suburb: 'Sandton' },
+        { id: 999, canonicalPlaceId: PLACE_SANDTON },
       ]),
     ).rejects.toThrow('Coverage area not found for this provider');
-
     expect(update).not.toHaveBeenCalled();
     expect(deleteFn).not.toHaveBeenCalled();
     expect(insert).not.toHaveBeenCalled();
   });
 
-  it('stops matching coverage that is removed from the canonical set', async () => {
+  it('stops matching a Place removed from the submitted canonical set', async () => {
     const returned = existingCoverageRows.filter(row => row.id === 41);
     const { set, deleteFn, deleteWhere, insert } = mockCoverageReplacementDb(
       existingCoverageRows,
       returned,
     );
-
-    const rows = (await servicesEngineService.replaceProviderLocations(20, [
-      { id: 41, province: 'Gauteng', city: 'Johannesburg', suburb: 'Sandton' },
-    ])) as Array<{ suburb: string | null; city: string | null; province: string | null }>;
-
+    const rows = await servicesEngineService.replaceProviderLocations(20, [
+      { id: 41, canonicalPlaceId: PLACE_SANDTON },
+    ]);
     expect(set).toHaveBeenCalledTimes(1);
     expect(deleteFn).toHaveBeenCalledWith(serviceProviderLocations);
     expect(deleteWhere).toHaveBeenCalledWith(eq(serviceProviderLocations.id, 42));
     expect(insert).not.toHaveBeenCalled();
-    expect(
-      providerCoversLocation(rows, { province: 'Gauteng', city: 'Pretoria', suburb: 'Arcadia' }),
-    ).toBe(false);
-    expect(
-      providerCoversLocation(rows, { province: 'Gauteng', city: 'Johannesburg', suburb: 'Sandton' }),
-    ).toBe(true);
+    expect(providerCoversLocation(rows, { canonicalPlaceId: PLACE_ARCADIA })).toBe(false);
+    expect(providerCoversLocation(rows, { canonicalPlaceId: PLACE_SANDTON })).toBe(true);
   });
 
-  it('edits a coverage tuple in place without creating an active duplicate', async () => {
+  it('edits coverage in place by canonical Place ID without retaining radius or text geography', async () => {
     const { update, set, where, deleteFn, insert } = mockCoverageReplacementDb(existingCoverageRows);
-
     await servicesEngineService.replaceProviderLocations(20, [
-      { id: 41, province: 'Gauteng', city: 'Johannesburg', suburb: 'Bryanston' },
-      { id: 42, province: 'Gauteng', city: 'Pretoria', suburb: 'Arcadia' },
+      { id: 41, canonicalPlaceId: PLACE_ARCADIA },
+      { id: 42, canonicalPlaceId: PLACE_SANDTON, isPrimary: false },
     ]);
-
     expect(update).toHaveBeenCalledTimes(2);
     expect(update).toHaveBeenCalledWith(serviceProviderLocations);
-    expect(set).toHaveBeenCalledWith(
-      expect.objectContaining({ suburb: 'Bryanston', postalCode: '2196', radiusKm: 40 }),
-    );
+    expect(set).toHaveBeenNthCalledWith(1, { canonicalPlaceId: PLACE_ARCADIA, isPrimary: 1 });
     expect(where).toHaveBeenCalledWith(eq(serviceProviderLocations.id, 41));
     expect(deleteFn).not.toHaveBeenCalled();
     expect(insert).not.toHaveBeenCalled();
   });
 
-  it('removes a persisted coverage row the provider blanked out', async () => {
-    const { deleteFn, deleteWhere, insertValues } = mockCoverageReplacementDb(existingCoverageRows);
-
-    await servicesEngineService.replaceProviderLocations(20, [
-      { id: 41, province: 'Gauteng', city: 'Johannesburg', suburb: 'Sandton' },
-      { id: 42, province: '', city: '', suburb: '' },
-    ]);
-
-    expect(deleteFn).toHaveBeenCalledWith(serviceProviderLocations);
-    expect(deleteWhere).toHaveBeenCalledWith(eq(serviceProviderLocations.id, 42));
-    expect(insertValues).not.toHaveBeenCalled();
+  it('rejects an unresolved canonical Place ID without making a write', async () => {
+    const { update, deleteFn, insert } = mockCoverageReplacementDb(existingCoverageRows);
+    await expect(
+      servicesEngineService.replaceProviderLocations(20, [
+        { id: 41, canonicalPlaceId: 'pl-place-01-000000000000000000000099' },
+      ]),
+    ).rejects.toThrow('Choose an approved canonical Place for every coverage area');
+    expect(update).not.toHaveBeenCalled();
+    expect(deleteFn).not.toHaveBeenCalled();
+    expect(insert).not.toHaveBeenCalled();
   });
 });
 
@@ -1809,9 +1637,7 @@ describe('Services V1 bounded and deterministic reads', () => {
         category: 'home_improvement',
         sourceSurface: 'directory',
         intentStage: 'general',
-        province: 'Gauteng',
-        city: 'Johannesburg',
-        suburb: 'Sandton',
+        canonicalPlaceId: PLACE_SANDTON,
         serviceCode: 'plumbing',
         notes: 'Need a repair before transfer.',
       }),
@@ -1839,9 +1665,7 @@ describe('Services V1 bounded and deterministic reads', () => {
         category: 'home_improvement',
         sourceSurface: 'directory',
         intentStage: 'general',
-        province: 'Gauteng',
-        city: 'Johannesburg',
-        suburb: 'Sandton',
+        canonicalPlaceId: PLACE_SANDTON,
         serviceCode: 'plumbing',
         notes: 'Need a repair before transfer.',
       }),

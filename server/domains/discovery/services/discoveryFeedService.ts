@@ -3,18 +3,15 @@ import type {
   DiscoveryFeedResponse,
   DiscoveryQuery,
 } from '../../../../shared/discovery/contracts';
-import { getDb } from '../../../db';
-import { locations } from '../../../../drizzle/schema';
-import { eq } from 'drizzle-orm';
 import {
   getDiscoveryFeedCache,
   setDiscoveryFeedCache,
 } from '../caching/discoveryCache';
 import { discoveryRankingService } from './discoveryRankingService';
 import {
-  discoveryLegacyFeedSource,
+  discoveryFeedSource,
   type DiscoveryCandidateResult,
-} from './discoveryLegacyFeedSource';
+} from './discoveryFeedSource';
 
 interface DiscoveryFeedContext {
   userId?: number;
@@ -23,14 +20,14 @@ interface DiscoveryFeedContext {
 const DEFAULT_LIMIT = 20;
 const MAX_CANDIDATE_LIMIT = 60;
 
-const LEGACY_CATEGORY_MAP: Partial<Record<NonNullable<DiscoveryQuery['category']>, string>> = {
+const DISCOVERY_CATEGORY_MAP: Partial<Record<NonNullable<DiscoveryQuery['category']>, string>> = {
   property: 'property',
   service: 'services',
 };
 
 function mapCategory(query: DiscoveryQuery): string | undefined {
   if (!query.category) return undefined;
-  return LEGACY_CATEGORY_MAP[query.category];
+  return DISCOVERY_CATEGORY_MAP[query.category];
 }
 
 function getItemPrice(item: any): number | undefined {
@@ -52,7 +49,7 @@ function inferDiscoveryItemType(item: any): DiscoveryFeedItem['type'] {
   }
 
   if (item?.development || item?.developmentId) return 'development';
-  if (item?.locationInsight || item?.locationType === 'suburb') return 'location';
+  if (item?.locationInsight) return 'location';
   if (category === 'finance' || category === 'investment') return 'insight';
   if (item?.service || category === 'services') return 'service';
   return 'property';
@@ -80,28 +77,11 @@ function getItemCreatorActorId(item: any): number | undefined {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
 }
 
-function getItemLocationIdentity(item: any): { type?: string; id?: number } {
-  const rawLocation =
-    (item?.location && typeof item.location === 'object' ? item.location : undefined) ??
-    (item?.metadata?.location && typeof item.metadata.location === 'object'
-      ? item.metadata.location
-      : undefined);
-
-  const typeValue = rawLocation?.type ?? item?.locationType ?? item?.metadata?.locationType;
-  const idValue = rawLocation?.id ?? item?.locationId ?? item?.metadata?.locationId;
-  const parsedId = Number(idValue);
-
-  return {
-    type: typeof typeValue === 'string' ? typeValue.toLowerCase() : undefined,
-    id: Number.isFinite(parsedId) && parsedId > 0 ? parsedId : undefined,
-  };
-}
-
 function toDiscoveryFeedItem(item: any): DiscoveryFeedItem | null {
-  const suburb = item?.location?.suburb;
-  const city = item?.location?.city;
-  const province = item?.location?.province;
-  const locationName = [suburb, city].filter(Boolean).join(', ') || city || province || item?.location;
+  const locationName =
+    item?.location && typeof item.location === 'object' && typeof item.location.name === 'string'
+      ? item.location.name
+      : undefined;
   const coverUrl =
     item?.thumbnailUrl ||
     item?.primaryMediaUrl ||
@@ -122,20 +102,32 @@ function toDiscoveryFeedItem(item: any): DiscoveryFeedItem | null {
       coverUrl,
       videoUrl: typeof videoUrl === 'string' ? videoUrl : undefined,
     },
-    location: locationName
-      ? {
-          name: locationName,
-          province: province || undefined,
-        }
-      : undefined,
+    canonicalPlaceId:
+      typeof item?.canonicalPlaceId === 'string' ? item.canonicalPlaceId : undefined,
+    location: locationName ? { name: locationName } : undefined,
     price: getItemPrice(item),
     engagement: {
       likes: Number(item?.likeCount ?? item?.stats?.likes ?? 0),
       saves: Number(item?.saveCount ?? item?.stats?.saves ?? 0),
       views: Number(item?.viewCount ?? item?.stats?.views ?? 0),
     },
-    metadata: item,
+    metadata: stripLegacyGeography(item),
   };
+}
+
+function stripLegacyGeography(item: any): Record<string, unknown> {
+  const safeItem = { ...(item ?? {}) };
+  delete safeItem.locationId;
+  delete safeItem.locationType;
+  delete safeItem.location;
+  const metadata = safeItem.metadata;
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) return safeItem;
+
+  const safeMetadata = { ...(metadata as Record<string, unknown>) };
+  delete safeMetadata.locationId;
+  delete safeMetadata.locationType;
+  delete safeMetadata.location;
+  return { ...safeItem, metadata: safeMetadata };
 }
 
 function normalizeDiscoveryCategory(category?: DiscoveryQuery['category']): string | undefined {
@@ -145,30 +137,6 @@ function normalizeDiscoveryCategory(category?: DiscoveryQuery['category']): stri
 
 function getCandidateLimit(limit: number): number {
   return Math.min(Math.max(limit * 3, limit), MAX_CANDIDATE_LIMIT);
-}
-
-async function resolveLocationLabel(query: DiscoveryQuery): Promise<string | undefined> {
-  if (!query.location?.id) return undefined;
-
-  const db = await getDb();
-  const [location] = await db
-    .select({
-      id: locations.id,
-      name: locations.name,
-      type: locations.type,
-    })
-    .from(locations)
-    .where(eq(locations.id, query.location.id))
-    .limit(1);
-
-  if (!location?.name) return undefined;
-
-  const normalizedType = String(location.type || '').toLowerCase();
-  if (query.location.type && normalizedType && normalizedType !== query.location.type) {
-    return undefined;
-  }
-
-  return String(location.name);
 }
 
 function finalizeResult(
@@ -212,7 +180,6 @@ function applyQueryFilters(
     const itemCategory = getItemCategory(item);
     const itemPrice = getItemPrice(item);
     const itemCreatorActorId = getItemCreatorActorId(item);
-    const itemLocation = getItemLocationIdentity(item);
 
     if (query.contentType && query.contentType !== 'video') {
       return false;
@@ -230,14 +197,8 @@ function applyQueryFilters(
       return false;
     }
 
-    if (query.location?.id) {
-      if (itemLocation.id && itemLocation.id !== query.location.id) {
-        return false;
-      }
-
-      if (query.location.type && itemLocation.type && itemLocation.type !== query.location.type) {
-        return false;
-      }
+    if (query.canonicalPlaceId && item?.canonicalPlaceId !== query.canonicalPlaceId) {
+      return false;
     }
 
     if (minPrice !== undefined && (itemPrice === undefined || itemPrice < minPrice)) {
@@ -271,7 +232,6 @@ export class DiscoveryFeedService {
     const category = mapCategory(query);
     const candidateLimit = getCandidateLimit(limit);
     const shouldUseDiscoveryCache = process.env.NODE_ENV === 'production';
-    const locationLabel = await resolveLocationLabel(query);
 
     if (shouldUseDiscoveryCache) {
       const cached = await getDiscoveryFeedCache<DiscoveryFeedResponse>(query, { userId });
@@ -280,8 +240,24 @@ export class DiscoveryFeedService {
       }
     }
 
+    if (query.canonicalPlaceId) {
+      const result = await discoveryFeedSource.getAreaCandidates({
+        canonicalPlaceId: query.canonicalPlaceId,
+        limit: candidateLimit,
+        offset,
+      });
+      const filtered = applyQueryFilters(result, query);
+      const finalized = finalizeResult(filtered, query, limit, offset, context);
+
+      if (shouldUseDiscoveryCache) {
+        await setDiscoveryFeedCache(query, finalized, { userId });
+      }
+
+      return finalized;
+    }
+
     if (category) {
-      const result = await discoveryLegacyFeedSource.getCategoryCandidates({
+      const result = await discoveryFeedSource.getCategoryCandidates({
         category,
         limit: candidateLimit,
         offset,
@@ -296,38 +272,7 @@ export class DiscoveryFeedService {
       return finalized;
     }
 
-    if (locationLabel) {
-      const result = await discoveryLegacyFeedSource.getAreaCandidates({
-        location: locationLabel,
-        limit: candidateLimit,
-        offset,
-      });
-      const filtered = applyQueryFilters(result, query);
-      const finalized = finalizeResult(
-        {
-          ...filtered,
-          metadata: {
-            ...filtered.metadata,
-            resolvedLocationLabel: locationLabel,
-          },
-        },
-        query,
-        limit,
-        offset,
-        context,
-      );
-
-      if (shouldUseDiscoveryCache) {
-        await setDiscoveryFeedCache(query, finalized, { userId });
-      }
-
-      return finalized;
-    }
-
-    // Location IDs are part of the new contract, but this worktree's explore service
-    // still resolves "area" feeds from free-form location strings. If we cannot resolve
-    // a canonical location label, fall back to the recommended feed.
-    const result = await discoveryLegacyFeedSource.getRecommendedCandidates({
+    const result = await discoveryFeedSource.getRecommendedCandidates({
       userId,
       limit: candidateLimit,
       offset,

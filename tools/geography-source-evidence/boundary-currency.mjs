@@ -143,12 +143,9 @@ const ledger = {
     finding:
       'This province records no aggregated boundary provenance: its source authority has no ' +
       'boundary_evidence block, so neither the demarcation year nor the vintage is recorded. ' +
-      'Its per-record provenance IS committed and was investigated -- see ' +
-      '`pnpm place:gauteng-provenance`. All 33 of its geoBoundaries shapeIDs match release ' +
-      '9469f09 and all 1,466 admitted Places have a representative point inside the polygon ' +
-      'their own administrative context names. That is CORROBORATION, not a vintage record: ' +
-      'boundaries change slowly, so an older release would likely contain the same points. ' +
-      'The vintage itself is unrecoverable because the metadata sidecar was never committed ' +
+      'Its per-record provenance remains pinned by the canonical source authority artifacts. ' +
+      'Those mappings are provenance, not a vintage record. The vintage itself is ' +
+      'unrecoverable because the metadata sidecar was never committed ' +
       'with the raw bundle. Its Place IDs remain valid and untouched; the currency review ' +
       'still cannot quantify its gap.',
   })),

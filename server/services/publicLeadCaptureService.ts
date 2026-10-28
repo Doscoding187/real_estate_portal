@@ -44,19 +44,19 @@ import {
   type PublicSupplyOrigin,
 } from './publicLeadCustodyService';
 import { evaluatePublicDevelopmentEligibility } from './publicDevelopmentEligibility';
+import { getDevelopmentPlaceGeography } from './developmentPlaceAssignmentService';
 import { getDeveloperPublicationAccess } from './developerPublicationAccess';
 import { EmailService } from '../_core/emailService';
 import { isPaidMvpLaunchAccessSubscriptionEntitled } from './planAccessService';
 import { isCommercialActivationAvailable } from './commercialActivationPolicy';
 import { resolvePublicPropertyEligibility } from './publicPropertyEligibilityService';
-import { resolvePublicLandLeadCustody } from './landPublicService';
 import { resolveSharedLivingLeadCustody, ensureLeadContextRow } from './sharedLivingEnquiryService';
-import { resolvePublicCommercialLeadCustody } from './commercialOfficeService';
 import { PUBLIC_LEAD_INPUT_LIMITS } from './publicLeadInputContract';
 import {
-  COMMERCIAL_PUBLIC_JOURNEY_HANDOFF_MESSAGE,
-  isCommercialMarketingPropertyType,
+  COMMERCIAL_CANONICAL_ASSIGNMENT_BLOCKER,
 } from '../../shared/commercial-domain';
+import { LAND_CANONICAL_ASSIGNMENT_BLOCKER } from '../../shared/land-domain';
+import { SHARED_LIVING_CANONICAL_ASSIGNMENT_BLOCKER } from '../../shared/sharedLivingDomain';
 import { safeErrorSummary } from '../_core/safeError';
 
 type LeadType = 'inquiry' | 'viewing_request' | 'offer' | 'callback';
@@ -283,38 +283,27 @@ function getPublicTargetCount(input: PublicLeadCaptureInput): number {
  * with a residential, commercial, development, brand, or client-supplied
  * recipient target and then silently choose one of them.
  */
-function assertSharedLivingTargetAuthority(input: PublicLeadCaptureInput): void {
-  const sharedLivingPlaceId = positiveId(input.slPlaceId);
-  if (!sharedLivingPlaceId) {
-    if (positiveId(input.slSpaceId)) {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: 'A Shared Living space must be paired with its canonical place.',
-      });
-    }
-    return;
-  }
-
-  const mixedTargets = [
-    input.listingId,
-    input.commercialAvailabilityId,
-    input.propertyId,
-    input.developmentId,
-    input.cataloguePublisherId,
-    input.agencyId,
-    input.agentId,
-  ].some(value => positiveId(value) !== undefined);
-  if (mixedTargets) {
+function assertCanonicalLeadTarget(input: PublicLeadCaptureInput): void {
+  if (positiveId(input.slPlaceId) || positiveId(input.slSpaceId)) {
     throw new TRPCError({
-      code: 'BAD_REQUEST',
-      message:
-        'Choose one canonical enquiry authority. Shared Living cannot be combined with another listing or recipient.',
+      code: 'PRECONDITION_FAILED',
+      message: SHARED_LIVING_CANONICAL_ASSIGNMENT_BLOCKER,
     });
   }
+
+  if (positiveId(input.listingId)) {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: positiveId(input.commercialAvailabilityId)
+        ? COMMERCIAL_CANONICAL_ASSIGNMENT_BLOCKER
+        : LAND_CANONICAL_ASSIGNMENT_BLOCKER,
+    });
+  }
+
 }
 
 function assertPublicCaptureInput(input: PublicLeadCaptureInput) {
-  assertSharedLivingTargetAuthority(input);
+  assertCanonicalLeadTarget(input);
   const captureRequestId = input.captureRequestId?.trim() || '';
   if (
     captureRequestId.length < PUBLIC_LEAD_INPUT_LIMITS.captureRequestIdMin ||
@@ -737,6 +726,7 @@ async function notifySharedLivingLister(
 export async function resolveLeadOwnership(
   input: PublicLeadCaptureInput,
 ): Promise<ResolvedLeadOwnership> {
+  assertCanonicalLeadTarget(input);
   const database = await getDb();
   if (!database) throw new Error('Database not available');
 
@@ -922,125 +912,6 @@ export async function resolveLeadOwnership(
     return mapCustodyResolution({}, custody);
   }
 
-  if (listingId) {
-    if (commercialAvailabilityId) {
-      const commercial = await resolvePublicCommercialLeadCustody({
-        listingId,
-        commercialAvailabilityId,
-      });
-      if (!commercial)
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Commercial space is not available for public enquiries.',
-        });
-      const agentId = positiveId(commercial.agentId);
-      const agencyId = positiveId(commercial.agencyId);
-      const recipientId = agentId ?? agencyId;
-      const commercialEligibility = await isRecipientCommerciallyDeliverable(
-        agentId || null,
-        agencyId || null,
-      );
-      if (!recipientId || !commercialEligibility.eligible) {
-        return {
-          listingId,
-          agentId: undefined,
-          agencyId: undefined,
-          supplyOrigin: 'customer_managed',
-          leadCustody: 'attention_required',
-          recipientType: 'manual',
-          recipientId: null,
-          leadDeliveryMethod: 'manual',
-          reason: !recipientId
-            ? 'The Commercial marketing listing has no deliverable supplier recipient.'
-            : commercialEligibility.reason,
-          commercialContext: {
-            commercialAssetId: commercial.commercialAssetId,
-            commercialSpaceId: commercial.commercialSpaceId,
-            commercialAvailabilityId: commercial.commercialAvailabilityId,
-          },
-        };
-      }
-      return {
-        listingId,
-        agentId: agentId ?? undefined,
-        agencyId: agencyId ?? undefined,
-        supplyOrigin: 'customer_managed',
-        leadCustody: 'verified_customer_recipient',
-        recipientType: agentId ? 'agent' : 'agency',
-        recipientId,
-        leadDeliveryMethod: 'crm_export',
-        reason: null,
-        commercialContext: {
-          commercialAssetId: commercial.commercialAssetId,
-          commercialSpaceId: commercial.commercialSpaceId,
-          commercialAvailabilityId: commercial.commercialAvailabilityId,
-        },
-      };
-    }
-    const land = await resolvePublicLandLeadCustody(listingId);
-    if (!land) {
-      // A Listing-only Commercial request has no sufficient canonical
-      // availability context. Detect it after the Land authority declines so
-      // valid Land enquiries keep their existing query path and fake/legacy
-      // callers cannot be silently interpreted as Land.
-      const [listing] = await database
-        .select({ propertyType: listings.propertyType })
-        .from(listings)
-        .where(eq(listings.id, listingId))
-        .limit(1);
-      if (isCommercialMarketingPropertyType(listing?.propertyType)) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: COMMERCIAL_PUBLIC_JOURNEY_HANDOFF_MESSAGE,
-        });
-      }
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'Listing not available for public enquiries.',
-      });
-    }
-    const agentId = positiveId(land.agentId);
-    const agencyId = positiveId(land.agencyId);
-    const recipientId = agentId ?? agencyId;
-    if (!recipientId) {
-      return {
-        listingId,
-        agentId: undefined,
-        agencyId: undefined,
-        supplyOrigin: 'customer_managed',
-        leadCustody: 'attention_required',
-        recipientType: 'manual',
-        recipientId: null,
-        leadDeliveryMethod: 'manual',
-        reason: 'The approved Land authority has no deliverable marketing recipient.',
-      };
-    }
-    const landEligibility = await isRecipientCommerciallyDeliverable(agentId, agencyId);
-    if (!landEligibility.eligible) {
-      return {
-        listingId,
-        agentId: undefined,
-        agencyId: undefined,
-        supplyOrigin: 'customer_managed',
-        leadCustody: 'attention_required',
-        recipientType: 'manual',
-        recipientId: null,
-        leadDeliveryMethod: 'manual',
-        reason: landEligibility.reason,
-      };
-    }
-    return {
-      listingId,
-      agentId: agentId ?? undefined,
-      agencyId: agencyId ?? undefined,
-      supplyOrigin: 'customer_managed',
-      leadCustody: 'verified_customer_recipient',
-      recipientType: agentId ? 'agent' : 'agency',
-      recipientId,
-      leadDeliveryMethod: 'crm_export',
-      reason: null,
-    };
-  }
   const targetKind: 'property' | 'development' | 'brand' = propertyId
     ? 'property'
     : requestedDevelopmentId
@@ -1176,6 +1047,9 @@ export async function resolveLeadOwnership(
   }
 
   if (targetKind === 'development') {
+    const assignedGeography = positiveId(development?.id)
+      ? await getDevelopmentPlaceGeography(positiveId(development?.id)!)
+      : null;
     const developerIds = [positiveId(brand?.developerOrganisationId)].filter(
       (id): id is number => id !== undefined,
     );
@@ -1195,6 +1069,7 @@ export async function resolveLeadOwnership(
         approvalStatus: development?.approvalStatus || null,
       },
       publisher: brand,
+      canonicalPlaceId: assignedGeography?.canonicalPlaceId ?? null,
       organisation: developerId ? developerMap.get(developerId) : null,
       unitTypes: [],
       activeUnitTypeCount: Number(development?.activeUnitTypeCount || 0),

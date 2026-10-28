@@ -7,10 +7,8 @@ type AgentServicesReferralProps = {
   listingId?: number | null;
   /** The public property id, when the listing is published. */
   propertyId?: number | null;
-  /** The suburb, city or province the listing sits in. */
-  suburb?: string | null;
-  city?: string | null;
-  province?: string | null;
+  /** Exact admitted Place identity; absent assignments remain unscoped. */
+  canonicalPlaceId?: string | null;
   /** The service category the referral points at. */
   category?: 'media_marketing' | 'inspection_compliance' | 'moving';
   /** Optional action copy. */
@@ -35,9 +33,7 @@ type AgentServicesReferralProps = {
 export function AgentServicesReferral({
   listingId,
   propertyId,
-  suburb,
-  city,
-  province,
+  canonicalPlaceId,
   category = 'media_marketing',
   label,
   className = '',
@@ -57,9 +53,7 @@ export function AgentServicesReferral({
     reasonKey: 'agent_listing_preparation',
     listingId: listingId ?? undefined,
     propertyId: propertyId ?? undefined,
-    suburb: suburb ?? undefined,
-    city: city ?? undefined,
-    province: province ?? undefined,
+    canonicalPlaceId: canonicalPlaceId ?? undefined,
   });
 
   return (
@@ -84,9 +78,7 @@ export function AgentServicesReferral({
 export function AgentServicesReferralPanel({
   listingId,
   propertyId,
-  suburb,
-  city,
-  province,
+  canonicalPlaceId,
   className = '',
 }: Omit<AgentServicesReferralProps, 'category' | 'label' | 'className'> & {
   className?: string;
@@ -109,25 +101,19 @@ export function AgentServicesReferralPanel({
         <AgentServicesReferral
           listingId={listingId}
           propertyId={propertyId}
-          suburb={suburb}
-          city={city}
-          province={province}
+          canonicalPlaceId={canonicalPlaceId}
           category="media_marketing"
         />
         <AgentServicesReferral
           listingId={listingId}
           propertyId={propertyId}
-          suburb={suburb}
-          city={city}
-          province={province}
+          canonicalPlaceId={canonicalPlaceId}
           category="inspection_compliance"
         />
         <AgentServicesReferral
           listingId={listingId}
           propertyId={propertyId}
-          suburb={suburb}
-          city={city}
-          province={province}
+          canonicalPlaceId={canonicalPlaceId}
           category="moving"
         />
       </div>

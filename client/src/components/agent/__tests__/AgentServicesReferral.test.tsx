@@ -17,9 +17,7 @@ describe('AgentServicesReferral', () => {
       <AgentServicesReferral
         listingId={217}
         propertyId={990}
-        suburb="Sandton"
-        city="Johannesburg"
-        province="Gauteng"
+        canonicalPlaceId="pl-place-01-6a145c6d642ba208a2c12de7"
       />,
     );
 
@@ -32,9 +30,10 @@ describe('AgentServicesReferral', () => {
     expect(href).toContain('reasonKey=agent_listing_preparation');
     expect(href).toContain('listingId=217');
     expect(href).toContain('propertyId=990');
-    expect(href).toContain('suburb=Sandton');
-    expect(href).toContain('city=Johannesburg');
-    expect(href).toContain('province=Gauteng');
+    expect(href).toContain('canonicalPlaceId=pl-place-01-6a145c6d642ba208a2c12de7');
+    expect(href).not.toContain('suburb=');
+    expect(href).not.toContain('city=');
+    expect(href).not.toContain('province=');
   });
 
   it('omits listing context the workspace does not hold', () => {

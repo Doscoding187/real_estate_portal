@@ -67,7 +67,7 @@ import { agentOnboardingService } from './services/agentOnboardingService';
 import { AgentCoverageAreaValidationError } from './services/agentCoverageAreaService';
 import {
   AGENT_COVERAGE_AREA_MAX,
-  CANONICAL_AGENT_COVERAGE_LOCATION_ID_PATTERN,
+  CANONICAL_AGENT_COVERAGE_PLACE_ID_PATTERN,
   parseAgentCoverageAreas,
 } from '../shared/agentCoverageArea';
 import {
@@ -1431,7 +1431,7 @@ export const agentRouter = router({
         whatsapp: z.string().max(50).optional(),
         profileImage: z.string().optional(),
         areasServed: z
-          .array(z.string().trim().regex(CANONICAL_AGENT_COVERAGE_LOCATION_ID_PATTERN))
+          .array(z.string().trim().regex(CANONICAL_AGENT_COVERAGE_PLACE_ID_PATTERN))
           .max(AGENT_COVERAGE_AREA_MAX)
           .optional(),
         focus: z.enum(['sales', 'rentals', 'both']).optional(),

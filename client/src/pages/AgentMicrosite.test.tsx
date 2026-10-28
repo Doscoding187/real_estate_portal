@@ -126,18 +126,28 @@ const baseProfile = {
   socialLinks: null,
   licenseNumber: null,
   yearsExperience: 12,
-  areasServed: [{ canonicalLocationId: 'suburb:11', label: 'Bryanston, Sandton, Gauteng' }],
+  areasServed: [
+    {
+      canonicalPlaceId: 'pl-place-01-f175328139bb845a4645b9d4',
+      label: 'Bryanston, Johannesburg, Gauteng',
+    },
+  ],
   languages: 'English',
   isVerified: 1,
   agency: { name: 'Northline Realty' },
   canonicalAreas: [
     {
-      canonicalLocationId: 'suburb:11',
-      name: 'Bryanston, Sandton, Gauteng',
+      canonicalPlaceId: 'pl-place-01-f175328139bb845a4645b9d4',
+      name: 'Bryanston, Johannesburg, Gauteng',
       type: 'suburb',
-      url: '/gauteng/sandton/bryanston',
+      url: '/gauteng/city-of-johannesburg/bryanston',
     },
-    { canonicalLocationId: 'suburb:12', name: 'Fourways, Sandton, Gauteng', type: null, url: null },
+    {
+      canonicalPlaceId: 'pl-place-01-bbe8dbb14d11d1383a3a8d54',
+      name: 'Fourways, Johannesburg, Gauteng',
+      type: 'suburb',
+      url: '/gauteng/city-of-johannesburg/fourways',
+    },
   ],
 };
 
@@ -252,7 +262,9 @@ describe('AgentMicrosite public web presence', () => {
     render(<AgentMicrosite />);
 
     expect(screen.getByRole('heading', { name: 'Areas I work in' })).toBeDefined();
-    expect(screen.getByRole('article', { name: 'Bryanston, Sandton, Gauteng' })).toBeDefined();
+    expect(
+      screen.getByRole('article', { name: 'Bryanston, Johannesburg, Gauteng' }),
+    ).toBeDefined();
     expect(screen.queryByText("Jane's Bryanston")).toBeNull();
   });
 
@@ -266,17 +278,14 @@ describe('AgentMicrosite public web presence', () => {
     expect(screen.queryByText(/0\+/)).toBeNull();
   });
 
-  it('links served areas only where canonical geography resolved them', () => {
+  it('keeps service area cards display-only without a canonical browse route', () => {
     profileResult.current = { data: baseProfile as never, isLoading: false, isError: false };
 
     render(<AgentMicrosite />);
 
-    const canonicalLink = screen.getByTestId('area-guide-link') as HTMLAnchorElement;
-    expect(canonicalLink.getAttribute('href')).toBe('/gauteng/sandton/bryanston');
-
     const areasSection = screen.getByTestId('areas-section');
     expect(areasSection.textContent).toContain('Fourways');
-    expect(areasSection.querySelector('a[href="/fourways"]')).toBeNull();
+    expect(areasSection.querySelector('article a')).toBeNull();
   });
 
   it('projects canonically public inventory with links to the marketplace detail route', () => {
@@ -431,17 +440,13 @@ describe('AgentMicrosite public web presence', () => {
     render(<AgentMicrosite />);
     const intro = screen.getByTestId('area-guides-intro');
     expect(
-      within(intro).getByRole('link', { name: 'Explore all area guides' }).getAttribute('href'),
-    ).toBe('/tools/area-guides');
-    const bryanston = screen.getByRole('article', { name: 'Bryanston, Sandton, Gauteng' });
-    expect(
-      within(bryanston)
-        .getByRole('link', { name: 'Explore guide for Bryanston, Sandton, Gauteng' })
-        .getAttribute('href'),
-    ).toBe('/gauteng/sandton/bryanston');
-    const fourways = screen.getByRole('article', { name: 'Fourways, Sandton, Gauteng' });
+      within(intro).getByRole('link', { name: 'Browse canonical places' }).getAttribute('href'),
+    ).toBe('/south-africa');
+    const bryanston = screen.getByRole('article', { name: 'Bryanston, Johannesburg, Gauteng' });
+    expect(within(bryanston).queryByRole('link')).toBeNull();
+    const fourways = screen.getByRole('article', { name: 'Fourways, Johannesburg, Gauteng' });
     expect(within(fourways).queryByRole('link')).toBeNull();
-    expect(within(fourways).getByText('Guide not available yet')).toBeDefined();
+    expect(within(fourways).getByText('Service area')).toBeDefined();
   });
 
   it('places three real platform resources after the area guides and before About', () => {
@@ -451,7 +456,7 @@ describe('AgentMicrosite public web presence', () => {
     const section = screen.getByRole('region', { name: 'Local Insights & Advice' });
     const cards = section.querySelectorAll('.as-insight-card');
     expect(cards).toHaveLength(3);
-    expect(cards[0].getAttribute('href')).toBe('/gauteng/sandton/bryanston');
+    expect(cards[0].getAttribute('href')).toBe('/gauteng/city-of-johannesburg/bryanston');
     expect(cards[0].textContent).toContain('Living in Bryanston');
     expect(cards[1].getAttribute('href')).toBe('/guides/buying-property');
     expect(cards[2].getAttribute('href')).toBe('/explore/shorts');
@@ -467,7 +472,9 @@ describe('AgentMicrosite public web presence', () => {
     profileResult.current = {
       data: {
         ...baseProfile,
-        canonicalAreas: [{ ...baseProfile.canonicalAreas[1], name: 'Unresolved area' }],
+        canonicalAreas: [
+          { ...baseProfile.canonicalAreas[1], name: 'Unresolved area', type: null, url: null },
+        ],
       },
       isLoading: false,
       isError: false,
@@ -528,7 +535,7 @@ describe('AgentMicrosite public web presence', () => {
 
   it('collapses long area lists and lets visitors select the remaining canonical areas', () => {
     const canonicalAreas = Array.from({ length: 7 }, (_, index) => ({
-      canonicalLocationId: `suburb:${index + 1}`,
+      canonicalPlaceId: `pl-place-01-${String(index + 1).padStart(24, '0')}`,
       name: `Area ${index + 1}, Gauteng`,
       type: 'suburb',
       url: `/gauteng/area-${index + 1}`,
@@ -542,10 +549,8 @@ describe('AgentMicrosite public web presence', () => {
     expect(screen.queryByRole('article', { name: /Area 7/ })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'See all 7 areas' }));
     expect(
-      within(screen.getByRole('article', { name: 'Area 7, Gauteng' }))
-        .getByRole('link')
-        .getAttribute('href'),
-    ).toBe('/gauteng/area-7');
+      within(screen.getByRole('article', { name: 'Area 7, Gauteng' })).queryByRole('link'),
+    ).toBeNull();
   });
 
   it('pages the full inventory and resets the cursor when transaction filters change', () => {

@@ -8,7 +8,6 @@ import {
 import {
   readFileSync,
 } from 'node:fs';
-import { releaseCanonicalGeography } from '../server/_core/databaseAuthority/dataAdapters/geographyRelease';
 import {
   releaseCanonicalPlaces,
   previewCanonicalPlaceRelease,
@@ -46,10 +45,6 @@ import {
   disposeOwnedWorktreeDatabase,
 } from '../server/_core/databaseAuthority/lifecycle';
 import { assessRuntimeDatabaseReadiness } from '../server/_core/databaseAuthority/readiness';
-import {
-  prepareCanonicalGeography,
-  verifyCanonicalGeography,
-} from '../server/_core/databaseAuthority/dataAdapters/canonicalGeography';
 import {
   prepareCanonicalPlaces,
   prepareNationalCanonicalPlaces,
@@ -164,8 +159,6 @@ type Command =
   | 'legal-release:verify'
   | 'readiness'
   | 'schema:check'
-  | 'reference:prepare'
-  | 'reference:verify'
   | 'platform-settings:prepare'
   | 'platform-settings:verify'
   | 'foundation:prepare'
@@ -583,7 +576,7 @@ async function run(command: Command): Promise<void> {
     command === 'release-reference:verify'
   ) {
     const adapter = option('adapter') ?? 'commercial';
-    if (!['commercial', 'geography', 'places'].includes(adapter))
+    if (!['commercial', 'places'].includes(adapter))
       throw new Error('Unknown reference adapter.');
     const isPlan = command.endsWith(':plan');
     const isApply = command.endsWith(':apply');
@@ -612,19 +605,11 @@ async function run(command: Command): Promise<void> {
     }
     const connection = await createAuthoritySqlConnection(authority, decision);
     try {
-      const evidence =
-        adapter === 'geography'
-          ? await releaseCanonicalGeography({
-              authority,
-              decision,
-              connection,
-              expectedPlanDigest: isApply ? requiredOption('plan-digest') : undefined,
-            })
-          : isPlan
-            ? await planCanonicalCommercialReferenceData({ authority, decision, connection })
-            : isApply
-              ? await prepareCanonicalCommercialReferenceData({ authority, decision, connection })
-              : await verifyCanonicalCommercialReference({ authority, decision, connection });
+      const evidence = isPlan
+        ? await planCanonicalCommercialReferenceData({ authority, decision, connection })
+        : isApply
+          ? await prepareCanonicalCommercialReferenceData({ authority, decision, connection })
+          : await verifyCanonicalCommercialReference({ authority, decision, connection });
       print(evidence);
     } finally {
       await connection.end();
@@ -744,8 +729,6 @@ async function run(command: Command): Promise<void> {
   }
 
   if (
-    command === 'reference:prepare' ||
-    command === 'reference:verify' ||
     command === 'foundation:prepare' ||
     command === 'foundation:verify' ||
     command === 'scenario:prepare' ||
@@ -859,25 +842,18 @@ async function run(command: Command): Promise<void> {
       return;
     }
 
-    const isReference = command.startsWith('reference:');
     const isFoundation = command.startsWith('foundation:');
     const isPrepare = command.endsWith(':prepare');
     const operation = isPrepare
-      ? isReference
-        ? 'reference-seed'
-        : isFoundation
-          ? 'foundation-seed'
-          : 'scenario-seed'
+      ? isFoundation
+        ? 'foundation-seed'
+        : 'scenario-seed'
       : 'verification';
     const authority = authorityFor(operation, isPrepare ? 'local-owner' : undefined);
     const decision = authorizationFor(authority);
     const connection = await createAuthoritySqlConnection(authority, decision);
     try {
-      const evidence = isReference
-        ? isPrepare
-          ? await prepareCanonicalGeography({ authority, decision, connection })
-          : await verifyCanonicalGeography({ authority, decision, connection })
-        : isFoundation
+      const evidence = isFoundation
           ? isPrepare
             ? await prepareCanonicalFoundation({ authority, decision, connection })
             : await verifyCanonicalFoundation({ authority, decision, connection })
@@ -1017,8 +993,6 @@ const commands = new Set<Command>([
   'legal-release:verify',
   'readiness',
   'schema:check',
-  'reference:prepare',
-  'reference:verify',
   'platform-settings:prepare',
   'platform-settings:verify',
   'places:prepare',

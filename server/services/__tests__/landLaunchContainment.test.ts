@@ -13,14 +13,9 @@ import {
 } from '../../db';
 import { landPublicRouter } from '../../landPublicRouter';
 import { requireLandRoute } from '../../landRouter';
-import {
-  publicLandDetail,
-  resolvePublicLandLeadCustody,
-  searchPublicLand,
-} from '../landPublicService';
 import { submitLandForReview, transitionLandReview } from '../landWorkflowService';
 
-const exactLandGeography = { city: 'Johannesburg', province: 'Gauteng' };
+const canonicalLandGeography = { canonicalPlaceId: 'pl-place-01-00000000000000000000000c' };
 
 function activeLandLinkDatabase() {
   const query = {
@@ -64,16 +59,16 @@ function renderedPredicate(predicate: unknown): string {
 describe('Land first-cohort containment', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('returns no public records or lead custody before opening a database connection', async () => {
+  it('blocks public Land search and detail until canonical assignments are implemented', async () => {
     mockGetDb.mockResolvedValue({ unexpected: true });
 
-    await expect(searchPublicLand(exactLandGeography)).resolves.toEqual([]);
-    await expect(publicLandDetail('north-ridge')).resolves.toBeNull();
-    await expect(resolvePublicLandLeadCustody(17)).resolves.toBeNull();
-
     const caller = landPublicRouter.createCaller({} as any);
-    await expect(caller.search(exactLandGeography)).resolves.toEqual([]);
-    await expect(caller.detail({ slug: 'north-ridge' })).resolves.toBeNull();
+    await expect(caller.search(canonicalLandGeography)).rejects.toMatchObject({
+      code: 'PRECONDITION_FAILED',
+    });
+    await expect(caller.detail({ slug: 'north-ridge' })).rejects.toMatchObject({
+      code: 'PRECONDITION_FAILED',
+    });
 
     expect(mockGetDb).not.toHaveBeenCalled();
   });

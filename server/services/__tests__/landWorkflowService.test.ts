@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { calculateLandReadiness, hashLandParcelIdentifier, isLandAuthorRole, isLandReviewerRole } from '../landWorkflowService';
 
 const ready = (overrides: Partial<Parameters<typeof calculateLandReadiness>[0]> = {}) => calculateLandReadiness({
-  listing: { askingPrice: '950000', city: 'Pretoria', province: 'Gauteng', title: 'Serviced residential stand', description: 'A well-located serviced residential stand ready for a buyer.' },
+  listing: { askingPrice: '950000', canonicalPlaceId: 'pl-place-01-000000000000000000000001', title: 'Serviced residential stand', description: 'A well-located serviced residential stand ready for a buyer.' },
   asset: { classification: 'residential_stand' },
-  parcels: [{ extentM2: '600', provinceId: 1, cityId: 2 }],
+  parcels: [{ extentM2: '600', canonicalPlaceId: 'pl-place-01-000000000000000000000001' }],
   authority: { actorType: 'agent', supportingEvidenceId: 9 },
   marketingImageCount: 1,
   caseState: 'approved',
@@ -33,11 +33,11 @@ describe('Land workflow readiness authority', () => {
     expect(ready({ authority: { actorType: 'agent', supportingEvidenceId: 9, expiresAt: '2000-01-01 00:00:00' } }).blockers.submission).toContain('marketing_authority_expired');
   });
 
-  it('requires every linked parcel to retain a canonical city and province boundary', () => {
+  it('requires every linked parcel to use the listing exact canonical Place', () => {
     const result = ready({
       parcels: [
-        { extentM2: '600', provinceId: 1, cityId: 2 },
-        { extentM2: '400', provinceId: 1, cityId: null },
+        { extentM2: '600', canonicalPlaceId: 'pl-place-01-000000000000000000000001' },
+        { extentM2: '400', canonicalPlaceId: null },
       ],
     });
     expect(result.submissionReady).toBe(false);

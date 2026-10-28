@@ -92,6 +92,20 @@ export const CANONICAL_PLACES_DIGEST = createHash('sha256')
   )
   .digest('hex');
 
+/** National adapter contract pinned to every admitted territory version. */
+export const CANONICAL_PLACES_NATIONAL_VERSION = 'canonical-places-national-v1' as const;
+export const CANONICAL_PLACES_NATIONAL_DIGEST = createHash('sha256')
+  .update(
+    [
+      CANONICAL_PLACES_NATIONAL_VERSION,
+      CANONICAL_PLACES_DIGEST,
+      ...loadPlaceAdmissionTerritoryRegistry(process.cwd())
+        .registry.territories.map(territory => `${territory.territoryId}:${territory.admissionVersion}`)
+        .sort(),
+    ].join('\n'),
+  )
+  .digest('hex');
+
 const ARTIFACT_KEYS = {
   places: 'places',
   names: 'names',

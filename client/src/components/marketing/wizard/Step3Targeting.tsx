@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { trpc } from '@/lib/trpc';
-import { MapPin, Users, DollarSign, Home } from 'lucide-react';
+import { Users, DollarSign, Home } from 'lucide-react';
 
 interface Step3Props {
   data: any;
@@ -35,7 +35,6 @@ const PROPERTY_TYPES = ['Apartment', 'House', 'Villa', 'Townhouse', 'Land', 'Com
 
 const Step3Targeting: React.FC<Step3Props> = ({ data, updateData, onNext, onBack, campaignId }) => {
   const [targeting, setTargeting] = useState({
-    locations: data.locations || [],
     buyerProfiles: data.buyerProfiles || [],
     minPrice: data.minPrice || '',
     maxPrice: data.maxPrice || '',
@@ -43,19 +42,6 @@ const Step3Targeting: React.FC<Step3Props> = ({ data, updateData, onNext, onBack
   });
 
   const updateTargetingMutation = trpc.marketing.updateTargeting.useMutation();
-
-  const handleLocationAdd = (location: string) => {
-    if (location && !targeting.locations.includes(location)) {
-      setTargeting({ ...targeting, locations: [...targeting.locations, location] });
-    }
-  };
-
-  const handleLocationRemove = (location: string) => {
-    setTargeting({
-      ...targeting,
-      locations: targeting.locations.filter((l: string) => l !== location),
-    });
-  };
 
   const toggleBuyerProfile = (profile: string) => {
     const profiles = targeting.buyerProfiles.includes(profile)
@@ -76,7 +62,6 @@ const Step3Targeting: React.FC<Step3Props> = ({ data, updateData, onNext, onBack
       await updateTargetingMutation.mutateAsync({
         campaignId,
         targeting: {
-          locationTargeting: targeting.locations,
           buyerProfile: targeting.buyerProfiles,
           priceRange: {
             min: targeting.minPrice ? parseFloat(targeting.minPrice) : null,
@@ -100,53 +85,6 @@ const Step3Targeting: React.FC<Step3Props> = ({ data, updateData, onNext, onBack
       </div>
 
       <div className="space-y-6">
-        {/* Location Targeting */}
-        <div className="space-y-3">
-          <Label className="flex items-center gap-2">
-            <MapPin className="w-4 h-4 text-blue-600" />
-            Location Targeting
-          </Label>
-          <div className="flex gap-2">
-            <Input
-              placeholder="Enter city or province..."
-              onKeyDown={e => {
-                if (e.key === 'Enter') {
-                  handleLocationAdd((e.target as HTMLInputElement).value);
-                  (e.target as HTMLInputElement).value = '';
-                }
-              }}
-            />
-            <Button
-              type="button"
-              variant="outline"
-              onClick={e => {
-                const input = e.currentTarget.previousSibling as HTMLInputElement;
-                handleLocationAdd(input.value);
-                input.value = '';
-              }}
-            >
-              Add
-            </Button>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {targeting.locations.map((location: string) => (
-              <div
-                key={location}
-                className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm flex items-center gap-2"
-              >
-                {location}
-                <button
-                  onClick={() => handleLocationRemove(location)}
-                  className="hover:text-blue-900"
-                >
-                  ×
-                </button>
-              </div>
-            ))}
-          </div>
-          <p className="text-xs text-slate-500">Leave empty to target all locations</p>
-        </div>
-
         {/* Buyer Profiles */}
         <div className="space-y-3">
           <Label className="flex items-center gap-2">

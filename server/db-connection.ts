@@ -67,7 +67,6 @@ async function getDbForOperation(operation: 'runtime-connect' | 'worker-connect'
     const state = {
       properties: [] as Row[],
       images: [] as Row[],
-      locations: [] as Row[],
       listings: [] as Row[],
     };
 
@@ -184,9 +183,6 @@ async function getDbForOperation(operation: 'runtime-connect' | 'worker-connect'
               isPrimary: Boolean(img.isPrimary),
               displayOrder: Number(img.displayOrder ?? 0),
             }));
-          } else if (activeTable.includes('locations')) {
-            // Return raw location data as stored
-            currentRows = [...state.locations];
           } else if (activeTable.includes('listings')) {
             currentRows = [...state.listings];
           } else if (activeTable.includes('properties')) {
@@ -333,16 +329,6 @@ async function getDbForOperation(operation: 'runtime-connect' | 'worker-connect'
             return { insertId: lastInsertId };
           }
 
-          if (tableName.includes('locations')) {
-            let lastInsertId = 0;
-            values.forEach(v => {
-              const id = Number(v.id ?? nextPropertyId++);
-              state.locations.push({ ...v, id });
-              lastInsertId = id;
-            });
-            return { insertId: lastInsertId };
-          }
-
           if (tableName.includes('listings')) {
             let lastInsertId = 0;
             values.forEach(v => {
@@ -374,8 +360,6 @@ async function getDbForOperation(operation: 'runtime-connect' | 'worker-connect'
         where: async () => {
           if (getTableName(table).includes('properties')) {
             state.properties = [];
-          } else if (getTableName(table).includes('locations')) {
-            state.locations = [];
           } else if (getTableName(table).includes('listings')) {
             state.listings = [];
           }

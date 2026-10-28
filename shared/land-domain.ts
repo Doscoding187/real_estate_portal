@@ -18,6 +18,10 @@ export const LAND_PUBLIC_CLASSIFICATIONS = [
 ] as const satisfies readonly LandClassification[];
 export type LandPublicClassification = (typeof LAND_PUBLIC_CLASSIFICATIONS)[number];
 
+/** Public Land geography stays closed until the canonical parcel assignment is modeled and reviewed. */
+export const LAND_CANONICAL_ASSIGNMENT_BLOCKER =
+  'Land search and authoring are waiting for land_parcels.canonical_place_id and reviewed Place assignments. Existing parcel labels will not be mapped automatically.';
+
 /**
  * The public Land journey has a deliberately smaller vocabulary than the
  * durable Land model. Keep this runtime guard beside the allow-list so every

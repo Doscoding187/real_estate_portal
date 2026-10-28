@@ -6,6 +6,10 @@
 **Status:** Complete ✅  
 **Design Direction:** Hybrid Modern + Soft UI
 
+> **Current geography contract:** This historical refactor guide predates canonical Place
+> search. Geography is now selected and carried only by canonical Place identity. Explore
+> property filters do not accept or synchronize a free-text location value.
+
 ---
 
 ## Table of Contents
@@ -52,7 +56,7 @@ This refactor transformed the Explore feature into a world-class, production-rea
 
 **4. Advanced Filtering**
 - Zustand store for global filter state
-- URL synchronization for shareable filtered views
+- Canonical Place search carries geography in the search intent; property filters contain no geography field
 - Mobile bottom sheet with drag-to-close
 - Desktop side panel with identical functionality
 - Keyboard navigation and focus trap
@@ -204,7 +208,6 @@ client/src/
 │   ├── useVideoPlayback.ts         # NEW: Video control logic
 │   ├── useVideoPreload.ts          # NEW: Video preloading
 │   ├── useMapFeedSync.ts           # NEW: Map/feed synchronization
-│   ├── useFilterUrlSync.ts         # NEW: URL sync for filters
 │   ├── useImagePreload.ts          # NEW: Image preloading
 │   ├── useThrottle.ts              # NEW: Throttle utility
 │   ├── useDebounce.ts              # NEW: Debounce utility
@@ -1139,7 +1142,6 @@ client/src/
 │       ├── useVideoPreload.test.ts
 │       ├── useMapFeedSync.test.ts
 │       ├── useThrottle.test.ts
-│       ├── useFilterUrlSync.test.ts
 │       ├── useImagePreload.test.ts
 │       ├── useOnlineStatus.test.ts
 │       ├── useKeyboardNavigation.test.ts
@@ -1276,12 +1278,10 @@ const bounds = {
 **Symptoms:**
 - Filters reset on page refresh
 - Filters don't sync across pages
-- URL doesn't update with filters
 
 **Possible Causes:**
 - localStorage not available
 - Zustand persistence not configured
-- URL sync hook not called
 
 **Solutions:**
 ```tsx
@@ -1304,13 +1304,7 @@ export const useExploreFiltersStore = create<FilterState>()(
   )
 );
 
-// Check URL sync
-import { useFilterUrlSync } from '@/hooks/useFilterUrlSync';
-
-function ExploreHome() {
-  useFilterUrlSync();  // Must be called in component
-  // ...
-}
+Geography is selected through canonical Place search and is not stored in this filter store.
 ```
 
 #### 4. Poor Scroll Performance
@@ -1627,11 +1621,8 @@ function FilterPanel() {
 **After (Zustand Store):**
 ```tsx
 import { useExploreFiltersStore } from '@/store/exploreFiltersStore';
-import { useFilterUrlSync } from '@/hooks/useFilterUrlSync';
 
 function FilterPanel() {
-  useFilterUrlSync();  // Sync to URL
-  
   const {
     propertyType,
     priceMin,
@@ -1738,7 +1729,6 @@ All existing features are preserved:
 1. Animations are smooth
 2. Empty states are helpful
 3. Offline mode works
-4. URL sync works
 5. Filter persistence works
 
 #### Regression Testing
@@ -1772,7 +1762,6 @@ Use existing test accounts and properties:
 - `client/src/hooks/useMapFeedSync.ts`
 - `client/src/hooks/useThrottle.ts`
 - `client/src/hooks/useDebounce.ts`
-- `client/src/hooks/useFilterUrlSync.ts`
 - `client/src/hooks/useImagePreload.ts`
 - `client/src/hooks/useOnlineStatus.ts`
 - `client/src/hooks/useKeyboardNavigation.ts`

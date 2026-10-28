@@ -3,7 +3,7 @@ import type { AuthorizedDatabaseOperation } from '../authorization';
 import type { AuthoritySqlConnection } from '../connectionAuthority';
 import { assertOwnedDisposableTarget } from '../lifecycle';
 import { serializeAgentCoverageAreas } from '../../../../shared/agentCoverageArea';
-import { encodeCanonicalLocationId } from '../../../../shared/locationAuthority';
+import { DEVELOPMENT_SITE_PLACE_ID } from './searchToLeadScenario';
 import {
   PLE_MANUAL_LOCATION_CAPABILITY,
   assertOperation,
@@ -16,14 +16,13 @@ import {
   type AdapterEvidence,
 } from './common';
 import type { ResolvedDatabaseAuthority } from '../types';
-import { verifyCanonicalGeographyReferenceData } from './canonicalGeography';
 import {
   assertCentralEnvironmentReady,
   inspectCentralLocalEnvironment,
   resolveCentralLocalEnvironment,
 } from '../../../../scripts/localEnvironmentAuthority';
 
-export const LISTING_PREVIEW_FIXTURE_VERSION = 'listing-preview-auth-v2' as const;
+export const LISTING_PREVIEW_FIXTURE_VERSION = 'listing-preview-auth-v3' as const;
 
 const FIXTURE = Object.freeze({
   agency: Object.freeze({
@@ -80,7 +79,7 @@ const FIXTURE_PAYLOAD = Object.freeze({
   agentProfile: FIXTURE.agentProfile,
   branding: FIXTURE.branding,
   coverageAuthority: {
-    location: 'gauteng/johannesburg/sandton',
+    canonicalPlaceId: DEVELOPMENT_SITE_PLACE_ID,
     format: 'typed-canonical-location-id-with-resolved-label',
   },
   publicationEntitlement: 'not-provisioned',
@@ -432,19 +431,15 @@ async function ensureBranding(
 }
 
 type CanonicalSandtonLocation = {
-  provinceId: number;
-  provinceName: string;
-  cityId: number;
-  cityName: string;
-  suburbId: number;
-  suburbName: string;
+  canonicalPlaceId: string;
+  label: string;
 };
 
 function serializedSandtonCoverage(location: CanonicalSandtonLocation): string {
   const coverage = serializeAgentCoverageAreas([
     {
-      canonicalLocationId: encodeCanonicalLocationId('suburb', location.suburbId),
-      label: [location.suburbName, location.cityName, location.provinceName].join(', '),
+      canonicalPlaceId: location.canonicalPlaceId,
+      label: location.label,
     },
   ]);
   if (!coverage) throw new Error('Listing preview fixture requires one canonical agent coverage area.');
@@ -456,27 +451,25 @@ async function resolveExactSandtonLocation(
 ): Promise<CanonicalSandtonLocation> {
   const rows = await queryRows(
     connection,
-    `SELECT p.id AS province_id, p.name AS province_name,
-            c.id AS city_id, c.name AS city_name,
-            s.id AS suburb_id, s.name AS suburb_name
-       FROM provinces p
-       INNER JOIN cities c ON c.provinceId = p.id
-       INNER JOIN suburbs s ON s.cityId = c.id
-      WHERE p.slug = ? AND c.slug = ? AND s.slug = ?`,
-    ['gauteng', 'johannesburg', 'sandton'],
+    `SELECT p.place_id, n.name
+       FROM place p
+       INNER JOIN place_name n
+               ON n.place_id = p.place_id
+              AND n.name_role = 'preferred_public'
+              AND n.name_state = 'active'
+      WHERE p.place_id = ?
+        AND p.place_type = 'suburb'
+        AND p.lifecycle_status = 'active'
+        AND p.search_eligible = 1
+        AND p.search_scope = 'locality'`,
+    [DEVELOPMENT_SITE_PLACE_ID],
   );
   if (rows.length !== 1) {
-    throw new Error(
-      'Listing preview fixture requires the canonical Gauteng/Johannesburg/Sandton hierarchy.',
-    );
+    throw new Error('Listing preview fixture requires the searchable Sandton Place.');
   }
   return {
-    provinceId: asId({ id: rowValue(rows[0], 'province_id') }, 'province'),
-    provinceName: String(rowValue(rows[0], 'province_name') || '').trim(),
-    cityId: asId({ id: rowValue(rows[0], 'city_id') }, 'city'),
-    cityName: String(rowValue(rows[0], 'city_name') || '').trim(),
-    suburbId: asId({ id: rowValue(rows[0], 'suburb_id') }, 'suburb'),
-    suburbName: String(rowValue(rows[0], 'suburb_name') || '').trim(),
+    canonicalPlaceId: String(rowValue(rows[0], 'place_id')),
+    label: String(rowValue(rows[0], 'name') || '').trim(),
   };
 }
 
@@ -728,7 +721,6 @@ export async function prepareListingPreviewFixture(input: {
     connection: input.connection,
     requiredCapabilities: [PLE_MANUAL_LOCATION_CAPABILITY],
   });
-  await verifyCanonicalGeographyReferenceData(input.connection);
   const coverage = serializedSandtonCoverage(await resolveExactSandtonLocation(input.connection));
   const password = localPreviewPassword();
 
@@ -797,7 +789,6 @@ export async function verifyListingPreviewFixture(input: {
     connection: input.connection,
     requiredCapabilities: [PLE_MANUAL_LOCATION_CAPABILITY],
   });
-  await verifyCanonicalGeographyReferenceData(input.connection);
   const coverage = serializedSandtonCoverage(await resolveExactSandtonLocation(input.connection));
   const password = localPreviewPassword();
   const verified = await verifyFixtureRows(input.connection, password, coverage);

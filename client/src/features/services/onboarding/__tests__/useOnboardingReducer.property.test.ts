@@ -158,14 +158,14 @@ describe('useOnboardingReducer — Property 17: location rows add/remove invaria
     expect(next.locations.length).toBe(1);
   });
 
-  it('each location row defaults radiusKm to "25"', () => {
+  it('each location row starts without a selected canonical Place', () => {
     fc.assert(
       fc.property(
         fc.integer({ min: 1, max: 5 }),
         k => {
           const state = stateWithLocationCount(k);
           for (const loc of state.locations) {
-            expect(loc.radiusKm).toBe('25');
+            expect(loc.place).toBeNull();
           }
         },
       ),
@@ -211,10 +211,18 @@ describe('useOnboardingReducer — unit tests', () => {
     const next = onboardingReducer(state, {
       type: 'UPDATE_LOCATION',
       id,
-      field: 'city',
-      value: 'Cape Town',
+      field: 'place',
+      value: {
+        canonicalPlaceId: 'pl-place-01-000000000000000000000000',
+        label: 'Cape Town',
+        placeType: 'metro',
+        scope: 'metro_city',
+        administrativeContext: 'Western Cape',
+      },
     });
-    expect(next.locations[0].city).toBe('Cape Town');
+    expect(next.locations[0].place?.canonicalPlaceId).toBe(
+      'pl-place-01-000000000000000000000000',
+    );
   });
 
   it('SET_ERROR stores error message for a step', () => {

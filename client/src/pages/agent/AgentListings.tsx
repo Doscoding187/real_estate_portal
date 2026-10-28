@@ -595,9 +595,7 @@ export default function AgentListings() {
                               <AgentServicesReferral
                                 listingId={listing.listingId}
                                 propertyId={publicPropertyId}
-                                suburb={listing.suburb}
-                                city={listing.city}
-                                province={listing.province}
+                                canonicalPlaceId={listing.canonicalPlaceId}
                               />
                             ) : null
                           }

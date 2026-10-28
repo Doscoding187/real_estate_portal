@@ -98,6 +98,10 @@ does not change B08–B18, LRC-SUPPORT-001 or the paid-opening NO-GO.
 
 ## Place readiness measured — 2026-10-20
 
+Historical measurement only. The projection-based readiness commands and
+numeric runtime loader described here have been retired; the active admission
+gate is the canonical Place package registry and its registered verifiers.
+
 | Item        | Recorded                                                                                                                                                                                                                                                                                   | Effect                                                                                                                                                                                  |
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Report      | `pnpm place:readiness` reads the committed runtime projection and the factual runtime mapping and says, for every runtime row, which signals it actually has. `pnpm place:readiness:check` fails while any row is hidden by the tier rule alone.                                           | "1,169 provisional" is now an actionable breakdown instead of a count.                                                                                                                  |

@@ -11,33 +11,24 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { MapPin, Loader2 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
+import type { PlaceSearchScope } from '@shared/placeAuthority';
+import { isCanonicalPlaceId } from '@shared/placeAuthority';
 
-interface LocationOption {
-  id: number;
+export interface CanonicalPlaceOption {
+  canonicalPlaceId: string;
   name: string;
-  type: 'province' | 'city' | 'suburb';
-  slug?: string;
-  latitude?: string;
-  longitude?: string;
-  provinceName?: string;
-  cityName?: string;
-  postalCode?: string;
-  isMetro?: number;
-  provinceSlug?: string;
-  citySlug?: string;
-  suburbSlug?: string;
-  canonicalLocationId?: string;
-  factualLocationId?: string;
-  parentCanonicalLocationId?: string;
+  scope: PlaceSearchScope;
+  placeType: string;
+  administrativeContext?: string | null;
   canonicalPath?: string;
 }
 
 interface LocationAutocompleteProps {
   value?: string;
   onValueChange: (value: string) => void;
-  onLocationSelect?: (location: LocationOption) => void;
+  onLocationSelect?: (location: CanonicalPlaceOption) => void;
   placeholder?: string;
-  type?: 'province' | 'city' | 'suburb' | 'address' | 'all';
+  type?: PlaceSearchScope | 'all';
   className?: string;
 }
 
@@ -67,18 +58,34 @@ export function LocationAutocomplete({
   }, [searchQuery]);
 
   // Search locations
-  const { data: locations, isLoading } = trpc.location.searchLocations.useQuery(
-    {
-      query: debouncedQuery,
-      type,
-      limit: 10,
-    },
+  const { data: discovery, isLoading } = trpc.placeAuthority.discover.useQuery(
+    { query: debouncedQuery },
     {
       enabled: debouncedQuery.length > 2,
     },
   );
+  const locations = (discovery?.results || []).flatMap((candidate): CanonicalPlaceOption[] => {
+    const scope = candidate.searchScope;
+    if (
+      !candidate.searchEligible ||
+      !isCanonicalPlaceId(candidate.placeId) ||
+      !scope ||
+      (type !== 'all' && type !== scope)
+    )
+      return [];
+    return [
+      {
+        canonicalPlaceId: candidate.placeId,
+        name: candidate.preferredPublicLabel || candidate.matchedName,
+        scope,
+        placeType: candidate.placeType,
+        administrativeContext: candidate.context.administrativeContext,
+        ...(candidate.canonicalPath ? { canonicalPath: candidate.canonicalPath } : {}),
+      },
+    ];
+  });
 
-  const handleSelect = (location: LocationOption) => {
+  const handleSelect = (location: CanonicalPlaceOption) => {
     setSearchQuery(location.name);
     onValueChange(location.name);
     if (onLocationSelect) {
@@ -131,8 +138,8 @@ export function LocationAutocomplete({
               <CommandGroup heading="Locations">
                 {locations.map(location => (
                   <CommandItem
-                    key={`${location.type}-${location.id}`}
-                    value={`${location.name}-${location.type}`}
+                    key={location.canonicalPlaceId}
+                    value={`${location.name}-${location.scope}`}
                     onSelect={() => handleSelect(location)}
                     className="flex items-center gap-3"
                   >
@@ -142,29 +149,18 @@ export function LocationAutocomplete({
                     <div className="flex-1 min-w-0">
                       <div className="font-medium">{location.name}</div>
                       <div className="text-sm text-muted-foreground flex items-center gap-2">
-                        <span className="capitalize">{location.type}</span>
-                        {location.provinceName && (
+                        <span className="capitalize">
+                          {location.scope === 'metro_city'
+                            ? 'City'
+                            : location.scope === 'locality'
+                              ? 'Locality'
+                              : 'Province'}
+                        </span>
+                        {location.administrativeContext && (
                           <>
                             <span>•</span>
-                            <span>{location.provinceName}</span>
+                            <span>{location.administrativeContext}</span>
                           </>
-                        )}
-                        {location.cityName && location.type !== 'city' && (
-                          <>
-                            <span>•</span>
-                            <span>{location.cityName}</span>
-                          </>
-                        )}
-                        {location.postalCode && (
-                          <>
-                            <span>•</span>
-                            <span>{location.postalCode}</span>
-                          </>
-                        )}
-                        {location.isMetro === 1 && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                            Metro
-                          </span>
                         )}
                       </div>
                     </div>

@@ -13,6 +13,7 @@ export type RuntimeSchemaCapabilities = {
     campaignOwnerTypeColumn: boolean;
     campaignOwnerIdColumn: boolean;
     campaignNameColumn: boolean;
+    campaignCanonicalPlaceIdColumn: boolean;
     campaignStatusColumn: boolean;
     campaignSourceChannelColumn: boolean;
     campaignDistributionModeColumn: boolean;
@@ -533,6 +534,9 @@ export async function getRuntimeSchemaCapabilities(options?: {
   const campaignNameColumn = campaignsTable
     ? await columnExists('demand_campaigns', 'name')
     : false;
+  const campaignCanonicalPlaceIdColumn = campaignsTable
+    ? await columnExists('demand_campaigns', 'canonical_place_id')
+    : false;
   const campaignStatusColumn = campaignsTable
     ? await columnExists('demand_campaigns', 'status')
     : false;
@@ -601,6 +605,7 @@ export async function getRuntimeSchemaCapabilities(options?: {
       campaignOwnerTypeColumn &&
       campaignOwnerIdColumn &&
       campaignNameColumn &&
+      campaignCanonicalPlaceIdColumn &&
       campaignStatusColumn &&
       campaignSourceChannelColumn &&
       campaignDistributionModeColumn &&
@@ -632,6 +637,7 @@ export async function getRuntimeSchemaCapabilities(options?: {
       campaignOwnerTypeColumn,
       campaignOwnerIdColumn,
       campaignNameColumn,
+      campaignCanonicalPlaceIdColumn,
       campaignStatusColumn,
       campaignSourceChannelColumn,
       campaignDistributionModeColumn,

@@ -40,7 +40,7 @@ vi.mock('@/components/location/CanonicalPlaceSelector', () => ({
           canonicalPlaceId: testState.placeId,
           label: 'Reviewed Place',
           placeType: 'locality',
-          scope: { kind: 'locality', canonicalLocationId: testState.placeId },
+          scope: { kind: 'locality', canonicalPlaceId: testState.placeId },
           administrativeContext: null,
         })
       }

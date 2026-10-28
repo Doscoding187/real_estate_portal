@@ -17,9 +17,9 @@ import { assertOwnedDisposableTarget, identityFromAuthority } from './lifecycle'
 import { readWorktreeDatabaseProfile } from './worktreeProfile';
 import { requireReferenceAdapterTarget } from './dataAdapters/common';
 import {
-  CANONICAL_GEOGRAPHY_VERSION,
-  verifyCanonicalGeography,
-} from './dataAdapters/canonicalGeography';
+  CANONICAL_PLACES_NATIONAL_VERSION,
+  verifyNationalCanonicalPlaces,
+} from './dataAdapters/canonicalPlaces';
 import {
   CANONICAL_FOUNDATION_VERSION,
   verifyCanonicalFoundation,
@@ -454,20 +454,20 @@ export async function assessAuthorizedDatabaseReadiness(input: {
       );
     } else {
       try {
-        const reference = await verifyCanonicalGeography({
+        const reference = await verifyNationalCanonicalPlaces({
           authority: input.authority,
           decision: input.authorization,
           connection: input.connection,
         });
         canonicalReferenceData = layer(
           'ready',
-          'canonical-reference-ready',
-          `${reference.version} (${reference.digest.slice(0, 16)}) verified: ${reference.verified.provinces} provinces, ${reference.verified.cities} cities, ${reference.verified.suburbs} suburb(s).`,
+          'canonical-places-ready',
+          `${CANONICAL_PLACES_NATIONAL_VERSION} verified: ${reference.completeProvinces}/${reference.provinces} provinces and ${reference.totals.stored.places} Places.`,
         );
       } catch (error) {
         canonicalReferenceData = adapterFailureLayer(
-          'canonical-reference',
-          CANONICAL_GEOGRAPHY_VERSION,
+          'canonical-places',
+          CANONICAL_PLACES_NATIONAL_VERSION,
           error,
         );
       }
@@ -527,14 +527,14 @@ export async function assessAuthorizedDatabaseReadiness(input: {
   }
   const requiredVersions =
     requestedRuntime === 'search-to-lead'
-      ? [CANONICAL_GEOGRAPHY_VERSION, CANONICAL_FOUNDATION_VERSION, SEARCH_TO_LEAD_SCENARIO_VERSION]
-      : [CANONICAL_GEOGRAPHY_VERSION, SEARCH_TO_LEAD_SCENARIO_VERSION];
+      ? [CANONICAL_PLACES_NATIONAL_VERSION, CANONICAL_FOUNDATION_VERSION, SEARCH_TO_LEAD_SCENARIO_VERSION]
+      : [CANONICAL_PLACES_NATIONAL_VERSION, SEARCH_TO_LEAD_SCENARIO_VERSION];
   const requiredDataReady =
     canonicalReferenceData.state === 'ready' &&
     acceptanceScenario.state === 'ready' &&
     (requestedRuntime !== 'search-to-lead' || commercialReferenceData.state === 'ready');
   const missingRequiredVersions = requiredVersions.filter(version => {
-    if (version === CANONICAL_GEOGRAPHY_VERSION) return canonicalReferenceData.state !== 'ready';
+    if (version === CANONICAL_PLACES_NATIONAL_VERSION) return canonicalReferenceData.state !== 'ready';
     if (version === SEARCH_TO_LEAD_SCENARIO_VERSION) return acceptanceScenario.state !== 'ready';
     return commercialReferenceData.state !== 'ready';
   });

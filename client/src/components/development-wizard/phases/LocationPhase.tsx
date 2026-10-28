@@ -39,7 +39,7 @@ export function LocationPhase() {
     };
 
     handleUpdate(updates);
-    toast.success('Location updated from map');
+    toast.success('Address and coordinates updated');
   };
 
   return (
@@ -147,8 +147,8 @@ export function LocationPhase() {
               </div>
             </div>
             <p className="text-sm text-slate-600">
-              City, suburb, and locality are assigned by an administrator after reviewing the
-              development site against canonical Place data.
+              A platform reviewer assigns the canonical Place after reviewing the development site.
+              Public development search uses only that reviewed Place assignment.
             </p>
           </div>
         </CardContent>

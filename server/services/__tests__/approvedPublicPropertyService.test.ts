@@ -12,6 +12,7 @@ import {
 
 const APPROVED_AT = '2026-08-10 10:00:00';
 const PHOTO_URL = 'https://cdn.example.test/approved-photo.jpg';
+const CANONICAL_SANDTON_PLACE_ID = 'pl-place-01-000000000000000000000001';
 
 function approvedDetails(bathrooms = 2) {
   const details = {
@@ -75,6 +76,7 @@ function canonicalFixture(bathrooms = 2) {
     publicAddress: 'Sandton, Johannesburg',
     city: 'Johannesburg',
     province: 'Gauteng',
+    canonicalPlaceId: CANONICAL_SANDTON_PLACE_ID,
     status: 'available',
     sourceListingId: 9001,
     ownerId: 100,
@@ -89,6 +91,7 @@ function canonicalFixture(bathrooms = 2) {
     revisionOfListingId: null,
     status: 'published',
     approvalStatus: 'approved',
+    canonicalPlaceId: CANONICAL_SANDTON_PLACE_ID,
     action: 'sell',
     propertyType: 'house',
     title: property.title,

@@ -13,6 +13,7 @@ import {
 import { getDb } from '../db-connection';
 import { evaluatePublicDevelopmentEligibility } from './publicDevelopmentEligibility';
 import { getDeveloperPublicationAccess } from './developerPublicationAccess';
+import { getDevelopmentPlaceGeography } from './developmentPlaceAssignmentService';
 import {
   resolveDistributionPreviewDemoInventory,
   type DistributionPreviewDemoUnitType,
@@ -363,6 +364,7 @@ export async function getDevelopmentSalesProjection(
     row.publisher.developerOrganisationId !== null
       ? await getDeveloperPublicationAccess(row.publisher.developerOrganisationId, { db })
       : null;
+  const geography = await getDevelopmentPlaceGeography(developmentId);
   const publication = evaluatePublicDevelopmentEligibility({
     development: {
       id: row.development.id,
@@ -373,6 +375,7 @@ export async function getDevelopmentSalesProjection(
       approvalStatus: row.development.approvalStatus,
     },
     publisher: row.publisher,
+    canonicalPlaceId: geography.canonicalPlaceId,
     organisation: row.organisation,
     unitTypes: unitTypeRows,
     activeUnitTypeCount: unitTypeRows.filter(unitType => Number(unitType.isActive) === 1).length,

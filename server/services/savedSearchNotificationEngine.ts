@@ -14,13 +14,11 @@ import { ENV } from '../_core/env';
 import { EmailService } from '../_core/emailService';
 import { getDb } from '../db-connection';
 import { normalizeSavedSearch } from '../lib/savedSearchContract';
-import { propertySearchService } from './propertySearchService';
 import {
   createSavedSearchDeliveryActionToken,
   type SavedSearchDeliveryAction,
 } from './savedSearchDeliveryActionTokenService';
 
-const PREVIEW_QUERY_LIMIT = 100;
 const PUBLIC_PREVIEW_QUERY_LIMIT = PUBLIC_SEARCH_MAX_PAGE_SIZE;
 const PREVIEW_MATCH_LIMIT = 3;
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
@@ -90,7 +88,6 @@ interface ProcessSavedSearchNotificationOptions {
 
 interface NormalizedSavedSearchCriteria {
   listingSource: ListingSourceFilter;
-  propertyFilters: PropertyFilters;
   publicSearchInput?: PublicSearchInventoryInput;
 }
 
@@ -142,31 +139,13 @@ function toNumber(value: unknown): number | undefined {
   return undefined;
 }
 
-function toBoolean(value: unknown): boolean | undefined {
-  if (typeof value === 'boolean') return value;
-  if (value === 'true') return true;
-  if (value === 'false') return false;
-  return undefined;
-}
-
 function toStringArray(value: unknown): string[] | undefined {
   if (!Array.isArray(value)) return undefined;
   const items = value
-    .map(item => {
-      if (typeof item === 'string') return item.trim();
-      if (item && typeof item === 'object' && 'slug' in item && typeof item.slug === 'string') {
-        return item.slug.trim();
-      }
-      return '';
-    })
+    .map(item => (typeof item === 'string' ? item.trim() : ''))
     .filter(Boolean);
 
   return items.length > 0 ? items : undefined;
-}
-
-function toSuburbArray(value: unknown): string[] | undefined {
-  if (typeof value === 'string' && value.trim()) return [value.trim()];
-  return toStringArray(value);
 }
 
 function toBounds(criteria: Record<string, unknown>): PropertyFilters['bounds'] | undefined {
@@ -227,60 +206,25 @@ function normalizeSavedSearchCriteria(
     return value === 'sale' || value === 'rent' ? (value as Property['listingType']) : undefined;
   })();
   const bounds = toBounds(criteria);
-  const propertyFilters: PropertyFilters = {
-    province: toString(criteria.province),
-    city: toString(criteria.city),
-    suburb: toSuburbArray(criteria.suburb),
-    locations: toStringArray(criteria.locations),
-    propertyType,
-    listingType,
-    minPrice: toNumber(criteria.minPrice),
-    maxPrice: toNumber(criteria.maxPrice),
-    minBedrooms: toNumber(criteria.minBedrooms),
-    maxBedrooms: toNumber(criteria.maxBedrooms),
-    minBathrooms: toNumber(criteria.minBathrooms),
-    minErfSize: toNumber(criteria.minErfSize),
-    maxErfSize: toNumber(criteria.maxErfSize),
-    minLandSize: toNumber(criteria.minLandSize),
-    maxLandSize: toNumber(criteria.maxLandSize),
-    minFloorSize: toNumber(criteria.minFloorSize ?? criteria.minArea),
-    maxFloorSize: toNumber(criteria.maxFloorSize ?? criteria.maxArea),
-    titleType: (() => {
-      const single = toString(criteria.titleType);
-      if (single) return [single as Property['titleType']];
-      const multiple = toStringArray(criteria.titleType);
-      return multiple?.length ? (multiple as Property['titleType'][]) : undefined;
-    })(),
-    maxLevy: toNumber(criteria.maxLevy),
-    securityEstate: toBoolean(criteria.securityEstate),
-    petFriendly: toBoolean(criteria.petFriendly),
-    fibreReady: toBoolean(criteria.fibreReady),
-    loadSheddingSolutions: (() => {
-      const values = toStringArray(criteria.loadSheddingSolutions);
-      return values?.length ? (values as Property['loadSheddingSolutions']) : undefined;
-    })(),
-    status: (() => {
-      const single = toString(criteria.status);
-      if (single) return [single as Property['status']];
-      const multiple = toStringArray(criteria.status);
-      return multiple?.length ? (multiple as Property['status'][]) : undefined;
-    })(),
-    bounds,
-  };
 
   const publicSearchInput = (() => {
-    // Place-authoritative Buy and Rent notifications share public inventory.
-    // Existing non-Place Buy predicates stay outside this consumer change.
-    if (
-      (listingType !== 'rent' &&
-        !(listingType === 'sale' && criteria.canonicalPlaceId !== undefined)) ||
-      (propertyType?.length || 0) > 1
-    )
-      return undefined;
+    if (!listingType || (propertyType?.length || 0) > 1) return undefined;
 
-    // These legacy predicates are not part of the current public search
-    // contract. Keep their historical compatibility path rather than
-    // silently dropping them from notification matching.
+    const competingGeography = [
+      'province',
+      'city',
+      'suburb',
+      'locations',
+      'locationId',
+      'locationIds',
+      'factualLocationId',
+      'searchAreaId',
+      'searchAreaIds',
+    ];
+    if (competingGeography.some(key => hasMeaningfulCriteriaValue(criteria[key]))) {
+      return undefined;
+    }
+
     const unsupportedPublicCriteria = [
       'titleType',
       'ownershipType',
@@ -297,36 +241,26 @@ function normalizeSavedSearchCriteria(
       return undefined;
     }
 
-    const locationIds = toStringArray(criteria.locationIds);
-    const searchAreaIds = toStringArray(criteria.searchAreaIds);
-    const searchAreaId = toString(criteria.searchAreaId);
     const input: PublicSearchInventoryInput = {
-      canonicalPlaceId: toString(criteria.canonicalPlaceId),
-      province: propertyFilters.province,
-      city: propertyFilters.city,
-      suburb: propertyFilters.suburb,
-      locations: propertyFilters.locations,
-      locationId: toString(criteria.locationId),
-      locationIds,
-      searchAreaId,
-      searchAreaIds,
+      canonicalPlaceId: isCanonicalPlaceId(criteria.canonicalPlaceId)
+        ? criteria.canonicalPlaceId
+        : undefined,
       propertyType: propertyType?.[0],
       listingType,
       listingSource: listingSource === 'all' ? undefined : listingSource,
-      minPrice: propertyFilters.minPrice,
-      maxPrice: propertyFilters.maxPrice,
-      minBedrooms: propertyFilters.minBedrooms,
-      maxBedrooms: propertyFilters.maxBedrooms,
-      minBathrooms: propertyFilters.minBathrooms,
-      maxBathrooms: propertyFilters.maxBathrooms,
+      minPrice: toNumber(criteria.minPrice),
+      maxPrice: toNumber(criteria.maxPrice),
+      minBedrooms: toNumber(criteria.minBedrooms),
+      maxBedrooms: toNumber(criteria.maxBedrooms),
+      minBathrooms: toNumber(criteria.minBathrooms),
       minArea: toNumber(criteria.minArea),
       maxArea: toNumber(criteria.maxArea),
       minFloorSize: toNumber(criteria.minFloorSize),
       maxFloorSize: toNumber(criteria.maxFloorSize),
-      minErfSize: propertyFilters.minErfSize,
-      maxErfSize: propertyFilters.maxErfSize,
-      minLandSize: propertyFilters.minLandSize,
-      maxLandSize: propertyFilters.maxLandSize,
+      minErfSize: toNumber(criteria.minErfSize),
+      maxErfSize: toNumber(criteria.maxErfSize),
+      minLandSize: toNumber(criteria.minLandSize),
+      maxLandSize: toNumber(criteria.maxLandSize),
       minLat: bounds?.south,
       maxLat: bounds?.north,
       minLng: bounds?.west,
@@ -338,7 +272,6 @@ function normalizeSavedSearchCriteria(
 
   return {
     listingSource,
-    propertyFilters,
     publicSearchInput,
   };
 }
@@ -789,21 +722,6 @@ function normalizeHistoryPreviewMatches(value: unknown): SavedSearchNotification
     .filter((match): match is SavedSearchNotificationMatch => Boolean(match));
 }
 
-function buildManualMatch(property: Property): ManualNotificationMatch {
-  return {
-    id: property.id,
-    title: property.title,
-    price: property.price,
-    city: property.city,
-    suburb: property.suburb,
-    listingType: property.listingType,
-    listingSource: 'manual',
-    listedDate: property.listedDate,
-    href: `/property/${property.id}`,
-    image: property.images?.[0]?.url || null,
-  };
-}
-
 export class SavedSearchNotificationEngine {
   async processDueNotifications(
     options: ProcessSavedSearchNotificationOptions = {},
@@ -1030,9 +948,7 @@ export class SavedSearchNotificationEngine {
       ];
       if (competingGeography.some(key => search.criteria[key] !== undefined)) return null;
     }
-    const { listingSource, propertyFilters, publicSearchInput } = normalizeSavedSearchCriteria(
-      search.criteria,
-    );
+    const { listingSource, publicSearchInput } = normalizeSavedSearchCriteria(search.criteria);
 
     if (listingSource === 'development' && !isCanonicalPlaceId(search.criteria.canonicalPlaceId)) {
       return null;
@@ -1053,24 +969,7 @@ export class SavedSearchNotificationEngine {
       );
     }
 
-    if (search.criteria.canonicalPlaceId !== undefined) return null;
-
-    const manualResults = await propertySearchService.searchProperties(
-      propertyFilters,
-      'date_desc',
-      1,
-      PREVIEW_QUERY_LIMIT,
-      undefined,
-      { publicOnly: true },
-    );
-
-    const manualMatches = manualResults.properties?.map(buildManualMatch) ?? [];
-
-    return buildSearchEvaluationResult(
-      manualMatches,
-      manualResults.total || 0,
-      search.lastNotifiedAt,
-    );
+    return null;
   }
 
   private async sendSavedSearchEmail(

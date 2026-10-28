@@ -45,7 +45,6 @@ import {
   developmentSupersessions,
   managerialAuditLogs,
   leads,
-  locations,
   distributionPrograms,
 } from '../../drizzle/schema';
 import { safeErrorSummary } from '../_core/safeError';

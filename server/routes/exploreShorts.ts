@@ -2,6 +2,7 @@ import { Router } from 'express';
 import type { NextFunction, Request, Response } from 'express';
 import { exploreFeedService } from '../services/exploreFeedService';
 import { safeErrorSummary } from '../_core/safeError';
+import { isCanonicalPlaceId } from '../../shared/placeAuthority';
 
 const router = Router();
 
@@ -119,19 +120,19 @@ router.get(
 );
 
 /**
- * GET /api/explore/by-area
- * Get properties from specific area
+ * GET /api/explore/by-area?canonicalPlaceId=...
+ * Get Explore content assigned to one admitted Place.
  */
 router.get('/by-area', optionalAuth, rateLimit(100, 60000), async (req: Request, res: Response) => {
   try {
-    const { location, limit = 20, offset = 0 } = req.query;
+    const { canonicalPlaceId, limit = 20, offset = 0 } = req.query;
 
-    if (!location) {
-      return res.status(400).json({ error: 'Location parameter required' });
+    if (!isCanonicalPlaceId(canonicalPlaceId)) {
+      return res.status(400).json({ error: 'One canonicalPlaceId is required.' });
     }
 
     const result = await exploreFeedService.getAreaFeed({
-      location: String(location),
+      canonicalPlaceId,
       limit: Number(limit),
       offset: Number(offset),
     });

@@ -6,40 +6,40 @@ import {
 } from '@/lib/consumerJourneyRouter';
 
 const sandton = {
-  id: 'suburb:34',
-  canonicalLocationId: 'suburb:34',
+  canonicalPlaceId: 'pl-place-01-000000000000000000000001',
   type: 'suburb' as const,
   name: 'Sandton',
   slug: 'sandton',
   provinceSlug: 'gauteng',
   citySlug: 'johannesburg',
+  parentCanonicalPlaceId: 'pl-place-01-000000000000000000000002',
 };
 const johannesburg = {
-  id: 'city:12',
-  canonicalLocationId: 'city:12',
+  canonicalPlaceId: 'pl-place-01-000000000000000000000002',
   type: 'city' as const,
   name: 'Johannesburg',
   slug: 'johannesburg',
   provinceSlug: 'gauteng',
   citySlug: 'johannesburg',
+  parentCanonicalPlaceId: 'pl-place-01-000000000000000000000010',
 };
 const capeTown = {
-  id: 'city:21',
-  canonicalLocationId: 'city:21',
+  canonicalPlaceId: 'pl-place-01-000000000000000000000003',
   type: 'city' as const,
   name: 'Cape Town',
   slug: 'cape-town',
   provinceSlug: 'western-cape',
   citySlug: 'cape-town',
+  parentCanonicalPlaceId: 'pl-place-01-000000000000000000000011',
 };
 const pretoria = {
-  id: 'city:13',
-  canonicalLocationId: 'city:13',
+  canonicalPlaceId: 'pl-place-01-000000000000000000000004',
   type: 'city' as const,
   name: 'Pretoria',
   slug: 'pretoria',
   provinceSlug: 'gauteng',
   citySlug: 'pretoria',
+  parentCanonicalPlaceId: 'pl-place-01-000000000000000000000010',
 };
 
 describe('consumer journey router', () => {
@@ -97,25 +97,34 @@ describe('consumer journey router', () => {
       {
         intent: 'buy' as const,
         journey: 'land' as const,
-        searchScope: { kind: 'search_area' as const, searchAreaId: 'area-1' },
+        searchScope: { kind: 'search_area', searchAreaId: 'area-1' } as never,
       },
       {
         intent: 'buy' as const,
         journey: 'land' as const,
         selectedLocations: [sandton],
-        searchScope: { kind: 'search_area' as const, searchAreaId: 'area-1' },
+        searchScope: { kind: 'search_area', searchAreaId: 'area-1' } as never,
       },
     ];
 
     expect(buildConsumerJourneyUrl(requests[0])).toBe(
-      '/plots-and-land?locationId=city%3A21&classification=residential_stand',
+      '/plots-and-land?canonicalPlaceId=pl-place-01-000000000000000000000003&classification=residential_stand',
     );
-    expect(buildConsumerJourneyUrl(requests[1])).toBe('/plots-and-land?locationId=city%3A12');
-    expect(buildConsumerJourneyUrl(requests[2])).toBe('/plots-and-land?locationId=suburb%3A34');
+    expect(buildConsumerJourneyUrl(requests[1])).toBe(
+      '/plots-and-land?canonicalPlaceId=pl-place-01-000000000000000000000002',
+    );
+    expect(buildConsumerJourneyUrl(requests[2])).toBe(
+      '/plots-and-land?canonicalPlaceId=pl-place-01-000000000000000000000001',
+    );
     const siblings = new URL(buildConsumerJourneyUrl(requests[3]), 'https://example.com');
-    expect(siblings.searchParams.getAll('locationIds')).toEqual(['city:12', 'city:13']);
+    expect(siblings.searchParams.getAll('canonicalPlaceIds')).toEqual([
+      'pl-place-01-000000000000000000000002',
+      'pl-place-01-000000000000000000000004',
+    ]);
     expect(siblings.searchParams.has('city')).toBe(false);
-    expect(buildConsumerJourneyUrl(requests[4])).toBe('/plots-and-land?searchAreaId=area-1');
+    expect(buildConsumerJourneyUrl(requests[4])).toBe(
+      '/plots-and-land?searchError=unsupported-location-scope',
+    );
     expect(buildConsumerJourneyUrl(requests[5])).toBe(
       '/plots-and-land?searchError=unsupported-location-scope',
     );
@@ -133,7 +142,7 @@ describe('consumer journey router', () => {
     });
     expect(href).toContain('/farms-and-smallholdings');
     expect(href).toContain('listingType=sale');
-    expect(href).toContain('locationId=suburb%3A34');
+    expect(href).toContain('canonicalPlaceId=pl-place-01-000000000000000000000001');
     expect(href).toContain('minLandSize=10000');
     expect(href).not.toContain('propertyType=');
   });
@@ -152,14 +161,13 @@ describe('consumer journey router', () => {
         journey: 'commercial',
         selectedLocations: [sandton],
       }),
-    ).toBe('/commercial?locationIds=suburb%3A34');
+    ).toBe('/commercial?canonicalPlaceId=pl-place-01-000000000000000000000001');
     const commercialSiblingScope = buildConsumerJourneyUrl({
       intent: 'rent',
       journey: 'commercial',
       selectedLocations: [johannesburg, capeTown],
     });
-    expect(commercialSiblingScope).toContain('locationIds=city%3A12');
-    expect(commercialSiblingScope).toContain('locationIds=city%3A21');
+    expect(commercialSiblingScope).toContain('searchError=unsupported-location-scope');
   });
 
   it('forwards only supported Commercial decisions with canonical location identity', () => {
@@ -177,7 +185,7 @@ describe('consumer journey router', () => {
     });
 
     expect(href).toBe(
-      '/commercial?locationIds=suburb%3A34&minAreaM2=250&maxMonthlyBudget=100000&availability=now&backupPower=1&minParkingBays=4',
+      '/commercial?canonicalPlaceId=pl-place-01-000000000000000000000001&minAreaM2=250&maxMonthlyBudget=100000&availability=now&backupPower=1&minParkingBays=4',
     );
   });
 
@@ -187,7 +195,7 @@ describe('consumer journey router', () => {
         intent: 'rent',
         journey: 'commercial',
         selectedLocations: [sandton],
-        searchScope: { kind: 'search_area', searchAreaId: 'area-1' },
+        searchScope: { kind: 'search_area', searchAreaId: 'area-1' } as never,
       }),
     ).toContain('searchError=unsupported-location-scope');
   });

@@ -35,7 +35,6 @@ The store manages the following filter properties:
 | `bedrooms` | `number \| null` | Number of bedrooms |
 | `bathrooms` | `number \| null` | Number of bathrooms |
 | `categoryId` | `number \| null` | Lifestyle category ID |
-| `location` | `string \| null` | Location filter |
 
 ## Actions
 
@@ -84,15 +83,6 @@ Set the lifestyle category filter.
 const { setCategoryId } = useExploreFiltersStore();
 setCategoryId(5);
 setCategoryId(null); // Clear filter
-```
-
-### setLocation(location)
-Set the location filter.
-
-```typescript
-const { setLocation } = useExploreFiltersStore();
-setLocation('Cape Town');
-setLocation(null); // Clear filter
 ```
 
 ### clearFilters()
@@ -217,7 +207,6 @@ function PropertyFeed() {
       bedrooms: filters.bedrooms,
       bathrooms: filters.bathrooms,
       categoryId: filters.categoryId,
-      location: filters.location,
     }),
   });
 
@@ -283,20 +272,7 @@ localStorage.removeItem('explore-filters');
 // Or use the clearFilters action
 ```
 
-## Integration with URL Sync
-
-The store is designed to work with the URL sync hook (Task 12):
-
-```typescript
-// URL sync hook will read from store and update URL
-import { useFilterUrlSync } from '@/hooks/useFilterUrlSync';
-
-function ExplorePage() {
-  useFilterUrlSync(); // Syncs store <-> URL
-  
-  // Rest of component...
-}
-```
+This store contains property and lifestyle filters only. Geography comes from canonical Place selection and is carried by the relevant search intent.
 
 ## Best Practices
 
@@ -313,7 +289,6 @@ function ExplorePage() {
 
 ## Related Files
 
-- `client/src/hooks/useFilterUrlSync.ts` (Task 12) - URL synchronization
 - `client/src/components/explore-discovery/FilterPanel.tsx` (Task 13) - Filter UI
 - All Explore pages (Tasks 24-27) - Filter consumers
 

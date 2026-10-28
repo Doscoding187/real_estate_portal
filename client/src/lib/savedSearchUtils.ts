@@ -19,15 +19,6 @@ function titleize(value?: string | null): string {
     .join(' ');
 }
 
-function getLocationLabel(filters: Partial<SearchFilters>): string {
-  if (filters.suburb && filters.city) {
-    return `${titleize(String(filters.suburb))}, ${titleize(filters.city)}`;
-  }
-  if (filters.city) return titleize(filters.city);
-  if (filters.province) return titleize(filters.province);
-  return 'South Africa';
-}
-
 function getPropertyDescriptor(filters: Partial<SearchFilters>): string {
   const bedrooms =
     filters.minBedrooms !== undefined
@@ -53,9 +44,7 @@ export function getSavedSearchSourceLabel(filters: Partial<SearchFilters>): stri
 export function getSavedSearchSuggestedName(filters: Partial<SearchFilters>): string {
   const sourceLabel = getSavedSearchSourceLabel(filters);
   const descriptor = getPropertyDescriptor(filters);
-  const locationLabel = getLocationLabel(filters);
-
-  return `${sourceLabel}: ${descriptor} in ${locationLabel}`;
+  return `${sourceLabel}: ${descriptor}`;
 }
 
 export function getSavedSearchNotificationDescription(
@@ -64,22 +53,21 @@ export function getSavedSearchNotificationDescription(
   deliveryPreferences: SavedSearchDeliveryPreferences = DEFAULT_SAVED_SEARCH_DELIVERY_PREFERENCES,
 ): string {
   const sourceLabel = getSavedSearchSourceLabel(filters).toLowerCase();
-  const locationLabel = getLocationLabel(filters);
   const deliveryLabel = getSavedSearchDeliveryLabel(deliveryPreferences).toLowerCase();
 
   if (!deliveryPreferences.emailEnabled && !deliveryPreferences.inAppEnabled) {
-    return `This search is saved for ${sourceLabel} in ${locationLabel}, with delivery paused.`;
+    return `This search is saved for ${sourceLabel}, with delivery paused.`;
   }
 
   if (frequency === 'never') {
-    return `This search is saved for ${sourceLabel} in ${locationLabel}, with notifications turned off.`;
+    return `This search is saved for ${sourceLabel}, with notifications turned off.`;
   }
 
   if (frequency === 'instant') {
-    return `You'll get instant ${deliveryLabel} updates for ${sourceLabel} in ${locationLabel}.`;
+    return `You'll get instant ${deliveryLabel} updates for ${sourceLabel}.`;
   }
 
-  return `You'll get ${frequency} ${deliveryLabel} updates for ${sourceLabel} in ${locationLabel}.`;
+  return `You'll get ${frequency} ${deliveryLabel} updates for ${sourceLabel}.`;
 }
 
 export function getSavedSearchDeliveryLabel(

@@ -39,7 +39,7 @@ Apply the reviewed migration plan using its actual accepted old head and expecte
 
 ```bash
 pnpm db:schema:congruency
-pnpm db:reference:prepare
+pnpm db:places:prepare-national
 pnpm db:foundation:prepare
 pnpm db:places:prepare -- --territory=za-gp
 pnpm db:scenario:prepare

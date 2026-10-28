@@ -61,19 +61,27 @@ function developmentHomeQuerySource() {
 
 let availabilityHistoryFixture: unknown[] = [];
 
-type DevelopmentHomeStateInput = Parameters<typeof deriveDevelopmentHomeLifecycleState>[0];
+type DevelopmentHomeStateInput = Parameters<typeof deriveDevelopmentHomeLifecycleState>[0] & {
+  canonicalPlaceId: string;
+};
 
 function developmentHomeState(
   approvalStatus: DevelopmentHomeStateInput['approvalStatus'],
   isPublished: DevelopmentHomeStateInput['isPublished'],
   overrides: Omit<Partial<DevelopmentHomeStateInput>, 'approvalStatus' | 'isPublished'> = {},
 ): DevelopmentHomeStateInput {
-  return { approvalStatus, isPublished, ...overrides };
+  return {
+    canonicalPlaceId: 'pl-place-01-000000000000000000000001',
+    approvalStatus,
+    isPublished,
+    ...overrides,
+  };
 }
 
 const ownedDevelopment = {
   id: 42,
   name: 'Harbour Heights',
+  canonicalPlaceId: 'pl-place-01-000000000000000000000001',
   slug: 'harbour-heights',
   address: '1 Harbour Road',
   transactionType: 'for_sale',
@@ -97,7 +105,22 @@ function configureDevelopmentQuery(
 ) {
   const results = [
     developmentResult,
-    [], // No accepted Development-to-Place assignment in this fixture.
+    developmentResult instanceof Error
+      ? []
+      : [
+          {
+            developmentId: 42,
+            placeId: 'pl-place-01-dee61758ef3bda7cd1a258ad',
+            evidenceReference: 'test-fixture:developer-home',
+            reviewedByUserId: 7,
+            reviewedAt: '2026-10-01 12:00:00',
+            matchedPlaceId: 'pl-place-01-dee61758ef3bda7cd1a258ad',
+            lifecycleStatus: 'active',
+            searchEligible: 1,
+            searchScope: 'locality',
+            name: 'Sandton',
+          },
+        ],
     unitTypeResult,
     reviewResult,
     ...(summaryResults.length ? summaryResults : [[], [], [], []]),
@@ -533,20 +556,23 @@ describe('developer.getDevelopmentHome Slice 1 contract', () => {
 
   it('makes foreign and nonexistent regular-developer IDs externally indistinguishable', async () => {
     configureDevelopmentQuery([]);
-    const foreign = callerFor({ id: 5, role: 'property_developer' }).getDevelopmentHome({
-      developmentId: 99,
-      range: '30d',
-    });
-    const nonexistent = callerFor({ id: 5, role: 'property_developer' }).getDevelopmentHome({
-      developmentId: 100,
-      range: '30d',
-    });
-
-    await expect(foreign).rejects.toMatchObject({
+    await expect(
+      callerFor({ id: 5, role: 'property_developer' }).getDevelopmentHome({
+        developmentId: 99,
+        range: '30d',
+      }),
+    ).rejects.toMatchObject({
       code: 'NOT_FOUND',
       message: 'Development not found',
     });
-    await expect(nonexistent).rejects.toMatchObject({
+
+    configureDevelopmentQuery([]);
+    await expect(
+      callerFor({ id: 5, role: 'property_developer' }).getDevelopmentHome({
+        developmentId: 100,
+        range: '30d',
+      }),
+    ).rejects.toMatchObject({
       code: 'NOT_FOUND',
       message: 'Development not found',
     });
@@ -603,20 +629,23 @@ describe('developer.getDevelopmentHome Slice 1 contract', () => {
   it('makes super-admin context mismatch and nonexistent IDs externally indistinguishable', async () => {
     configureDevelopmentQuery([]);
     const headers = { 'x-operating-as-publisher': '77' };
-    const mismatch = callerFor({ id: 1, role: 'super_admin' }, headers).getDevelopmentHome({
-      developmentId: 99,
-      range: '30d',
-    });
-    const nonexistent = callerFor({ id: 1, role: 'super_admin' }, headers).getDevelopmentHome({
-      developmentId: 100,
-      range: '30d',
-    });
-
-    await expect(mismatch).rejects.toMatchObject({
+    await expect(
+      callerFor({ id: 1, role: 'super_admin' }, headers).getDevelopmentHome({
+        developmentId: 99,
+        range: '30d',
+      }),
+    ).rejects.toMatchObject({
       code: 'NOT_FOUND',
       message: 'Development not found',
     });
-    await expect(nonexistent).rejects.toMatchObject({
+
+    configureDevelopmentQuery([]);
+    await expect(
+      callerFor({ id: 1, role: 'super_admin' }, headers).getDevelopmentHome({
+        developmentId: 100,
+        range: '30d',
+      }),
+    ).rejects.toMatchObject({
       code: 'NOT_FOUND',
       message: 'Development not found',
     });

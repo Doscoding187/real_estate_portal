@@ -55,6 +55,7 @@ const requiredPlaces = {
 const requiredOsmPlaceId = 'pl-place-01-00a8aa324ee0aabf33eb3c71';
 const requiredDiepkloofPlaceIds = [
   'pl-place-01-27a63c126cf908282985f8d5',
+  'pl-place-01-4f076e695fe8bcf020d971bb',
   'pl-place-01-e417e2e8049345e728be0ad2',
 ] as const;
 
@@ -133,17 +134,19 @@ describe('Slice 3: discovery resolves canonical identity', () => {
 
   it('refuses to collapse an ambiguous exact preferred name to one canonical Place', async () => {
     const response = await discoverPlaces('Diepkloof', { recordCoverage: false });
-    // "Diepkloof" is two distinct admitted Places, so this must be ambiguous
+    // "Diepkloof" is three distinct admitted Places, so this must be ambiguous
     // rather than collapsed to the first row the database happened to return.
     expect(response.outcome).toBe('ambiguous');
-    expect(response.results).toHaveLength(2);
+    expect(response.results.map(result => result.placeId).sort()).toEqual(
+      [...requiredDiepkloofPlaceIds].sort(),
+    );
     for (const result of response.results) {
       expect(result.placeId).toMatch(/^pl-place-01-[a-f0-9]{24}$/);
       expect(result.searchScope).not.toBeNull();
     }
   });
 
-  it('returns distinct canonical identities for the two admitted Diepkloof Places', async () => {
+  it('returns distinct canonical identities for all admitted Diepkloof Places', async () => {
     const response = await discoverPlaces('Diepkloof', { recordCoverage: false });
     const ids = new Set(response.results.map(r => r.placeId));
     expect([...ids].sort()).toEqual([...requiredDiepkloofPlaceIds].sort());
@@ -565,43 +568,19 @@ describe('Slice 3: canonical execution is exact and fail-closed', () => {
 describe('Slice 3: mixed authority is rejected, never merged', () => {
   const cases: { label: string; claim: PlaceAuthorityClaim; reason: string }[] = [
     {
-      label: 'Place plus legacy geography text',
-      claim: {
-        placeId: 'pl-place-01-000000000000000000000000',
-        legacyCity: 'Sandton',
-      },
-      reason: 'competing_place_and_legacy_geography',
+      label: 'Place plus typed geography text',
+      claim: { placeId: 'pl-place-01-000000000000000000000000', city: 'Sandton' },
+      reason: 'retired_geography_input',
     },
     {
-      label: 'Place plus a legacy numeric handle',
-      claim: {
-        placeId: 'pl-place-01-000000000000000000000000',
-        legacyLocationId: 42,
-      },
-      reason: 'competing_place_and_legacy_handle',
+      label: 'Place plus a numeric location handle',
+      claim: { placeId: 'pl-place-01-000000000000000000000000', locationId: 42 },
+      reason: 'retired_geography_input',
     },
     {
       label: 'Place plus a Search Area',
-      claim: {
-        placeId: 'pl-place-01-000000000000000000000000',
-        searchAreaId: 'sandton-core',
-      },
-      reason: 'competing_place_and_search_area',
-    },
-    {
-      label: 'Search Area plus legacy geography text',
-      claim: { searchAreaId: 'sandton-core', legacyCity: 'Sandton' },
-      reason: 'competing_search_area_and_legacy_geography',
-    },
-    {
-      label: 'legacy handle plus legacy geography text',
-      claim: { legacyLocationId: 42, legacyCity: 'Sandton' },
-      reason: 'competing_legacy_handle_and_legacy_geography',
-    },
-    {
-      label: 'more than one legacy geography level',
-      claim: { legacyCity: 'Sandton', legacySuburb: 'Sandton' },
-      reason: 'multiple_legacy_geography_fields',
+      claim: { placeId: 'pl-place-01-000000000000000000000000', searchAreaId: 'sandton-core' },
+      reason: 'retired_geography_input',
     },
     {
       label: 'a malformed Place identity',
@@ -636,29 +615,16 @@ describe('Slice 3: mixed authority is rejected, never merged', () => {
     }
   });
 
-  it('never treats a Search Area identity as a Place identity', () => {
+  it('does not resolve a Search Area identity as a Place authority', () => {
     const resolution = resolveSingleGeographyAuthority({ searchAreaId: 'sandton-core' });
-    expect(resolution.ok).toBe(true);
-    if (resolution.ok) {
-      expect(resolution.authority.kind).toBe('search_area');
-      // A Search Area must not be resolvable through the Place executor.
-      expect(resolution.authority.kind === 'place').toBe(false);
-    }
+    expect(resolution).toEqual({ ok: false, reason: 'retired_geography_input' });
   });
 });
 
 describe('Slice 3: a provider observation cannot create a canonical locality', () => {
-  it('no longer auto-inserts a provisional provider suburb', async () => {
-    const { readFileSync } = await import('node:fs');
-    const source = readFileSync('server/services/listingLocationResolver.ts', 'utf8');
-    // The governed failure is structural: there is no code path that inserts a
-    // canonical locality row from a provider label.
-    expect(source).not.toMatch(/insert\(suburbs\)/);
-    expect(source).not.toMatch(/origin:\s*'provider'/);
-    expect(source).toMatch(/recordUnresolvedLocalityCandidate/);
-    // The governed outcome is an explicit unresolved refusal, not a fallback.
-    expect(source).toMatch(/requires admission before a listing can use it/);
-    expect(source).toMatch(/'unresolved'/);
+  it('retires the legacy provider-to-locality resolver', async () => {
+    const { existsSync } = await import('node:fs');
+    expect(existsSync('server/services/listingLocationResolver.ts')).toBe(false);
   });
 
   it('removes the unauthenticated provider location write procedure', async () => {

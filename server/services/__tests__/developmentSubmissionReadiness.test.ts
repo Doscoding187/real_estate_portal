@@ -10,6 +10,7 @@ import {
 
 const validDevelopment = {
   name: 'Harbour Heights',
+  canonicalPlaceId: 'pl-place-01-000000000000000000000001',
   address: '1 Harbour Road',
   description:
     'A valid persisted description that contains more than fifty characters for submission.',

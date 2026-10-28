@@ -27,7 +27,7 @@ describe('isolated CI physical credential boundary', () => {
 
   it('builds explicit application and worker grants without control-table DML', () => {
     const plan = buildIsolatedCiGrantPlan();
-    expect(plan.applicationTables).toHaveLength(239);
+    expect(plan.applicationTables).toHaveLength(225);
     expect(plan.applicationTables).toContain('development_place_assignments');
     expect(plan.applicationTables).toContain('distribution_referrer_search_assessments');
     expect(
@@ -158,7 +158,6 @@ describe('isolated CI physical credential boundary', () => {
     const orderedSteps = [
       'Verify role and session authority before reviewer fixtures',
       'Verify founder identity authority before reviewer fixtures',
-      'Prepare canonical disposable reference data',
       'Prepare admitted Place integration fixtures',
       'Verify admitted Place integration fixtures',
       'Require dependent admitted Place identities',
@@ -168,8 +167,8 @@ describe('isolated CI physical credential boundary', () => {
     ].map(name => workflow.indexOf(`- name: ${name}`));
     expect(orderedSteps.every(position => position >= 0)).toBe(true);
     expect(orderedSteps).toEqual([...orderedSteps].sort((left, right) => left - right));
-    expect(workflow).toContain('pnpm db:places:prepare -- --territory=za-gp');
-    expect(workflow).toContain('pnpm db:places:verify -- --territory=za-gp');
+    expect(workflow).toContain('pnpm db:places:prepare-national');
+    expect(workflow).toContain('pnpm db:places:verify-national');
     expect(workflow).toContain('pnpm vitest run --project place-command');
   });
 });

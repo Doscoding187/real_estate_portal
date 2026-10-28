@@ -1,5 +1,6 @@
 import { developmentApprovalQueue, developments } from '../../drizzle/schema';
 import type { SubmissionValidationError } from './developmentSubmissionReadiness';
+import { isCanonicalPlaceId } from '../../shared/placeAuthority';
 
 export type DevelopmentHomeLifecycleState =
   | 'live'
@@ -60,11 +61,13 @@ export function deriveDevelopmentHomeLifecycleState(input: {
 }
 
 export function isDevelopmentHomePublicEligible(input: {
+  canonicalPlaceId: string | null;
   approvalStatus: (typeof developments.$inferSelect)['approvalStatus'];
   isPublished: (typeof developments.$inferSelect)['isPublished'];
   commercialEligible?: boolean;
 }): boolean {
   return (
+    isCanonicalPlaceId(input.canonicalPlaceId) &&
     input.approvalStatus === 'approved' &&
     Number(input.isPublished) === 1 &&
     input.commercialEligible !== false

@@ -19,6 +19,10 @@ export const COMMERCIAL_INVENTORY_MANAGEMENT_MESSAGE =
 export const COMMERCIAL_PUBLIC_JOURNEY_HANDOFF_MESSAGE =
   'Commercial leasing is available through the dedicated Commercial journey only.';
 
+/** Public and authoring Commercial geography stays closed until canonical assignment is modeled. */
+export const COMMERCIAL_CANONICAL_ASSIGNMENT_BLOCKER =
+  'Commercial search and authoring are waiting for commercial_assets.canonical_place_id and reviewed Place assignments. Existing address labels will not be mapped automatically.';
+
 export function isCommercialMarketingPropertyType(value: unknown): boolean {
   return (
     String(value || '')

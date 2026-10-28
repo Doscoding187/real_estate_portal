@@ -2,26 +2,6 @@ import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { protectedProcedure, publicProcedure, router } from './_core/trpc';
 import {
-  searchSharedLivingSpaces,
-  sharedLivingDetailBySlug,
-} from './services/sharedLivingPublicService';
-import {
-  addSharedLivingSpace,
-  approvePlace,
-  createSharedLivingDraft,
-  listMyPlaces,
-  pendingReviewQueue,
-  rejectPlace,
-  submitPlaceForReview,
-  updateOwnedSpace,
-} from './services/sharedLivingAuthoringService';
-import {
-  hasVerifiedPhone,
-  latestPhoneEvidence,
-  sendPhoneVerificationOtp,
-  verifyPhoneOtp,
-} from './services/sharedLivingVerificationService';
-import {
   listerThreadView,
   listListerThreads,
   replyAsListerThread,
@@ -29,12 +9,20 @@ import {
   threadViewByToken,
 } from './services/sharedLivingEnquiryService';
 import {
+  hasVerifiedPhone,
+  latestPhoneEvidence,
+  sendPhoneVerificationOtp,
+  verifyPhoneOtp,
+} from './services/sharedLivingVerificationService';
+import {
+  SHARED_LIVING_CANONICAL_ASSIGNMENT_BLOCKER,
   SHARED_LIVING_ACCOMMODATION_TYPES,
   SHARED_LIVING_MARKET_TAGS,
   SHARED_LIVING_PLACE_KINDS,
   SHARED_LIVING_SPACE_STATUSES,
 } from '../shared/sharedLivingDomain';
 import { resolveSharedLivingSearchGeography } from '../shared/sharedLivingSearchContract';
+import { PLACE_ID_REGEX } from '../shared/placeAuthority';
 
 const billsSchema = z.object({
   electricity: z.boolean().default(false),
@@ -58,20 +46,18 @@ const sharedLivingSearchSchema = z
       .trim()
       .regex(/^\d{4}-\d{2}-\d{2}$/)
       .optional(),
-    locationId: z.string().trim().min(1).max(32).optional(),
-    locationIds: z.array(z.string().trim().min(1).max(32)).min(2).max(5).optional(),
-    /** Kept in the strict contract solely so unsupported Search Area handoffs reject visibly. */
-    searchAreaId: z.string().trim().min(1).max(120).optional(),
+    canonicalPlaceId: z.string().trim().regex(PLACE_ID_REGEX).optional(),
+    canonicalPlaceIds: z.array(z.string().trim().regex(PLACE_ID_REGEX)).min(2).max(5).optional(),
     page: z.number().int().min(0).max(10_000).optional(),
   })
   .strict()
   .superRefine((input, ctx) => {
     const geography = resolveSharedLivingSearchGeography(input);
-    if (geography.status === 'invalid' || geography.status === 'unsupported_search_area') {
+    if (geography.status === 'invalid') {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: geography.message,
-        path: ['locationId'],
+        path: ['canonicalPlaceId'],
       });
     }
     if (
@@ -93,45 +79,24 @@ function requireSuperAdmin(role: string | undefined): void {
   }
 }
 
-/** Convert expected domain rejections into usable, non-500 public API errors. */
-async function authoringBoundary<T>(operation: () => Promise<T>): Promise<T> {
-  try {
-    return await operation();
-  } catch (error) {
-    if (error instanceof TRPCError) throw error;
-    const domainCode = String((error as { code?: unknown })?.code || '');
-    const message =
-      error instanceof Error ? error.message : 'The Shared Living action could not be completed.';
-    const code =
-      domainCode === 'FORBIDDEN'
-        ? 'FORBIDDEN'
-        : domainCode === 'NOT_FOUND'
-          ? 'NOT_FOUND'
-          : domainCode === 'PHONE_VERIFICATION_REQUIRED'
-            ? 'PRECONDITION_FAILED'
-            : 'BAD_REQUEST';
-    throw new TRPCError({ code, message });
-  }
+function requireCanonicalSharedLivingAssignments(): never {
+  throw new TRPCError({
+    code: 'PRECONDITION_FAILED',
+    message: SHARED_LIVING_CANONICAL_ASSIGNMENT_BLOCKER,
+  });
 }
 
 const capabilityTokenSchema = z.string().uuid();
 
 export const sharedLivingRouter = router({
   // ---------- Independent public discovery ----------
-  search: publicProcedure.input(sharedLivingSearchSchema.optional()).query(async ({ input }) => {
-    const result = await searchSharedLivingSpaces(input ?? {});
-    if (result.locationState === 'invalid' || result.locationState === 'unsupported_search_area') {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: result.locationMessage || 'The Shared Living location selection is not valid.',
-      });
-    }
-    return result;
-  }),
+  search: publicProcedure
+    .input(sharedLivingSearchSchema.optional())
+    .query(() => requireCanonicalSharedLivingAssignments()),
 
   detail: publicProcedure
     .input(z.object({ slug: z.string().trim().min(1).max(180) }).strict())
-    .query(({ input }) => sharedLivingDetailBySlug(input.slug)),
+    .query(() => requireCanonicalSharedLivingAssignments()),
 
   // ---------- Canonical public enquiry + secure lead thread ----------
   enquire: publicProcedure
@@ -149,6 +114,7 @@ export const sharedLivingRouter = router({
         .strict(),
     )
     .mutation(async ({ ctx, input }) => {
+      requireCanonicalSharedLivingAssignments();
       const { capturePublicLead } = await import('./services/publicLeadCaptureService');
       const result = await capturePublicLead({
         ...input,
@@ -203,14 +169,14 @@ export const sharedLivingRouter = router({
       return { verified: true };
     }),
 
-  myPlaces: protectedProcedure.query(async ({ ctx }) => listMyPlaces(Number(ctx.user?.id))),
+  myPlaces: protectedProcedure.query(() => requireCanonicalSharedLivingAssignments()),
 
   createDraft: protectedProcedure
     .input(
       z
         .object({
           addressLinePrivate: z.string().trim().min(5).max(255),
-          locationId: z.string().trim().min(1).max(32),
+          canonicalPlaceId: z.string().trim().regex(PLACE_ID_REGEX),
           placeKind: z.enum(SHARED_LIVING_PLACE_KINDS),
           description: z.string().trim().max(2000).optional(),
           spaceLabel: z.string().trim().min(2).max(120),
@@ -229,15 +195,7 @@ export const sharedLivingRouter = router({
         })
         .strict(),
     )
-    .mutation(({ ctx, input }) =>
-      authoringBoundary(() =>
-        createSharedLivingDraft({
-          ...input,
-          actorUserId: Number(ctx.user?.id),
-          actorRole: ctx.user?.role,
-        }),
-      ),
-    ),
+    .mutation(() => requireCanonicalSharedLivingAssignments()),
 
   addSpace: protectedProcedure
     .input(
@@ -258,11 +216,7 @@ export const sharedLivingRouter = router({
         })
         .strict(),
     )
-    .mutation(({ ctx, input }) =>
-      authoringBoundary(() =>
-        addSharedLivingSpace({ ...input, actorUserId: Number(ctx.user?.id) }),
-      ),
-    ),
+    .mutation(() => requireCanonicalSharedLivingAssignments()),
 
   updateSpace: protectedProcedure
     .input(
@@ -286,30 +240,11 @@ export const sharedLivingRouter = router({
         })
         .strict(),
     )
-    .mutation(async ({ ctx, input }) =>
-      authoringBoundary(async () => {
-        await updateOwnedSpace(Number(ctx.user?.id), input.spaceId, {
-          ...(input.label !== undefined ? { label: input.label } : {}),
-          ...(input.rentAmountMinor !== undefined
-            ? { rentAmountMinor: input.rentAmountMinor }
-            : {}),
-          ...(input.rentUnknown !== undefined ? { rentUnknown: input.rentUnknown } : {}),
-          ...(input.bills !== undefined ? { bills: input.bills } : {}),
-          availableFrom: input.availableFrom === '' ? null : input.availableFrom,
-          ...(input.status !== undefined ? { status: input.status } : {}),
-        });
-        return { updated: true };
-      }),
-    ),
+    .mutation(() => requireCanonicalSharedLivingAssignments()),
 
   submitForReview: protectedProcedure
     .input(z.object({ placeId: z.number().int().positive() }).strict())
-    .mutation(async ({ ctx, input }) =>
-      authoringBoundary(async () => {
-        await submitPlaceForReview(Number(ctx.user?.id), input.placeId);
-        return { submitted: true };
-      }),
-    ),
+    .mutation(() => requireCanonicalSharedLivingAssignments()),
 
   // ---------- Lister inbox / delivery acknowledgement ----------
   myListerThreads: protectedProcedure.query(({ ctx }) => listListerThreads(Number(ctx.user?.id))),
@@ -344,18 +279,15 @@ export const sharedLivingRouter = router({
   // ---------- Moderation ----------
   moderationQueue: protectedProcedure.query(async ({ ctx }) => {
     requireSuperAdmin(ctx.user?.role);
-    return pendingReviewQueue();
+    return requireCanonicalSharedLivingAssignments();
   }),
 
   moderateApprove: protectedProcedure
     .input(z.object({ placeId: z.number().int().positive() }).strict())
-    .mutation(async ({ ctx, input }) =>
-      authoringBoundary(async () => {
-        requireSuperAdmin(ctx.user?.role);
-        await approvePlace(Number(ctx.user?.id), input.placeId);
-        return { approved: true };
-      }),
-    ),
+    .mutation(async ({ ctx }) => {
+      requireSuperAdmin(ctx.user?.role);
+      return requireCanonicalSharedLivingAssignments();
+    }),
 
   moderateReject: protectedProcedure
     .input(
@@ -363,11 +295,8 @@ export const sharedLivingRouter = router({
         .object({ placeId: z.number().int().positive(), reason: z.string().trim().min(3).max(255) })
         .strict(),
     )
-    .mutation(async ({ ctx, input }) =>
-      authoringBoundary(async () => {
-        requireSuperAdmin(ctx.user?.role);
-        await rejectPlace(Number(ctx.user?.id), input.placeId, input.reason);
-        return { rejected: true };
-      }),
-    ),
+    .mutation(async ({ ctx }) => {
+      requireSuperAdmin(ctx.user?.role);
+      return requireCanonicalSharedLivingAssignments();
+    }),
 });

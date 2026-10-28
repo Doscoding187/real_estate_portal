@@ -22,7 +22,6 @@ import {
 import { sql } from 'drizzle-orm';
 import { users } from './core';
 import { plans } from './billing';
-import { locations } from './locations';
 import { cataloguePublishers, developerOrganisations } from './developerIdentity';
 import { place } from './placeAuthority';
 

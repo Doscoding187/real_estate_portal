@@ -2,6 +2,10 @@ import { useEffect, useState } from 'react';
 import { Link } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import {
+  CanonicalPlaceSelector,
+  type CanonicalPlaceSelection,
+} from '@/components/location/CanonicalPlaceSelector';
+import {
   FARM_INTENTS,
   parseFarmIntent,
   parseFarmSearchParams,
@@ -22,26 +26,50 @@ const INTENT_LABELS: Record<string, string> = {
  */
 export default function FarmsAndSmallholdings() {
   const initial = new URLSearchParams(window.location.search);
-  const [handoffError, setHandoffError] = useState(initial.get('searchError'));
+  const retiredGeographyKeys = [
+    'city',
+    'province',
+    'suburb',
+    'location',
+    'locationId',
+    'locationIds',
+    'locations',
+    'searchAreaId',
+    'searchAreaIds',
+    'factualLocationId',
+  ];
+  const hasRetiredGeography = retiredGeographyKeys.some(key => initial.has(key));
+  const [handoffError, setHandoffError] = useState(
+    initial.get('searchError') || (hasRetiredGeography ? 'invalid-place-authority' : null),
+  );
   const [listingType, setListingType] = useState(() => parseFarmIntent(initial.get('listingType')));
-  const [city, setCity] = useState(initial.get('city') || '');
-  const [province, setProvince] = useState(initial.get('province') || '');
+  const [canonicalPlaceId, setCanonicalPlaceId] = useState(
+    initial.get('canonicalPlaceId') || undefined,
+  );
+  const [selection, setSelection] = useState<CanonicalPlaceSelection | null>(null);
   const [minPrice, setMinPrice] = useState(initial.get('minPrice') || '');
   const [maxPrice, setMaxPrice] = useState(initial.get('maxPrice') || '');
   const [minLandSize, setMinLandSize] = useState(initial.get('minLandSize') || '');
   const [maxLandSize, setMaxLandSize] = useState(initial.get('maxLandSize') || '');
-  const [locationId, setLocationId] = useState(initial.get('locationId') || undefined);
-  const [locationIds, setLocationIds] = useState(initial.getAll('locationIds'));
-  const [searchAreaId, setSearchAreaId] = useState(initial.get('searchAreaId') || undefined);
+  const selectedPlace = trpc.placeAuthority.resolveSearchPlace.useQuery(
+    { placeId: canonicalPlaceId || '' },
+    { enabled: Boolean(canonicalPlaceId), retry: false, staleTime: 300_000 },
+  );
 
-  const applyManualGeography = (edit: { city: string; province: string }) => {
-    setCity(edit.city);
-    setProvince(edit.province);
-    setLocationId(undefined);
-    setLocationIds([]);
-    setSearchAreaId(undefined);
-    setHandoffError(null);
-  };
+  useEffect(() => {
+    const place = selectedPlace.data;
+    setSelection(
+      place
+        ? {
+            canonicalPlaceId: place.placeId,
+            label: place.label,
+            placeType: place.placeType,
+            scope: place.searchScope,
+            administrativeContext: place.administrativeContext,
+          }
+        : null,
+    );
+  }, [selectedPlace.data]);
 
   const queryInput = {
     ...sanitizeFarmSearchFilters({
@@ -52,41 +80,37 @@ export default function FarmsAndSmallholdings() {
       maxLandSize,
     }),
     propertyType: 'farm' as const,
-    city: city || undefined,
-    province: province || undefined,
-    locationId,
-    locationIds: locationIds.length ? locationIds : undefined,
-    searchAreaId,
+    canonicalPlaceId,
   };
-  const results = trpc.properties.searchPublicInventory.useQuery(queryInput);
+  const results = trpc.properties.searchPublicInventory.useQuery(queryInput, {
+    enabled: !handoffError,
+  });
 
   useEffect(() => {
     const next = new URLSearchParams();
     next.set('listingType', listingType);
-    if (city) next.set('city', city);
-    if (province) next.set('province', province);
+    if (canonicalPlaceId) next.set('canonicalPlaceId', canonicalPlaceId);
     if (minPrice) next.set('minPrice', minPrice);
     if (maxPrice) next.set('maxPrice', maxPrice);
     if (minLandSize) next.set('minLandSize', minLandSize);
     if (maxLandSize) next.set('maxLandSize', maxLandSize);
-    if (locationId) next.set('locationId', locationId);
-    locationIds.forEach(id => next.append('locationIds', id));
-    if (searchAreaId) next.set('searchAreaId', searchAreaId);
     if (handoffError) next.set('searchError', handoffError);
     window.history.replaceState(null, '', `${window.location.pathname}?${next.toString()}`);
   }, [
     listingType,
-    city,
-    province,
+    canonicalPlaceId,
     minPrice,
     maxPrice,
     minLandSize,
     maxLandSize,
     handoffError,
-    locationId,
-    searchAreaId,
-    locationIds,
   ]);
+
+  const applySelection = (next: CanonicalPlaceSelection | null) => {
+    setSelection(next);
+    setCanonicalPlaceId(next?.canonicalPlaceId);
+    setHandoffError(null);
+  };
 
   return (
     <main className="mx-auto max-w-6xl space-y-6 p-4 md:p-6">
@@ -96,13 +120,18 @@ export default function FarmsAndSmallholdings() {
           Space, price and place. Every result is an eligible published farm or smallholding.
         </p>
       </header>
-      {handoffError === 'unsupported-location-scope' && (
+      {handoffError && (
         <p
           role="alert"
           className="rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
         >
-          That location scope is not available for Farms &amp; Smallholdings yet. Choose a canonical
-          province, city, suburb, sibling locations, or an approved Search Area.
+          That search link uses a retired geography format. Choose an admitted canonical Place to
+          continue.
+        </p>
+      )}
+      {selectedPlace.error && !handoffError && (
+        <p role="alert" className="rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+          The selected canonical Place is unavailable. Choose another Place.
         </p>
       )}
       {results.error && (
@@ -131,24 +160,16 @@ export default function FarmsAndSmallholdings() {
             ))}
           </select>
         </label>
-        <label className="grid gap-1 text-sm">
-          <span>City</span>
-          <input
-            className="rounded border p-2"
-            placeholder="City"
-            value={city}
-            onChange={event => applyManualGeography({ city: event.target.value, province })}
+        <div className="sm:col-span-2 lg:col-span-4">
+          <CanonicalPlaceSelector
+            value={selection}
+            onChange={applySelection}
+            purpose="search"
+            label="Location"
+            placeholder="Search an admitted city, town, suburb or locality"
+            hint="Choose one canonical Place."
           />
-        </label>
-        <label className="grid gap-1 text-sm">
-          <span>Province</span>
-          <input
-            className="rounded border p-2"
-            placeholder="Province"
-            value={province}
-            onChange={event => applyManualGeography({ city, province: event.target.value })}
-          />
-        </label>
+        </div>
         <label className="grid gap-1 text-sm">
           <span>Minimum price (R)</span>
           <input

@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'wouter';
-import { trpc } from '@/lib/trpc';
+import { CanonicalPlaceSelector, type CanonicalPlaceSelection } from '@/components/location/CanonicalPlaceSelector';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -9,111 +8,99 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { trpc } from '@/lib/trpc';
 import {
+  LAND_CANONICAL_ASSIGNMENT_BLOCKER,
   LAND_CLASSIFICATION_LABELS,
   LAND_PUBLIC_CLASSIFICATIONS,
   type LandPublicClassification,
 } from '@shared/land-domain';
+import { isCanonicalPlaceId } from '@shared/placeAuthority';
 import { validateLandSearchGeography } from '@shared/landSearchGeography';
 
 const numberValue = (value: string) => (value.trim() ? Number(value) : undefined);
 
-export interface LandGeographyState {
-  city: string;
-  province: string;
-  locationId?: string;
-  locationIds: string[];
-  searchAreaId?: string;
-  handoffError?: string | null;
-}
-
-/** A typed manual edit replaces, never layers over, a specialist geography handoff. */
-export function editManualLandGeography(
-  state: LandGeographyState,
-  edit: Pick<LandGeographyState, 'city' | 'province'>,
-): LandGeographyState {
-  return { ...edit, locationIds: [], handoffError: null };
-}
-
 export default function PlotsAndLand() {
   const initial = new URLSearchParams(window.location.search);
-  const [handoffError, setHandoffError] = useState(initial.get('searchError'));
-  const initialClassification = initial.get('classification') as LandPublicClassification | null;
-  const [classification, setClassification] = useState<LandPublicClassification | ''>(
-    initialClassification && LAND_PUBLIC_CLASSIFICATIONS.includes(initialClassification)
-      ? initialClassification
-      : '',
+  const hasRetiredGeography = [
+    'city', 'province', 'locationId', 'locationIds', 'locations', 'searchAreaId', 'searchAreaIds',
+  ].some(key => initial.has(key));
+  const initialPlaceId = initial.get('canonicalPlaceId') || undefined;
+  const [canonicalPlaceId, setCanonicalPlaceId] = useState(
+    hasRetiredGeography || (initialPlaceId && !isCanonicalPlaceId(initialPlaceId))
+      ? undefined
+      : initialPlaceId,
   );
-  const [city, setCity] = useState(initial.get('city') || '');
-  const [province, setProvince] = useState(initial.get('province') || '');
+  const [selection, setSelection] = useState<CanonicalPlaceSelection | null>(null);
+  const [canonicalPlaceIds, setCanonicalPlaceIds] = useState(initial.getAll('canonicalPlaceIds'));
+  const [handoffError, setHandoffError] = useState<string | null>(
+    hasRetiredGeography
+      ? 'This link used retired city, province, or numeric geography. Select an admitted Place to continue.'
+      : initial.get('searchError'),
+  );
+  const initialPlaceQuery = trpc.placeAuthority.resolveSearchPlace.useQuery(
+    { placeId: canonicalPlaceId || '' },
+    { enabled: Boolean(canonicalPlaceId), retry: false, staleTime: 300_000 },
+  );
+  const multiPlaceQuery = trpc.placeAuthority.resolveSearchPlaces.useQuery(
+    { placeIds: canonicalPlaceIds },
+    { enabled: canonicalPlaceIds.length > 0, retry: false, staleTime: 300_000 },
+  );
+  useEffect(() => {
+    const place = initialPlaceQuery.data;
+    setSelection(
+      place
+        ? {
+            canonicalPlaceId: place.placeId,
+            label: place.label,
+            placeType: place.placeType,
+            scope: place.searchScope,
+            administrativeContext: place.administrativeContext,
+            canonicalPath: place.canonicalPath,
+          }
+        : null,
+    );
+  }, [initialPlaceQuery.data]);
+
+  const [classification, setClassification] = useState<LandPublicClassification | ''>(() => {
+    const value = initial.get('classification') as LandPublicClassification | null;
+    return value && LAND_PUBLIC_CLASSIFICATIONS.includes(value) ? value : '';
+  });
   const [minPrice, setMinPrice] = useState(initial.get('minPrice') || '');
   const [maxPrice, setMaxPrice] = useState(initial.get('maxPrice') || '');
   const [minSize, setMinSize] = useState(initial.get('minSize') || '');
   const [maxSize, setMaxSize] = useState(initial.get('maxSize') || '');
-  const [locationId, setLocationId] = useState(initial.get('locationId') || undefined);
-  const [locationIds, setLocationIds] = useState(initial.getAll('locationIds'));
-  const [searchAreaId, setSearchAreaId] = useState(initial.get('searchAreaId') || undefined);
 
-  const applyManualGeography = (edit: Pick<LandGeographyState, 'city' | 'province'>) => {
-    const next = editManualLandGeography(
-      { city, province, locationId, locationIds, searchAreaId, handoffError },
-      edit,
-    );
-    setCity(next.city);
-    setProvince(next.province);
-    setLocationId(undefined);
-    setLocationIds([]);
-    setSearchAreaId(undefined);
-    setHandoffError(null);
-  };
-
-  const queryInput = {
-    classification: classification || undefined,
-    city: city || undefined,
-    province: province || undefined,
-    locationId,
-    locationIds: locationIds.length ? locationIds : undefined,
-    searchAreaId,
-    minPrice: numberValue(minPrice),
-    maxPrice: numberValue(maxPrice),
-    minSize: numberValue(minSize),
-    maxSize: numberValue(maxSize),
-  };
-  const geographyIssue = validateLandSearchGeography(queryInput);
+  const geographyIssue = validateLandSearchGeography({
+    canonicalPlaceId,
+    canonicalPlaceIds,
+  });
 
   useEffect(() => {
     const next = new URLSearchParams();
-    if (locationId) next.set('locationId', locationId);
-    locationIds.forEach(id => next.append('locationIds', id));
-    if (searchAreaId) next.set('searchAreaId', searchAreaId);
-    if (city) next.set('city', city);
-    if (province) next.set('province', province);
+    if (canonicalPlaceId) next.set('canonicalPlaceId', canonicalPlaceId);
+    canonicalPlaceIds.forEach(id => next.append('canonicalPlaceIds', id));
     if (classification) next.set('classification', classification);
     if (minPrice) next.set('minPrice', minPrice);
     if (maxPrice) next.set('maxPrice', maxPrice);
     if (minSize) next.set('minSize', minSize);
     if (maxSize) next.set('maxSize', maxSize);
-    if (handoffError) next.set('searchError', handoffError);
+    if (handoffError) next.set('searchError', 'retired-geography');
     window.history.replaceState(
       null,
       '',
       `${window.location.pathname}${next.toString() ? `?${next}` : ''}`,
     );
   }, [
+    canonicalPlaceId,
+    canonicalPlaceIds,
     classification,
-    city,
-    province,
     minPrice,
     maxPrice,
     minSize,
     maxSize,
     handoffError,
-    locationId,
-    searchAreaId,
-    locationIds,
   ]);
-
-  const results = trpc.landPublic.search.useQuery(queryInput, { enabled: !geographyIssue });
 
   return (
     <main className="mx-auto max-w-6xl space-y-6 p-4 md:p-6">
@@ -122,56 +109,43 @@ export default function PlotsAndLand() {
         <p className="mt-2 text-slate-600">Find land. Understand the land. Verify what matters.</p>
       </header>
 
-      {handoffError === 'unsupported-location-scope' && (
-        <p
-          role="alert"
-          className="rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
-        >
-          That location scope is not available for Land yet. Choose a canonical province, city,
-          suburb, sibling locations, or an approved Search Area.
+      {handoffError && (
+        <p role="alert" className="rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+          {handoffError}
         </p>
       )}
 
-      {geographyIssue && (
-        <p
-          role="status"
-          className="rounded border border-sky-200 bg-sky-50 p-3 text-sm text-sky-950"
-        >
-          {geographyIssue.message}
-        </p>
-      )}
-
-      {results.error && (
-        <p
-          role="alert"
-          className="rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
-        >
-          {results.error.message}
-        </p>
-      )}
+      <p role="status" className="rounded border border-sky-200 bg-sky-50 p-3 text-sm text-sky-950">
+        {LAND_CANONICAL_ASSIGNMENT_BLOCKER}
+      </p>
 
       <section
         aria-label="Land search filters"
         className="grid gap-3 rounded border bg-white p-4 sm:grid-cols-2 lg:grid-cols-4"
       >
-        <label className="grid gap-1 text-sm">
-          <span>City</span>
-          <Input
-            aria-label="City"
-            placeholder="City"
-            value={city}
-            onChange={event => applyManualGeography({ city: event.target.value, province })}
+        <div className="sm:col-span-2">
+          <CanonicalPlaceSelector
+            value={selection}
+            onChange={value => {
+              setSelection(value);
+              setCanonicalPlaceId(value?.canonicalPlaceId);
+              setCanonicalPlaceIds([]);
+              setHandoffError(null);
+            }}
+            purpose="search"
+            label="Canonical Place"
+            placeholder="Choose an admitted city, town, suburb or locality"
+            hint="Land geography is selected from the admitted Place Authority."
           />
-        </label>
-        <label className="grid gap-1 text-sm">
-          <span>Province</span>
-          <Input
-            aria-label="Province"
-            placeholder="Province"
-            value={province}
-            onChange={event => applyManualGeography({ city, province: event.target.value })}
-          />
-        </label>
+          {canonicalPlaceIds.length > 0 && (
+            <p className="mt-2 text-sm text-muted-foreground">
+              {multiPlaceQuery.data?.results
+                .map(place => place?.label)
+                .filter(Boolean)
+                .join(' · ') || 'The selected Places will be checked against canonical assignments.'}
+            </p>
+          )}
+        </div>
         <label className="grid gap-1 text-sm">
           <span>Land type</span>
           <Select
@@ -195,77 +169,29 @@ export default function PlotsAndLand() {
         </label>
         <label className="grid gap-1 text-sm">
           <span>Minimum price (R)</span>
-          <Input
-            aria-label="Minimum price (R)"
-            type="number"
-            min="1"
-            value={minPrice}
-            onChange={event => setMinPrice(event.target.value)}
-          />
+          <Input aria-label="Minimum price (R)" type="number" min="1" value={minPrice} onChange={event => setMinPrice(event.target.value)} />
         </label>
         <label className="grid gap-1 text-sm">
           <span>Maximum price (R)</span>
-          <Input
-            aria-label="Maximum price (R)"
-            type="number"
-            min="1"
-            value={maxPrice}
-            onChange={event => setMaxPrice(event.target.value)}
-          />
+          <Input aria-label="Maximum price (R)" type="number" min="1" value={maxPrice} onChange={event => setMaxPrice(event.target.value)} />
         </label>
         <label className="grid gap-1 text-sm">
           <span>Minimum extent (m²)</span>
-          <Input
-            aria-label="Minimum extent (m²)"
-            type="number"
-            min="1"
-            value={minSize}
-            onChange={event => setMinSize(event.target.value)}
-          />
+          <Input aria-label="Minimum extent (m²)" type="number" min="1" value={minSize} onChange={event => setMinSize(event.target.value)} />
         </label>
         <label className="grid gap-1 text-sm">
           <span>Maximum extent (m²)</span>
-          <Input
-            aria-label="Maximum extent (m²)"
-            type="number"
-            min="1"
-            value={maxSize}
-            onChange={event => setMaxSize(event.target.value)}
-          />
+          <Input aria-label="Maximum extent (m²)" type="number" min="1" value={maxSize} onChange={event => setMaxSize(event.target.value)} />
         </label>
+        <button
+          type="button"
+          disabled
+          title={geographyIssue?.message || LAND_CANONICAL_ASSIGNMENT_BLOCKER}
+          className="rounded bg-slate-300 px-4 py-2 font-medium text-slate-600"
+        >
+          Land search unavailable
+        </button>
       </section>
-
-      <section aria-live="polite" className="grid gap-4 md:grid-cols-3">
-        {(results.data ?? []).map(item => (
-          <Link
-            key={item.listingId}
-            href={item.href}
-            className="rounded border p-4 transition hover:border-slate-500"
-          >
-            <p className="font-semibold">{item.title}</p>
-            <p>
-              {LAND_CLASSIFICATION_LABELS[
-                item.classification as keyof typeof LAND_CLASSIFICATION_LABELS
-              ] || item.classification}{' '}
-              · {Number(item.extentM2).toLocaleString()} m²
-            </p>
-            <p>
-              {item.city}, {item.province}
-            </p>
-            <p>{item.intendedUse || 'Land opportunity'}</p>
-            <p className="mt-2 font-medium">R {Number(item.askingPrice).toLocaleString()}</p>
-            <p className="text-sm text-slate-600">
-              {item.passport.trustState?.replace(/_/g, ' ') || 'Listed with disclosures'}
-            </p>
-          </Link>
-        ))}
-      </section>
-
-      {!geographyIssue && !results.isLoading && !results.error && !results.data?.length && (
-        <p className="rounded border border-dashed p-6 text-slate-600">
-          No eligible Land listings match these exact filters.
-        </p>
-      )}
     </main>
   );
 }

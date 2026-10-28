@@ -4,6 +4,7 @@ const { mockDb, mockCacheGet, mockCacheSet, mockRecommendedFeedKey } = vi.hoiste
   const localDb: any = {
     select: vi.fn(),
     from: vi.fn(),
+    innerJoin: vi.fn(),
     leftJoin: vi.fn(),
     where: vi.fn(),
     orderBy: vi.fn(),
@@ -11,7 +12,7 @@ const { mockDb, mockCacheGet, mockCacheSet, mockRecommendedFeedKey } = vi.hoiste
     offset: vi.fn(),
   };
 
-  for (const method of ['select', 'from', 'leftJoin', 'where', 'orderBy', 'limit', 'offset']) {
+  for (const method of ['select', 'from', 'innerJoin', 'leftJoin', 'where', 'orderBy', 'limit', 'offset']) {
     localDb[method].mockImplementation(() => localDb);
   }
 
@@ -25,6 +26,13 @@ const { mockDb, mockCacheGet, mockCacheSet, mockRecommendedFeedKey } = vi.hoiste
 
 vi.mock('../../db', () => ({
   db: mockDb,
+}));
+
+vi.mock('../canonicalPlaceSearchService', () => ({
+  loadCanonicalPlaceSearchProjection: vi.fn(async () => ({
+    executions: new Map([['pl-place-01-000000000000000000000007', {}]]),
+    labels: new Map([['pl-place-01-000000000000000000000007', { label: 'Test Place' }]]),
+  })),
 }));
 
 vi.mock('../../lib/cache', () => ({
@@ -45,7 +53,7 @@ import { exploreFeedService } from '../exploreFeedService';
 describe('ExploreFeedService fallback behavior', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    for (const method of ['select', 'from', 'leftJoin', 'where', 'orderBy', 'limit', 'offset']) {
+    for (const method of ['select', 'from', 'innerJoin', 'leftJoin', 'where', 'orderBy', 'limit', 'offset']) {
       mockDb[method].mockImplementation(() => mockDb);
     }
   });
@@ -61,9 +69,13 @@ describe('ExploreFeedService fallback behavior', () => {
   it('propagates area feed query failures', async () => {
     mockDb.offset.mockRejectedValueOnce(new Error('area query failed'));
 
-    await expect(exploreFeedService.getAreaFeed({ location: 'Sandton', limit: 5, offset: 4 })).rejects.toThrow(
-      'area query failed',
-    );
+    await expect(
+      exploreFeedService.getAreaFeed({
+        canonicalPlaceId: 'pl-place-01-000000000000000000000007',
+        limit: 5,
+        offset: 4,
+      }),
+    ).rejects.toThrow('area query failed');
   });
 
   it('fails closed when the canonical Explore schema is missing', async () => {

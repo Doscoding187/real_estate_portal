@@ -64,8 +64,7 @@
     "supportedReplacements": [
       "scripts/db-contract-verify.ts",
       "scripts/db-verify-distribution-schema.ts",
-      "scripts/local-db.sh",
-      "scripts/verify-national-place-search.ts"
+      "scripts/local-db.sh"
     ],
     "localTestLifecycle": [
       "docker/mysql-local/init/01-create-local-databases.sql",
@@ -109,12 +108,10 @@
       "scripts/check-development-columns-direct.ts",
       "scripts/check-development-columns.ts",
       "scripts/check-development-phases.ts",
-      "scripts/check-location-data.ts",
       "scripts/check-properties-schema.ts",
       "scripts/check-properties.ts",
       "scripts/check-property-data.ts",
       "scripts/check-property-indexes.ts",
-      "scripts/check-provinces.ts",
       "scripts/check-table-struct.ts",
       "scripts/check-table.ts",
       "scripts/check-triggers.ts",
@@ -129,7 +126,6 @@
       "scripts/check_properties_cols.ts",
       "scripts/check_row_counts.ts",
       "scripts/db-contract-default-normalization.ts",
-      "scripts/debug-filtering.ts",
       "scripts/debug-leopards-rest.ts",
       "scripts/debug-listings.ts",
       "scripts/debug-slug-isolated.ts",
@@ -149,8 +145,6 @@
       "scripts/prospectJourneyProcessRunner.ts",
       "scripts/save-table-structs.ts",
       "scripts/test-agent-integration.ts",
-      "scripts/test-location-pages.ts",
-      "scripts/test-location-service.ts",
       "scripts/test-phase6-stats.ts",
       "scripts/test-readiness.ts",
       "scripts/test-search-raw.ts",
@@ -188,10 +182,8 @@
       "server/scripts/show_users_columns.ts",
       "server/scripts/simulate_service_query.ts",
       "server/scripts/verify-approval-workflow.ts",
-      "server/scripts/verify-development-validation.ts",
       "server/scripts/verify-get-profile.ts",
       "server/scripts/verify-hot-selling-final.ts",
-      "server/scripts/verify-hybrid.ts",
       "server/scripts/verify-id-fix.ts",
       "server/scripts/verify-images-debug.ts",
       "server/scripts/verify-local-db.ts",
@@ -323,7 +315,7 @@
         "server/scripts/verify-hot-selling.ts"
       ]
     },
-    "guardedOperationalSurfaceCountAtClosure": 118,
+    "guardedOperationalSurfaceCountAtClosure": 112,
     "operationalSurfaceDefinition": "A current source path within the guard boundary that has direct database-client, execution, SQL mutation/inspection, or ambient-target capability signals. Historical documentation, ordinary runtime data access, migrations, tests and non-capable authority files are not counted as operational surfaces."
   },
   "policy": {

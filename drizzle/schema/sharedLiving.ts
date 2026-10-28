@@ -12,9 +12,9 @@ import {
   unique,
   varchar,
 } from 'drizzle-orm/mysql-core';
-import { cities, provinces, suburbs } from './locations';
 import { leads } from './leads';
 import { users } from './core';
+import { place } from './placeAuthority';
 
 /**
  * Shared Living domain: one place per address with many independently
@@ -34,9 +34,10 @@ export const slPlaces = mysqlTable(
       .notNull()
       .references(() => users.id, { onDelete: 'restrict' }),
     addressLinePrivate: varchar('address_line_private', { length: 255 }).notNull(),
-    provinceId: int('province_id').references(() => provinces.id, { onDelete: 'set null' }),
-    cityId: int('city_id').references(() => cities.id, { onDelete: 'set null' }),
-    suburbId: int('suburb_id').references(() => suburbs.id, { onDelete: 'set null' }),
+    canonicalPlaceId: varchar('canonical_place_id', { length: 40 }).references(
+      () => place.placeId,
+      { onDelete: 'restrict', onUpdate: 'restrict' },
+    ),
     geoPrecision: mysqlEnum('geo_precision', ['suburb', 'city', 'province'])
       .notNull()
       .default('suburb'),
@@ -67,9 +68,7 @@ export const slPlaces = mysqlTable(
   },
   table => [
     unique('uq_sl_places_slug').on(table.slug),
-    index('idx_sl_places_suburb').on(table.suburbId),
-    index('idx_sl_places_city').on(table.cityId),
-    index('idx_sl_places_province').on(table.provinceId),
+    index('idx_sl_places_canonical_place').on(table.canonicalPlaceId),
     index('idx_sl_places_status').on(table.status),
   ],
 );

@@ -35,7 +35,7 @@ import {
   getVariants,
 } from '@/lib/animations/exploreAnimations';
 
-type ExploreFocus = 'buy' | 'sell' | 'renovate' | 'services' | 'finance' | 'invest' | 'neighbourhood';
+type ExploreFocus = 'buy' | 'sell' | 'renovate' | 'services' | 'finance' | 'invest';
 type LegacyExploreIntent = ExploreIntent;
 
 const EXPLORE_INTENT_SESSION_KEY = 'exploreIntent';
@@ -53,8 +53,6 @@ const SECTION_ID_ALIASES: Record<string, string> = {
   top_contractors_builders: 'top_contractors_builders',
   'finance-education': 'finance_education',
   finance_education: 'finance_education',
-  'explore-neighbourhoods': 'neighbourhoods',
-  neighbourhoods: 'neighbourhoods',
   'market-insights': 'market_insights',
   market_insights: 'market_insights',
 };
@@ -66,7 +64,6 @@ const SECTION_ORDER = [
   'new_listings',
   'top_contractors_builders',
   'finance_education',
-  'neighbourhoods',
   'market_insights',
 ] as const;
 
@@ -108,11 +105,6 @@ const SECTION_SURFACE_META: Record<
     cta: 'Watch insights',
     accent: 'linear-gradient(135deg, rgba(249,115,22,0.92) 0%, rgba(251,191,36,0.9) 100%)',
   },
-  neighbourhoods: {
-    eyebrow: 'Neighbourhoods',
-    cta: 'Explore places',
-    accent: 'linear-gradient(135deg, rgba(168,85,247,0.92) 0%, rgba(217,70,239,0.9) 100%)',
-  },
   market_insights: {
     eyebrow: 'Market signals',
     cta: 'Read the market',
@@ -152,7 +144,6 @@ function mapFocusToLegacyIntent(focus: ExploreFocus): LegacyExploreIntent {
     case 'services':
       return 'improve';
     case 'finance':
-    case 'neighbourhood':
       return 'learn';
     default:
       return 'buy';
@@ -171,8 +162,6 @@ function mapSectionToFocus(sectionId: string): ExploreFocus {
       return 'renovate';
     case 'finance_education':
       return 'finance';
-    case 'neighbourhoods':
-      return 'neighbourhood';
     case 'market_insights':
       return 'invest';
     default:
@@ -268,13 +257,6 @@ export default function ExploreHome() {
 
     if (item.type === 'video') {
       navigateToFeed('buy');
-      return;
-    }
-
-    if (item.type === 'neighbourhood') {
-      const name =
-        typeof item.data?.name === 'string' ? String(item.data.name).toLowerCase() : undefined;
-      navigateToFeed('neighbourhood', name);
       return;
     }
 
@@ -380,7 +362,7 @@ export default function ExploreHome() {
                 className="mt-1 text-sm"
                 style={{ color: designTokens.colors.text.secondary }}
               >
-                Media-first discovery across listings, walkthroughs, neighbourhoods, services, and insights.
+                Media-first discovery across listings, walkthroughs, canonical Places, services, and insights.
               </p>
             </div>
 
@@ -497,7 +479,7 @@ export default function ExploreHome() {
               { label: 'For You', action: () => navigateToFeed('buy') },
               { label: 'Listings', action: () => navigateToFeed('buy', 'listings') },
               { label: 'Walkthroughs', action: () => setLocation('/explore/shorts') },
-              { label: 'Neighbourhoods', action: () => navigateToFeed('neighbourhood') },
+              { label: 'Places', action: () => setLocation('/explore/shorts') },
               { label: 'Home Services', action: () => navigateToFeed('services') },
               { label: 'Finance', action: () => navigateToFeed('finance') },
             ].map(pill => (
