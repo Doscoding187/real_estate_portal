@@ -30,6 +30,7 @@ import { EnhancedNavbar } from '@/components/EnhancedNavbar';
 import { ServicesSiteFooter } from '@/components/services/ServicesSiteFooter';
 import type { ProviderDirectoryItem } from '@/components/services/ProviderCard';
 import { useServicesLocation } from '@/features/services/useServicesLocation';
+import { buildServiceBreadcrumbStructuredData } from '@/features/services/seoStructuredData';
 import { applySeo } from '@/lib/seo';
 
 function safeDecode(value: string) {
@@ -180,6 +181,12 @@ export default function ServicesLocalizedCategoryPage() {
       title: `${formatCategoryLabel(category)} in ${city}, ${province} | Property Listify`,
       description: `Browse published ${formatCategoryLabel(category).toLowerCase()} providers with listed coverage in ${city}, ${province}.`,
       canonicalPath,
+      structuredData: buildServiceBreadcrumbStructuredData([
+        { label: 'Home', path: '/' },
+        { label: 'Services', path: '/services' },
+        { label: formatCategoryLabel(category), path: `/services/${canonicalCategorySlug}` },
+        { label: `${city}, ${province}` },
+      ]),
     });
   }, [canonicalPath, category, city, province]);
 

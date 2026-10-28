@@ -1,16 +1,28 @@
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { type Request, type Response, Router } from 'express';
 
-import { agents, cataloguePublishers, developments, properties } from '../../drizzle/schema';
+import {
+  agents,
+  cataloguePublishers,
+  developments,
+  properties,
+  SERVICE_CATEGORY_VALUES,
+} from '../../drizzle/schema';
 import { ENV } from '../_core/env';
 import { getDb } from '../db-connection';
 import { APPROVED_AGENT, buildAgentPublicSlug } from '../services/agentPublicProfileService';
 import { publicDevelopmentEligibilityConditions } from '../services/publicDevelopmentEligibility';
 import { resolvePublicPropertyEligibilityIds } from '../services/publicPropertyEligibilityService';
+import { servicesEngineService } from '../services/servicesEngineService';
 
 import { getPublishedCityGuides } from '../../shared/cityGuideContent';
 import { COUNTRY_DISCOVERY_PATH } from '../../shared/countryDiscovery';
 import { getPublishedProvinceGuides } from '../../shared/provinceGuideContent';
+import {
+  slugifyLocationSegment,
+  toProviderSlug,
+  toServiceCategorySlug,
+} from '../../shared/serviceDirectorySlugs';
 import { SITEMAP_INDEX_CHILDREN } from '../../shared/sitemapIndex';
 import { getPublishedSuburbGuidePaths } from '../../shared/suburbGuidePolicy';
 
@@ -219,6 +231,54 @@ router.get('/sitemap-agents.xml', async (_req, res, next) => {
     );
 
     sendXml(res, xml);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/sitemap-services.xml', async (_req, res, next) => {
+  try {
+    const baseUrl = resolveBaseUrl(_req);
+    const db = await getDb();
+    if (!db) {
+      throw new Error('Database not available');
+    }
+
+    const entries = await servicesEngineService.listServiceSitemapEntries();
+
+    const categoryEntries = SERVICE_CATEGORY_VALUES.map(category => ({
+      loc: toAbsoluteUrl(`/services/${toServiceCategorySlug(category)}`, baseUrl),
+      changefreq: 'weekly',
+      priority: 0.6,
+    }));
+
+    const providerEntries = entries.providers.map(provider => ({
+      loc: toAbsoluteUrl(
+        `/services/provider/${toProviderSlug(provider.companyName, provider.providerId)}`,
+        baseUrl,
+      ),
+      lastmod: provider.updatedAt,
+      changefreq: 'weekly',
+      priority: 0.6,
+    }));
+
+    const localizedEntries = entries.localized
+      .map(row => ({
+        categorySlug: toServiceCategorySlug(row.category),
+        citySlug: slugifyLocationSegment(row.city),
+        provinceSlug: slugifyLocationSegment(row.province),
+      }))
+      .filter(row => row.categorySlug && row.citySlug && row.provinceSlug)
+      .map(row => ({
+        loc: toAbsoluteUrl(
+          `/services/${row.categorySlug}/${row.citySlug}/${row.provinceSlug}`,
+          baseUrl,
+        ),
+        changefreq: 'weekly',
+        priority: 0.5,
+      }));
+
+    sendXml(res, buildUrlSet([...categoryEntries, ...providerEntries, ...localizedEntries]));
   } catch (error) {
     next(error);
   }
