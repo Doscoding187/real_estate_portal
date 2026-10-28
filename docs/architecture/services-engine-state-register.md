@@ -148,6 +148,17 @@ Ahead/behind vs `main` @ `026586690`, verified 2026-10-28. **Branch deletion is
 never assumed safe from ahead/behind alone; each line lists the evidence condition
 required for its disposition.**
 
+**Retired 2026-10-28**, after fresh post-fetch re-verification
+(`git fetch origin --prune`, `git rev-list --left-right --count main…<ref>` = 0
+unique commits) and owner delegation recorded the same day: local
+`feat/services-publication-review-queue-20261021`, `fix/services-v1-reconcile`;
+remote `feat/services-marketplace-mvp-parity-20261022`,
+`feat/services-marketplace-overhaul`, `feat/services-review-moderation-20261022`,
+`feat/services-property-journey-actions`, `fix/services-marketplace-followup`,
+`feature/services-frontend-release`, `feature/services-pro-release`. The
+wip-preserved V1 trio and `origin/feature/services-engine-release` deliberately
+remain per their rows below.
+
 | Branch | Evidence | Proposed disposition |
 | --- | --- | --- |
 | `feat/services-publication-review-queue-20261021` | 0 ahead / 83 behind; last commit 2026-10-22 "publication review queue + marketplace v2 surfaces" | **Retire** (delete) after reviewer confirms — no unique commits |
