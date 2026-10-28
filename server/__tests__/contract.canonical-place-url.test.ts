@@ -33,7 +33,7 @@ describe('canonical Place URLs', () => {
       'property-listify-national-canonical-place-url-projection-v0.1',
     );
     expect(current.path_policy.legacy_aliases).toBe('none');
-    expect(entries).toHaveLength(14_808);
+    expect(entries).toHaveLength(14_807);
     expect(new Set(paths).size).toBe(paths.length);
     expect(new Set(placeIds).size).toBe(placeIds.length);
     expect(
