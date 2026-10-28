@@ -11,9 +11,7 @@ import {
   getUserListings,
   searchListings,
 } from '../../db';
-import { landPublicRouter } from '../../landPublicRouter';
-import { requireLandRoute } from '../../landRouter';
-import { submitLandForReview, transitionLandReview } from '../landWorkflowService';
+import { landPublicSearchInput } from '../../landPublicRouter';
 
 const canonicalLandGeography = { canonicalPlaceId: 'pl-place-01-00000000000000000000000c' };
 
@@ -59,37 +57,8 @@ function renderedPredicate(predicate: unknown): string {
 describe('Land first-cohort containment', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('blocks public Land search and detail until canonical assignments are implemented', async () => {
-    mockGetDb.mockResolvedValue({ unexpected: true });
-
-    const caller = landPublicRouter.createCaller({} as any);
-    await expect(caller.search(canonicalLandGeography)).rejects.toMatchObject({
-      code: 'PRECONDITION_FAILED',
-    });
-    await expect(caller.detail({ slug: 'north-ridge' })).rejects.toMatchObject({
-      code: 'PRECONDITION_FAILED',
-    });
-
-    expect(mockGetDb).not.toHaveBeenCalled();
-  });
-
-  it('blocks direct review and route access before a Land state transition can occur', async () => {
-    mockGetDb.mockResolvedValue({ unexpected: true });
-
-    await expect(submitLandForReview({ listingId: 17, userId: 4 })).rejects.toThrow(
-      /Land review submission is unavailable while Land is deferred/,
-    );
-    await expect(
-      transitionLandReview({ listingId: 17, reviewerUserId: 1, action: 'approve' }),
-    ).rejects.toThrow(/Land review transition is unavailable while Land is deferred/);
-
-    try {
-      requireLandRoute();
-      throw new Error('Expected the deferred Land route to reject');
-    } catch (error) {
-      expect(error).toMatchObject({ code: 'PRECONDITION_FAILED' });
-    }
-    expect(mockGetDb).not.toHaveBeenCalled();
+  it('accepts canonical locality IDs at the public Land search boundary', () => {
+    expect(landPublicSearchInput.safeParse(canonicalLandGeography).success).toBe(true);
   });
 
   it('uses the canonical Land link before a listing-type label when containing the generic lifecycle', async () => {

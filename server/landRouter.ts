@@ -2,11 +2,14 @@ import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { protectedProcedure, router, superAdminProcedure } from './_core/trpc';
 import { requireUser } from './_core/requireUser';
-import { LAND_CANONICAL_ASSIGNMENT_BLOCKER, LAND_PUBLIC_CLASSIFICATIONS } from '../shared/land-domain';
+import { LAND_PUBLIC_CLASSIFICATIONS } from '../shared/land-domain';
+import { PLACE_ID_REGEX } from '../shared/placeAuthority';
+import { requireLandVerticalAvailable } from '../shared/landLaunchPolicy';
 import {
   accessPrivateLandEvidence,
   attachLandMarketingMedia,
   addPrivateEvidence,
+  createLandDraft,
   declareMarketingAuthority,
   isLandAuthorRole,
   landWorkflowSnapshot,
@@ -60,8 +63,15 @@ function author(
   return user;
 }
 
-export function requireLandRoute(): never {
-  throw new TRPCError({ code: 'PRECONDITION_FAILED', message: LAND_CANONICAL_ASSIGNMENT_BLOCKER });
+export function requireLandRoute(): void {
+  try {
+    requireLandVerticalAvailable('Land route access');
+  } catch (error) {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: error instanceof Error ? error.message : 'Land is unavailable for this launch cohort.',
+    });
+  }
 }
 
 function rethrow(error: unknown): never {
@@ -70,9 +80,8 @@ function rethrow(error: unknown): never {
 }
 
 export const landRouter = router({
-  createDraft: protectedProcedure.input(z.object({ classification: z.enum(LAND_PUBLIC_CLASSIFICATIONS), title: z.string().trim().min(4).max(255), description: z.string().trim().min(20), askingPrice: z.number().positive(), address: z.string().trim().optional(), intendedUse: z.string().trim().max(120).optional(), canonicalPlaceId: z.string().trim().min(1).max(40), parcel: z.object({ kind: z.enum(['erf', 'portion', 'farm', 'remainder', 'other']), identifier: z.string().trim().min(1).max(500), extentM2: z.number().positive(), geometryConfidence: z.enum(['unknown', 'approximate', 'confirmed']).optional() }).strict() }).strict()).mutation(({ ctx }) => {
-    author(ctx);
-    throw new TRPCError({ code: 'PRECONDITION_FAILED', message: LAND_CANONICAL_ASSIGNMENT_BLOCKER });
+  createDraft: protectedProcedure.input(z.object({ classification: z.enum(LAND_PUBLIC_CLASSIFICATIONS), title: z.string().trim().min(4).max(255), description: z.string().trim().min(20), askingPrice: z.number().positive(), address: z.string().trim().optional(), intendedUse: z.string().trim().max(120).optional(), canonicalPlaceId: z.string().trim().regex(PLACE_ID_REGEX), parcel: z.object({ kind: z.enum(['erf', 'portion', 'farm', 'remainder', 'other']), identifier: z.string().trim().min(1).max(500), extentM2: z.number().positive(), geometryConfidence: z.enum(['unknown', 'approximate', 'confirmed']).optional() }).strict() }).strict()).mutation(async ({ ctx, input }) => {
+    try { return await createLandDraft({ ...input, userId: author(ctx).id }); } catch (error) { return rethrow(error); }
   }),
   addClaims: protectedProcedure.input(z.object({ listingId: z.number().int().positive(), claims: z.array(claim).min(1) })).mutation(async ({ ctx, input }) => {
     try { await recordLandClaims({ ...input, userId: author(ctx).id }); return { success: true }; } catch (error) { return rethrow(error); }

@@ -10,7 +10,6 @@ import {
 } from '@/components/ui/select';
 import { trpc } from '@/lib/trpc';
 import {
-  LAND_CANONICAL_ASSIGNMENT_BLOCKER,
   LAND_CLASSIFICATION_LABELS,
   LAND_PUBLIC_CLASSIFICATIONS,
   type LandPublicClassification,
@@ -75,6 +74,18 @@ export default function PlotsAndLand() {
     canonicalPlaceId,
     canonicalPlaceIds,
   });
+  const results = trpc.landPublic.search.useQuery(
+    {
+      canonicalPlaceId,
+      canonicalPlaceIds: canonicalPlaceIds.length ? canonicalPlaceIds : undefined,
+      classification: classification || undefined,
+      minPrice: numberValue(minPrice),
+      maxPrice: numberValue(maxPrice),
+      minSize: numberValue(minSize),
+      maxSize: numberValue(maxSize),
+    },
+    { enabled: !geographyIssue },
+  );
 
   useEffect(() => {
     const next = new URLSearchParams();
@@ -115,10 +126,6 @@ export default function PlotsAndLand() {
         </p>
       )}
 
-      <p role="status" className="rounded border border-sky-200 bg-sky-50 p-3 text-sm text-sky-950">
-        {LAND_CANONICAL_ASSIGNMENT_BLOCKER}
-      </p>
-
       <section
         aria-label="Land search filters"
         className="grid gap-3 rounded border bg-white p-4 sm:grid-cols-2 lg:grid-cols-4"
@@ -134,8 +141,8 @@ export default function PlotsAndLand() {
             }}
             purpose="search"
             label="Canonical Place"
-            placeholder="Choose an admitted city, town, suburb or locality"
-            hint="Land geography is selected from the admitted Place Authority."
+            placeholder="Choose an admitted locality"
+            hint="Land listings are found by their exact canonical locality."
           />
           {canonicalPlaceIds.length > 0 && (
             <p className="mt-2 text-sm text-muted-foreground">
@@ -183,15 +190,31 @@ export default function PlotsAndLand() {
           <span>Maximum extent (m²)</span>
           <Input aria-label="Maximum extent (m²)" type="number" min="1" value={maxSize} onChange={event => setMaxSize(event.target.value)} />
         </label>
-        <button
-          type="button"
-          disabled
-          title={geographyIssue?.message || LAND_CANONICAL_ASSIGNMENT_BLOCKER}
-          className="rounded bg-slate-300 px-4 py-2 font-medium text-slate-600"
-        >
-          Land search unavailable
-        </button>
       </section>
+      {results.error && (
+        <p role="alert" className="rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+          {results.error.message}
+        </p>
+      )}
+      {results.isPending && !geographyIssue && (
+        <p role="status" className="text-sm text-slate-600">Searching approved Land listings…</p>
+      )}
+      {results.data && results.data.length === 0 && !results.isPending && !geographyIssue && (
+        <p role="status" className="rounded border p-4 text-slate-600">No published Land listings match this locality yet.</p>
+      )}
+      {results.data && results.data.length > 0 && !geographyIssue && (
+        <section aria-label="Land listings" className="grid gap-4 sm:grid-cols-2">
+          {results.data.map(listing => (
+            <a key={listing.listingId} href={listing.href} className="rounded border bg-white p-4 hover:border-slate-400">
+              {listing.coverImageUrl && <img src={listing.coverImageUrl} alt="" className="mb-3 h-48 w-full rounded object-cover" />}
+              <h2 className="font-semibold">{listing.title}</h2>
+              <p className="mt-1 text-sm text-slate-600">{listing.locality}, {listing.province}</p>
+              <p className="mt-2 text-sm">{listing.classification.replace(/_/g, ' ')} · {Number(listing.extentM2).toLocaleString()} m²</p>
+              <p className="mt-1 font-medium">R {Number(listing.askingPrice).toLocaleString()}</p>
+            </a>
+          ))}
+        </section>
+      )}
     </main>
   );
 }

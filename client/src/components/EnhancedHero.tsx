@@ -595,6 +595,20 @@ export function EnhancedHero({
             ? 'Choose an admitted Place suggestion to search.'
             : null,
     );
+    if (
+      journey === 'plot_land' &&
+      location.type !== 'suburb' &&
+      resolution.outcome !== 'invalid' &&
+      resolution.outcome !== 'limit-reached'
+    ) {
+      if (location.canonicalPath) {
+        setLocation(location.canonicalPath);
+      } else {
+        setLocationSelectionNotice(
+          'This broad Place has no canonical destination page yet. Choose an exact suburb or locality.',
+        );
+      }
+    }
   };
   const runSearch = (locations = selectedLocations) => {
     setPriceRangeOpen(false);
@@ -670,8 +684,25 @@ export function EnhancedHero({
       return;
     }
     if (journey === 'plot_land') {
-      // The public hero uses `plot_land`; the canonical consumer router owns
-      // the Land URL contract and its classification allow-list.
+      // A single broad Place is routed from selection into its destination guide.
+      // The submit control remains for exact locality and sibling searches.
+      if (locations.length === 1 && locations[0].type !== 'suburb') {
+        const path = locations[0].canonicalPath;
+        if (!path) {
+          setLocationSelectionNotice(
+            'This broad Place has no canonical destination page yet. Choose an exact suburb or locality.',
+          );
+          return;
+        }
+        setLocation(path);
+        return;
+      }
+      if (locations.some(location => location.type !== 'suburb')) {
+        setLocationSelectionNotice(
+          'Choose one broad Place to explore its areas, or search selected exact localities.',
+        );
+        return;
+      }
       setLocation(
         buildConsumerJourneyUrl({
           intent: 'buy',

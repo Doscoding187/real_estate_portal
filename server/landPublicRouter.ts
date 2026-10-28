@@ -1,9 +1,14 @@
-import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { publicProcedure, router } from './_core/trpc';
-import { LAND_PUBLIC_CLASSIFICATIONS, LAND_CANONICAL_ASSIGNMENT_BLOCKER } from '../shared/land-domain';
+import { LAND_PUBLIC_CLASSIFICATIONS } from '../shared/land-domain';
 import { PLACE_ID_REGEX } from '../shared/placeAuthority';
 import { validateLandSearchGeography } from '../shared/landSearchGeography';
+import { isLandVerticalAvailable } from '../shared/landLaunchPolicy';
+import {
+  publicLandDetail,
+  publicLandGuideAreas,
+  searchPublicLand,
+} from './services/landPublicService';
 
 export const landPublicSearchInput = z
   .object({
@@ -36,42 +41,12 @@ export const landPublicSearchInput = z
     }
   });
 
-type PublicLandDetail = {
-  listingId: number;
-  title: string;
-  classification: (typeof LAND_PUBLIC_CLASSIFICATIONS)[number];
-  extentM2: number | string;
-  city: string;
-  province: string;
-  precision: 'exact' | 'approximate';
-  intendedUse: string | null;
-  description: string | null;
-  media: Array<{ url: string }>;
-  passport: {
-    trustState: string | null;
-    claims: Array<{ code: string; state: string }>;
-    assertions: Array<{
-      claimCode: string;
-      status: string;
-      sourceProvider?: string | null;
-      checkedAt?: string | Date | null;
-      publicConclusion?: string | null;
-      limitations?: string | null;
-    }>;
-  };
-  parcelCount: number;
-};
-
-function requireCanonicalLandAssignments<T = never>(): T {
-  throw new TRPCError({
-    code: 'PRECONDITION_FAILED',
-    message: LAND_CANONICAL_ASSIGNMENT_BLOCKER,
-  });
-}
-
 export const landPublicRouter = router({
-  search: publicProcedure.input(landPublicSearchInput).query(() => requireCanonicalLandAssignments()),
+  search: publicProcedure.input(landPublicSearchInput).query(({ input }) => (isLandVerticalAvailable() ? searchPublicLand(input) : [])),
+  guideAreas: publicProcedure
+    .input(z.object({ canonicalPlaceId: z.string().trim().regex(PLACE_ID_REGEX) }).strict())
+    .query(({ input }) => (isLandVerticalAvailable() ? publicLandGuideAreas(input.canonicalPlaceId) : [])),
   detail: publicProcedure
     .input(z.object({ slug: z.string().trim().min(1).max(180) }).strict())
-    .query(() => requireCanonicalLandAssignments<PublicLandDetail>()),
+    .query(({ input }) => (isLandVerticalAvailable() ? publicLandDetail(input.slug) : null)),
 });

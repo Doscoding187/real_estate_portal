@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { LAND_VERTICAL_LAUNCH_STATE } from '@shared/landLaunchPolicy';
 import {
   buildConsumerJourneyUrl,
   getConsumerJourneys,
@@ -42,15 +43,26 @@ const pretoria = {
   parentCanonicalPlaceId: 'pl-place-01-000000000000000000000010',
 };
 
+function withLandLaunchEnabled(run: () => void) {
+  const launchState = LAND_VERTICAL_LAUNCH_STATE as unknown as { enabled: boolean };
+  const previous = launchState.enabled;
+  launchState.enabled = true;
+  try {
+    run();
+  } finally {
+    launchState.enabled = previous;
+  }
+}
+
 describe('consumer journey router', () => {
   it('exposes only executable Buy choices', () => {
     expect(getConsumerJourneys('buy').map(item => item.key)).toEqual([
       'residential',
-      'land',
       'farm',
     ]);
     expect(resolveConsumerJourney('buy', 'commercial')).toBeUndefined();
-    expect(resolveConsumerJourney('buy', 'land')?.destination).toBe('/plots-and-land');
+    expect(resolveConsumerJourney('buy', 'land')).toBeUndefined();
+    expect(buildConsumerJourneyUrl({ intent: 'buy', journey: 'land' })).toBe('/plots-and-land');
   });
 
   it('keeps residential Buy semantics in the existing search authority', () => {
@@ -75,7 +87,8 @@ describe('consumer journey router', () => {
   });
 
   it('preserves one canonical Land geography authority and rejects mixed authorities', () => {
-    const requests = [
+    withLandLaunchEnabled(() => {
+      const requests = [
       {
         intent: 'buy' as const,
         journey: 'land' as const,
@@ -105,29 +118,30 @@ describe('consumer journey router', () => {
         selectedLocations: [sandton],
         searchScope: { kind: 'search_area', searchAreaId: 'area-1' } as never,
       },
-    ];
+      ];
 
-    expect(buildConsumerJourneyUrl(requests[0])).toBe(
+      expect(buildConsumerJourneyUrl(requests[0])).toBe(
       '/plots-and-land?canonicalPlaceId=pl-place-01-000000000000000000000003&classification=residential_stand',
-    );
-    expect(buildConsumerJourneyUrl(requests[1])).toBe(
+      );
+      expect(buildConsumerJourneyUrl(requests[1])).toBe(
       '/plots-and-land?canonicalPlaceId=pl-place-01-000000000000000000000002',
-    );
-    expect(buildConsumerJourneyUrl(requests[2])).toBe(
+      );
+      expect(buildConsumerJourneyUrl(requests[2])).toBe(
       '/plots-and-land?canonicalPlaceId=pl-place-01-000000000000000000000001',
-    );
-    const siblings = new URL(buildConsumerJourneyUrl(requests[3]), 'https://example.com');
-    expect(siblings.searchParams.getAll('canonicalPlaceIds')).toEqual([
+      );
+      const siblings = new URL(buildConsumerJourneyUrl(requests[3]), 'https://example.com');
+      expect(siblings.searchParams.getAll('canonicalPlaceIds')).toEqual([
       'pl-place-01-000000000000000000000002',
       'pl-place-01-000000000000000000000004',
-    ]);
-    expect(siblings.searchParams.has('city')).toBe(false);
-    expect(buildConsumerJourneyUrl(requests[4])).toBe(
+      ]);
+      expect(siblings.searchParams.has('city')).toBe(false);
+      expect(buildConsumerJourneyUrl(requests[4])).toBe(
       '/plots-and-land?searchError=unsupported-location-scope',
-    );
-    expect(buildConsumerJourneyUrl(requests[5])).toBe(
+      );
+      expect(buildConsumerJourneyUrl(requests[5])).toBe(
       '/plots-and-land?searchError=unsupported-location-scope',
-    );
+      );
+    });
   });
 
   it('routes Farms & Smallholdings to its dedicated specialist journey', () => {

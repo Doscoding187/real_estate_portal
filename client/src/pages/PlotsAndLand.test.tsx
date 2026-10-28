@@ -1,10 +1,11 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { LAND_CANONICAL_ASSIGNMENT_BLOCKER, LAND_CLASSIFICATION_LABELS, LAND_PUBLIC_CLASSIFICATIONS } from '@shared/land-domain';
+import { LAND_CLASSIFICATION_LABELS, LAND_PUBLIC_CLASSIFICATIONS } from '@shared/land-domain';
 
-const { resolveOne, resolveMany } = vi.hoisted(() => ({
+const { resolveOne, resolveMany, searchLand } = vi.hoisted(() => ({
   resolveOne: vi.fn(),
   resolveMany: vi.fn(),
+  searchLand: vi.fn(),
 }));
 
 vi.mock('@/lib/trpc', () => ({
@@ -13,6 +14,7 @@ vi.mock('@/lib/trpc', () => ({
       resolveSearchPlace: { useQuery: resolveOne },
       resolveSearchPlaces: { useQuery: resolveMany },
     },
+    landPublic: { search: { useQuery: searchLand } },
   },
 }));
 
@@ -28,7 +30,7 @@ const place = {
   placeId: 'pl-place-01-000000000000000000000001',
   label: 'Johannesburg',
   placeType: 'metropolitan_municipality',
-  searchScope: 'metro_city' as const,
+  searchScope: 'locality' as const,
   administrativeContext: 'Gauteng',
   canonicalPath: '/gauteng/johannesburg',
 };
@@ -38,11 +40,12 @@ describe('Plots & Land canonical geography boundary', () => {
     window.history.replaceState({}, '', '/plots-and-land');
     resolveOne.mockReset().mockReturnValue({ data: null });
     resolveMany.mockReset().mockReturnValue({ data: { results: [] } });
+    searchLand.mockReset().mockReturnValue({ data: [], error: null, isPending: false });
   });
 
   afterEach(() => cleanup());
 
-  it('drops retired numeric geography while preserving non-geographic filters', () => {
+  it('drops retired geography while preserving non-geographic filters', () => {
     window.history.replaceState(
       {},
       '',
@@ -57,10 +60,9 @@ describe('Plots & Land canonical geography boundary', () => {
     expect(screen.getByLabelText('Maximum price (R)')).toHaveValue(1_000_000);
     expect(screen.getByRole('alert')).toHaveTextContent('retired city, province, or numeric geography');
     expect(new URLSearchParams(window.location.search).has('locationId')).toBe(false);
-    expect(screen.getByRole('button', { name: 'Land search unavailable' })).toBeDisabled();
   });
 
-  it('resolves a canonical Place handoff and explains the missing assignment', () => {
+  it('resolves a canonical locality handoff and searches by its exact Place ID', () => {
     resolveOne.mockReturnValue({ data: place });
     window.history.replaceState({}, '', `/plots-and-land?canonicalPlaceId=${place.placeId}`);
 
@@ -70,7 +72,11 @@ describe('Plots & Land canonical geography boundary', () => {
       { placeId: place.placeId },
       expect.objectContaining({ enabled: true }),
     );
-    expect(screen.getByRole('status')).toHaveTextContent(LAND_CANONICAL_ASSIGNMENT_BLOCKER);
+    expect(searchLand).toHaveBeenCalledWith(
+      expect.objectContaining({ canonicalPlaceId: place.placeId }),
+      expect.objectContaining({ enabled: true }),
+    );
+    expect(screen.getByRole('status')).toHaveTextContent('No published Land listings match this locality yet.');
   });
 
   it('rejects unknown public classifications from the URL', () => {

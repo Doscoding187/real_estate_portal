@@ -309,6 +309,13 @@ export default function AgentListings() {
             Commercial inventory
           </Button>
           <Button
+            variant="outline"
+            onClick={() => setLocation('/agent/land/create')}
+            className={agentPageStyles.ghostButton}
+          >
+            Land listing
+          </Button>
+          <Button
             onClick={startListing}
             disabled={statusLoading || journeyAction.waiting}
             className={agentPageStyles.primaryButton}

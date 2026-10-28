@@ -5,8 +5,14 @@ const { mockGetDb } = vi.hoisted(() => ({ mockGetDb: vi.fn() }));
 vi.mock('../../db-connection', () => ({ getDb: mockGetDb }));
 
 import { transitionLandReview } from '../landWorkflowService';
+import { LAND_VERTICAL_LAUNCH_STATE, isLandVerticalAvailable } from '../../../shared/landLaunchPolicy';
 
-function databaseForApproval() {
+const CANONICAL_PLACE_ID = 'pl-place-01-000000000000000000000001';
+
+function databaseForApproval(
+  listingPlaceId: string | null = CANONICAL_PLACE_ID,
+  parcelPlaceId: string | null = CANONICAL_PLACE_ID,
+) {
   const selections = [
     [{ listingId: 9, landAssetId: 41, linkStatus: 'active' }],
     [
@@ -14,7 +20,7 @@ function databaseForApproval() {
         id: 9,
         ownerId: 77,
         askingPrice: '950000',
-        canonicalPlaceId: 'pl-place-01-000000000000000000000001',
+        canonicalPlaceId: listingPlaceId,
         city: 'Pretoria',
         province: 'Gauteng',
         title: 'Corner residential stand',
@@ -22,7 +28,7 @@ function databaseForApproval() {
       },
     ],
     [{ id: 41, classification: 'residential_stand' }],
-    [{ id: 21, extentM2: '600', canonicalPlaceId: 'pl-place-01-000000000000000000000001' }],
+    [{ id: 21, extentM2: '600', canonicalPlaceId: parcelPlaceId }],
     [],
     [
       {
@@ -81,6 +87,17 @@ function databaseForApproval() {
   };
 }
 
+async function withLandLaunchEnabled<T>(run: () => Promise<T>): Promise<T> {
+  const launchState = LAND_VERTICAL_LAUNCH_STATE as unknown as { enabled: boolean };
+  const previous = launchState.enabled;
+  launchState.enabled = true;
+  try {
+    return await run();
+  } finally {
+    launchState.enabled = previous;
+  }
+}
+
 describe('Land review approval transition', () => {
   beforeEach(() => vi.clearAllMocks());
 
@@ -94,5 +111,37 @@ describe('Land review approval transition', () => {
 
     expect(mockGetDb).not.toHaveBeenCalled();
     expect(db.updates).toEqual([]);
+  });
+
+  it('approves a listing with matching canonical locality IDs when enabled in test setup', async () => {
+    await withLandLaunchEnabled(async () => {
+      expect(isLandVerticalAvailable()).toBe(true);
+      const db = databaseForApproval();
+      mockGetDb.mockResolvedValue(db);
+
+      await expect(
+        transitionLandReview({ listingId: 9, reviewerUserId: 1, action: 'approve' }),
+      ).resolves.toBeUndefined();
+
+      expect(db.updates.length).toBeGreaterThan(0);
+    });
+  });
+
+  it.each([
+    ['missing listing Place ID', null, CANONICAL_PLACE_ID],
+    ['invalid listing Place ID', 'city:42', CANONICAL_PLACE_ID],
+    ['parcel assigned to a different Place', CANONICAL_PLACE_ID, 'pl-place-01-000000000000000000000002'],
+  ])('fails approval for %s when enabled in test setup', async (_case, listingPlaceId, parcelPlaceId) => {
+    await withLandLaunchEnabled(async () => {
+      expect(isLandVerticalAvailable()).toBe(true);
+      const db = databaseForApproval(listingPlaceId, parcelPlaceId);
+      mockGetDb.mockResolvedValue(db);
+
+      await expect(
+        transitionLandReview({ listingId: 9, reviewerUserId: 1, action: 'approve' }),
+      ).rejects.toThrow(/Land submission is not ready for approval/);
+
+      expect(db.updates).toEqual([]);
+    });
   });
 });

@@ -36,7 +36,7 @@ const land = {
   title: 'Serviced stand in Pretoria',
   description: 'A seller-described Land opportunity with an approximate public location.',
   askingPrice: '950000',
-  city: 'Pretoria',
+  locality: 'Newclare',
   province: 'Gauteng',
   classification: 'residential_stand',
   intendedUse: 'Residential development',
@@ -80,6 +80,7 @@ describe('LandDetail', () => {
       'https://cdn.example.com/stand.jpg',
     );
     expect(screen.getByText('Water: Seller declared')).toBeInTheDocument();
+    expect(screen.getByText(/Newclare, Gauteng/)).toBeInTheDocument();
     expect(screen.getByText(/remains verified and deliverable/i)).toBeInTheDocument();
     expect(screen.getByRole('status')).toHaveTextContent(
       'Recipient verification is required before direct contact.',
