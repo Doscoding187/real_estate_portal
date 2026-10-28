@@ -239,6 +239,23 @@ const appRouterConfig = {
     myProperties: publicProcedure.query(async () => {
       return [] as any[];
     }),
+    guideAreas: publicProcedure
+      .input(
+        z
+          .object({
+            canonicalPlaceId: z
+              .string()
+              .trim()
+              .max(40)
+              .refine(isPlaceId, 'Choose an approved canonical Place'),
+            listingType: z.enum(['sale', 'rent']),
+          })
+          .strict(),
+      )
+      .query(async ({ input }) => {
+        const { publicPropertyGuideAreas } = await import('./services/publicPropertyGuideService');
+        return publicPropertyGuideAreas(input.canonicalPlaceId, input.listingType);
+      }),
     /**
      * Canonical public inventory authority. Property and approved-development
      * inventory are fetched and paginated here before the browser receives a

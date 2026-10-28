@@ -52,9 +52,7 @@ function locationFromPlace(place: CanonicalPlaceSelection): LocationNode {
     ...(place.parentPlaceId ? { parentCanonicalPlaceId: place.parentPlaceId } : {}),
     ...(place.canonicalPath ? { canonicalPath: place.canonicalPath } : {}),
     selectionTypeLabel: place.placeType.replace(/_/g, ' '),
-    ...(place.administrativeContext
-      ? { selectionContextLabel: place.administrativeContext }
-      : {}),
+    ...(place.administrativeContext ? { selectionContextLabel: place.administrativeContext } : {}),
   };
 }
 
@@ -73,7 +71,9 @@ export function HomeAreaPicker({
   category?: string;
   onConfirm: (selection: HomeAreaSelection) => void;
 }) {
-  const [selectedPlace, setSelectedPlace] = useState(() => initialPlace(initialSelection.locations));
+  const [selectedPlace, setSelectedPlace] = useState(() =>
+    initialPlace(initialSelection.locations),
+  );
   const journeyLabel =
     journey === 'rent' ? 'Rent' : journey === 'developments' ? 'New developments' : 'Buy';
 
@@ -86,7 +86,8 @@ export function HomeAreaPicker({
         <DialogHeader className="text-left">
           <DialogTitle className="text-xl">Choose a Place</DialogTitle>
           <DialogDescription className="leading-6">
-            {journeyLabel}{category ? ` · ${category}` : ''}. Choose one admitted canonical Place.
+            {journeyLabel}
+            {category ? ` · ${category}` : ''}. Choose one admitted canonical Place.
           </DialogDescription>
         </DialogHeader>
         <CanonicalPlaceSelector
@@ -109,7 +110,7 @@ export function HomeAreaPicker({
               onConfirm({ locations: [locationFromPlace(selectedPlace)] });
             }}
           >
-            Search this Place
+            {selectedPlace?.scope === 'locality' ? 'Search this locality' : 'Explore areas'}
           </Button>
         </div>
       </DialogContent>

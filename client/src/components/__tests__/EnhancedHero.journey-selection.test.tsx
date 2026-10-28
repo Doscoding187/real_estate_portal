@@ -33,7 +33,9 @@ vi.mock('@/components/LocationAutosuggest', () => ({
       />
       {props.selectedLocations?.map((location: any) => (
         <span key={location.canonicalPlaceId}>
-          <span data-testid={`selected-location-${location.canonicalPlaceId}`}>{location.name}</span>
+          <span data-testid={`selected-location-${location.canonicalPlaceId}`}>
+            {location.name}
+          </span>
           <button
             type="button"
             aria-label={`Remove ${location.name}`}
@@ -286,7 +288,7 @@ describe('EnhancedHero explicit journey selection', () => {
     expect(setLocation).not.toHaveBeenCalled();
   });
 
-  it('routes a single location through the existing Buy contract after Buy is selected', () => {
+  it('routes a broad Buy selection to the Sale locality guide', () => {
     render(<EnhancedHero />);
 
     fireEvent.click(screen.getByTestId('select-johannesburg'));
@@ -300,9 +302,33 @@ describe('EnhancedHero explicit journey selection', () => {
       String(setLocation.mock.calls.at(-1)?.[0]),
       'https://listify.test',
     );
-    expect(submittedUrl.pathname).toBe('/property-for-sale');
-    expect(submittedUrl.searchParams.get('canonicalPlaceId')).toBe(johannesburgId);
+    expect(submittedUrl.pathname).toBe('/gauteng/johannesburg');
+    expect(submittedUrl.searchParams.get('mode')).toBe('sale');
     expect(submittedUrl.searchParams.getAll('locationIds')).toEqual([]);
+  });
+
+  it('routes a broad Rent selection to the Rent locality guide', () => {
+    render(<EnhancedHero activeTab="rent" />);
+
+    fireEvent.click(screen.getByTestId('select-johannesburg'));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Search', exact: true })[0]);
+
+    expect(setLocation).toHaveBeenCalledWith('/gauteng/johannesburg?mode=rent');
+  });
+
+  it('keeps an exact Rent locality on the existing exact-place search route', () => {
+    render(<EnhancedHero activeTab="rent" />);
+
+    fireEvent.click(screen.getByTestId('select-sandton'));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Search', exact: true })[0]);
+
+    const submittedUrl = new URL(
+      String(setLocation.mock.calls.at(-1)?.[0]),
+      'https://listify.test',
+    );
+    expect(submittedUrl.pathname).toBe('/property-to-rent');
+    expect(submittedUrl.searchParams.get('canonicalPlaceId')).toBe(sandtonId);
+    expect(submittedUrl.searchParams.get('mode')).toBeNull();
   });
 
   it('routes an enabled Developments selection to the canonical search URL', () => {
@@ -361,7 +387,7 @@ describe('EnhancedHero explicit journey selection', () => {
     expect(screen.queryByText('Bathrooms')).not.toBeInTheDocument();
   });
 
-  it('supports journey-first selection but waits for a canonical location', () => {
+  it('routes journey-first broad Buy selection to the Sale locality guide', () => {
     render(<EnhancedHero />);
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Buy' })[0]);
@@ -378,9 +404,7 @@ describe('EnhancedHero explicit journey selection', () => {
       .forEach(button => expect(button).not.toBeDisabled());
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Search', exact: true })[0]);
-    expect(setLocation).toHaveBeenCalledWith(
-      expect.stringContaining(`canonicalPlaceId=${johannesburgId}`),
-    );
+    expect(setLocation).toHaveBeenCalledWith('/gauteng/johannesburg?mode=sale');
   });
 
   it('exposes the governed bedroom and bathroom filters for Buy', () => {
