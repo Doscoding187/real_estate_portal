@@ -185,15 +185,23 @@ remain per their rows below.
 
 ### §4.6 Client hygiene defects (bundle: hygiene slice inside P0)
 
-1. Auth-redirect param divergence: reviews page `/login?redirect=…` vs request page
-   and shared helper `/login?next=…` (`ServiceProviderReviewsPage.tsx:372`,
-   `publicNavigation.ts:1159`).
-2. `service_provider` canonical account destination divergence:
-   `publicNavigation.ts:1190` → `/service/profile` vs `SmartDashboardRedirect.tsx:32-33` /
-   `DeveloperRoutes.tsx:37-38` → `/service/dashboard`.
-3. Uncanonicalized category slug aliases (`/services/inspection_compliance` renders
+**Resolved 2026-10-28** on `feat/services-client-hygiene-20261028` (worktree
+`property-listify-services-hygiene-20261028`):
+1. ~~Auth-redirect param divergence~~ — the Services reviews page now uses the
+   shared `next` convention (`ServiceProviderReviewsPage.tsx:372`). Out-of-scope
+   `redirect=` uses belong to other engines and stay untouched.
+2. ~~`service_provider` canonical account destination divergence~~ —
+   `getCanonicalAccountDestination` now returns `/service/dashboard`
+   (`publicNavigation.ts:1190`), matching `SmartDashboardRedirect` and
+   `DeveloperRoutes`; the dashboard's own gate continues to route unpublished
+   providers to `/service/profile`. Tests updated (`publicNavigation.test.ts`,
+   `EnhancedNavbar.account-routing.test.ts`); targeted run 2 files / 85 tests
+   pass; `pnpm check` clean.
+
+Remaining hygiene item:
+1. Uncanonicalized category slug aliases (`/services/inspection_compliance` renders
    while canonical head says `inspection-compliance`); localized page redirects,
-   category page does not — fold into DELTA-4 or the hygiene slice.
+   category page does not — folded into DELTA-4.
 
 ## §5 Maintenance
 
