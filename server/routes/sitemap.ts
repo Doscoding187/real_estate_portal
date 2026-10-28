@@ -20,6 +20,7 @@ import { COUNTRY_DISCOVERY_PATH } from '../../shared/countryDiscovery';
 import { getPublishedProvinceGuides } from '../../shared/provinceGuideContent';
 import {
   slugifyLocationSegment,
+  toProviderServiceSlug,
   toProviderSlug,
   toServiceCategorySlug,
 } from '../../shared/serviceDirectorySlugs';
@@ -262,6 +263,23 @@ router.get('/sitemap-services.xml', async (_req, res, next) => {
       priority: 0.6,
     }));
 
+    const providerServiceEntries = entries.providerServices
+      .filter(row => row.serviceCode)
+      .map(row => {
+        const serviceSlug = toProviderServiceSlug(row.serviceDisplayName, row.serviceCode);
+        if (!serviceSlug) return null;
+        return {
+          loc: toAbsoluteUrl(
+            `/services/provider/${toProviderSlug(row.companyName, row.providerId)}/service/${serviceSlug}`,
+            baseUrl,
+          ),
+          lastmod: row.updatedAt,
+          changefreq: 'weekly',
+          priority: 0.5,
+        };
+      })
+      .filter(entry => entry != null);
+
     const localizedEntries = entries.localized
       .map(row => ({
         categorySlug: toServiceCategorySlug(row.category),
@@ -278,7 +296,15 @@ router.get('/sitemap-services.xml', async (_req, res, next) => {
         priority: 0.5,
       }));
 
-    sendXml(res, buildUrlSet([...categoryEntries, ...providerEntries, ...localizedEntries]));
+    sendXml(
+      res,
+      buildUrlSet([
+        ...categoryEntries,
+        ...providerEntries,
+        ...providerServiceEntries,
+        ...localizedEntries,
+      ]),
+    );
   } catch (error) {
     next(error);
   }
