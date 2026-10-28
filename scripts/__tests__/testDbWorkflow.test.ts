@@ -26,7 +26,7 @@ describe('canonical local test database rebuild guards', () => {
   });
 
   it('rejects remote and non-loopback hosts', () => {
-    for (const host of ['localhost', 'mysql.example.test', 'gateway01.tidbcloud.com']) {
+    for (const host of ['localhost', 'mysql.example.test', 'remote.mysql.example.com']) {
       expect(() =>
         assertTestDatabaseTarget({
           ...baseEnv,

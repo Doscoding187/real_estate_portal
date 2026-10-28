@@ -207,7 +207,7 @@ describe('historical rehearsal connection boundary (mock transport, no live DB)'
     'refuses %s before fixture mutation',
     async kind => {
       if (kind === 'dirty') mocks.dirty = true;
-      if (kind === 'version') mocks.sqlVersion = '8.0.11-TiDB';
+      if (kind === 'version') mocks.sqlVersion = '8.0.11-UnsupportedProvider';
       if (kind === 'database') mocks.selected = 'listify_property_sa';
       if (kind === 'tls') mocks.tls = '';
       const { a, d } = authority();

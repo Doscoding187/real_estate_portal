@@ -4,7 +4,7 @@
  * IMPORTANT:
  * - Your current Drizzle schema exports do NOT include `contentTopics` or `exploreShorts`.
  * - This file MUST NOT import them, or the server will crash on boot.
- * - We use raw SQL so the app can boot on MySQL/TiDB even if tables are unfinished.
+ * - We use raw SQL so the app can boot on MySQL even if optional tables are unfinished.
  */
 
 import { db } from '../db';

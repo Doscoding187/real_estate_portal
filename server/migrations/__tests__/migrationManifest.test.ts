@@ -4,7 +4,6 @@ import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
-  assertTidbCompatibleMigrationSql,
   loadAndValidateMigrationManifest,
   parseSqlStatements,
   type MigrationManifestDocument,
@@ -68,32 +67,6 @@ afterEach(() => {
 });
 
 describe('canonical migration manifest', () => {
-  it.each([
-    ['trigger', 'CREATE TRIGGER immutable_widget BEFORE UPDATE ON widget FOR EACH ROW SET @x = 1;'],
-    ['procedure', 'CREATE PROCEDURE rebuild_widget() SELECT 1;'],
-    ['function', 'CREATE FUNCTION widget_value() RETURNS INT RETURN 1;'],
-    ['event', 'CREATE EVENT rebuild_widget ON SCHEDULE EVERY 1 DAY DO SELECT 1;'],
-    ['delimiter', 'DELIMITER $$\nCREATE TABLE widget_two (id int)$$'],
-  ])('rejects TiDB-unsupported %s migration primitives', (_label, sql) => {
-    expect(() => assertTidbCompatibleMigrationSql(sql)).toThrow('TiDB compatibility guard');
-  });
-
-  it('does not confuse ordinary table or column names with stored programs', () => {
-    expect(() =>
-      assertTidbCompatibleMigrationSql(
-        'CREATE TABLE scheduled_events (trigger_stage varchar(32), event_name varchar(64));',
-      ),
-    ).not.toThrow();
-  });
-
-  it('rejects a TiDB ALTER TABLE job that creates columns with dependent keys or constraints', () => {
-    expect(() =>
-      assertTidbCompatibleMigrationSql(
-        'ALTER TABLE leads ADD COLUMN capture_request_id varchar(128), ADD UNIQUE KEY uq_leads_capture_request (capture_request_id);',
-      ),
-    ).toThrow('sequence them as separate statements');
-  });
-
   it('accepts the integrated repository 0000 -> 0007 manifest with exact ancestry', () => {
     const manifest = loadAndValidateMigrationManifest({
       migrationsDirectory: resolve('server/migrations'),
@@ -335,10 +308,10 @@ describe('canonical migration manifest', () => {
       approvalReference: 'DBX-PRELAUNCH-LEAD-DELIVERY-RELATIONAL-2026-09-09-Edward',
     });
     expect(leadDeliveryRelational?.statementCount).toBe(3);
-    const tidbSequenced = manifest.orderedMigrations.filter(
+    const historicalCompatibilityApproved = manifest.orderedMigrations.filter(
       entry => entry.approvalReference === 'DBX-TIDB-INCREMENTAL-DDL-SEQUENCING-2026-09-04-Edward',
     );
-    expect(tidbSequenced.map(entry => entry.filename)).toEqual([
+    expect(historicalCompatibilityApproved.map(entry => entry.filename)).toEqual([
       '0003_canonical_property_measurements.sql',
       '0004_canonical_listing_location.sql',
       '0011_catalogue_publisher_developments.sql',
@@ -350,7 +323,7 @@ describe('canonical migration manifest', () => {
       '0034_listing_lead_association.sql',
       '0050_commercial_asset_physical_location.sql',
     ]);
-    expect(tidbSequenced.map(entry => entry.statementCount)).toEqual([
+    expect(historicalCompatibilityApproved.map(entry => entry.statementCount)).toEqual([
       4, 15, 3, 3, 3, 4, 3, 3, 3, 3,
     ]);
     expect(manifest.expectedHead.filename).toBe('0157_developments_canonical_place_only.sql');

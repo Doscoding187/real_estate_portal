@@ -4,7 +4,7 @@ description: Route Property Listify database-bearing work through the canonical 
 allowed-tools: Read, Grep, Glob, Bash, Edit, Write
 metadata:
   owner: property-listify
-  version: 1.2.0
+  version: 1.2.1
   status: active
   risk_tier: instruction-only
   provenance: original
@@ -76,8 +76,10 @@ them:
 - `docs/database-authority/database-change-protocol.md`
 
 Archived migrations are historical evidence only. Generic PostgreSQL, Prisma,
-or schema-design advice never overrides Property Listify’s MySQL/TiDB, Drizzle,
-manifest, and migration-led authority.
+or schema-design advice never overrides Property Listify’s MySQL-only, Drizzle,
+manifest, and migration-led authority. The intended hosted product is Azure
+Database for MySQL; Azure SQL Database is SQL Server and is not an application
+target.
 
 ## Start with a short routing record
 
@@ -106,7 +108,7 @@ For a `staging` or `production` operation using the `migration` credential
 class, the authority requires `DATABASE_MIGRATION_URL` in the current process
 environment. That URL must:
 
-- use the approved MySQL/TiDB target with the identical host, port, and
+- use the approved MySQL target with the identical host, port, and
   database fingerprint as `DATABASE_URL`;
 - use a distinct non-empty database username and password from the runtime
   URL; and
@@ -149,11 +151,11 @@ permission.
    anything. Never use ad hoc DDL, `db:push`, or mix this work into an unrelated
    feature PR.
 
-5. **Protected release or recovery** — staging, production, Railway, or TiDB
-   target; live reference data; release migration; provider capability; failed
-   attempt; import, restore, repair, or convergence. Treat it as protected even
-   when a browser console or container shell is available. A read-only plan is
-   not approval to apply.
+5. **Protected release or recovery** — staging, production, or an unsupported
+   database provider; live reference data; release migration; failed attempt;
+   import, restore, or repair. Treat it as protected even when a browser
+   console or container shell is available. A read-only plan is not approval
+   to apply.
 
 ## Mandatory startup for categories 2–5
 
@@ -164,7 +166,7 @@ permission.
 4. Resolve the approved command, operation, target class, credential class,
    and manifest head through repository authority. Do not derive them from a
    pasted connection command or a remembered environment variable.
-5. Stop before a remote, unknown, production, staging, Railway, or TiDB target
+5. Stop before a remote, unknown, production, staging, or unsupported-provider target
    without explicit operation/fingerprint approval; unsafe permissions;
    conflicting local configuration; missing required values; or disagreeing
    authority files. Never print secrets or complete credential-bearing URLs.
@@ -227,10 +229,10 @@ running, blocked, incomplete, foreign, unknown, or non-congruent state.
   visible progress.
 - Never repair a ledger row, delete attempt evidence, or import data to make a
   dashboard look healthy.
-- A zero-statement rejected migration can proceed only through its explicitly
-  reviewed named recovery path in the change protocol.
-- A TiDB capability mismatch or missing CHECK constraint is a provider
-  convergence incident, not permission to replay history or weaken a model.
+- No standing migration recovery command exists. Preserve failed-attempt
+  evidence and stop until a separate MySQL-only incident contract is reviewed.
+- TiDB-specific integration, recovery, and convergence paths are retired. Do
+  not reintroduce them as fallbacks or alternate authorities.
 - If canonical authority and runtime code disagree, stop product work long
   enough to audit and reconcile the consumer to the canonical model.
 

@@ -55,7 +55,7 @@ describe('database final closure residual executor authority', () => {
 
     const manual = manifest.manualUtilityAuthority;
 
-    expect(manifest.version).toBe(11);
+    expect(manifest.version).toBe(12);
     expect(manual.directSchemaCandidateClasses['deferred schema executor']).toEqual([]);
     expect(manual.deferredGap3Utilities).toEqual([]);
 
@@ -159,9 +159,6 @@ describe('database final closure residual executor authority', () => {
 
     expect(probeFiles).toEqual([
       'server/_core/databaseAuthority/' + 'b08AzureInspectionIdentity.ts',
-      // Bounded source-only preservation, never runtime schema selection.
-      'server/_core/databaseAuthority/' + 'sourceArchive.ts',
-      'server/_core/databaseAuthority/' + 'tidbCheckConstraintCapability.ts',
       'server/services/' + 'runtimeSchemaCapabilities.ts',
     ]);
   });

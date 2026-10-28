@@ -55,13 +55,16 @@ describe('database governance authority', () => {
     }
   });
 
-  it('lists only the current approved compatibility exceptions', () => {
-    expect(exceptions).toContain('## Current approved exceptions');
+  it('keeps active exceptions distinct from historical TiDB approvals', () => {
+    expect(exceptions).toContain('## Compatibility exception records');
     expect(exceptions).toContain(
       '### Exception ID: DBX-PLE-2B-property-taxonomy-enum-expansion',
     );
     expect(exceptions).toContain('Status: Approved for the PLE-2B implementation slice');
-    expect(exceptions).not.toContain('\nNone.\n');
+    expect(exceptions.replace(/\s+/g, ' ')).toContain(
+      'All `DBX-TIDB-*` entries below are historical approval evidence',
+    );
+    expect(exceptions.match(/Status: Historical approval;[^\n]*/g)?.length).toBeGreaterThan(0);
     expect(exceptions.replace(/\s+/g, ' ')).toContain(
       'does not gain approval from historical presence',
     );

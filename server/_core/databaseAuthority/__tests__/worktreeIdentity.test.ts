@@ -61,7 +61,7 @@ describe('runtime worktree identity', () => {
         RAILWAY_GIT_COMMIT_SHA: 'b'.repeat(40),
         DATABASE_CREDENTIAL_CLASS: 'runtime',
         DATABASE_URL:
-          'mysql://runtime:secret@tidb.example.test:4000/listify_property_sa?sslaccept=strict',
+          'mysql://runtime:secret@remote.mysql.example.test:4000/listify_property_sa?sslaccept=strict',
       },
     });
 

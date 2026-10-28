@@ -1,5 +1,5 @@
 {
-  "version": 11,
+  "version": 12,
   "canonicalAuthority": {
     "productionCommand": "pnpm db:release:apply",
     "testCommand": "pnpm db:migrate:test",
@@ -130,7 +130,6 @@
       "scripts/show-create-unit-types.ts",
       "scripts/verify-schema.ts",
       "server/create-test-db.ts",
-      "server/migrations/recoverTidbCheckConstraintConvergence.ts",
       "server/scripts/apply-approval-schema.ts",
       "server/scripts/create-local-db.ts",
       "server/scripts/debug-schema.ts",
@@ -225,9 +224,7 @@
       ],
       "deferred schema executor": [],
       "controlled data repair": [],
-      "approved protected release recovery": [
-        "server/migrations/recoverTidbCheckConstraintConvergence.ts"
-      ],
+      "approved protected release recovery": [],
       "verification or diagnostic": [
         "scripts/db-contract-verify.ts",
         "scripts/schema-sanity-check.mjs"
@@ -242,9 +239,7 @@
       "scripts/db-verify-distribution-schema.ts",
       "scripts/schema-sanity-check.mjs"
     ],
-    "approvedProtectedReleaseRecoveries": [
-      "server/migrations/recoverTidbCheckConstraintConvergence.ts"
-    ],
+    "approvedProtectedReleaseRecoveries": [],
     "approvedLocalTestInitialization": [
       "docker/mysql-local/init/01-create-local-databases.sql",
       "scripts/testDbWorkflow.ts"
@@ -690,7 +685,7 @@
     {
       "path": "server/migrations/0001_public_search_to_lead_reliability_sequenced.sql",
       "classification": "canonical active",
-      "purpose": "Reviewed TiDB-safe additive consent, idempotency, and lead-delivery state for the public search-to-lead journey, with the unique index applied after its new columns."
+      "purpose": "Sequenced additive consent, idempotency, and lead-delivery state for the public search-to-lead journey, with the unique index applied after its new columns."
     },
     {
       "path": "server/migrations/0002_canonical_property_taxonomy.sql",
@@ -915,7 +910,7 @@
     {
       "path": "server/migrations/0046_commercial_office_quote_terms_sequenced.sql",
       "classification": "canonical active",
-      "purpose": "Adds explicit Commercial quote mode and VAT treatment for Office leasing through separately executable TiDB-safe column expansions."
+      "purpose": "Adds explicit Commercial quote mode and VAT treatment for Office leasing through separately executable column expansions."
     },
     {
       "path": "server/migrations/0047_commercial_gross_rental_component.sql",
@@ -1258,7 +1253,7 @@
     {
       "path": "server/migrations/0105_saved_searches_canonical_place_reference_fk.sql",
       "classification": "canonical active",
-      "purpose": "Place Authority Slice 3: adds the ON DELETE RESTRICT foreign key for saved_searches.place_id, sequenced after 0098 because TiDB refuses a single ALTER that both introduces a column and adds a dependent constraint.",
+      "purpose": "Place Authority Slice 3: adds the ON DELETE RESTRICT foreign key for saved_searches.place_id in a separately verifiable migration after the column introduction.",
       "approvedFiles": [
         "server/migrations/0105_saved_searches_canonical_place_reference_fk.sql"
       ]
@@ -1530,17 +1525,7 @@
     {
       "path": "server/migrations/migrationManifest.ts",
       "classification": "canonical supporting",
-      "purpose": "Validates canonical migration membership, lineage, statement policy, and TiDB-safe additive DDL sequencing before any plan or apply operation."
-    },
-    {
-      "path": "server/migrations/recoverRejectedReleaseCommercialQuoteTermsMigration.ts",
-      "classification": "canonical supporting",
-      "purpose": "Provides the bounded protected release recovery for the reviewed zero-statement TiDB 0046 quote-terms failure; it changes only durable review evidence and never executes rejected SQL."
-    },
-    {
-      "path": "server/migrations/recoverTidbCheckConstraintConvergence.ts",
-      "classification": "canonical supporting",
-      "purpose": "Provides the one reviewed protected TiDB CHECK-constraint convergence: it verifies the canonical head and violation-free physical state, enables TiDB CHECK enforcement, and adds only the 22 canonical checks under the migration lock with durable evidence."
+      "purpose": "Validates canonical MySQL migration membership, lineage, statement policy, and checksums before any plan or apply operation."
     },
     {
       "path": "server/routes/SELECT id, name, userId.sql",
