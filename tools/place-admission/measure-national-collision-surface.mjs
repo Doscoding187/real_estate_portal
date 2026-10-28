@@ -7,16 +7,16 @@
  * property a national load cannot compromise.
  *
  * The within-province same-name pairs are measured but never fail the gate, and the
- * reason is the point: they are not duplicates waiting to be merged. 614 admitted
+ * reason is the point: they are not duplicates waiting to be merged. 613 admitted
  * pairs share a parent and a normalized name. 32 sit under the 15 km governed
  * merge bound and every one differs in place_type (a town and the municipality that
- * contains it share a name by ordinary geography); the other 582 are at or past the
+ * contains it share a name by ordinary geography); the other 581 are at or past the
  * bound. An earlier draft of this file called them "duplicates that should already
  * have merged", which asserted a defect the evidence contradicts, and it exited 0
  * even on real ID collisions. Both were wrong.
  *
  * The measurement also exists to show that adding place_type to the key does not
- * rescue a uniqueness constraint: 500 of the 614 pairs share a type as well, so
+ * rescue a uniqueness constraint: 500 of the 613 pairs share a type as well, so
  * UNIQUE(parent, normalized_name, place_type) is violated too. `place_id` alone is
  * the identity.
  *
@@ -105,7 +105,7 @@ const args = new Set(process.argv.slice(2));
  *    All members are collected per key first and pairs enumerated afterwards. An
  *    earlier draft paired each newcomer only against the first member, which silently
  *    undercounts any group of three or more and reported 500 pairs where full
- *    enumeration gives 614. */
+ *    enumeration gives 613. */
 const keyGroups = new Map();
 let orphans = 0;
 for (const name of names) {

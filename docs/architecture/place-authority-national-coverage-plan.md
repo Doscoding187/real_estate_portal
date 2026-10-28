@@ -69,23 +69,24 @@ it has guessed.
 
 This is the finding most likely to surprise, and it is not a defect.
 
-**614 admitted pairs share a parent and a normalized name.** They are deliberately
+**613 admitted pairs share a parent and a normalized name.** They are deliberately
 unmerged Places:
 
 - **32 pairs** are under the 15 km governed merge bound, and **every one of them
   differs in place type**. Oudtshoorn is both a local municipality and a town
   2.2 km from its own seat. Stellenbosch is a town and a local municipality 7.3 km
   apart. Mandeni, Nkandla, Nongoma and Umvoti are the same pattern.
-- **582 pairs** are at or beyond the bound and correctly remain separate Places,
-  including 310 more than 50 km apart.
+- **581 pairs** are at or beyond the bound and correctly remain separate Places,
+  including 309 more than 50 km apart.
 
 A town and the municipality that contains it sharing a name is normal South African
 geography, not a duplicate. The merge rule requires same name **and** same type
 **and** same administrative context; it is type-aware, and this is it working.
 
-So `UNIQUE(parent, normalized_name)` would fail on 614 rows that are correct as
-admitted. Any national schema must key on something that tolerates a name repeated
-under one parent at two types, or accept that the constraint is approximate.
+So `UNIQUE(parent, normalized_name)` cannot hold across the dataset: it encounters
+613 valid within-province pairs that share the key. Any national schema must key on
+something that tolerates a name repeated under one parent at two types, or accept
+that the constraint is approximate.
 
 ## 4. What a combined load must guarantee
 

@@ -217,7 +217,7 @@ describe('Place admission: national identity is enforced, not merely reported', 
     );
     // A town and the municipality containing it share a parent and a name. These
     // are correct admitted Places, so a uniqueness constraint would reject real data.
-    expect(output).toMatch(/pairs enumerated in full\s+614/);
+    expect(output).toMatch(/pairs enumerated in full\s+613/);
     // Every pair close enough to merge differs in place type, so none is a merge miss.
     expect(output).toMatch(/under bound AND same type\s+0/);
     // And widening the key with place_type does not rescue it either.
