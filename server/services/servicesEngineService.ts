@@ -3521,10 +3521,11 @@ export class ServicesEngineService {
   async listServiceSitemapEntries(): Promise<{
     providers: ServiceSitemapProviderEntry[];
     localized: ServiceSitemapLocalizedEntry[];
+    providerServices: ServiceSitemapProviderServiceEntry[];
   }> {
     const db = await getDb();
     if (!db) {
-      return { providers: [], localized: [] };
+      return { providers: [], localized: [], providerServices: [] };
     }
 
     const eligibility = and(
@@ -3587,6 +3588,37 @@ export class ServicesEngineService {
         serviceProviderLocations.province,
       );
 
+    const providerServiceRows = await db
+      .select({
+        providerId: partners.id,
+        companyName: partners.companyName,
+        serviceCode: serviceProviderServices.serviceCode,
+        serviceDisplayName: serviceProviderServices.displayName,
+        updatedAt: serviceProviderProfiles.updatedAt,
+      })
+      .from(serviceProviderServices)
+      .innerJoin(partners, eq(partners.id, serviceProviderServices.providerId))
+      .innerJoin(
+        serviceProviderProfiles,
+        eq(serviceProviderProfiles.providerId, serviceProviderServices.providerId),
+      )
+      .leftJoin(
+        serviceProviderSubscriptions,
+        eq(serviceProviderSubscriptions.providerId, serviceProviderServices.providerId),
+      )
+      .where(
+        and(
+          eligibility,
+          eq(serviceProviderServices.isActive, 1),
+          sql`EXISTS (SELECT 1 FROM ${serviceProviderLocations} loc WHERE loc.provider_id = ${partners.id} AND (NULLIF(TRIM(loc.province), '') IS NOT NULL OR NULLIF(TRIM(loc.city), '') IS NOT NULL OR NULLIF(TRIM(loc.suburb), '') IS NOT NULL))`,
+        ),
+      )
+      .orderBy(
+        serviceProviderServices.providerId,
+        serviceProviderServices.displayName,
+        serviceProviderServices.id,
+      );
+
     return {
       providers: providerRows.map(row => ({
         providerId: Number(row.providerId),
@@ -3597,6 +3629,13 @@ export class ServicesEngineService {
         category: String(row.category || ''),
         city: String(row.city || '').trim(),
         province: String(row.province || '').trim(),
+      })),
+      providerServices: providerServiceRows.map(row => ({
+        providerId: Number(row.providerId),
+        companyName: String(row.companyName || '').trim(),
+        serviceCode: String(row.serviceCode || '').trim(),
+        serviceDisplayName: String(row.serviceDisplayName || '').trim(),
+        updatedAt: row.updatedAt ? String(row.updatedAt) : null,
       })),
     };
   }
@@ -3661,6 +3700,14 @@ type ServiceSitemapLocalizedEntry = {
   category: string;
   city: string;
   province: string;
+};
+
+type ServiceSitemapProviderServiceEntry = {
+  providerId: number;
+  companyName: string;
+  serviceCode: string;
+  serviceDisplayName: string;
+  updatedAt: string | null;
 };
 
 export const servicesEngineService = new ServicesEngineService();

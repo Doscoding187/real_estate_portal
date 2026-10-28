@@ -18,7 +18,9 @@ import {
   formatCategoryLabel,
   serviceCategoryFromSlug,
   serviceJourneyContextFromSearch,
+  buildProviderServicePath,
   buildServiceRequestPath,
+  toProviderServiceSlug,
   type ServiceCategory,
 } from '@/features/services/catalog';
 import { formatResponseLatency } from '@/features/services/leadMetrics';
@@ -481,7 +483,15 @@ export default function ServiceProviderProfilePage() {
                 </p>
                 <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {profile.services.map(service => (
-                    <article key={service.code} className={`${servicesUi.surface} p-5`}>
+                    <Link
+                      key={service.code}
+                      href={buildProviderServicePath(
+                        slug,
+                        toProviderServiceSlug(service.displayName, service.code),
+                        search,
+                      )}
+                      className={`${servicesUi.surface} block p-5 transition hover:border-[#168363]`}
+                    >
                       <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#168363]">
                         {formatCategoryLabel(service.category as ServiceCategory)}
                       </p>
@@ -498,7 +508,11 @@ export default function ServiceProviderProfilePage() {
                           ? formatPriceRange(service.minPrice, service.maxPrice)
                           : 'Price on request'}
                       </p>
-                    </article>
+                      <p className="mt-2 inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#168363]">
+                        View service page
+                        <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+                      </p>
+                    </Link>
                   ))}
                 </div>
                 {profile.services.length === 0 && (

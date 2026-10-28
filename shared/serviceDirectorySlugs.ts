@@ -7,8 +7,8 @@ export function slugifyLocationSegment(value: string) {
     .trim()
     .toLowerCase()
     .replace(/[_\s]+/g, '-')
-    .replace(/-+/g, '-')
     .replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-')
     .replace(/^-+|-+$/g, '');
 }
 
@@ -22,4 +22,9 @@ export function toProviderSlug(companyName: string, providerId: number) {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/(^-|-$)/g, '');
   return `${stem || 'provider'}--${providerId}`;
+}
+
+export function toProviderServiceSlug(displayName: string, code: string) {
+  const stem = slugifyLocationSegment(displayName) || slugifyLocationSegment(code) || 'service';
+  return stem;
 }

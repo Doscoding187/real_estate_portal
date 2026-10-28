@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { SERVICE_CATEGORY_VALUES } from '../../drizzle/schema';
 import {
   slugifyLocationSegment,
+  toProviderServiceSlug,
   toProviderSlug,
   toServiceCategorySlug,
 } from '../../shared/serviceDirectorySlugs';
@@ -30,5 +31,12 @@ describe('service slug parity authority', () => {
     expect(slugifyLocationSegment('Western_Cape -- coast')).toBe('western-cape-coast');
     expect(slugifyLocationSegment('Cape Town')).toBe('cape-town');
     expect(slugifyLocationSegment('!)).')).toBe('');
+  });
+
+  it('builds per-provider service page slugs from display name with a code fallback', () => {
+    expect(toProviderServiceSlug('Home moving service', 'home_move')).toBe('home-moving-service');
+    expect(toProviderServiceSlug('  ', '电气 wires')).toBe('wires');
+    expect(toProviderServiceSlug('', 'Insurance / Feasibility')).toBe('insurance-feasibility');
+    expect(toProviderServiceSlug('!!!', '   ')).toBe('service');
   });
 });

@@ -1,11 +1,13 @@
 import {
   slugifyLocationSegment,
+  toProviderServiceSlug,
   toProviderSlug,
   toServiceCategorySlug,
 } from '../../../../shared/serviceDirectorySlugs';
 
 export {
   slugifyLocationSegment,
+  toProviderServiceSlug,
   toProviderSlug,
   toServiceCategorySlug,
 } from '../../../../shared/serviceDirectorySlugs';
@@ -256,6 +258,26 @@ export function buildProviderProfilePath(
   });
   const query = params.toString();
   return `/services/provider/${encodeURIComponent(slug)}${query ? `?${query}` : ''}`;
+}
+
+export function buildProviderServicePath(
+  slug: string,
+  serviceSlug: string,
+  search = '',
+  context: ServiceJourneyContext = {},
+) {
+  const params = new URLSearchParams(search);
+  for (const key of SERVICE_JOURNEY_QUERY_KEYS) {
+    params.delete(key);
+  }
+  setServiceJourneyContext(params, {
+    ...serviceJourneyContextFromSearch(search),
+    ...context,
+  });
+  const query = params.toString();
+  return `/services/provider/${encodeURIComponent(
+    slug,
+  )}/service/${encodeURIComponent(serviceSlug)}${query ? `?${query}` : ''}`;
 }
 
 export function serviceCategoryFromSlug(slug: string): ServiceCategory | null {
