@@ -166,6 +166,16 @@ describeWithDb('Developer development publication lifecycle integration', () => 
     const db = await getDb();
     if (!db) return;
 
+    const developmentIds = fixtures.flatMap(fixture => fixture.developmentIds);
+    if (developmentIds.length > 0) {
+      // Assignments reference both the development and the reviewing user.
+      // Clear them before deleting any fixture user, including a reviewer
+      // whose fixture has no development of its own.
+      await db
+        .delete(developmentPlaceAssignments)
+        .where(inArray(developmentPlaceAssignments.developmentId, developmentIds));
+    }
+
     while (fixtures.length > 0) {
       const fixture = fixtures.pop()!;
       if (fixture.developmentIds.length > 0) {
@@ -173,9 +183,6 @@ describeWithDb('Developer development publication lifecycle integration', () => 
           .delete(developmentApprovalQueue)
           .where(inArray(developmentApprovalQueue.developmentId, fixture.developmentIds));
         await db.delete(leads).where(inArray(leads.developmentId, fixture.developmentIds));
-        await db
-          .delete(developmentPlaceAssignments)
-          .where(inArray(developmentPlaceAssignments.developmentId, fixture.developmentIds));
         await db.delete(unitTypes).where(inArray(unitTypes.developmentId, fixture.developmentIds));
         await db.delete(developments).where(inArray(developments.id, fixture.developmentIds));
       }

@@ -134,10 +134,12 @@ describe('Slice 3: discovery resolves canonical identity', () => {
 
   it('refuses to collapse an ambiguous exact preferred name to one canonical Place', async () => {
     const response = await discoverPlaces('Diepkloof', { recordCoverage: false });
-    // "Diepkloof" is two distinct admitted Places, so this must be ambiguous
+    // "Diepkloof" is three distinct admitted Places, so this must be ambiguous
     // rather than collapsed to the first row the database happened to return.
     expect(response.outcome).toBe('ambiguous');
-    expect(response.results).toHaveLength(2);
+    expect(response.results.map(result => result.placeId).sort()).toEqual(
+      [...requiredDiepkloofPlaceIds].sort(),
+    );
     for (const result of response.results) {
       expect(result.placeId).toMatch(/^pl-place-01-[a-f0-9]{24}$/);
       expect(result.searchScope).not.toBeNull();

@@ -259,7 +259,7 @@ async function insertUser(
 async function canonicalSandtonLocation() {
   return {
     canonicalPlaceId: CANONICAL_SANDTON_PLACE_ID,
-    label: 'Sandton, Johannesburg, Gauteng',
+    label: 'Sandton, Gauteng',
   };
 }
 
