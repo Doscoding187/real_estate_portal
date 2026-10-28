@@ -369,7 +369,7 @@ export default function ServiceProviderReviewsPage() {
                   can submit a review for moderation.
                 </p>
                 <Link
-                  href={`/login?redirect=${encodeURIComponent(`/services/reviews/${routeProviderId}`)}`}
+                  href={`/login?next=${encodeURIComponent(`/services/reviews/${routeProviderId}`)}`}
                   className={`${servicesUi.action} mt-4 w-full`}
                 >
                   Sign in to review
