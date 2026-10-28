@@ -204,7 +204,7 @@ describe('catalog-bound protected geography release', () => {
     expect(f.snapshot.provinces).toHaveLength(0);
   });
   it.each([
-    'gateway01.ap-northeast-1.prod.aws.tidbcloud.com',
+    'unsupported.mysql.example.com',
     'other.mysql.database.azure.com',
     'pl-azure84-rehearsal-20260928.mysql.database.azure.com',
   ])('refuses non-target %s', async host => {

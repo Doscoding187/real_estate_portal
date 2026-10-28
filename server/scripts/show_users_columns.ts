@@ -13,7 +13,7 @@ async function main() {
 
   console.log('\n--- USERS TABLE COLUMNS ---');
 
-  // Works on MySQL/TiDB
+  // MySQL column metadata query.
   const r: any = await db.execute(sql`SHOW COLUMNS FROM users`);
 
   const rows = r?.rows ?? (Array.isArray(r) ? r : []);

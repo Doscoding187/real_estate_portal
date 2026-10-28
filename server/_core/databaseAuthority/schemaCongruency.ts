@@ -2,7 +2,6 @@ import { createHash } from 'node:crypto';
 import { is, SQL } from 'drizzle-orm';
 import { getTableConfig, MySqlDialect, MySqlTable } from 'drizzle-orm/mysql-core';
 import type { AuthoritySqlConnection } from './connectionAuthority';
-import { readTiDbCheckConstraintCapability } from './tidbCheckConstraintCapability';
 
 export const RUNNER_CONTROL_TABLES = Object.freeze([
   'sql_migration_history',
@@ -37,11 +36,6 @@ export type NormalizedForeignKey = {
 export type NormalizedCheck = {
   name: string;
   expression: string;
-  /**
-   * MySQL reports this per constraint. TiDB exposes enforcement as a cluster
-   * capability, so its value is applied consistently to every discovered
-   * constraint after the capability has been read.
-   */
   enforced: boolean;
 };
 
@@ -188,8 +182,8 @@ export function normalizeSqlExpression(value: string): string {
       pendingWhitespace = true;
       continue;
     }
-    // MySQL/TiDB can prefix a string literal with its character set. Drop the
-    // provider rendering only when it appears outside a literal and at a token
+    // MySQL can prefix a string literal with its character set. Drop the
+    // rendering only when it appears outside a literal and at a token
     // boundary; literal content such as 'note _utf8mb4' must stay untouched.
     const charsetIntroducer = value.slice(index).match(/^_utf8mb4\\?'/i);
     const previousSourceCharacter = value[index - 1] ?? '';
@@ -709,11 +703,14 @@ function normalizedCheckEnforcement(value: unknown): boolean | null {
 
 export async function normalizedPhysicalSchema(
   connection: AuthoritySqlConnection,
-  provider: 'mysql' | 'tidb' | 'unknown' = 'unknown',
+  provider: 'mysql' | 'unknown' = 'mysql',
   desired?: NormalizedSchema,
 ): Promise<NormalizedSchema> {
+  if (provider !== 'mysql') {
+    throw new Error('Physical schema inspection requires the canonical MySQL provider.');
+  }
   let lowerCaseTableNames = 0;
-  if (provider === 'mysql' && desired) {
+  if (desired) {
     const settingRows = await queryRows(
       connection,
       'SELECT @@global.lower_case_table_names AS lower_case_table_names',
@@ -858,47 +855,22 @@ export async function normalizedPhysicalSchema(
       });
     }
   };
-  let portableCheckRows: Array<Record<string, unknown>> = [];
-  let portableInventoryError: unknown = null;
+  let portableCheckRows: Array<Record<string, unknown>>;
   try {
     portableCheckRows = await queryRows(
       connection,
       "SELECT tc.TABLE_NAME AS table_name, tc.CONSTRAINT_NAME AS constraint_name, cc.CHECK_CLAUSE AS check_clause, tc.ENFORCED AS enforced FROM information_schema.TABLE_CONSTRAINTS tc INNER JOIN information_schema.CHECK_CONSTRAINTS cc ON cc.CONSTRAINT_SCHEMA = tc.CONSTRAINT_SCHEMA AND cc.CONSTRAINT_NAME = tc.CONSTRAINT_NAME WHERE tc.CONSTRAINT_SCHEMA = DATABASE() AND tc.CONSTRAINT_TYPE = 'CHECK' ORDER BY tc.TABLE_NAME, tc.CONSTRAINT_NAME",
     );
   } catch (error) {
-    // Some TiDB versions do not support the portable MySQL CHECK inventory;
-    // retain the failure and require the provider inventory to supply proof.
-    portableInventoryError = error;
+    throw new Error(
+      `MySQL CHECK metadata could not be read from the canonical information_schema inventory: ${error instanceof Error ? error.message : 'unknown error'}`,
+    );
   }
   addCheckRows(portableCheckRows);
-  // TiDB's provider-specific inventory includes the owning table. Merge it
-  // with the portable catalog instead of treating a partial portable result as
-  // authoritative. MySQL-compatible providers that do not expose this view
-  // simply reject the read and retain their portable evidence.
-  let tidbCheckRows: Array<Record<string, unknown>> = [];
-  let tidbInventoryError: unknown = null;
-  try {
-    tidbCheckRows = await queryRows(
-      connection,
-      'SELECT TABLE_NAME AS table_name, CONSTRAINT_NAME AS constraint_name, CHECK_CLAUSE AS check_clause FROM information_schema.TIDB_CHECK_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE() ORDER BY TABLE_NAME, CONSTRAINT_NAME',
-    );
-  } catch (error) {
-    // Non-TiDB providers do not expose this inventory. It is safe to rely on
-    // the portable inventory only when that inventory itself was readable.
-    tidbInventoryError = error;
-  }
-  if (portableInventoryError && tidbInventoryError) {
-    throw new Error(
-      'Physical CHECK metadata could not be read from either the portable or TiDB inventory.',
-    );
-  }
-  addCheckRows(tidbCheckRows);
-  const tidbCapability =
-    provider === 'tidb' ? await readTiDbCheckConstraintCapability(connection, provider) : null;
   for (const row of checksByIdentity.values()) {
     const table = tables.get(row.tableName)!;
-    const enforced = provider === 'tidb' ? tidbCapability?.enabled === true : row.enforced;
-    if (provider === 'mysql' && enforced === null) {
+    const enforced = row.enforced;
+    if (enforced === null) {
       throw new Error(
         `MySQL CHECK enforcement metadata is unavailable for ${row.tableName}.${row.constraintName}.`,
       );

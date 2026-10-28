@@ -6,7 +6,7 @@ import { eq, and, sql } from 'drizzle-orm';
 /**
  * Trending Suburbs PBT
  *
- * FIX #1: MySQL/TiDB may not support INSERT ... RETURNING in our config.
+ * FIX #1: The active MySQL driver does not expose INSERT ... RETURNING here.
  * FIX #2: Test DB wrapper does not support .limit(); use .get() for single-row reads.
  */
 

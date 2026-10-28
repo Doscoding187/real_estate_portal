@@ -68,7 +68,7 @@ describe('Property Listify Database Authority skill contract', () => {
     expect(skill).toContain('pnpm db:authority:bootstrap:local');
     expect(skill).toContain('Repair a stale consumer');
     expect(skill).toContain('dedicated database-authority branch/worktree');
-    expect(skill).toContain('Railway, or TiDB target');
+    expect(skill).toContain('unsupported-provider');
     expect(skill).toContain('Generic PostgreSQL, Prisma');
     expect(skill).not.toMatch(/(?:mysql|postgres(?:ql)?):\/\//i);
     expect(skill).not.toMatch(/password\s*=/i);
@@ -89,7 +89,7 @@ describe('Property Listify Database Authority skill contract', () => {
 
     expect(architect).toContain('property-listify-database-authority');
     expect(architect).toContain('Database Operating Playbook');
-    expect(architect).toContain('MySQL-compatible TiDB');
+    expect(architect).toContain('active database provider is MySQL');
     expect(architecture).toContain('property-listify-database-authority');
     expect(architecture).toContain('## 🧠 Skills (41)');
     expect(architecture).toContain(
@@ -104,7 +104,7 @@ describe('Property Listify Database Authority skill contract', () => {
     expect(agents).toContain('The skill is an operating guide only; repository');
     expect(databaseSkill).toMatchObject({
       name: 'property-listify-database-authority',
-      version: '1.2.0',
+      version: '1.2.1',
       status: 'active',
       riskTier: 'instruction-only',
       capabilities: {

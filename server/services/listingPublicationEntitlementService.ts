@@ -610,7 +610,7 @@ async function getActiveListingCount(
       ),
     );
 
-  // A locking read is a current read in MySQL/TiDB. This prevents a second
+  // A locking read is a current read in MySQL. This prevents a second
   // publication transaction from counting a stale snapshot after it waits on
   // the canonical owner-row lock.
   const rows =

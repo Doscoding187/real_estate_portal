@@ -122,7 +122,7 @@ afterEach(() => {
 });
 
 describe('truthful layered readiness', () => {
-  it('fails readiness when a CHECK predicate is unchanged but enforcement is disabled', () => {
+  it('fails readiness when the physical schema differs from the canonical model', () => {
     const report: SchemaCongruencyReport = {
       congruent: false,
       desiredDigest: 'd'.repeat(64),
@@ -145,14 +145,10 @@ describe('truthful layered readiness', () => {
       ],
     };
 
-    expect(
-      schemaCongruencyReadinessLayer(report, {
-        applicable: false,
-        variable: 'tidb_enable_check_constraint',
-        value: null,
-        enabled: null,
-      }),
-    ).toMatchObject({ state: 'not-ready', code: 'schema-not-congruent' });
+    expect(schemaCongruencyReadinessLayer(report)).toMatchObject({
+      state: 'not-ready',
+      code: 'schema-not-congruent',
+    });
   });
 
   it('keeps process liveness green while an unreachable database is red', async () => {

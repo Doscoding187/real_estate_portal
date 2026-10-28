@@ -2,9 +2,12 @@
 
 **Status:** Database Authority v3 control-plane entry
 
-Read this file before any database-bearing work. Then read the mandatory
-procedure in `01-database-operating-playbook.md`. Machine-readable pointers are
-in `authority-manifest.json`; operation permissions are in `operation-policy.json`.
+Read this file before database work, then read `01-database-operating-playbook.md`.
+Machine-readable pointers and permissions are in `authority-manifest.json` and `operation-policy.json`.
+
+**Active provider:** MySQL only, including the intended hosted Azure Database for MySQL.
+Azure SQL Database is SQL Server and unsupported by this application. TiDB integration
+and recovery code are retired; historical records do not prove hosted cutover is complete.
 
 ## Authority spine
 
@@ -41,9 +44,7 @@ pnpm db:authority:manifest
 pnpm db:authority:context
 ```
 
-Status is read-only. In a feature worktree, central local credentials resolve to that registered worktree's collision-resistant database identity; they do not resolve to `listify_local`. The current `listify_local` is quarantined evidence. It may receive sanitized,
-read-only diagnostics only. Runtime mutation, migration, seed, fixture, reset,
-rebuild, import, restore, repair, and ledger editing are not authorized.
+Status is read-only. In a feature worktree, central local credentials resolve to that registered worktree's collision-resistant database identity, never `listify_local`. The current `listify_local` is quarantined evidence for sanitized, read-only diagnostics. Runtime mutation, migration, seed, fixture, reset, rebuild, import, restore, repair, and ledger editing are not authorized.
 
 ## Owned local worktree workflow
 
@@ -85,22 +86,15 @@ confined `mysqld`; there is no silent TCP, signal, or broad-process fallback.
 
 If an abnormal termination leaves only authority-owned transient runtime metadata (`mysqld.pid`, `mysql.sock`, or `mysql.sock.lock`), use the governed `pnpm db:authority:service:recover` command. It classifies the complete bundle, fails closed on a live or ambiguous service, and removes only those three exact artifacts after proving the service root, process, port, socket, and lock state are safe. It never removes the service root, data directory, logs, or database files. A cleanly stopped service is a recovery no-op.
 
-The native MySQL initialization command owns creation of its data directory.
-The service path is derived by `localServicePaths.ts` as
-`/var/tmp/property-listify-<uid>/mysql-3307`. The shared `/var/tmp` parent must
-remain root-owned and sticky; the UID directory and service directory are
-created or reused only when they are exact, non-symlinked, current-user-owned,
-and mode `0700`. This is the AppArmor-compatible local path. Do not improvise a
-home-directory MySQL datadir or modify AppArmor. A previous home-directory
-service path is inactive legacy residue: report it, never adopt it, and never
-delete it automatically.
-
-The native MySQL initialization command owns creation of the data directory.
-A successful initialization records a mode-0600 service identity marker
-containing only the approved service fingerprint. An existing data path
-without both the initialized `mysql` system schema and the matching marker is
-treated as preserved partial or foreign state and fails closed; the service
-never deletes it automatically. Validate and remove only an exact, empty,
+The native MySQL initializer owns `/var/tmp/property-listify-<uid>/mysql-3307`,
+derived by `localServicePaths.ts`. The shared `/var/tmp` parent must remain
+root-owned and sticky; the UID and service directories must be exact,
+non-symlinked, current-user-owned, and mode `0700`. This is the AppArmor-safe
+path. Do not improvise a home-directory MySQL datadir or modify AppArmor; report old
+home-directory service residue without adopting or deleting it. Successful
+initialization records a mode-0600 marker with the approved service fingerprint.
+Existing data without both the initialized `mysql` schema and matching marker
+fails closed and is never deleted automatically. Remove only exact, empty,
 owned residue via an approved cleanup packet before retrying initialization.
 
 Reference, foundation, scenario, demo, and test-fixture adapters require the
@@ -137,7 +131,9 @@ unaccepted migration head fail closed. No release-reference apply runs during
 application startup, and the actual production apply remains an explicitly
 authorized release action.
 
-The reviewed protected zero-statement `0001` failure uses the dedicated release recovery commands after its TiDB replacement is active.
+Historical zero-statement recovery commands and TiDB tools are retired. Failed,
+running, or blocked attempts have no standing recovery command: preserve evidence
+and stop for a separately reviewed MySQL-only incident contract.
 
 Provisioning is idempotent only when its mode-0600 ownership profile exactly
 matches the canonical worktree realpath and Git common-directory identity.
@@ -179,21 +175,19 @@ acknowledgement between targets or operations.
 - `0000_canonical_launch_baseline.sql` is immutable.
 - Archived SQL is evidence only and can never enter the active plan.
 - An ordinary future DDL migration contains one independently verifiable table
-  or index expansion. A TiDB `ALTER TABLE` that introduces columns must not add
-  indexes, keys, or constraints; sequence those objects separately. Cross-schema/database lifecycle SQL fails; destructive or shape-changing DDL requires the approved exceptional contract.
+  or index expansion. Cross-schema/database lifecycle SQL fails; destructive
+  or shape-changing DDL requires the approved exceptional contract.
 - Transactional-data migrations contain DML only.
 - Apply proves the named-lock owner connection and records that owner with each
   durable attempt.
 - Apply refuses before connection unless the accepted old head and expected new
   manifest head are explicit. `none` is valid only for a verified fresh target.
 - Plan mode performs no schema, history, attempt, or lock mutation.
-- Apply records a durable running attempt before statements. MySQL/TiDB DDL is
-  not described as transactionally rolled back.
-- Running, failed, or blocked attempts stop ordinary future application until
-  an explicitly reviewed recovery workflow exists. A reviewed migration that
-  failed before its first statement may only be replaced through
-  `db:migration-recovery:plan` followed by an exact-plan-digest
-  `db:migration-recovery:apply`; never retry or edit its ledger row manually.
+- Apply records a durable running attempt before statements. MySQL DDL is not
+  described as transactionally rolled back.
+- Running, failed, or blocked attempts stop ordinary future application. Do
+  not retry or edit their ledger rows; preserve evidence and require a separately
+  reviewed MySQL-only incident contract before any recovery.
 - Never edit a ledger, rewrite an applied migration, delete attempt evidence,
   silently retry ambiguous DDL, or introduce generic down migrations.
 
@@ -203,9 +197,9 @@ Change Protocol.
 
 ## Schema and readiness rules
 
-`schema:inventory:check` proves deterministic desired-model evidence.
-`db:schema:congruency` compares normalized Drizzle metadata to physical MySQL
-metadata and excludes only the two runner control tables.
+`schema:inventory:check` proves desired-model evidence. `db:schema:congruency`
+compares normalized Drizzle metadata to physical MySQL metadata, excluding only
+the two runner control tables.
 
 `/api/health` proves process liveness only. `/api/readiness` separately reports
 service availability, exact target ownership, schema migration, schema
@@ -215,8 +209,7 @@ diagnostics remain separate layers. A client object, reachable server, or
 coherent ledger alone is not application readiness.
 
 A stale seed, fixture, test helper or runtime query must be reconciled to the canonical schema.
-Do not conceal authority failure with schema guessing, alternate queries,
-catch-and-retry SQL, or empty-success fallbacks.
+Never conceal authority failure with schema guessing, retry SQL, or empty-success fallbacks.
 
 ## Retired compatibility commands
 

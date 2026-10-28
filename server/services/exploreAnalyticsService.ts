@@ -1,7 +1,7 @@
 /**
  * Explore Analytics Service
  * Aggregates engagement metrics and generates creator analytics
- * Works with MySQL/TiDB using Drizzle ORM
+ * Uses the canonical MySQL provider through Drizzle ORM.
  */
 
 import { db } from '../db';
