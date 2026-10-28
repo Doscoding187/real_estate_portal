@@ -16,6 +16,7 @@ import { getDb } from '../db-connection';
 import {
   cataloguePublishers,
   developmentApprovalQueue,
+  developmentPlaceAssignments,
   developerOrganisations,
   developments,
   leads,
@@ -151,6 +152,19 @@ describeWithDb('Developer development publication lifecycle integration', () => 
   afterEach(async () => {
     const db = await getDb();
     if (!db) return;
+
+    const fixtureUserIds = fixtures.map(fixture => fixture.userId);
+    if (fixtureUserIds.length > 0) {
+      await db
+        .delete(developmentPlaceAssignments)
+        .where(inArray(developmentPlaceAssignments.reviewedByUserId, fixtureUserIds));
+    }
+    const fixtureDevelopmentIds = fixtures.flatMap(fixture => fixture.developmentIds);
+    if (fixtureDevelopmentIds.length > 0) {
+      await db
+        .delete(developmentPlaceAssignments)
+        .where(inArray(developmentPlaceAssignments.developmentId, fixtureDevelopmentIds));
+    }
 
     while (fixtures.length > 0) {
       const fixture = fixtures.pop()!;
