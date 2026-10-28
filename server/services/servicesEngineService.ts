@@ -3456,9 +3456,18 @@ export class ServicesEngineService {
     };
   }
 
-  async listProviderLeads(providerId: number, limit = 50, offset = 0) {
+  async listProviderLeads(
+    providerId: number,
+    limit = 50,
+    offset = 0,
+    status: (typeof SERVICE_LEAD_STATUS_VALUES)[number] | null = null,
+  ) {
     const db = await getDb();
     if (!db) throw new Error('Database not available');
+
+    if (status && !(SERVICE_LEAD_STATUS_VALUES as readonly string[]).includes(status)) {
+      throw new Error('Invalid lead status filter');
+    }
 
     const leads = await db
       .select({
@@ -3485,7 +3494,11 @@ export class ServicesEngineService {
       })
       .from(serviceLeads)
       .leftJoin(users, eq(users.id, serviceLeads.requesterUserId))
-      .where(eq(serviceLeads.providerId, providerId))
+      .where(
+        status
+          ? and(eq(serviceLeads.providerId, providerId), eq(serviceLeads.status, status))
+          : eq(serviceLeads.providerId, providerId),
+      )
       .orderBy(desc(serviceLeads.createdAt), desc(serviceLeads.id))
       .limit(Math.max(1, Math.min(100, Number(limit || 50))))
       .offset(Math.max(0, Number(offset || 0)));

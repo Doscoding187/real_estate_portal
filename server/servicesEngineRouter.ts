@@ -19,7 +19,11 @@ import {
   getPublicLeadClientIp,
 } from './services/publicLeadRateLimitService';
 import { getDb } from './db';
-import { SERVICE_PROVIDER_REVIEW_REPORT_REASON_VALUES, users } from '../drizzle/schema';
+import {
+  SERVICE_LEAD_STATUS_VALUES,
+  SERVICE_PROVIDER_REVIEW_REPORT_REASON_VALUES,
+  users,
+} from '../drizzle/schema';
 import { eq } from 'drizzle-orm';
 
 const serviceCategorySchema = z.enum([
@@ -833,6 +837,7 @@ export const servicesEngineRouter = router({
       z.object({
         limit: z.number().int().min(1).max(100).optional(),
         offset: z.number().int().min(0).max(10000).optional(),
+        status: z.enum(SERVICE_LEAD_STATUS_VALUES as unknown as [string, ...string[]]).optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
@@ -843,6 +848,7 @@ export const servicesEngineRouter = router({
         providerId,
         input.limit || 50,
         input.offset || 0,
+        input.status ? (input.status as (typeof SERVICE_LEAD_STATUS_VALUES)[number]) : null,
       );
     }),
 
@@ -864,4 +870,11 @@ export const servicesEngineRouter = router({
       const providerId = await requireProviderWorkspaceId(user.id);
       return servicesEngineService.getProviderDashboard(providerId, input.days || 30);
     }),
+
+  myProviderResponsePerformance: protectedProcedure.query(async ({ ctx }) => {
+    const user = requireUser(ctx);
+    requireProviderRole(user.role);
+    const providerId = await requireProviderWorkspaceId(user.id);
+    return servicesEngineService.getProviderLeadResponsePerformance(providerId);
+  }),
 });

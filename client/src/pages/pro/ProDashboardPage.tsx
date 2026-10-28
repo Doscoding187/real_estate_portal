@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,9 +11,12 @@ import { applySeo } from '@/lib/seo';
 import { ProNavigation } from '@/components/services/ProNavigation';
 import { useServiceProviderOnboardingStatus } from '@/hooks/useServiceProviderOnboardingStatus';
 import { formatCategoryLabel } from '@/features/services/catalog';
+import { formatResponseLatency } from '@/features/services/leadMetrics';
 import { ArrowRight, BadgeCheck, BriefcaseBusiness, Clock3, Sparkles } from 'lucide-react';
 
 const LEADS_PAGE_SIZE = 50;
+
+const LEAD_STATUS_FILTERS = ['new', 'accepted', 'quoted', 'won', 'lost', 'expired'] as const;
 
 const NEXT_STATUSES: Record<string, string[]> = {
   new: ['accepted', 'expired', 'lost'],
@@ -22,6 +25,12 @@ const NEXT_STATUSES: Record<string, string[]> = {
   won: [],
   lost: [],
   expired: [],
+};
+
+const SOURCE_LABELS: Record<string, string> = {
+  directory: 'Directory requests',
+  journey_injection: 'Property journey requests',
+  agent_dashboard: 'Agent workspace requests',
 };
 
 function readableStatus(status: string) {
@@ -34,6 +43,9 @@ export default function ProDashboardPage() {
   const { status, isLoading: statusLoading } = useServiceProviderOnboardingStatus();
   const [responseNotes, setResponseNotes] = useState<Record<number, string>>({});
   const [leadsPage, setLeadsPage] = useState(0);
+  const [statusFilter, setStatusFilter] = useState<'all' | (typeof LEAD_STATUS_FILTERS)[number]>(
+    'all',
+  );
 
   useEffect(() => {
     applySeo({
@@ -57,9 +69,16 @@ export default function ProDashboardPage() {
     { enabled: Boolean(status?.dashboardUnlocked) },
   );
   const leadsQuery = trpc.servicesEngine.myProviderLeads.useQuery(
-    { limit: LEADS_PAGE_SIZE, offset: leadsPage * LEADS_PAGE_SIZE },
+    {
+      limit: LEADS_PAGE_SIZE,
+      offset: leadsPage * LEADS_PAGE_SIZE,
+      status: statusFilter === 'all' ? undefined : statusFilter,
+    },
     { enabled: Boolean(status?.dashboardUnlocked) },
   );
+  const responseQuery = trpc.servicesEngine.myProviderResponsePerformance.useQuery(undefined, {
+    enabled: Boolean(status?.dashboardUnlocked),
+  });
   const updateLead = trpc.servicesEngine.updateMyLeadStatus.useMutation({
     onSuccess: async () => {
       toast.success('Request status updated');
@@ -70,10 +89,6 @@ export default function ProDashboardPage() {
   });
   const dashboard = dashboardQuery.data;
   const leads = leadsQuery.data || [];
-  const activeLeadCount = useMemo(
-    () => leads.filter(lead => ['new', 'accepted', 'quoted'].includes(String(lead.status))).length,
-    [leads],
-  );
 
   if (statusLoading) {
     return (
@@ -140,9 +155,11 @@ export default function ProDashboardPage() {
                 </div>
                 <div className="rounded-[1.5rem] border border-white/70 bg-white/85 p-4 shadow-sm">
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                    Active
+                    Window
                   </p>
-                  <p className="mt-2 text-2xl font-semibold text-slate-950">{activeLeadCount}</p>
+                  <p className="mt-2 text-base font-semibold text-slate-950">
+                    Last {dashboard?.windowDays || 30} days
+                  </p>
                 </div>
                 <div className="rounded-[1.5rem] border border-white/70 bg-white/85 p-4 shadow-sm">
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
@@ -254,6 +271,64 @@ export default function ProDashboardPage() {
             </Card>
           </section>
 
+          <section className="grid gap-3 md:grid-cols-2">
+            <Card className="border-[#0f3d91]/10 bg-white/90 shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">
+                  Request mix · last {dashboard?.windowDays || 30} days
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex flex-wrap gap-2">
+                  {LEAD_STATUS_FILTERS.map(status => (
+                    <Badge key={status} variant="outline">
+                      {readableStatus(status)} {dashboard?.byStatus?.[status] || 0}
+                    </Badge>
+                  ))}
+                </div>
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600">
+                  {Object.entries(dashboard?.bySource || {}).map(([source, count]) => (
+                    <span key={source}>
+                      {SOURCE_LABELS[source] || readableStatus(source)} {count}
+                    </span>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-[#0f3d91]/10 bg-white/90 shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Typical first response</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {responseQuery.data && responseQuery.data.measuredLeads > 0 ? (
+                  <div className="space-y-1">
+                    <p className="text-2xl font-semibold">
+                      {formatResponseLatency(responseQuery.data.medianResponseSeconds)}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      Median across {responseQuery.data.measuredLeads} request
+                      {responseQuery.data.measuredLeads === 1 ? '' : 's'}, last{' '}
+                      {responseQuery.data.windowDays} days.
+                    </p>
+                    {!responseQuery.data.sampleReady && (
+                      <p className="text-xs text-amber-700">
+                        Fewer than 3 measured responses yet; the public profile keeps this metric
+                        hidden until then.
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    <p className="text-base font-semibold">Not measured yet</p>
+                    <p className="text-xs text-slate-500">
+                      Counted only from real lead events once you respond to assigned requests.
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </section>
+
           <section>
             <Card className="border-[#0f3d91]/10 bg-white/90 shadow-sm">
               <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
@@ -263,6 +338,31 @@ export default function ProDashboardPage() {
                 </Button>
               </CardHeader>
               <CardContent className="space-y-4">
+                <div className="flex flex-wrap gap-2 border-b border-slate-100 pb-3">
+                  <Button
+                    size="sm"
+                    variant={statusFilter === 'all' ? 'default' : 'outline'}
+                    onClick={() => {
+                      setStatusFilter('all');
+                      setLeadsPage(0);
+                    }}
+                  >
+                    All
+                  </Button>
+                  {LEAD_STATUS_FILTERS.map(option => (
+                    <Button
+                      key={option}
+                      size="sm"
+                      variant={statusFilter === option ? 'default' : 'outline'}
+                      onClick={() => {
+                        setStatusFilter(option);
+                        setLeadsPage(0);
+                      }}
+                    >
+                      {readableStatus(option)}
+                    </Button>
+                  ))}
+                </div>
                 {leadsQuery.isLoading && (
                   <div className="text-sm text-slate-500">Loading requests...</div>
                 )}
@@ -364,8 +464,9 @@ export default function ProDashboardPage() {
                   })}
                 {!leadsQuery.isLoading && !leadsQuery.error && leads.length === 0 && (
                   <div className="rounded-[1rem] border border-dashed border-slate-300 bg-slate-50/80 p-6 text-sm leading-6 text-slate-600">
-                    No requests yet. Once your profile is published, consumer requests assigned to
-                    your provider identity will appear here.
+                    {statusFilter === 'all'
+                      ? 'No requests yet. Once your profile is published, consumer requests assigned to your provider identity will appear here.'
+                      : `No ${readableStatus(statusFilter)} requests yet.`}
                   </div>
                 )}
                 {!leadsQuery.isLoading && !leadsQuery.error && leads.length > 0 && (
