@@ -108,7 +108,19 @@ Last verified 2026-10-28 @ `026586690` by reference sweep over `client/src`
 (excluding `__tests__` and the components' own files). Built against the
 superseded S-3 spec; never wired into routed code.
 
-| Asset | Evidence | Proposed disposition |
+**Approved and executed 2026-10-28.** Edward approved the Retire dispositions
+("commit and continue"). Deletions landed on
+`feat/services-retire-unmounted-assets-20261028` (worktree
+`property-listify-services-retire-debris-20261028`): 13 unmounted components, the
+four orphan property tests (`StarRating`, `TrustBar`, `CategoryCard`,
+`MatchQualityBadge`), and the `POPULAR_PROJECTS`/`COST_GUIDES` catalog constants.
+Verification: `pnpm check` clean; targeted services vitest — 15 files / 114 tests
+pass. The `ProProfilePage` lazy-import row is **not** retired; it advances to
+DELTA-7 unchanged.
+
+| Asset | Evidence | Disposition |
+
+
 | --- | --- | --- |
 | `components/services/ServicesSkeletons.tsx` (4 exports) | No page/route references | **Retire** in the first P0 slice |
 | `components/services/TrustBar.tsx`, `TrustStepsRow.tsx` | Only `advertise/PreviewCarousel.README.md` mention + intra-set references | **Retire** |
@@ -135,6 +147,17 @@ superseded S-3 spec; never wired into routed code.
 Ahead/behind vs `main` @ `026586690`, verified 2026-10-28. **Branch deletion is
 never assumed safe from ahead/behind alone; each line lists the evidence condition
 required for its disposition.**
+
+**Retired 2026-10-28**, after fresh post-fetch re-verification
+(`git fetch origin --prune`, `git rev-list --left-right --count main…<ref>` = 0
+unique commits) and owner delegation recorded the same day: local
+`feat/services-publication-review-queue-20261021`, `fix/services-v1-reconcile`;
+remote `feat/services-marketplace-mvp-parity-20261022`,
+`feat/services-marketplace-overhaul`, `feat/services-review-moderation-20261022`,
+`feat/services-property-journey-actions`, `fix/services-marketplace-followup`,
+`feature/services-frontend-release`, `feature/services-pro-release`. The
+wip-preserved V1 trio and `origin/feature/services-engine-release` deliberately
+remain per their rows below.
 
 | Branch | Evidence | Proposed disposition |
 | --- | --- | --- |
