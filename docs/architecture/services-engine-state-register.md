@@ -108,7 +108,19 @@ Last verified 2026-10-28 @ `026586690` by reference sweep over `client/src`
 (excluding `__tests__` and the components' own files). Built against the
 superseded S-3 spec; never wired into routed code.
 
-| Asset | Evidence | Proposed disposition |
+**Approved and executed 2026-10-28.** Edward approved the Retire dispositions
+("commit and continue"). Deletions landed on
+`feat/services-retire-unmounted-assets-20261028` (worktree
+`property-listify-services-retire-debris-20261028`): 13 unmounted components, the
+four orphan property tests (`StarRating`, `TrustBar`, `CategoryCard`,
+`MatchQualityBadge`), and the `POPULAR_PROJECTS`/`COST_GUIDES` catalog constants.
+Verification: `pnpm check` clean; targeted services vitest — 15 files / 114 tests
+pass. The `ProProfilePage` lazy-import row is **not** retired; it advances to
+DELTA-7 unchanged.
+
+| Asset | Evidence | Disposition |
+
+
 | --- | --- | --- |
 | `components/services/ServicesSkeletons.tsx` (4 exports) | No page/route references | **Retire** in the first P0 slice |
 | `components/services/TrustBar.tsx`, `TrustStepsRow.tsx` | Only `advertise/PreviewCarousel.README.md` mention + intra-set references | **Retire** |
