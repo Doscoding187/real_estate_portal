@@ -1,5 +1,6 @@
 import { cleanup, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { LAND_VERTICAL_LAUNCH_STATE } from '@shared/landLaunchPolicy';
 
 const { resolveCanonicalUrl, guideAreas } = vi.hoisted(() => ({
   resolveCanonicalUrl: vi.fn(),
@@ -18,7 +19,12 @@ vi.mock('@/components/seo/MetaControl', () => ({ MetaControl: () => null }));
 import CanonicalPlacePage from './CanonicalPlacePage';
 
 describe('Canonical Place Land area guide', () => {
+  const launchState = LAND_VERTICAL_LAUNCH_STATE as unknown as { enabled: boolean };
+  let originalLaunchState: boolean;
+
   beforeEach(() => {
+    originalLaunchState = launchState.enabled;
+    launchState.enabled = true;
     window.history.replaceState({}, '', '/gauteng/johannesburg');
     resolveCanonicalUrl.mockReturnValue({
       data: {
@@ -57,6 +63,7 @@ describe('Canonical Place Land area guide', () => {
   });
 
   afterEach(() => {
+    launchState.enabled = originalLaunchState;
     cleanup();
     vi.clearAllMocks();
   });

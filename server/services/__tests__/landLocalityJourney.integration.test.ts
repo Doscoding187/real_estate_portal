@@ -21,10 +21,13 @@ import { landPublicRouter } from '../../landPublicRouter';
 import { landRouter } from '../../landRouter';
 import { getDb, shutdownDb } from '../../db-connection';
 import { executePlace } from '../placeDiscoveryService';
+import { LAND_VERTICAL_LAUNCH_STATE } from '../../../shared/landLaunchPolicy';
 
 const runDisposableJourney = process.env.LAND_LOCALITY_E2E === '1';
 
 describe.runIf(runDisposableJourney)('Land locality create, publish and search journey', () => {
+  const launchState = LAND_VERTICAL_LAUNCH_STATE as unknown as { enabled: boolean };
+  let originalLaunchState: boolean;
   let db: NonNullable<Awaited<ReturnType<typeof getDb>>>;
   let ownerUserId: number | null = null;
   let reviewerUserId: number | null = null;
@@ -40,6 +43,8 @@ describe.runIf(runDisposableJourney)('Land locality create, publish and search j
   }) as any;
 
   beforeAll(async () => {
+    originalLaunchState = launchState.enabled;
+    launchState.enabled = true;
     // Run with `pnpm test:authority` so DATABASE_URL is injected for the exact
     // registered disposable worktree target; normal unit tests remain DB-free.
     const connection = await getDb();
@@ -85,6 +90,7 @@ describe.runIf(runDisposableJourney)('Land locality create, publish and search j
     if (db && ownerUserId) await db.delete(users).where(eq(users.id, ownerUserId));
     if (db && reviewerUserId) await db.delete(users).where(eq(users.id, reviewerUserId));
     await shutdownDb();
+    launchState.enabled = originalLaunchState;
   });
 
   it('creates a locality-assigned draft, approves it through Land review, and finds it by that Place ID', async () => {

@@ -18,6 +18,7 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ADMIN_DASHBOARD_ROUTES } from '@/pages/admin/adminRouteRegistry';
 import { LandPublicLayout } from './components/land/LandPublicLayout';
 import { DistributionPartnerIdentityGate } from '@/components/referral/DistributionPartnerIdentityGate';
+import { isLandPublicDiscoveryAvailable, isLandVerticalAvailable } from '@shared/landLaunchPolicy';
 
 // Eager Imports (Critical Path)
 import Home from './pages/Home';
@@ -52,6 +53,7 @@ const AgentTrainingSupport = lazy(() => import('./pages/agent/AgentTrainingSuppo
 const AgentSettings = lazy(() => import('./pages/AgentSettings'));
 const AgentSetup = lazy(() => import('./pages/AgentSetup'));
 const AgentPackageSelection = lazy(() => import('./pages/agent/AgentPackageSelection'));
+const LandDeferred = lazy(() => import('./pages/LandDeferred'));
 const LandAuthoringWorkspace = lazy(() => import('./pages/agent/LandAuthoringWorkspace'));
 const LandReviewWorkspace = lazy(() => import('./pages/admin/LandReviewWorkspace'));
 const PlotsAndLand = lazy(() => import('./pages/PlotsAndLand'));
@@ -255,7 +257,7 @@ function Router() {
           </Route>
           <Route path="/admin/land-review">
             <RequireRole role="super_admin">
-              <LandReviewWorkspace />
+              {isLandVerticalAvailable() ? <LandReviewWorkspace /> : <LandDeferred audience="reviewer" />}
             </RequireRole>
           </Route>
           <Route path="/admin/shared-living-review">
@@ -279,7 +281,7 @@ function Router() {
           </Route>
           <Route path="/agent/land/create">
             <RequireRole role="agent" unauthenticatedAuthEntry="signin">
-              <LandAuthoringWorkspace />
+              {isLandVerticalAvailable() ? <LandAuthoringWorkspace /> : <LandDeferred audience="author" />}
             </RequireRole>
           </Route>
           <Route path="/agent/commercial/create">
@@ -704,14 +706,14 @@ function Router() {
             }}
           />
           <Route path="/plots-and-land">
-            <LandPublicLayout>
-              <PlotsAndLand />
-            </LandPublicLayout>
+            {isLandPublicDiscoveryAvailable() ? (
+              <LandPublicLayout><PlotsAndLand /></LandPublicLayout>
+            ) : <LandDeferred audience="public" />}
           </Route>
           <Route path="/land/:slug">
-            <LandPublicLayout>
-              <LandDetail />
-            </LandPublicLayout>
+            {isLandPublicDiscoveryAvailable() ? (
+              <LandPublicLayout><LandDetail /></LandPublicLayout>
+            ) : <LandDeferred audience="public" />}
           </Route>
           <Route path="/property-to-rent" component={SearchResults} />
           <Route path="/farms-and-smallholdings" component={FarmsAndSmallholdings} />

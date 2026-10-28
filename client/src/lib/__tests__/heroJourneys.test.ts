@@ -31,8 +31,8 @@ describe('hero journey authority', () => {
       destination: '/plots-and-land',
       productHomepageVisible: true,
       productHomepageEnabled: true,
-      homepageVisible: true,
-      homepageEnabled: true,
+      homepageVisible: false,
+      homepageEnabled: false,
     });
     expect(getPublicHeroJourney('commercial')).toMatchObject({
       destination: '/commercial',
@@ -47,7 +47,6 @@ describe('hero journey authority', () => {
       'rent',
       'developments',
       'shared_living',
-      'plot_land',
       'commercial',
       'find_agent',
     ]);
@@ -115,27 +114,24 @@ describe('hero journey authority', () => {
     ]);
   });
 
-  it('exposes public Land search through the manifest while publication stays deferred', () => {
+  it('keeps public Land hidden while the first cohort remains deferred', () => {
     const hostedRelease = resolvePublicJourneyReleaseContext({
       PROD: true,
       VITE_DEPLOY_ENV: 'production',
       VITE_PUBLIC_JOURNEY_RELEASES: 'shared_living,plot_land,commercial',
     });
 
-    expect(isLandPublicDiscoveryAvailable()).toBe(true);
+    expect(isLandPublicDiscoveryAvailable()).toBe(false);
     expect(isLandVerticalAvailable()).toBe(false);
 
-    // Consumer search is separately authorized; inventory publication stays
-    // deferred under the Land vertical policy.
     expect(getPublicHeroJourney('shared_living', hostedRelease)).toMatchObject({
       homepageVisible: true,
       homepageEnabled: true,
       destination: '/shared-living',
     });
     expect(getPublicHeroJourney('plot_land', hostedRelease)).toMatchObject({
-      homepageVisible: true,
-      homepageEnabled: true,
-      destination: '/plots-and-land',
+      homepageVisible: false,
+      homepageEnabled: false,
     });
     expect(getPublicHeroJourney('commercial', hostedRelease)).toMatchObject({
       homepageVisible: true,

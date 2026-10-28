@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { LoadingState } from '@/components/ui/feedback-state';
 import { PageFrame, PageHeader } from '@/components/ui/page-frame';
 import NotFound from '@/pages/NotFound';
+import { isLandPublicDiscoveryAvailable } from '@shared/landLaunchPolicy';
 
 function searchHref(transaction: 'property-for-sale' | 'property-to-rent', placeId: string) {
   const params = new URLSearchParams({ canonicalPlaceId: placeId });
@@ -19,10 +20,11 @@ export default function CanonicalPlacePage() {
   const resolvedPlace = query.data;
   const isBroadPlace =
     resolvedPlace?.searchScope === 'province' || resolvedPlace?.searchScope === 'metro_city';
+  const landDiscoveryAvailable = isLandPublicDiscoveryAvailable();
   const landAreas = trpc.landPublic.guideAreas.useQuery(
     { canonicalPlaceId: resolvedPlace?.placeId ?? '' },
     {
-      enabled: Boolean(resolvedPlace?.placeId && isBroadPlace),
+      enabled: Boolean(landDiscoveryAvailable && resolvedPlace?.placeId && isBroadPlace),
       retry: false,
       staleTime: 60_000,
     },
@@ -78,7 +80,7 @@ export default function CanonicalPlacePage() {
           }
         />
 
-        {isBroadPlace ? (
+        {landDiscoveryAvailable && isBroadPlace ? (
           <section aria-labelledby="land-area-guide-title" className="space-y-4 rounded-xl border p-5">
             <div>
               <h2 id="land-area-guide-title" className="text-xl font-semibold">

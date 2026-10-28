@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { isLandPublicDiscoveryAvailable, isLandVerticalAvailable } from '@shared/landLaunchPolicy';
+import { LAND_VERTICAL_LAUNCH_STATE, isLandPublicDiscoveryAvailable, isLandVerticalAvailable } from '@shared/landLaunchPolicy';
 
 const { setLocation, searchDiscoveryQuery } = vi.hoisted(() => ({
   setLocation: vi.fn(),
@@ -148,6 +148,17 @@ vi.mock('@/lib/trpc', () => ({
 }));
 
 import { EnhancedHero } from '../EnhancedHero';
+
+const launchState = LAND_VERTICAL_LAUNCH_STATE as unknown as { enabled: boolean };
+function withLandLaunchEnabled(run: () => void) {
+  const previous = launchState.enabled;
+  launchState.enabled = true;
+  try {
+    run();
+  } finally {
+    launchState.enabled = previous;
+  }
+}
 
 describe('EnhancedHero explicit journey selection', () => {
   beforeEach(() => {
@@ -315,24 +326,28 @@ describe('EnhancedHero explicit journey selection', () => {
   });
 
   it('takes a broad Land Place directly to its guide without rolling listings up', () => {
-    render(<EnhancedHero activeTab="plot_land" />);
+    withLandLaunchEnabled(() => {
+      render(<EnhancedHero activeTab="plot_land" />);
 
-    expect(isLandPublicDiscoveryAvailable()).toBe(true);
-    expect(isLandVerticalAvailable()).toBe(false);
-    expect(screen.getByText('Land type')).toBeInTheDocument();
+      expect(isLandPublicDiscoveryAvailable()).toBe(true);
+      expect(isLandVerticalAvailable()).toBe(true);
+      expect(screen.getByText('Land type')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByTestId('select-johannesburg'));
+      fireEvent.click(screen.getByTestId('select-johannesburg'));
 
-    expect(setLocation).toHaveBeenCalledWith('/gauteng/johannesburg');
+      expect(setLocation).toHaveBeenCalledWith('/gauteng/johannesburg');
+    });
   });
 
   it('keeps exact locality Land search on its selected Place ID', () => {
-    render(<EnhancedHero activeTab="plot_land" />);
+    withLandLaunchEnabled(() => {
+      render(<EnhancedHero activeTab="plot_land" />);
 
-    fireEvent.click(screen.getByTestId('select-sandton'));
-    fireEvent.click(screen.getAllByRole('button', { name: 'Search', exact: true })[0]);
+      fireEvent.click(screen.getByTestId('select-sandton'));
+      fireEvent.click(screen.getAllByRole('button', { name: 'Search', exact: true })[0]);
 
-    expect(setLocation).toHaveBeenCalledWith(`/plots-and-land?canonicalPlaceId=${sandtonId}`);
+      expect(setLocation).toHaveBeenCalledWith(`/plots-and-land?canonicalPlaceId=${sandtonId}`);
+    });
   });
 
   it('exposes Commercial Office filters that map to tenant decisions', () => {

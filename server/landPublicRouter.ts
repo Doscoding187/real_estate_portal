@@ -3,6 +3,7 @@ import { publicProcedure, router } from './_core/trpc';
 import { LAND_PUBLIC_CLASSIFICATIONS } from '../shared/land-domain';
 import { PLACE_ID_REGEX } from '../shared/placeAuthority';
 import { validateLandSearchGeography } from '../shared/landSearchGeography';
+import { isLandVerticalAvailable } from '../shared/landLaunchPolicy';
 import {
   publicLandDetail,
   publicLandGuideAreas,
@@ -41,11 +42,11 @@ export const landPublicSearchInput = z
   });
 
 export const landPublicRouter = router({
-  search: publicProcedure.input(landPublicSearchInput).query(({ input }) => searchPublicLand(input)),
+  search: publicProcedure.input(landPublicSearchInput).query(({ input }) => (isLandVerticalAvailable() ? searchPublicLand(input) : [])),
   guideAreas: publicProcedure
     .input(z.object({ canonicalPlaceId: z.string().trim().regex(PLACE_ID_REGEX) }).strict())
-    .query(({ input }) => publicLandGuideAreas(input.canonicalPlaceId)),
+    .query(({ input }) => (isLandVerticalAvailable() ? publicLandGuideAreas(input.canonicalPlaceId) : [])),
   detail: publicProcedure
     .input(z.object({ slug: z.string().trim().min(1).max(180) }).strict())
-    .query(({ input }) => publicLandDetail(input.slug)),
+    .query(({ input }) => (isLandVerticalAvailable() ? publicLandDetail(input.slug) : null)),
 });
