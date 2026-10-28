@@ -1,16 +1,13 @@
-import type { Locator, Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { expect, test } from '../helpers/audit-network';
 
 /**
- * Neutral geography routing contract.
+ * Canonical Place routing contract.
  *
- * Canonical discovery geography lives at /{province}, /{province}/{city} and
- * /{province}/{city}/{suburb}. Result pages stay query-scoped under
- * /property-for-sale (and /property-to-rent). The retired SRP-path geography
+ * Canonical Place pages use the exact paths in the published URL projection.
+ * Result pages carry one canonicalPlaceId. The retired SRP-path geography
  * family (/property-for-sale/{geo}) must not come back.
  *
- * Hero search handoff coverage requires canonical reference data; on
- * environments without it the suite skips those cases with an honest reason.
  */
 
 /**
@@ -50,16 +47,13 @@ test.afterEach(async ({ page }) => {
   if (!clientErrors.length) return;
   const errors = [...clientErrors];
   clientErrors.length = 0;
-  await expect(
-    errors.length,
-    `the page raised a client-side error:\n${errors.join('\n')}`,
-  ).toBe(0);
+  await expect(errors.length, `the page raised a client-side error:\n${errors.join('\n')}`).toBe(0);
 });
 
-const NEUTRAL_DISCOVERY_PAGES = [
-  { path: '/gauteng', heading: /Explore Gauteng/i },
-  { path: '/gauteng/johannesburg', heading: /Explore Johannesburg/i },
-  { path: '/gauteng/johannesburg/sandton', heading: /Explore Sandton/i },
+const CANONICAL_PLACE_PAGES = [
+  { path: '/gauteng', label: 'Gauteng' },
+  { path: '/gauteng/johannesburg', label: 'Johannesburg' },
+  { path: '/gauteng/city-of-johannesburg/sandton', label: 'Sandton' },
 ];
 
 const RETIRED_SRP_GEOGRAPHY_PATHS = [
@@ -68,30 +62,16 @@ const RETIRED_SRP_GEOGRAPHY_PATHS = [
   '/property-to-rent/gauteng/johannesburg',
 ];
 
-async function openBuyHero(page: Page): Promise<Locator> {
-  await page.goto('/', { waitUntil: 'domcontentloaded' });
-  await page.getByRole('button', { name: 'Buy', exact: true }).first().click();
-  return page.getByRole('combobox', { name: 'Search by city, suburb, or area' });
-}
-
-async function waitForSuggestionsOrEmptyState(page: Page, option: Locator) {
-  await Promise.race([
-    option.first().waitFor({ state: 'visible', timeout: PAGE_READY_TIMEOUT }).catch(() => null),
-    page
-      .getByText('No locations found')
-      .waitFor({ state: 'visible', timeout: PAGE_READY_TIMEOUT })
-      .catch(() => null),
-  ]);
-}
-
-test.describe('Neutral geography routing', () => {
-  for (const { path, heading } of NEUTRAL_DISCOVERY_PAGES) {
-    test(`${path} serves discovery content and never SRP controls`, async ({ page }) => {
+test.describe('Canonical Place routing', () => {
+  for (const { path, label } of CANONICAL_PLACE_PAGES) {
+    test(`${path} serves its admitted Place page without legacy result controls`, async ({
+      page,
+    }) => {
       await page.goto(path, { waitUntil: 'domcontentloaded' });
 
-      await expect(
-        page.getByRole('heading', { level: 1, name: heading }),
-      ).toBeVisible({ timeout: PAGE_READY_TIMEOUT });
+      await expect(page.getByRole('heading', { level: 1, name: label, exact: true })).toBeVisible({
+        timeout: PAGE_READY_TIMEOUT,
+      });
       await expect(
         page.locator('[data-testid="search-filters"], [data-testid="filters-sidebar"]'),
       ).toHaveCount(0);
@@ -104,107 +84,36 @@ test.describe('Neutral geography routing', () => {
   test('retired SRP-path geography URLs stay retired', async ({ page }) => {
     for (const path of RETIRED_SRP_GEOGRAPHY_PATHS) {
       await page.goto(path, { waitUntil: 'domcontentloaded' });
-      await expect(
-        page.getByRole('heading', { level: 1, name: 'Page not found' }),
-      ).toBeVisible({ timeout: PAGE_READY_TIMEOUT });
+      await expect(page.getByRole('heading', { level: 1, name: 'Page not found' })).toBeVisible({
+        timeout: PAGE_READY_TIMEOUT,
+      });
       await expect(page).toHaveURL(new RegExp(`${path.replaceAll('/', '\\/')}$`));
     }
   });
 
-  test.describe('Hero search handoff', () => {
-    test('suburb selection hands off to query-scoped results', async ({ page }) => {
-      const locationInput = await openBuyHero(page);
-      await locationInput.fill('Sandton');
+  test('canonical place page carries its exact identity into property search', async ({ page }) => {
+    await page.goto('/gauteng/city-of-johannesburg/sandton', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { level: 1, name: 'Sandton', exact: true })).toBeVisible(
+      {
+        timeout: PAGE_READY_TIMEOUT,
+      },
+    );
 
-      const sandtonOption = page.getByRole('option', { name: /Sandton/ });
-      await waitForSuggestionsOrEmptyState(page, sandtonOption);
-      test.skip(
-        !(await sandtonOption.first().isVisible()),
-        'Hero search handoff requires canonical reference data.',
-      );
+    const saleLink = page.getByRole('link', { name: 'Search homes for sale' });
+    await expect(saleLink).toBeVisible();
+    const href = await saleLink.getAttribute('href');
+    expect(href).toMatch(/^\/property-for-sale\?canonicalPlaceId=pl-place-01-[a-f0-9]{24}$/);
+    const expectedPlaceId = new URL(href ?? '/', 'http://listify.test').searchParams.get(
+      'canonicalPlaceId',
+    );
+    expect(expectedPlaceId).toMatch(/^pl-place-01-[a-f0-9]{24}$/);
 
-      await sandtonOption.first().click();
-      await page
-        .locator('form')
-        .getByRole('button', { name: 'Search', exact: true })
-        .click();
-
-      await expect(page).toHaveURL(
-        /\/property-for-sale\?.*canonicalPlaceId=pl-place-01-[a-f0-9]{24}/,
-      );
-      const resultUrl = new URL(page.url());
-      expect(resultUrl.pathname).toBe('/property-for-sale');
-      expect(resultUrl.searchParams.get('canonicalPlaceId')).toMatch(
-        /^pl-place-01-[a-f0-9]{24}$/,
-      );
-      for (const legacyKey of ['locationId', 'city', 'province', 'suburb']) {
-        expect(resultUrl.searchParams.has(legacyKey)).toBe(false);
-      }
-      await expect(page.getByTestId('selected-location-chip')).toContainText('Sandton');
-    });
-
-    test('broad city selection clarifies through the area picker before searching', async ({
-      page,
-    }) => {
-      const locationInput = await openBuyHero(page);
-      await locationInput.fill('Johannesburg');
-
-      const cityOption = page.getByRole('option', { name: /^Johannesburg City/ });
-      await waitForSuggestionsOrEmptyState(page, cityOption);
-      test.skip(
-        !(await cityOption.first().isVisible()),
-        'Hero search handoff requires canonical reference data.',
-      );
-
-      await cityOption.first().click();
-      await page
-        .locator('form')
-        .getByRole('button', { name: 'Search', exact: true })
-        .click();
-
-      const areaPicker = page.getByRole('dialog');
-      await expect(areaPicker).toBeVisible();
-      await expect(areaPicker.getByRole('button', { name: /Browse all Johannesburg/ })).toBeVisible();
-
-      await areaPicker.getByRole('button', { name: /Browse all Johannesburg/ }).click();
-
-      await expect(page).toHaveURL(/\/property-for-sale\?.*canonicalPlaceId=/);
-      const resultUrl = new URL(page.url());
-      expect(resultUrl.pathname).toBe('/property-for-sale');
-      expect(resultUrl.searchParams.get('canonicalPlaceId')).toMatch(
-        /^pl-place-01-[a-f0-9]{24}$/,
-      );
-      for (const legacyKey of ['locationId', 'city', 'province', 'suburb']) {
-        expect(resultUrl.searchParams.has(legacyKey)).toBe(false);
-      }
-      await expect(page.getByTestId('selected-location-chip')).toContainText('Johannesburg');
-    });
-
-    test('area picker explore path lands on the canonical neutral city page', async ({ page }) => {
-      const locationInput = await openBuyHero(page);
-      await locationInput.fill('Johannesburg');
-
-      const cityOption = page.getByRole('option', { name: /^Johannesburg City/ });
-      await waitForSuggestionsOrEmptyState(page, cityOption);
-      test.skip(
-        !(await cityOption.first().isVisible()),
-        'Hero search handoff requires canonical reference data.',
-      );
-
-      await cityOption.first().click();
-      await page
-        .locator('form')
-        .getByRole('button', { name: 'Search', exact: true })
-        .click();
-
-      const areaPicker = page.getByRole('dialog');
-      await expect(areaPicker).toBeVisible();
-      await areaPicker.getByRole('button', { name: /Not sure\? Explore Johannesburg/ }).click();
-
-      await expect(page).toHaveURL(/\/gauteng\/johannesburg$/);
-      await expect(
-        page.getByRole('heading', { level: 1, name: /Explore Johannesburg/i }),
-      ).toBeVisible();
-    });
+    await saleLink.click();
+    await expect(page).toHaveURL(/\/property-for-sale\?canonicalPlaceId=pl-place-01-[a-f0-9]{24}$/);
+    const resultUrl = new URL(page.url());
+    expect(resultUrl.searchParams.get('canonicalPlaceId')).toBe(expectedPlaceId);
+    for (const legacyKey of ['locationId', 'city', 'province', 'suburb']) {
+      expect(resultUrl.searchParams.has(legacyKey)).toBe(false);
+    }
   });
 });

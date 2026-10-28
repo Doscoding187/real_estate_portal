@@ -152,7 +152,13 @@ export function resolveExplicitTransactionType(
     '/new-developments': 'developments',
   };
   const pathType = canonicalPathType[pathname] ?? null;
-  const rawValues = ['intent', 'transactionType', 'listingType']
+  // On the developments route, transactionType is a result refinement
+  // (for_sale / for_rent). The path already fixes the journey type.
+  const intentKeys =
+    pathname === '/new-developments'
+      ? ['intent', 'listingType']
+      : ['intent', 'transactionType', 'listingType'];
+  const rawValues = intentKeys
     .map(key => searchParams.get(key)?.trim().toLowerCase())
     .filter((value): value is string => Boolean(value));
   const resolvedValues = rawValues.map(value => TRANSACTION_TYPE_ALIASES[value] ?? null);
@@ -216,6 +222,43 @@ export function resolveSearchIntent(
         ? parseRentSearchParams(searchParams)
         : {};
 
+  if (transactionType === 'developments') {
+    const allowedValues: Record<string, readonly string[]> = {
+      developmentType: ['residential', 'commercial', 'mixed_use', 'land'],
+      developmentStatus: ['launching-soon', 'selling', 'sold-out'],
+      transactionType: ['for_sale', 'for_rent'],
+      availability: ['available', 'sold_out'],
+    };
+    for (const [key, values] of Object.entries(allowedValues)) {
+      const value = searchParams.get(key);
+      if (value && values.includes(value)) filters[key] = value;
+    }
+
+    for (const key of ['minPrice', 'maxPrice', 'minBedrooms', 'maxBedrooms']) {
+      const raw = searchParams.get(key);
+      if (raw === null || raw.trim() === '') continue;
+      const value = Number(raw);
+      if (Number.isFinite(value) && value >= 0) filters[key] = value;
+    }
+
+    if (
+      filters.minPrice !== undefined &&
+      filters.maxPrice !== undefined &&
+      filters.minPrice > filters.maxPrice
+    ) {
+      delete filters.minPrice;
+      delete filters.maxPrice;
+    }
+    if (
+      filters.minBedrooms !== undefined &&
+      filters.maxBedrooms !== undefined &&
+      filters.minBedrooms > filters.maxBedrooms
+    ) {
+      delete filters.minBedrooms;
+      delete filters.maxBedrooms;
+    }
+  }
+
   if (transactionType === RENT_TRANSACTION_TYPE) {
     searchParams.forEach((value, key) => {
       if (RESERVED_QUERY_KEYS.has(key)) return;
@@ -240,7 +283,12 @@ export function resolveSearchIntent(
   }
 
   Object.keys(filters).forEach(key => {
-    if (RESERVED_QUERY_KEYS.has(key)) delete filters[key];
+    if (
+      RESERVED_QUERY_KEYS.has(key) &&
+      !(transactionType === 'developments' && key === 'transactionType')
+    ) {
+      delete filters[key];
+    }
   });
   if (transactionType === BUY_TRANSACTION_TYPE) filters.listingType = 'sale';
   if (transactionType === RENT_TRANSACTION_TYPE) filters.listingType = 'rent';
@@ -279,7 +327,14 @@ export function generateIntentUrl(intent: SearchIntent): string {
         : filters;
 
   Object.entries(serializableFilters).forEach(([key, value]) => {
-    if (RESERVED_QUERY_KEYS.has(key) || key === 'listingType' || key === 'searchError') return;
+    if (
+      (RESERVED_QUERY_KEYS.has(key) &&
+        !(transactionType === 'developments' && key === 'transactionType')) ||
+      key === 'listingType' ||
+      key === 'searchError'
+    ) {
+      return;
+    }
     if (value === undefined || value === null || value === '') return;
     if (Array.isArray(value)) {
       value.forEach(item => {

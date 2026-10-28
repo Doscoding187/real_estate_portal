@@ -34,7 +34,12 @@ const queueEntry = {
       currency: 'ZAR',
     },
   ],
-  coverageAreas: [{ province: 'Gauteng', city: 'Johannesburg', suburb: 'Sandton' }],
+  coverageAreas: [
+    {
+      canonicalPlaceId: 'pl-place-01-000000000000000000000001',
+      label: 'Sandton, Johannesburg, Gauteng',
+    },
+  ],
   createdAt: '2026-01-10 00:00:00',
 };
 

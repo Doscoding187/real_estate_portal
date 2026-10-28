@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/select';
 import { trpc } from '@/lib/trpc';
 import {
+  LAND_CANONICAL_ASSIGNMENT_BLOCKER,
   LAND_CLASSIFICATION_LABELS,
   LAND_PUBLIC_CLASSIFICATIONS,
   type LandPublicClassification,
@@ -17,8 +18,6 @@ import {
 import { isCanonicalPlaceId } from '@shared/placeAuthority';
 import { validateLandSearchGeography } from '@shared/landSearchGeography';
 
-const LAND_CANONICAL_ASSIGNMENT_BLOCKER =
-  'Land search is waiting for the canonical land_parcels.canonical_place_id field and reviewed Place assignments. Existing parcel labels will not be mapped automatically.';
 const numberValue = (value: string) => (value.trim() ? Number(value) : undefined);
 
 export default function PlotsAndLand() {

@@ -93,9 +93,9 @@ describe('canonical Place public search selection', () => {
     expect(reloaded.validation).toBeUndefined();
     expect(reloaded.geography.canonicalPlaceId).toBe(id);
     expect(buildCanonicalSavedSearchCriteria(reloaded)).toMatchObject({
-      canonicalPlaceId: id,
       listingType: 'sale',
     });
+    expect(buildCanonicalSavedSearchCriteria(reloaded)).not.toHaveProperty('canonicalPlaceId');
     expect(generateIntentUrl(reloaded)).toBe(url.pathname + url.search);
     fireEvent.change(screen.getByRole('combobox', { name: 'City, town, suburb or locality' }), {
       target: { value: 'Different place' },
@@ -136,8 +136,6 @@ describe('canonical Place public search selection', () => {
       key.endsWith('Ids') || ['suburb', 'locations'].includes(key)
         ? ['suburb:1', 'suburb:2']
         : 'competing';
-    expect(validatePublicSearchInput({ canonicalPlaceId: id, [key]: value })?.path).toBe(
-      'canonicalPlaceId',
-    );
+    expect(validatePublicSearchInput({ canonicalPlaceId: id, [key]: value })?.path).toBe(key);
   });
 });

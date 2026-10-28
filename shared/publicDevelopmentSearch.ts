@@ -1,4 +1,5 @@
 import type { SearchResultSortOption } from './transactionalSearchState';
+import { isCanonicalPlaceId } from './placeAuthority';
 
 export const PUBLIC_DEVELOPMENT_SEARCH_AVAILABILITY = ['available', 'sold_out'] as const;
 export type PublicDevelopmentSearchAvailability =
@@ -241,6 +242,9 @@ export function projectPublicDevelopmentFacts(
   units: readonly PublicDevelopmentProjectionUnit[],
 ): PublicDevelopmentSearchItem | null {
   if (development.transactionType !== 'for_sale' && development.transactionType !== 'for_rent') {
+    return null;
+  }
+  if (development.canonicalPlaceId !== null && !isCanonicalPlaceId(development.canonicalPlaceId)) {
     return null;
   }
 

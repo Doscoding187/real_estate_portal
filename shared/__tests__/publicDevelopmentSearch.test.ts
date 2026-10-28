@@ -16,7 +16,6 @@ function projectionDevelopment(
   return {
     id: 7,
     name: 'Greenstone Ridge',
-    canonicalPlaceId: null,
     slug: 'greenstone-ridge',
     description: null,
     images: [],

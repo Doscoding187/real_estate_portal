@@ -126,7 +126,7 @@ describe('PXF-S1 property prospect contract', () => {
     expect(dto).toContain('detailPresentation');
     expect(dto).toContain('publicLocation:');
     expect(page).toContain('PropertyLocationOverview');
-    expect(page).toContain('location={presentation.location}');
+    expect(page).toContain('location={displayLocation}');
     expect(page).not.toContain('NearbyLandmarks');
     expect(locationOverview).not.toContain('getNearbyAmenities');
     expect(locationOverview).not.toContain("from '@/lib/trpc'");

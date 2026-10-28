@@ -89,7 +89,7 @@ describe('ServiceProviderProfilePage', () => {
 
     expect(screen.getByText('Test Provider Co')).toBeInTheDocument();
     expect(screen.getByText('Plumbing')).toBeInTheDocument();
-    expect(screen.getByText('Rondebosch, Cape Town, Western Cape')).toBeInTheDocument();
+    expect(screen.getAllByText('Rondebosch, Cape Town, Western Cape')).toHaveLength(2);
   });
 
   it('shows a provider website when one is published', () => {
