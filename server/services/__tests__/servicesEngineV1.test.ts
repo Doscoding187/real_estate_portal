@@ -541,7 +541,7 @@ describe('Services V1 provider edit preservation', () => {
     mockGetDb.mockResolvedValue({});
 
     await expect(servicesEngineService.replaceProviderLocations(20, [])).rejects.toThrow(
-      'Choose between one and five canonical Place coverage areas',
+      'At least one valid coverage area is required',
     );
   });
 });
@@ -747,7 +747,7 @@ describe('Services V1 enquiry attribution', () => {
         companyName: 'Provider Company',
         services: [{ category: 'home_improvement', code: 'Plumbing', displayName: 'Plumbing' }],
 
-        locations: [{ canonicalPlaceId: PLACE_SANDTON, label: 'Sandton, Johannesburg, Gauteng' }],
+        locations: [{ canonicalPlaceId: PLACE_SANDTON, label: 'Sandton' }],
         reviews: [],
       } as never);
 
@@ -831,7 +831,7 @@ describe('Services V1 enquiry attribution', () => {
         providerId: 20,
         companyName: 'Provider Company',
         services: [{ category: 'home_improvement', code: 'Plumbing', displayName: 'Plumbing' }],
-        locations: [{ canonicalPlaceId: PLACE_SANDTON, label: 'Sandton, Johannesburg, Gauteng' }],
+        locations: [{ canonicalPlaceId: PLACE_SANDTON, label: 'Sandton' }],
         reviews: [],
       } as never);
 
@@ -1271,7 +1271,7 @@ describe('Services V1 reviewed publication authority', () => {
       isPublished: true,
       publicationStatus: 'published',
       services: [{ code: 'plumbing' }],
-      locations: [{ canonicalPlaceId: PLACE_SANDTON, label: 'Sandton, Johannesburg, Gauteng' }],
+      locations: [{ canonicalPlaceId: PLACE_SANDTON, label: 'Sandton' }],
     });
 
     const directoryDb = {
@@ -1581,7 +1581,7 @@ describe('Services V1 authoritative coverage replacement', () => {
       servicesEngineService.replaceProviderLocations(20, [
         { id: 41, canonicalPlaceId: 'pl-place-01-000000000000000000000099' },
       ]),
-    ).rejects.toThrow('Choose active, searchable canonical Place coverage areas');
+    ).rejects.toThrow('Choose an approved canonical Place for every coverage area');
     expect(update).not.toHaveBeenCalled();
     expect(deleteFn).not.toHaveBeenCalled();
     expect(insert).not.toHaveBeenCalled();

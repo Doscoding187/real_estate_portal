@@ -166,8 +166,8 @@ describe('Developer Engine S0 containment contracts', () => {
 
   it('blocks auction publication while retaining private authoring support', () => {
     const developmentService = source('server/services/developmentService.ts');
-    const derivedListingService = source('server/services/developmentDerivedListingService.ts');
     const publicDevelopmentSearch = source('server/services/publicDevelopmentSearchService.ts');
+    const publicSearchService = source('server/services/publicSearchService.ts');
     const publicLeadCaptureService = source('server/services/publicLeadCaptureService.ts');
     const distributionPolicy = source('server/services/distributionAccessPolicy.ts');
     const sitemap = source('server/routes/sitemap.ts');
@@ -179,11 +179,11 @@ describe('Developer Engine S0 containment contracts', () => {
       "decision === 'approved' && development.transactionType === 'auction'",
     );
     expect(developmentService).toContain('publicDevelopmentEligibilityConditions()');
-    expect(derivedListingService).toContain('publicDevelopmentEligibilityConditions()');
     expect(developmentService).not.toContain("neq(developments.transactionType, 'auction')");
-    expect(derivedListingService).not.toContain("neq(developments.transactionType, 'auction')");
     expect(publicDevelopmentSearch).toContain('publicDevelopmentEligibilityConditions()');
     expect(publicDevelopmentSearch).toContain('canonicalPlaceId');
+    expect(publicSearchService).toContain("from './publicDevelopmentSearchService'");
+    expect(publicSearchService).not.toContain('developmentDerivedListingService');
     expect(publicLeadCaptureService).toContain('evaluatePublicDevelopmentEligibility');
     expect(distributionPolicy).toContain('getDevelopmentSalesProjection');
     expect(distributionPolicy).toContain('projection.campaign.visible === true');

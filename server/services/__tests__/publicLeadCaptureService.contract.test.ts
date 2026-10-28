@@ -10,6 +10,7 @@ const {
   mockResolvePublicPropertyEligibility,
   mockCreateLeadDeliveryInTransaction,
   mockGetLeadDeliverySnapshot,
+  mockGetDevelopmentPlaceGeography,
 } = vi.hoisted(() => ({
   mockGetDb: vi.fn(),
   mockRecordAgentOsEventForAgentId: vi.fn(),
@@ -19,6 +20,7 @@ const {
   mockResolvePublicPropertyEligibility: vi.fn(),
   mockCreateLeadDeliveryInTransaction: vi.fn(),
   mockGetLeadDeliverySnapshot: vi.fn(),
+  mockGetDevelopmentPlaceGeography: vi.fn(),
 }));
 
 vi.mock('../../db', () => ({
@@ -43,6 +45,10 @@ vi.mock('../cataloguePublisherService', () => ({
 
 vi.mock('../publicPropertyEligibilityService', () => ({
   resolvePublicPropertyEligibility: mockResolvePublicPropertyEligibility,
+}));
+
+vi.mock('../developmentPlaceAssignmentService', () => ({
+  getDevelopmentPlaceGeography: mockGetDevelopmentPlaceGeography,
 }));
 
 vi.mock('../leadDeliveryService', () => ({
@@ -267,11 +273,10 @@ function entitledLaunchSubscription(
 }
 
 describe('publicLeadCaptureService contract', () => {
-  it('rejects retired non-property geography targets before reading or writing the database', async () => {
+  it('rejects retired Land, Commercial, and Shared Living targets before database access', async () => {
     const retiredTargets = [
       { listingId: 701 },
       { listingId: 703, commercialAvailabilityId: 801 },
-      { developmentId: 1701 },
       { slPlaceId: 18, slSpaceId: 21 },
     ];
     for (const target of retiredTargets) {
@@ -400,6 +405,7 @@ describe('publicLeadCaptureService contract', () => {
             },
           },
     );
+    mockGetDevelopmentPlaceGeography.mockResolvedValue(null);
   });
 
   it('captures a public agent-profile enquiry directly into the selected agent CRM', async () => {
@@ -568,11 +574,30 @@ describe('publicLeadCaptureService contract', () => {
   });
 
   it('blocks Development lead capture until reviewed Place assignments exist', async () => {
-    await expect(capturePublicLead(baseInput({ developmentId: 77 }))).rejects.toMatchObject({
-      code: 'PRECONDITION_FAILED',
-      message: expect.stringContaining('reviewed Place assignments'),
+    const database = makeFakeDatabase({
+      selectResults: [
+        [],
+        [{
+          id: 77,
+          cataloguePublisherId: null,
+          isPublished: 1,
+          approvalStatus: 'approved',
+          transactionType: 'for_sale',
+          developmentType: 'residential',
+          activeUnitTypeCount: 1,
+          activeOperatorCount: 0,
+          activeSupersessionSource: 0,
+        }],
+      ],
     });
-    expect(mockGetDb).not.toHaveBeenCalled();
+    mockGetDb.mockResolvedValue(database);
+
+    await expect(capturePublicLead(baseInput({ developmentId: 77 }))).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+      message: 'Development not available for public enquiries.',
+    });
+    expect(mockGetDevelopmentPlaceGeography).toHaveBeenCalledWith(77);
+    expect(database.insertValues).not.toHaveBeenCalled();
   });
 
   it('uses canonical property agent ownership and ignores client recipient ids', async () => {

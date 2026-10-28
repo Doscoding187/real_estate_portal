@@ -2,19 +2,19 @@
 
 ## Geography authority
 
-Every public Land search has exactly one geography authority. The accepted
-authorities are a typed city/province pair, one canonical `locationId`, a
-same-level sibling `locationIds` OR selection, or one governed `searchAreaId`.
+Every public Land search has one geography authority: one admitted
+`canonicalPlaceId`, or a same-level sibling OR selection of admitted
+`canonicalPlaceIds`. Both forms identify Places in the canonical Place
+authority.
 
-Do not combine these forms. The router must reject a mixed request; services
-must not select a winner, merge scopes, widen the boundary, or fall back to
-listing display text. A manual edit intentionally replaces a canonical or
-Search Area handoff before the request is sent.
+The router rejects mixed or retired inputs, including typed city/province,
+numeric location IDs, Search Areas, and display text. Services do not choose a
+winner, merge scopes, widen the boundary, or fall back to listing labels. A
+manual edit replaces the selected Place handoff before the request is sent.
 
-Canonical IDs resolve through the location authority. Multi-location Land
-searches resolve to exact siblings only. Search Areas resolve only when the
-`plot_land` journey is explicitly authorised, and the parcel geography is the
-query boundary.
+Canonical IDs resolve through Place Authority. Multi-Place Land searches
+resolve to the exact selected siblings only. The public Land consumer remains
+gated until canonical Land assignments are available.
 
 ## Public classification
 

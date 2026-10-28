@@ -725,7 +725,7 @@ describeWithDb('agency full operating journey acceptance', () => {
         licenseNumber: `PL-${suffix}`,
         yearsExperience: 5,
         focus: 'sales',
-        areasServed: [canonicalSuburbId],
+        areasServed: [location.canonicalPlaceId],
         specializations: ['Residential sales'],
         propertyTypes: ['house'],
         languages: ['English'],
@@ -963,7 +963,7 @@ describeWithDb('agency full operating journey acceptance', () => {
     ).toEqual([]);
 
     const privateSearch = await publicApi.properties.searchPublicInventory.query({
-      canonicalPlaceId: canonicalSuburbId,
+      canonicalPlaceId: CANONICAL_SANDTON_PLACE_ID,
       propertyType: 'house',
       listingType: 'sale',
       listingSource: 'manual',
@@ -975,7 +975,7 @@ describeWithDb('agency full operating journey acceptance', () => {
 
     await expect(
       publicApi.properties.searchPublicInventory.query({
-        locationId: canonicalSuburbId,
+        locationId: CANONICAL_SANDTON_PLACE_ID,
         city: 'johannesburg',
         propertyType: 'house',
         listingType: 'sale',
@@ -1070,7 +1070,7 @@ describeWithDb('agency full operating journey acceptance', () => {
     // Legacy numeric geography must never bridge into canonical Place inventory.
     await expect(
       publicApi.properties.searchPublicInventory.query({
-        locationId: canonicalSuburbId,
+        locationId: CANONICAL_SANDTON_PLACE_ID,
         propertyType: 'house',
         listingType: 'sale',
         listingSource: 'manual',
@@ -1199,7 +1199,7 @@ describeWithDb('agency full operating journey acceptance', () => {
       { province: 'gauteng' },
       { city: 'johannesburg' },
       { suburb: ['north-riding'] },
-      { locationId: canonicalSuburbId },
+      { locationId: CANONICAL_SANDTON_PLACE_ID },
       { locationIds: ['suburb:1', 'suburb:2'] },
       { searchAreaId: 'sandton-core' },
       { searchAreaIds: ['sandton-core', 'rosebank-core'] },

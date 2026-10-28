@@ -6,8 +6,6 @@ const PLACE_B = 'pl-place-01-000000000000000000000002';
 
 describe('Land public-search geography authority', () => {
   it.each([
-    { searchAreaId: 'johannesburg-sandton', canonicalPlaceId: PLACE_A },
-    { searchAreaId: 'johannesburg-sandton', canonicalPlaceIds: [PLACE_A, PLACE_B] },
     { canonicalPlaceId: PLACE_A, canonicalPlaceIds: [PLACE_A, PLACE_B] },
   ])('rejects conflicting geography authorities: %o', input => {
     expect(validateLandSearchGeography(input)).toBeDefined();
@@ -16,7 +14,6 @@ describe('Land public-search geography authority', () => {
   it.each([
     { canonicalPlaceId: PLACE_A },
     { canonicalPlaceIds: [PLACE_A, PLACE_B] },
-    { searchAreaId: 'johannesburg-sandton' },
   ])('allows one canonical geography authority: %o', input => {
     expect(validateLandSearchGeography(input)).toBeUndefined();
   });

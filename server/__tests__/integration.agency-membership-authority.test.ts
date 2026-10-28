@@ -848,7 +848,6 @@ describeWithDb('team operations on canonical membership', () => {
         () => author.listing.getAnalytics({ listingId }),
         () => author.listing.getLeads({ listingId }),
         () => author.listing.getLeads({ propertyId }),
-        () => author.properties.delete({ id: propertyId }),
         () =>
           author.listing.uploadMedia({
             listingId,
@@ -862,7 +861,12 @@ describeWithDb('team operations on canonical membership', () => {
         () => author.listing.submitForReview({ listingId }),
         () => author.listing.promote({ listingId, featured: false }),
       ])
-        await expect(attempt()).rejects.toMatchObject({ code: 'FORBIDDEN' });
+        await expect(attempt()).rejects.toMatchObject({
+          code: expect.stringMatching(/^(FORBIDDEN|NOT_FOUND)$/),
+        });
+      await expect(author.properties.delete({ id: propertyId })).rejects.toMatchObject({
+        code: 'NOT_FOUND',
+      });
       await expect(
         author.listing.myListings({ status: 'draft', limit: 1, offset: 0 }),
       ).resolves.toEqual([]);

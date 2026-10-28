@@ -53,12 +53,10 @@ describe('properties.create retirement contract', () => {
   });
 
   it.each(['agent', 'agency_admin', 'super_admin'])(
-    'denies an authenticated %s before property or media persistence',
+    'does not expose direct property creation to an authenticated %s',
     async role => {
       await expect(callerFor(role).properties.create(createInput)).rejects.toMatchObject({
-        code: 'PRECONDITION_FAILED',
-        message:
-          'Direct property creation has been retired. Use the canonical listing workflow for review and publication.',
+        code: 'NOT_FOUND',
       });
 
       expect(mockDb.createProperty).not.toHaveBeenCalled();

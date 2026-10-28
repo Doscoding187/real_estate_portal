@@ -47,6 +47,7 @@ export function validatePublicSearchInput(
     'locationId',
     'factualLocationId',
     'locationIds',
+    'canonicalPlaceIds',
     'searchAreaIds',
     'searchAreaId',
   ]) {

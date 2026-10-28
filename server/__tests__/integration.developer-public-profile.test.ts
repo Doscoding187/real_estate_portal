@@ -1,9 +1,16 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 
 import { developerRouter } from '../developerRouter';
 import { getDb } from '../db-connection';
-import { developerOrganisations, developments, unitTypes, users } from '../../drizzle/schema';
+import {
+  developmentPlaceAssignments,
+  developerOrganisations,
+  developments,
+  unitTypes,
+  users,
+} from '../../drizzle/schema';
+import { recordReviewedDevelopmentPlaceAssignment } from '../services/developmentPlaceAssignmentService';
 import {
   activateDeveloperTestLaunchAccess,
   createDeveloperTestContext,
@@ -21,12 +28,16 @@ describeWithDb('developer public profile integration', () => {
   let developerContext: DeveloperTestContext | null = null;
   const developmentIds: number[] = [];
   const unitTypeIds: string[] = [];
+  const reviewerUserIds: number[] = [];
 
   afterEach(async () => {
     const db = await getDb();
     if (!db) return;
 
     for (const id of developmentIds.splice(0)) {
+      await db
+        .delete(developmentPlaceAssignments)
+        .where(eq(developmentPlaceAssignments.developmentId, id));
       await db.delete(unitTypes).where(eq(unitTypes.developmentId, id));
       await db.delete(developments).where(eq(developments.id, id));
     }
@@ -38,6 +49,9 @@ describeWithDb('developer public profile integration', () => {
     if (userId) {
       await db.delete(users).where(eq(users.id, userId));
       userId = null;
+    }
+    if (reviewerUserIds.length) {
+      await db.delete(users).where(inArray(users.id, reviewerUserIds.splice(0)));
     }
   });
 
@@ -53,6 +67,14 @@ describeWithDb('developer public profile integration', () => {
       emailVerified: 1,
     });
     userId = Number(userInsert.insertId);
+    const [reviewerInsert] = await db!.insert(users).values({
+      email: `public-brand-reviewer-${suffix}@example.com`,
+      name: `Public Brand Reviewer ${suffix}`,
+      role: 'super_admin',
+      emailVerified: 1,
+    });
+    const reviewerUserId = Number(reviewerInsert.insertId);
+    reviewerUserIds.push(reviewerUserId);
 
     developerContext = await createDeveloperTestContext({
       userId,
@@ -76,7 +98,16 @@ describeWithDb('developer public profile integration', () => {
       isPublished: 1,
       approvalStatus: 'approved',
     });
-    developmentIds.push(Number(publishedInsert.insertId));
+    const publishedDevelopmentId = Number(publishedInsert.insertId);
+    developmentIds.push(publishedDevelopmentId);
+    await recordReviewedDevelopmentPlaceAssignment({
+      developmentId: publishedDevelopmentId,
+      phaseId: null,
+      placeId: 'pl-place-01-dee61758ef3bda7cd1a258ad',
+      assignmentKind: 'site',
+      evidenceReference: `test-fixture:developer-public-profile:${suffix}`,
+      reviewerUserId,
+    });
     const unitTypeId = `public-unit-${suffix}`;
     await db!.insert(unitTypes).values({
       id: unitTypeId,
@@ -147,6 +178,14 @@ describeWithDb('developer public profile integration', () => {
       emailVerified: 1,
     });
     userId = Number(userInsert.insertId);
+    const [reviewerInsert] = await db!.insert(users).values({
+      email: `presence-reviewer-${suffix}@example.com`,
+      name: `Presence Reviewer ${suffix}`,
+      role: 'super_admin',
+      emailVerified: 1,
+    });
+    const reviewerUserId = Number(reviewerInsert.insertId);
+    reviewerUserIds.push(reviewerUserId);
 
     developerContext = await createDeveloperTestContext({
       userId,
@@ -167,7 +206,16 @@ describeWithDb('developer public profile integration', () => {
       isPublished: 1,
       approvalStatus: 'approved',
     });
-    developmentIds.push(Number(publishedInsert.insertId));
+    const publishedDevelopmentId = Number(publishedInsert.insertId);
+    developmentIds.push(publishedDevelopmentId);
+    await recordReviewedDevelopmentPlaceAssignment({
+      developmentId: publishedDevelopmentId,
+      phaseId: null,
+      placeId: 'pl-place-01-dee61758ef3bda7cd1a258ad',
+      assignmentKind: 'site',
+      evidenceReference: `test-fixture:developer-presence:${suffix}`,
+      reviewerUserId,
+    });
     const unitTypeId = `presence-unit-${suffix}`;
     await db!.insert(unitTypes).values({
       id: unitTypeId,

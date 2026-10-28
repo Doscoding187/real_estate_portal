@@ -215,7 +215,10 @@ export interface PlaceAuthorityClaim {
   placeId?: string | null;
 }
 
-export type PlaceAuthorityRejection = 'no_geography_authority' | 'malformed_place_id';
+export type PlaceAuthorityRejection =
+  | 'no_geography_authority'
+  | 'malformed_place_id'
+  | 'retired_geography_input';
 
 export type PlaceAuthorityResolution =
   | { ok: true; authority: { kind: 'place'; placeId: string } }
@@ -231,6 +234,11 @@ const present = (value: unknown) =>
 export function resolveSingleGeographyAuthority(
   claim: PlaceAuthorityClaim,
 ): PlaceAuthorityResolution {
+  const hasRetiredInput = Object.entries(claim).some(
+    ([key, value]) => key !== 'placeId' && present(value),
+  );
+  if (hasRetiredInput) return { ok: false, reason: 'retired_geography_input' };
+
   const hasPlace = present(claim.placeId);
   if (!hasPlace) return { ok: false, reason: 'no_geography_authority' };
   if (!isCanonicalPlaceId(claim.placeId)) return { ok: false, reason: 'malformed_place_id' };

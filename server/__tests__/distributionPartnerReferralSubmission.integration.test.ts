@@ -12,6 +12,7 @@ import {
 import {
   cataloguePublishers,
   developmentRequiredDocuments,
+  developmentPlaceAssignments,
   developmentManagerAssignments,
   distributionBrandPartnerships,
   distributionDevelopmentAccess,
@@ -35,6 +36,7 @@ import {
 } from '../../drizzle/schema';
 import { CANONICAL_PLATFORM_SETTINGS } from '../_core/databaseAuthority/dataAdapters/canonicalPlatformSettings';
 import { cataloguePublisherService } from '../services/cataloguePublisherService';
+import { recordReviewedDevelopmentPlaceAssignment } from '../services/developmentPlaceAssignmentService';
 import {
   upsertBrandPartnership,
   upsertDevelopmentAccess,
@@ -49,6 +51,7 @@ import { installSyntheticLegalRelease } from '../test-utils/legalReleaseFixture'
 
 const hasDb = Boolean(process.env.DATABASE_URL);
 const INTEGRATION_TIMEOUT_MS = 30_000;
+const CANONICAL_TEST_PLACE_ID = 'pl-place-01-dee61758ef3bda7cd1a258ad';
 const describeWithDb: typeof describe = hasDb
   ? describe
   : ((name: string, fn: Parameters<typeof describe>[1]) =>
@@ -166,6 +169,14 @@ async function insertDevelopment(name: string) {
 
   const developmentId = Number((insertResult as any).insertId || 0);
   createdState.developmentIds.push(developmentId);
+  await recordReviewedDevelopmentPlaceAssignment({
+    developmentId,
+    phaseId: null,
+    placeId: CANONICAL_TEST_PLACE_ID,
+    assignmentKind: 'site',
+    evidenceReference: `test-fixture:distribution-referral:${suffix}`,
+    reviewerUserId: curatorUserId,
+  });
 
   const unitTypeId = randomUUID();
   await db.insert(unitTypes).values({
@@ -719,6 +730,9 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
     }
 
     if (developmentIds.length) {
+      await db
+        .delete(developmentPlaceAssignments)
+        .where(inArray(developmentPlaceAssignments.developmentId, developmentIds));
       await db.delete(developments).where(inArray(developments.id, developmentIds));
     }
 

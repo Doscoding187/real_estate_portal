@@ -13,7 +13,6 @@ const {
   mockInsertValues,
   mockUpdateSet,
   mockUpdateWhere,
-  mockSearchProperties,
   mockSearchInventory,
   mockSendEmail,
 } = vi.hoisted(() => ({
@@ -29,19 +28,12 @@ const {
   mockInsertValues: vi.fn(),
   mockUpdateSet: vi.fn(),
   mockUpdateWhere: vi.fn(),
-  mockSearchProperties: vi.fn(),
   mockSearchInventory: vi.fn(),
   mockSendEmail: vi.fn(),
 }));
 
 vi.mock('../../db-connection', () => ({
   getDb: mockGetDb,
-}));
-
-vi.mock('../propertySearchService', () => ({
-  propertySearchService: {
-    searchProperties: mockSearchProperties,
-  },
 }));
 
 vi.mock('../publicSearchService', () => ({
@@ -57,6 +49,8 @@ vi.mock('../../_core/emailService', () => ({
 }));
 
 import { savedSearchNotificationEngine } from '../savedSearchNotificationEngine';
+
+const canonicalPlaceId = 'pl-place-01-000000000000000000000001';
 
 const publicOriginEnvKeys = [
   'APP_URL',
@@ -140,7 +134,7 @@ describe('savedSearchNotificationEngine', () => {
         userId: 7,
         name: 'Johannesburg Apartments',
         criteria: {
-          city: 'Johannesburg',
+          canonicalPlaceId,
           listingType: 'sale',
           propertyType: 'apartment',
         },
@@ -171,15 +165,19 @@ describe('savedSearchNotificationEngine', () => {
       update: vi.fn(() => ({ set: mockUpdateSet })),
     });
 
-    mockSearchProperties.mockResolvedValue({
+    mockSearchInventory.mockResolvedValue({
       total: 2,
-      properties: [
+      cards: [
         {
           id: '55',
           title: '2 Bedroom Apartment for Sale in Rosebank',
           price: 1450000,
+          canonicalPlaceId,
+          kind: 'property',
+          href: '/property/55',
           city: 'Johannesburg',
           suburb: 'Rosebank',
+          listingSource: 'manual',
           listingType: 'sale',
           listedDate: new Date('2026-03-21T09:00:00.000Z'),
           images: [{ url: 'https://example.com/property.jpg' }],
@@ -188,17 +186,17 @@ describe('savedSearchNotificationEngine', () => {
           id: '56',
           title: '1 Bedroom Apartment for Sale in Sandton',
           price: 995000,
+          canonicalPlaceId,
+          kind: 'property',
+          href: '/property/56',
           city: 'Johannesburg',
           suburb: 'Sandton',
+          listingSource: 'manual',
           listingType: 'sale',
           listedDate: new Date('2026-03-20T06:00:00.000Z'),
           images: [],
         },
       ],
-    });
-    mockSearchInventory.mockResolvedValue({
-      total: 0,
-      cards: [],
       page: 0,
       pageSize: 50,
       hasMore: false,
@@ -227,17 +225,14 @@ describe('savedSearchNotificationEngine', () => {
         now: new Date('2026-03-21T10:00:00.000Z'),
       });
 
-      expect(mockSearchProperties).toHaveBeenCalledWith(
-        {
-          city: 'Johannesburg',
-          propertyType: ['apartment'],
+      expect(mockSearchInventory).toHaveBeenCalledWith(
+        expect.objectContaining({
+          canonicalPlaceId,
+          propertyType: 'apartment',
           listingType: 'sale',
-        },
-        'date_desc',
-        1,
-        100,
-        undefined,
-        { publicOnly: true },
+          page: 0,
+          pageSize: 50,
+        }),
       );
       expect(mockInsertValues).toHaveBeenCalledTimes(2);
       expect(mockInsertValues).toHaveBeenNthCalledWith(
@@ -363,20 +358,27 @@ describe('savedSearchNotificationEngine', () => {
 
   it('skips notification emission when no new matches exist since lastNotifiedAt', async () => {
     mockDbOrderBy.mockReturnValue({ where: mockDbWhere });
-    mockSearchProperties.mockResolvedValue({
+    mockSearchInventory.mockResolvedValue({
       total: 1,
-      properties: [
+      cards: [
         {
           id: '55',
           title: '2 Bedroom Apartment for Sale in Rosebank',
           price: 1450000,
+          canonicalPlaceId,
+          kind: 'property',
+          href: '/property/55',
           city: 'Johannesburg',
           suburb: 'Rosebank',
+          listingSource: 'manual',
           listingType: 'sale',
           listedDate: new Date('2026-03-18T09:00:00.000Z'),
           images: [{ url: 'https://example.com/property.jpg' }],
         },
       ],
+      page: 0,
+      pageSize: 50,
+      hasMore: false,
     });
 
     const result = await savedSearchNotificationEngine.processDueNotifications({
@@ -410,10 +412,6 @@ describe('savedSearchNotificationEngine', () => {
       },
     ]);
     mockDbOrderBy.mockReturnValue({ where: mockDbWhere });
-    mockSearchProperties.mockResolvedValue({
-      total: 0,
-      properties: [],
-    });
     mockSearchInventory.mockResolvedValue({
       total: 2,
       cards: [
@@ -450,7 +448,6 @@ describe('savedSearchNotificationEngine', () => {
     expect(mockSearchInventory).toHaveBeenCalledWith(
       expect.objectContaining({ canonicalPlaceId, listingSource: 'development' }),
     );
-    expect(mockSearchProperties).not.toHaveBeenCalled();
     expect(mockInsertValues).not.toHaveBeenCalled();
     expect(mockSendEmail).not.toHaveBeenCalled();
     expect(result.notifications[0]).toMatchObject({
@@ -491,7 +488,6 @@ describe('savedSearchNotificationEngine', () => {
     });
 
     expect(mockSearchInventory).not.toHaveBeenCalled();
-    expect(mockSearchProperties).not.toHaveBeenCalled();
     expect(result.notifications).toEqual([]);
   });
 
@@ -543,7 +539,7 @@ describe('savedSearchNotificationEngine', () => {
         userId: 7,
         name: 'Johannesburg Apartments',
         criteria: {
-          city: 'Johannesburg',
+          canonicalPlaceId,
           listingType: 'sale',
           propertyType: 'apartment',
           __deliveryPreferences: {

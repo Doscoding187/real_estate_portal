@@ -15,8 +15,10 @@ import {
   normalizePublicSearchPageSize,
 } from '../../shared/publicSearchPagination';
 import type { PropertyFilters, SearchCardResult, SortOption } from '../../shared/types';
+import type { PublicDevelopmentSearchItem } from '../../shared/publicDevelopmentSearch';
 import { isCanonicalPlaceId } from '../../shared/placeAuthority';
 import { validatePublicSearchInput } from '../../shared/publicSearchValidation';
+import { buildDevelopmentCardHighlights } from '../../shared/listing-highlight-registry';
 import {
   BUY_PUBLIC_PROPERTY_TYPES,
   RENT_PUBLIC_PROPERTY_TYPES,
@@ -25,7 +27,7 @@ import {
   COMMERCIAL_PUBLIC_JOURNEY_HANDOFF_MESSAGE,
   isCommercialMarketingPropertyType,
 } from '../../shared/commercial-domain';
-import { developmentDerivedListingService } from './developmentDerivedListingService';
+import { publicDevelopmentSearchService } from './publicDevelopmentSearchService';
 import { propertySearchService } from './propertySearchService';
 
 export interface PublicSearchInventoryInput {
@@ -142,19 +144,91 @@ function buildPublicFilters(
   };
 }
 
-function buildDevelopmentFilters(input: PublicSearchInventoryInput & { canonicalPlaceId: string }) {
+function buildDevelopmentSearchInput(
+  input: PublicSearchInventoryInput & { canonicalPlaceId: string },
+  page: number,
+  pageSize: number,
+): Parameters<typeof publicDevelopmentSearchService.search>[0] {
   return {
     canonicalPlaceId: input.canonicalPlaceId,
-    propertyType: genericJourneyPropertyTypes(input.listingType!, input.propertyType),
-    listingType: input.listingType,
+    transactionType: input.listingType === 'rent' ? 'for_rent' : 'for_sale',
+    developmentType:
+      input.propertyType === 'plot'
+        ? 'land'
+        : input.propertyType === 'commercial'
+          ? 'commercial'
+          : 'residential',
     minPrice: input.minPrice,
     maxPrice: input.maxPrice,
     minBedrooms: input.minBedrooms,
     maxBedrooms: input.maxBedrooms,
-    minBathrooms: input.minBathrooms,
-    minArea: input.minArea,
-    maxArea: input.maxArea,
-    bounds: buildSearchBounds(input),
+    sortOption: input.sortOption,
+    page,
+    pageSize,
+  };
+}
+
+function developmentCard(item: PublicDevelopmentSearchItem): SearchCardResult {
+  const location = item.locationLabels.join(', ');
+  const publisherRole =
+    item.publisher.authorityKind === 'platform_reference' ? 'platform' : 'developer';
+  const publisherProvenance =
+    item.publisher.authorityKind === 'platform_reference' ? 'platform_curated' : 'developer';
+  const price = item.priceFrom ?? 0;
+  const firstImage = item.images[0] ?? '';
+  const bathrooms = item.unitTypes
+    .map(unit => unit.bathrooms)
+    .filter((value): value is number => value !== null && Number.isFinite(value));
+
+  return {
+    kind: 'development',
+    id: String(item.id),
+    href: item.canonicalRoute,
+    title: item.name,
+    location,
+    city: '',
+    suburb: '',
+    province: '',
+    ...(item.canonicalPlaceId ? { canonicalPlaceId: item.canonicalPlaceId } : {}),
+    locationLabels: item.locationLabels,
+    price,
+    image: firstImage,
+    images: item.images.map(url => ({ url })),
+    description: item.description ?? undefined,
+    bedrooms: item.bedroomRange.min ?? undefined,
+    bathrooms: bathrooms.length ? Math.min(...bathrooms) : undefined,
+    propertyType:
+      item.developmentType === 'land'
+        ? 'plot'
+        : item.developmentType === 'commercial'
+          ? 'commercial'
+          : 'house',
+    listingType: item.transactionType === 'for_rent' ? 'rent' : 'sale',
+    listingSource: 'development',
+    contactRole: publisherRole,
+    identity: {
+      role: publisherRole,
+      provenance: publisherProvenance,
+      name: item.publisher.name,
+      organizationName: item.publisher.name,
+      organizationLogoUrl: item.publisher.logoUrl,
+      cataloguePublisherId: item.publisher.id,
+    },
+    development: { id: item.id, name: item.name, slug: item.slug },
+    developerBrand: {
+      id: item.publisher.id,
+      brandName: item.publisher.name,
+      slug: item.publisher.slug,
+      logoUrl: item.publisher.logoUrl ?? undefined,
+    },
+    highlights: buildDevelopmentCardHighlights(item.highlights),
+    badges: [item.status],
+    imageCount: item.images.length,
+    transactionType: item.transactionType,
+    listedDate: item.createdAt ? new Date(item.createdAt) : new Date(0),
+    developmentId: item.id,
+    availableUnits: item.availableUnits ?? undefined,
+    totalUnits: item.totalUnits ?? undefined,
   };
 }
 
@@ -288,21 +362,17 @@ export class PublicSearchService {
     const filters = buildPublicFilters(input, placeMemberIds);
     const manualEnabled = input.listingSource !== 'development';
     const developmentEnabled = input.listingSource !== 'manual' && Boolean(input.canonicalPlaceId);
-    const developmentFilters =
-      input.canonicalPlaceId && developmentEnabled
-        ? buildDevelopmentFilters({ ...input, canonicalPlaceId: input.canonicalPlaceId })
-        : undefined;
-
     const fetchSourceResults = async (requestedPage: number) => {
       const combined = manualEnabled && developmentEnabled;
       const sourcePageSize = combined ? (requestedPage + 1) * pageSize : pageSize;
-      const sourcePage = combined ? 1 : requestedPage + 1;
+      const manualSourcePage = combined ? 1 : requestedPage + 1;
+      const developmentSourcePage = combined ? 0 : requestedPage;
       return Promise.all([
         manualEnabled
           ? propertySearchService.searchProperties(
               filters,
               sourceSortOption,
-              sourcePage,
+              manualSourcePage,
               sourcePageSize,
               {
                 publicOnly: true,
@@ -312,11 +382,12 @@ export class PublicSearchService {
             )
           : null,
         developmentEnabled
-          ? developmentDerivedListingService.searchListings(
-              developmentFilters!,
-              sourceSortOption,
-              sourcePage,
-              sourcePageSize,
+          ? publicDevelopmentSearchService.search(
+              buildDevelopmentSearchInput(
+                { ...input, canonicalPlaceId: input.canonicalPlaceId! },
+                developmentSourcePage,
+                sourcePageSize,
+              ),
             )
           : null,
       ]);
@@ -336,7 +407,7 @@ export class PublicSearchService {
     }
 
     const manualCards = (manualResults?.cards || []) as SearchCardResult[];
-    const developmentCards = (developmentResults?.cards || []) as SearchCardResult[];
+    const developmentCards = (developmentResults?.items || []).map(developmentCard);
     const blended =
       manualEnabled && developmentEnabled
         ? blendSearchSources(manualCards, developmentCards, sortOption)

@@ -17,8 +17,11 @@ describe('cross-supply projection authority', () => {
   it('retires the legacy Development listing projection', () => {
     expect(existsSync('server/services/developmentDerivedListingService.ts')).toBe(false);
     const source = read('server/services/publicDevelopmentSearchService.ts');
-    expect(source).toContain('PUBLIC_DEVELOPMENT_CANONICAL_ASSIGNMENT_BLOCKER');
-    expect(source).toContain('items: []');
+    expect(source).toContain('listDevelopmentIdsForCanonicalPlace');
+    expect(source).toContain('publicDevelopmentEligibilityConditions()');
+    const inventory = read('server/services/publicSearchService.ts');
+    expect(inventory).toContain("from './publicDevelopmentSearchService'");
+    expect(inventory).not.toContain('developmentDerivedListingService');
   });
 
   it('keeps Shared Living public reads on its governed service boundary', () => {
