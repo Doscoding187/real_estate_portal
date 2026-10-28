@@ -311,7 +311,7 @@ describe('EnhancedHero explicit journey selection', () => {
     render(<EnhancedHero activeTab="rent" />);
 
     fireEvent.click(screen.getByTestId('select-johannesburg'));
-    fireEvent.click(screen.getAllByRole('button', { name: 'Search', exact: true })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Search' })[0]);
 
     expect(setLocation).toHaveBeenCalledWith('/gauteng/johannesburg?mode=rent');
   });
@@ -320,7 +320,7 @@ describe('EnhancedHero explicit journey selection', () => {
     render(<EnhancedHero activeTab="rent" />);
 
     fireEvent.click(screen.getByTestId('select-sandton'));
-    fireEvent.click(screen.getAllByRole('button', { name: 'Search', exact: true })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Search' })[0]);
 
     const submittedUrl = new URL(
       String(setLocation.mock.calls.at(-1)?.[0]),
