@@ -2858,10 +2858,10 @@ async function runContainedApplicationVerification(
     const developmentCard = search.cards.find(
       card =>
         card.kind === 'development' &&
-        card.href === `/development/dba-verification-development-v1/unit/${SCENARIO_IDS.unit}`,
+        card.href === '/development/dba-verification-development-v1',
     );
     if (!developmentCard)
-      throw new Error('Search-to-Lead scenario did not blend both eligible public result sources.');
+      throw new Error('Search-to-Lead scenario omitted the canonical Development root result.');
 
     const propertyCaller = callerFor(null);
     const scenarios: NonNullable<SearchToLeadScenarioEvidence['acceptance']>['scenarios'] = {};
