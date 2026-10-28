@@ -3402,6 +3402,89 @@ export class ServicesEngineService {
     }));
   }
 
+  async listServiceSitemapEntries(): Promise<{
+    providers: ServiceSitemapProviderEntry[];
+    localized: ServiceSitemapLocalizedEntry[];
+  }> {
+    const db = await getDb();
+    if (!db) {
+      return { providers: [], localized: [] };
+    }
+
+    const eligibility = and(
+      eq(partners.isActive, 1),
+      eq(partners.verificationStatus, 'verified'),
+      eq(serviceProviderProfiles.directoryActive, 1),
+      inArray(serviceProviderSubscriptions.status, ['trial', 'active']),
+    );
+
+    const providerRows = await db
+      .select({
+        providerId: partners.id,
+        companyName: partners.companyName,
+        updatedAt: serviceProviderProfiles.updatedAt,
+      })
+      .from(partners)
+      .innerJoin(serviceProviderProfiles, eq(serviceProviderProfiles.providerId, partners.id))
+      .leftJoin(
+        serviceProviderSubscriptions,
+        eq(serviceProviderSubscriptions.providerId, partners.id),
+      )
+      .where(
+        and(
+          eligibility,
+          sql`EXISTS (SELECT 1 FROM ${serviceProviderServices} svc WHERE svc.provider_id = ${partners.id} AND svc.is_active = 1)`,
+          sql`EXISTS (SELECT 1 FROM ${serviceProviderLocations} loc WHERE loc.provider_id = ${partners.id} AND (NULLIF(TRIM(loc.province), '') IS NOT NULL OR NULLIF(TRIM(loc.city), '') IS NOT NULL OR NULLIF(TRIM(loc.suburb), '') IS NOT NULL))`,
+        ),
+      );
+
+    const localizedRows = await db
+      .selectDistinct({
+        category: serviceProviderServices.serviceCategory,
+        city: serviceProviderLocations.city,
+        province: serviceProviderLocations.province,
+      })
+      .from(serviceProviderServices)
+      .innerJoin(
+        serviceProviderLocations,
+        eq(serviceProviderLocations.providerId, serviceProviderServices.providerId),
+      )
+      .innerJoin(
+        serviceProviderProfiles,
+        eq(serviceProviderProfiles.providerId, serviceProviderServices.providerId),
+      )
+      .innerJoin(partners, eq(partners.id, serviceProviderServices.providerId))
+      .leftJoin(
+        serviceProviderSubscriptions,
+        eq(serviceProviderSubscriptions.providerId, serviceProviderServices.providerId),
+      )
+      .where(
+        and(
+          eligibility,
+          eq(serviceProviderServices.isActive, 1),
+          sql`(NULLIF(TRIM(${serviceProviderLocations.city}), '') IS NOT NULL AND NULLIF(TRIM(${serviceProviderLocations.province}), '') IS NOT NULL)`,
+        ),
+      )
+      .orderBy(
+        serviceProviderServices.serviceCategory,
+        serviceProviderLocations.city,
+        serviceProviderLocations.province,
+      );
+
+    return {
+      providers: providerRows.map(row => ({
+        providerId: Number(row.providerId),
+        companyName: String(row.companyName || '').trim(),
+        updatedAt: row.updatedAt ? String(row.updatedAt) : null,
+      })),
+      localized: localizedRows.map(row => ({
+        category: String(row.category || ''),
+        city: String(row.city || '').trim(),
+        province: String(row.province || '').trim(),
+      })),
+    };
+  }
+
   async getProviderDashboard(providerId: number, days = 30) {
     const db = await getDb();
     if (!db) throw new Error('Database not available');
@@ -3451,5 +3534,17 @@ export class ServicesEngineService {
     };
   }
 }
+
+type ServiceSitemapProviderEntry = {
+  providerId: number;
+  companyName: string;
+  updatedAt: string | null;
+};
+
+type ServiceSitemapLocalizedEntry = {
+  category: string;
+  city: string;
+  province: string;
+};
 
 export const servicesEngineService = new ServicesEngineService();

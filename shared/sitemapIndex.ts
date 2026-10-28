@@ -7,6 +7,7 @@ export const SITEMAP_INDEX_CHILDREN = [
   '/sitemap-listings.xml',
   '/sitemap-developments.xml',
   '/sitemap-agents.xml',
+  '/sitemap-services.xml',
   '/sitemap-static.xml',
   '/sitemap-guides.xml',
 ] as const;

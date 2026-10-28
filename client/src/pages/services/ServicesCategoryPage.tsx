@@ -28,6 +28,7 @@ import { EnhancedNavbar } from '@/components/EnhancedNavbar';
 import { ServicesSiteFooter } from '@/components/services/ServicesSiteFooter';
 import type { ProviderDirectoryItem } from '@/components/services/ProviderCard';
 import { applySeo } from '@/lib/seo';
+import { buildServiceBreadcrumbStructuredData } from '@/features/services/seoStructuredData';
 import { useServicesLocation } from '@/features/services/useServicesLocation';
 import { getServiceTopicPage, ServiceTopicPage } from './ServiceTopicPage';
 
@@ -127,13 +128,28 @@ export default function ServicesCategoryPage() {
   const hasLocation = Boolean(initialQuery.city || initialQuery.suburb || initialQuery.province);
 
   useEffect(() => {
+    if (!parsedCategory) return;
+    const canonicalCategorySlug = toServiceCategorySlug(parsedCategory);
+    if (categoryParam === canonicalCategorySlug) return;
+
+    setLocation(`/services/${canonicalCategorySlug}${search}`, { replace: true });
+  }, [categoryParam, parsedCategory, search, setLocation]);
+
+  useEffect(() => {
     const categoryLabel = formatCategoryLabel(category);
     applySeo({
       title: `${categoryLabel} Services | Property Listify`,
       description: `Browse published ${categoryLabel.toLowerCase()} providers and their listed service coverage.`,
       canonicalPath: `/services/${toServiceCategorySlug(category)}`,
+      structuredData: parsedCategory
+        ? buildServiceBreadcrumbStructuredData([
+            { label: 'Home', path: '/' },
+            { label: 'Services', path: '/services' },
+            { label: categoryLabel },
+          ])
+        : undefined,
     });
-  }, [category]);
+  }, [category, parsedCategory]);
 
   useEffect(() => {
     setFilters({

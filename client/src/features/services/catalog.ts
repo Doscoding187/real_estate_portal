@@ -1,3 +1,15 @@
+import {
+  slugifyLocationSegment,
+  toProviderSlug,
+  toServiceCategorySlug,
+} from '../../../../shared/serviceDirectorySlugs';
+
+export {
+  slugifyLocationSegment,
+  toProviderSlug,
+  toServiceCategorySlug,
+} from '../../../../shared/serviceDirectorySlugs';
+
 export type ServiceCategory =
   | 'home_improvement'
   | 'finance_legal'
@@ -154,20 +166,6 @@ export function isServiceCategory(value: string): value is ServiceCategory {
   return SERVICE_CATEGORIES.some(category => category.value === value);
 }
 
-export function slugifyLocationSegment(value: string) {
-  return String(value || '')
-    .trim()
-    .toLowerCase()
-    .replace(/[_\s]+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/[^a-z0-9-]/g, '')
-    .replace(/^-+|-+$/g, '');
-}
-
-export function toServiceCategorySlug(category: ServiceCategory) {
-  return String(category).replace(/_/g, '-');
-}
-
 function setServiceJourneyContext(params: URLSearchParams, context: ServiceJourneyContext) {
   for (const key of SERVICE_JOURNEY_QUERY_KEYS) {
     const value = context[key];
@@ -272,14 +270,6 @@ export function formatCategoryLabel(value: ServiceCategory) {
 export function formatArea(city?: string | null, province?: string | null, suburb?: string | null) {
   const parts = [suburb, city, province].filter(Boolean);
   return parts.length ? parts.join(', ') : 'your area';
-}
-
-export function toProviderSlug(companyName: string, providerId: number) {
-  const stem = companyName
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '');
-  return `${stem || 'provider'}--${providerId}`;
 }
 
 export function providerIdFromSlug(slug: string): number | null {
