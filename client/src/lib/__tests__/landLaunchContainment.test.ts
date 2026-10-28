@@ -49,10 +49,11 @@ describe('Land public search and retained publication containment', () => {
     expect(resolveConsumerJourney('buy', 'land')?.destination).toBe('/plots-and-land');
   });
 
-  it('mounts public search/detail while retaining authoring and reviewer containment', () => {
-    expect(app).toContain("const LandDeferred = lazy(() => import('./pages/LandDeferred'));");
-    expect(app).toContain('<LandDeferred audience="reviewer" />');
-    expect(app).toContain('<LandDeferred audience="author" />');
+  it('routes the specialist Land authoring and review pages without changing the shared launch flag', () => {
+    expect(app).toContain("const LandAuthoringWorkspace = lazy(() => import('./pages/agent/LandAuthoringWorkspace'));");
+    expect(app).toContain("const LandReviewWorkspace = lazy(() => import('./pages/admin/LandReviewWorkspace'));");
+    expect(app).toContain('<LandReviewWorkspace />');
+    expect(app).toContain('<LandAuthoringWorkspace />');
     expect(app).toContain('<PlotsAndLand />');
     expect(app).toContain('<LandDetail />');
     expect(app).not.toContain('<Route path="/plots-and-land" component={LandDeferred} />');

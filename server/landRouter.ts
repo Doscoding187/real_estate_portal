@@ -2,11 +2,13 @@ import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { protectedProcedure, router, superAdminProcedure } from './_core/trpc';
 import { requireUser } from './_core/requireUser';
-import { LAND_CANONICAL_ASSIGNMENT_BLOCKER, LAND_PUBLIC_CLASSIFICATIONS } from '../shared/land-domain';
+import { LAND_PUBLIC_CLASSIFICATIONS } from '../shared/land-domain';
+import { PLACE_ID_REGEX } from '../shared/placeAuthority';
 import {
   accessPrivateLandEvidence,
   attachLandMarketingMedia,
   addPrivateEvidence,
+  createLandDraft,
   declareMarketingAuthority,
   isLandAuthorRole,
   landWorkflowSnapshot,
@@ -56,12 +58,7 @@ function author(
 ): ReturnType<typeof requireUser> {
   const user = requireUser(ctx);
   if (!isLandAuthorRole(user.role)) throw new TRPCError({ code: 'FORBIDDEN', message: 'Land authoring requires an authorized seller, agent, agency, or developer role.' });
-  requireLandRoute();
   return user;
-}
-
-export function requireLandRoute(): never {
-  throw new TRPCError({ code: 'PRECONDITION_FAILED', message: LAND_CANONICAL_ASSIGNMENT_BLOCKER });
 }
 
 function rethrow(error: unknown): never {
@@ -70,9 +67,8 @@ function rethrow(error: unknown): never {
 }
 
 export const landRouter = router({
-  createDraft: protectedProcedure.input(z.object({ classification: z.enum(LAND_PUBLIC_CLASSIFICATIONS), title: z.string().trim().min(4).max(255), description: z.string().trim().min(20), askingPrice: z.number().positive(), address: z.string().trim().optional(), intendedUse: z.string().trim().max(120).optional(), canonicalPlaceId: z.string().trim().min(1).max(40), parcel: z.object({ kind: z.enum(['erf', 'portion', 'farm', 'remainder', 'other']), identifier: z.string().trim().min(1).max(500), extentM2: z.number().positive(), geometryConfidence: z.enum(['unknown', 'approximate', 'confirmed']).optional() }).strict() }).strict()).mutation(({ ctx }) => {
-    author(ctx);
-    throw new TRPCError({ code: 'PRECONDITION_FAILED', message: LAND_CANONICAL_ASSIGNMENT_BLOCKER });
+  createDraft: protectedProcedure.input(z.object({ classification: z.enum(LAND_PUBLIC_CLASSIFICATIONS), title: z.string().trim().min(4).max(255), description: z.string().trim().min(20), askingPrice: z.number().positive(), address: z.string().trim().optional(), intendedUse: z.string().trim().max(120).optional(), canonicalPlaceId: z.string().trim().regex(PLACE_ID_REGEX), parcel: z.object({ kind: z.enum(['erf', 'portion', 'farm', 'remainder', 'other']), identifier: z.string().trim().min(1).max(500), extentM2: z.number().positive(), geometryConfidence: z.enum(['unknown', 'approximate', 'confirmed']).optional() }).strict() }).strict()).mutation(async ({ ctx, input }) => {
+    try { return await createLandDraft({ ...input, userId: author(ctx).id }); } catch (error) { return rethrow(error); }
   }),
   addClaims: protectedProcedure.input(z.object({ listingId: z.number().int().positive(), claims: z.array(claim).min(1) })).mutation(async ({ ctx, input }) => {
     try { await recordLandClaims({ ...input, userId: author(ctx).id }); return { success: true }; } catch (error) { return rethrow(error); }
@@ -95,12 +91,12 @@ export const landRouter = router({
   submit: protectedProcedure.input(z.object({ listingId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
     try { await submitLandForReview({ listingId: input.listingId, userId: author(ctx).id }); return { success: true }; } catch (error) { return rethrow(error); }
   }),
-  reviewerWorkspace: superAdminProcedure.input(z.object({ listingId: z.number().int().positive() })).query(async ({ input }) => { requireLandRoute(); return landWorkflowSnapshot(input.listingId); }),
-  reviewerQueue: superAdminProcedure.query(() => { requireLandRoute(); return landReviewQueue(); }),
+  reviewerWorkspace: superAdminProcedure.input(z.object({ listingId: z.number().int().positive() })).query(async ({ input }) => landWorkflowSnapshot(input.listingId)),
+  reviewerQueue: superAdminProcedure.query(() => landReviewQueue()),
   review: superAdminProcedure.input(z.object({ listingId: z.number().int().positive(), action: z.enum(['start', 'request_changes', 'reject', 'approve', 'suspend']), reasonCode: z.string().trim().max(100).optional(), comment: z.string().trim().max(4000).optional() })).mutation(async ({ ctx, input }) => {
-    try { requireLandRoute(); await transitionLandReview({ ...input, reviewerUserId: requireUser(ctx).id }); return { success: true }; } catch (error) { return rethrow(error); }
+    try { await transitionLandReview({ ...input, reviewerUserId: requireUser(ctx).id }); return { success: true }; } catch (error) { return rethrow(error); }
   }),
   accessEvidence: protectedProcedure.input(z.object({ evidenceDocumentId: z.number().int().positive() })).query(async ({ ctx, input }) => {
-    try { requireLandRoute(); return await accessPrivateLandEvidence({ evidenceDocumentId: input.evidenceDocumentId, actorUserId: requireUser(ctx).id, role: requireUser(ctx).role, requestCorrelationId: ctx.requestId }); } catch (error) { return rethrow(error); }
+    try { return await accessPrivateLandEvidence({ evidenceDocumentId: input.evidenceDocumentId, actorUserId: requireUser(ctx).id, role: requireUser(ctx).role, requestCorrelationId: ctx.requestId }); } catch (error) { return rethrow(error); }
   }),
 });

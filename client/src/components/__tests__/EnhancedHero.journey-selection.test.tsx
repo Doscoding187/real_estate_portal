@@ -314,7 +314,7 @@ describe('EnhancedHero explicit journey selection', () => {
     expect(setLocation).toHaveBeenCalledWith(`/commercial?canonicalPlaceId=${johannesburgId}`);
   });
 
-  it('opens public Land search while keeping Land publication deferred', () => {
+  it('takes a broad Land Place directly to its guide without rolling listings up', () => {
     render(<EnhancedHero activeTab="plot_land" />);
 
     expect(isLandPublicDiscoveryAvailable()).toBe(true);
@@ -322,9 +322,17 @@ describe('EnhancedHero explicit journey selection', () => {
     expect(screen.getByText('Land type')).toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId('select-johannesburg'));
+
+    expect(setLocation).toHaveBeenCalledWith('/gauteng/johannesburg');
+  });
+
+  it('keeps exact locality Land search on its selected Place ID', () => {
+    render(<EnhancedHero activeTab="plot_land" />);
+
+    fireEvent.click(screen.getByTestId('select-sandton'));
     fireEvent.click(screen.getAllByRole('button', { name: 'Search', exact: true })[0]);
 
-    expect(setLocation).toHaveBeenCalledWith(`/plots-and-land?canonicalPlaceId=${johannesburgId}`);
+    expect(setLocation).toHaveBeenCalledWith(`/plots-and-land?canonicalPlaceId=${sandtonId}`);
   });
 
   it('exposes Commercial Office filters that map to tenant decisions', () => {

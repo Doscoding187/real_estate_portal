@@ -13,8 +13,9 @@ winner, merge scopes, widen the boundary, or fall back to listing labels. A
 manual edit replaces the selected Place handoff before the request is sent.
 
 Canonical IDs resolve through Place Authority. Multi-Place Land searches
-resolve to the exact selected siblings only. The public Land consumer remains
-gated until canonical Land assignments are available.
+resolve to the exact selected siblings only. A broad Place destination page may
+guide buyers to its child localities, but it is not itself a Land search scope:
+only published inventory in a selected exact locality appears in Land results.
 
 ## Public classification
 

@@ -9,9 +9,11 @@ const review = readFileSync(resolve(process.cwd(), 'client/src/pages/admin/LandR
 describe('Land UI boundary contracts', () => {
   it('selects Land geography through the canonical Place authority', () => {
     expect(authoring).toContain('<CanonicalPlaceSelector value={canonicalPlace}');
-    expect(authoring).toContain('label="Canonical Place"');
-    expect(authoring).toContain('LAND_CANONICAL_ASSIGNMENT_BLOCKER');
-    expect(authoring).toContain('disabled title={LAND_CANONICAL_ASSIGNMENT_BLOCKER}');
+    expect(authoring).toContain('label="Land locality"');
+    expect(authoring).toContain('create.mutateAsync');
+    expect(authoring).toContain('canonicalPlaceId: canonicalPlace.canonicalPlaceId');
+    expect(authoring).toContain('canonicalPlace?.scope !== \'locality\'');
+    expect(authoring).not.toContain('Land search and authoring are waiting');
     expect(authoring).not.toContain('trpc.location.getLocationHierarchy.useQuery');
     expect(authoring).not.toContain('provinceId');
     expect(authoring).not.toContain('cityId');

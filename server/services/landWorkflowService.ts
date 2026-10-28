@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { and, desc, eq, inArray, isNull, ne } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 import {
   agents,
   landAssetParcels,
@@ -16,16 +16,19 @@ import {
   landVerificationAssertions,
   listingMedia,
   listings,
+  placeName,
 } from '../../drizzle/schema';
 import { getDb } from '../db-connection';
 import {
   deriveLandTrustState,
   isLandMarketingAuthorityActive,
+  isLandPublicClassification,
   isLandTimestampDue,
+  type LandPublicClassification,
   type LandClaimCode,
 } from '../../shared/land-domain';
-import { requireLandVerticalAvailable } from '../../shared/landLaunchPolicy';
 import { isCanonicalPlaceId } from '../../shared/placeAuthority';
+import { executePlace } from './placeDiscoveryService';
 import { buildLocalMediaUploadUrl, getMediaStorageAdapter, inspectLocalMediaObject } from '../_core/mediaStorage';
 import { createLandEvidenceDeliveryToken, createLandEvidenceUploadReservation, createPrivateEvidenceS3DeliveryUrl, createPrivateEvidenceS3UploadUrl, inspectPrivateEvidenceS3Object, verifyLandEvidenceUploadReservation } from './landEvidenceStorage';
 import { verifyListingMediaUploadToken } from './listingMediaAuthority';
@@ -124,6 +127,106 @@ async function ownedEditableLandListing(db: Database, listingId: number, userId:
     throw new Error('Land authoring is locked while this listing is in review or public.');
   }
   return { ...owned, reviewCase };
+}
+
+export async function createLandDraft(input: {
+  userId: number;
+  classification: LandPublicClassification;
+  title: string;
+  description: string;
+  askingPrice: number;
+  address?: string | null;
+  intendedUse?: string | null;
+  canonicalPlaceId: string;
+  parcel: {
+    kind: 'erf' | 'portion' | 'farm' | 'remainder' | 'other';
+    identifier: string;
+    extentM2: number;
+    geometryConfidence?: 'unknown' | 'approximate' | 'confirmed';
+  };
+}) {
+  if (!isLandPublicClassification(input.classification)) {
+    throw new Error('This Land classification is not available for public authoring.');
+  }
+  if (!Number.isFinite(input.askingPrice) || input.askingPrice <= 0) {
+    throw new Error('A positive Land asking price is required.');
+  }
+  if (!Number.isFinite(input.parcel.extentM2) || input.parcel.extentM2 <= 0) {
+    throw new Error('A positive Land parcel extent is required.');
+  }
+  if (!isCanonicalPlaceId(input.canonicalPlaceId)) {
+    throw new Error('Select an active, searchable canonical locality for this Land parcel.');
+  }
+
+  const privateIdentifier = input.parcel.identifier.trim();
+  const privateIdentifierHash = hashLandParcelIdentifier(privateIdentifier);
+  const db = await database();
+  const now = timestamp();
+  return db.transaction(async tx => {
+    const resolution = await executePlace(input.canonicalPlaceId, tx, { lock: true });
+    if (!resolution.ok || resolution.execution.scope !== 'locality') {
+      throw new Error('Select an active, searchable canonical locality for this Land parcel.');
+    }
+    const names = await tx
+      .select({ placeId: placeName.placeId, name: placeName.name })
+      .from(placeName)
+      .where(
+        and(
+          inArray(placeName.placeId, [input.canonicalPlaceId, resolution.execution.provincePlaceId]),
+          eq(placeName.nameRole, 'preferred_public'),
+          eq(placeName.nameState, 'active'),
+        ),
+      );
+    const localityName = names.find(name => name.placeId === input.canonicalPlaceId)?.name;
+    const provinceName = names.find(name => name.placeId === resolution.execution.provincePlaceId)?.name;
+    if (!localityName || !provinceName) {
+      throw new Error('The selected canonical locality is missing its public name or province context.');
+    }
+
+    const [agent] = await tx.select().from(agents).where(eq(agents.userId, input.userId)).limit(1);
+    const slug = `land-${input.classification}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const listingResult = await tx.insert(listings).values({
+      ownerId: input.userId,
+      agentId: agent?.id ?? null,
+      agencyId: agent?.agencyId ?? null,
+      action: 'sell',
+      propertyType: 'plot',
+      title: input.title.trim(),
+      description: input.description.trim(),
+      askingPrice: String(input.askingPrice),
+      address: input.address || null,
+      city: localityName,
+      province: provinceName,
+      canonicalPlaceId: input.canonicalPlaceId,
+      status: 'draft',
+      approvalStatus: 'pending',
+      slug,
+      propertyDetails: { landEngine: true },
+    } as any);
+    const listingId = Number((listingResult as any)[0]?.insertId ?? (listingResult as any).insertId);
+    const assetResult = await tx.insert(landAssets).values({
+      classification: input.classification,
+      intendedUse: input.intendedUse || null,
+      createdByUserId: input.userId,
+    });
+    const landAssetId = Number((assetResult as any)[0]?.insertId ?? (assetResult as any).insertId);
+    const parcelResult = await tx.insert(landParcels).values({
+      jurisdictionCountryCode: 'ZA',
+      canonicalPlaceId: input.canonicalPlaceId,
+      parcelKind: input.parcel.kind,
+      privateIdentifier,
+      privateIdentifierHash,
+      extentM2: String(input.parcel.extentM2),
+      geometryConfidence: input.parcel.geometryConfidence || 'unknown',
+      identitySource: 'seller',
+      createdByUserId: input.userId,
+    });
+    const parcelId = Number((parcelResult as any)[0]?.insertId ?? (parcelResult as any).insertId);
+    await tx.insert(landAssetParcels).values({ landAssetId, parcelId, relationshipRole: 'primary' });
+    await tx.insert(landListingLinks).values({ landAssetId, listingId });
+    await tx.insert(landReviewCases).values({ listingId, state: 'draft', submissionSequence: 0, createdAt: now, updatedAt: now });
+    return { listingId, landAssetId, parcelId };
+  });
 }
 
 export async function recordLandClaims(input: { listingId: number; userId: number; claims: readonly { code: LandClaimCode; valueState: 'asserted' | 'unknown' | 'unavailable' | 'not_applicable'; value?: unknown }[] }) {
@@ -290,7 +393,6 @@ export async function landReviewQueue() {
 }
 
 export async function submitLandForReview(input: { listingId: number; userId: number }) {
-  requireLandVerticalAvailable('Land review submission');
   const db = await database(); const snapshot = await landWorkflowSnapshot(input.listingId, input.userId);
   if (!snapshot.readiness.submissionReady) throw new Error(`Land submission is not ready: ${snapshot.readiness.blockers.submission.join(', ') || snapshot.readiness.blockers.draft.join(', ')}`);
   const reviewCase = snapshot.reviewCase; if (!reviewCase) throw new Error('Land review case missing.');
@@ -304,7 +406,6 @@ export async function submitLandForReview(input: { listingId: number; userId: nu
 }
 
 export async function transitionLandReview(input: { listingId: number; reviewerUserId: number; action: 'start' | 'request_changes' | 'reject' | 'approve' | 'suspend'; reasonCode?: string | null; comment?: string | null }) {
-  requireLandVerticalAvailable('Land review transition');
   const db = await database(); const snapshot = await landWorkflowSnapshot(input.listingId); const reviewCase = snapshot.reviewCase; if (!reviewCase) throw new Error('Land review case missing.');
   const map = { start: ['reviewing', 'review_started'], request_changes: ['changes_requested', 'changes_requested'], reject: ['rejected', 'rejected'], approve: ['approved', 'approved'], suspend: ['suspended', 'suspended'] } as const;
   const [nextState, eventType] = map[input.action];

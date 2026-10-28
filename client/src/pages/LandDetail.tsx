@@ -28,7 +28,7 @@ export default function LandDetail() {
     <Link href="/plots-and-land">← Plots &amp; Land</Link>
     <section>
       <h1 className="text-3xl font-semibold">{land.title}</h1>
-      <p>{label(land.classification)} · {Number(land.extentM2).toLocaleString()} m² · {land.city}, {land.province}</p>
+      <p>{label(land.classification)} · {Number(land.extentM2).toLocaleString()} m² · {land.locality}, {land.province}</p>
       <p className="text-sm text-slate-600">Location precision: {land.precision === 'exact' ? 'exact verified site position' : 'approximate site location'}. No cadastral boundary is implied.</p>
       {land.intendedUse && <p className="mt-3 font-medium">Intended use: {land.intendedUse}</p>}
       {land.description && <p className="mt-3 whitespace-pre-line text-slate-700">{land.description}</p>}

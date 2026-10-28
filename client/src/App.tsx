@@ -52,7 +52,8 @@ const AgentTrainingSupport = lazy(() => import('./pages/agent/AgentTrainingSuppo
 const AgentSettings = lazy(() => import('./pages/AgentSettings'));
 const AgentSetup = lazy(() => import('./pages/AgentSetup'));
 const AgentPackageSelection = lazy(() => import('./pages/agent/AgentPackageSelection'));
-const LandDeferred = lazy(() => import('./pages/LandDeferred'));
+const LandAuthoringWorkspace = lazy(() => import('./pages/agent/LandAuthoringWorkspace'));
+const LandReviewWorkspace = lazy(() => import('./pages/admin/LandReviewWorkspace'));
 const PlotsAndLand = lazy(() => import('./pages/PlotsAndLand'));
 const LandDetail = lazy(() => import('./pages/LandDetail'));
 const AcceptInvitation = lazy(() => import('./pages/AcceptInvitation'));
@@ -254,7 +255,7 @@ function Router() {
           </Route>
           <Route path="/admin/land-review">
             <RequireRole role="super_admin">
-              <LandDeferred audience="reviewer" />
+              <LandReviewWorkspace />
             </RequireRole>
           </Route>
           <Route path="/admin/shared-living-review">
@@ -278,7 +279,7 @@ function Router() {
           </Route>
           <Route path="/agent/land/create">
             <RequireRole role="agent" unauthenticatedAuthEntry="signin">
-              <LandDeferred audience="author" />
+              <LandAuthoringWorkspace />
             </RequireRole>
           </Route>
           <Route path="/agent/commercial/create">

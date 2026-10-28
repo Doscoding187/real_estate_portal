@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
 import { CanonicalPlaceSelector, type CanonicalPlaceSelection } from '@/components/location/CanonicalPlaceSelector';
-import { LAND_CANONICAL_ASSIGNMENT_BLOCKER, LAND_CLASSIFICATION_LABELS, LAND_PUBLIC_CLASSIFICATIONS, type LandPublicClassification } from '@shared/land-domain';
+import { LAND_CLASSIFICATION_LABELS, LAND_PUBLIC_CLASSIFICATIONS, type LandPublicClassification } from '@shared/land-domain';
 
 const labels = Object.fromEntries(LAND_PUBLIC_CLASSIFICATIONS.map(value => [value, LAND_CLASSIFICATION_LABELS[value]])) as Record<LandPublicClassification, string>;
 type LandClassification = LandPublicClassification;
@@ -25,6 +25,7 @@ export default function LandAuthoringWorkspace() {
   const [marketingFile, setMarketingFile] = useState<File | null>(null);
   const [selectedMandateEvidenceId, setSelectedMandateEvidenceId] = useState<number | null>(null);
   const [evidenceType, setEvidenceType] = useState<'mandate' | 'title_registry' | 'parcel_survey' | 'planning' | 'other'>('mandate');
+  const create = trpc.land.createDraft.useMutation();
   const addClaims = trpc.land.addClaims.useMutation();
   const authority = trpc.land.declareAuthority.useMutation();
   const requestUpload = trpc.land.requestPrivateEvidenceUpload.useMutation();
@@ -34,6 +35,29 @@ export default function LandAuthoringWorkspace() {
   const confirmMarketingUpload = trpc.listing.confirmMediaUpload.useMutation();
   const submit = trpc.land.submit.useMutation();
   const workspace = trpc.land.getWorkspace.useQuery({ listingId: listingId ?? 0 }, { enabled: Boolean(listingId) });
+  const createDraft = async () => {
+    if (!canonicalPlace || canonicalPlace.scope !== 'locality') return;
+    try {
+      const result = await create.mutateAsync({
+        classification: form.classification,
+        title: form.title,
+        description: form.description,
+        askingPrice: Number(form.askingPrice),
+        intendedUse: form.intendedUse || undefined,
+        canonicalPlaceId: canonicalPlace.canonicalPlaceId,
+        parcel: {
+          kind: form.parcelKind,
+          identifier: form.parcelReference,
+          extentM2: Number(form.extentM2),
+          geometryConfidence: 'approximate',
+        },
+      });
+      setListingId(result.listingId);
+      toast.success('Land draft saved. Continue with facts and authority.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Unable to save Land draft.');
+    }
+  };
   const uploadEvidence = async () => {
     if (!listingId || !file) return;
     try {
@@ -74,7 +98,7 @@ export default function LandAuthoringWorkspace() {
 
   return <AgentAppShell><main className="mx-auto max-w-5xl space-y-6 p-4 md:p-8">
     <div><p className="text-sm font-medium text-emerald-700">Plots & Land · private workspace</p><h1 className="text-3xl font-semibold text-slate-950">Create a Land listing</h1><p className="mt-1 text-slate-600">Land facts are seller declarations until independently checked. Private documents are never marketing media.</p></div>
-    {!listingId ? <Card><CardHeader><CardTitle>What are you listing?</CardTitle></CardHeader><CardContent className="grid gap-4 md:grid-cols-2"><div><Label>Land type</Label><Select value={form.classification} onValueChange={classification => setForm({ ...form, classification: classification as LandClassification })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{Object.entries(labels).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent></Select></div><div><Label>Asking price</Label><Input type="number" value={form.askingPrice} onChange={e => setForm({ ...form, askingPrice: e.target.value })} /></div><div className="md:col-span-2"><Label>Listing title</Label><Input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Serviced stand in…" /></div><div className="md:col-span-2"><Label>Describe the opportunity</Label><Textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} /></div><div className="md:col-span-2"><CanonicalPlaceSelector value={canonicalPlace} onChange={setCanonicalPlace} label="Canonical Place" purpose="authoring" hint="Choose an admitted Place. Names from providers or old location tables cannot assign identity." /></div><div><Label>Parcel reference</Label><Input value={form.parcelReference} onChange={e => setForm({ ...form, parcelReference: e.target.value })} placeholder="Erf 123" /></div><div><Label>Site extent (m²)</Label><Input type="number" value={form.extentM2} onChange={e => setForm({ ...form, extentM2: e.target.value })} /></div><div className="md:col-span-2"><Label>Intended use</Label><Input value={form.intendedUse} onChange={e => setForm({ ...form, intendedUse: e.target.value })} placeholder="Residential development" /></div><div className="md:col-span-2 space-y-2"><p role="status" className="rounded border border-sky-200 bg-sky-50 p-3 text-sm text-sky-950">{LAND_CANONICAL_ASSIGNMENT_BLOCKER}</p><Button disabled title={LAND_CANONICAL_ASSIGNMENT_BLOCKER}>Save Land draft</Button></div></CardContent></Card> : <>
+    {!listingId ? <Card><CardHeader><CardTitle>What are you listing?</CardTitle></CardHeader><CardContent className="grid gap-4 md:grid-cols-2"><div><Label>Land type</Label><Select value={form.classification} onValueChange={classification => setForm({ ...form, classification: classification as LandClassification })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{Object.entries(labels).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent></Select></div><div><Label>Asking price</Label><Input type="number" value={form.askingPrice} onChange={e => setForm({ ...form, askingPrice: e.target.value })} /></div><div className="md:col-span-2"><Label>Listing title</Label><Input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Serviced stand in…" /></div><div className="md:col-span-2"><Label>Describe the opportunity</Label><Textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} /></div><div className="md:col-span-2"><CanonicalPlaceSelector value={canonicalPlace} onChange={setCanonicalPlace} label="Land locality" purpose="authoring" hint="Select a searchable locality. Its canonical Place ID is saved with the parcel." />{canonicalPlace && canonicalPlace.scope !== 'locality' && <p role="status" className="mt-1 text-sm text-amber-700">Choose a locality to save a Land draft.</p>}</div><div><Label>Parcel reference</Label><Input value={form.parcelReference} onChange={e => setForm({ ...form, parcelReference: e.target.value })} placeholder="Erf 123" /></div><div><Label>Site extent (m²)</Label><Input type="number" value={form.extentM2} onChange={e => setForm({ ...form, extentM2: e.target.value })} /></div><div className="md:col-span-2"><Label>Intended use</Label><Input value={form.intendedUse} onChange={e => setForm({ ...form, intendedUse: e.target.value })} placeholder="Residential development" /></div><div className="md:col-span-2"><Button onClick={createDraft} disabled={create.isPending || canonicalPlace?.scope !== 'locality'}>Save Land draft</Button></div></CardContent></Card> : <>
       <Card><CardHeader><CardTitle>Readiness</CardTitle></CardHeader><CardContent><p className="text-sm text-slate-600">{readiness?.submissionReady ? 'Ready to submit for Land review.' : 'Complete the items below before submission.'}</p><ul className="mt-3 list-disc pl-5 text-sm text-slate-700">{[...(readiness?.blockers?.draft ?? []), ...(readiness?.blockers?.submission ?? [])].map((item: string) => <li key={item}>{item.replace(/_/g, ' ')}</li>)}</ul></CardContent></Card>
       {changes.length > 0 && <Card className="border-amber-300"><CardHeader><CardTitle>Changes requested</CardTitle></CardHeader><CardContent>{changes.map((event: any) => <p key={event.id} className="text-sm text-slate-700">{event.comment}</p>)}</CardContent></Card>}
       <Card><CardHeader><CardTitle>What do you know about the land?</CardTitle></CardHeader><CardContent className="space-y-3"><p className="text-sm text-slate-600">Saving the same fact replaces the current seller declaration and retains the previous version for private review.</p><div className="flex flex-wrap gap-3"><Select value={fact.code} onValueChange={code => setFact({ ...fact, code })}><SelectTrigger className="w-52"><SelectValue /></SelectTrigger><SelectContent>{['access','road_frontage','water','electricity','sanitation','zoning_land_use','restrictions_servitudes','development_context'].map(code => <SelectItem key={code} value={code}>{code.replace(/_/g, ' ')}</SelectItem>)}</SelectContent></Select><Input className="max-w-md" value={fact.value} onChange={e => setFact({ ...fact, value: e.target.value })} placeholder="Seller-declared detail" /><Button variant="outline" onClick={addFact}>Save or update fact</Button></div>{workspace.data?.claims?.length ? <div className="grid gap-2 text-sm">{workspace.data.claims.map((claim: any) => <p key={claim.id} className="rounded border p-2"><b>{claim.claimCode.replace(/_/g, ' ')}:</b> {claim.valueState === 'asserted' ? 'Seller declared' : claim.valueState.replace(/_/g, ' ')}</p>)}</div> : <p className="text-sm text-slate-500">No seller declarations saved yet.</p>}</CardContent></Card>
