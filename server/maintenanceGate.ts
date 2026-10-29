@@ -1,11 +1,15 @@
-import { isApiReady, type ApiReadinessProbeOptions } from '../shared/apiReadiness';
+import {
+  probeApiReadiness,
+  type ApiReadinessProbeOptions,
+  type ApiReadinessProbeResult,
+} from '../shared/apiReadiness';
 
 export const MAINTENANCE_READINESS_CACHE_TTL_MS = 3_000;
 const MAX_READINESS_CACHE_ENTRIES = 16;
 
 interface ReadinessCacheEntry {
   expiresAt: number;
-  result: Promise<boolean>;
+  result: Promise<ApiReadinessProbeResult>;
 }
 
 const readinessCache = new WeakMap<typeof fetch, Map<string, ReadinessCacheEntry>>();
@@ -13,7 +17,7 @@ const readinessCache = new WeakMap<typeof fetch, Map<string, ReadinessCacheEntry
 function cachedApiReadiness(
   apiBaseUrl: string,
   options: ApiReadinessProbeOptions,
-): Promise<boolean> {
+): Promise<ApiReadinessProbeResult> {
   const fetcher = options.fetcher ?? fetch;
   let cache = readinessCache.get(fetcher);
   if (!cache) {
@@ -33,14 +37,14 @@ function cachedApiReadiness(
 
   const entry: ReadinessCacheEntry = {
     expiresAt: Number.POSITIVE_INFINITY,
-    result: Promise.resolve(false),
+    result: Promise.resolve({ ready: false, statusCode: null }),
   };
-  entry.result = isApiReady(apiBaseUrl, { ...options, fetcher })
-    .then(ready => {
+  entry.result = probeApiReadiness(apiBaseUrl, { ...options, fetcher })
+    .then(result => {
       if (cache?.get(key) === entry) {
         entry.expiresAt = Date.now() + MAINTENANCE_READINESS_CACHE_TTL_MS;
       }
-      return ready;
+      return result;
     })
     .catch(error => {
       if (cache?.get(key) === entry) cache.delete(key);
@@ -93,22 +97,36 @@ export interface MaintenanceGateOptions {
   probeOptions?: Omit<ApiReadinessProbeOptions, 'fetcher'>;
 }
 
-export async function maintenanceResponseForRequest(
+export interface MaintenanceGateEvaluation {
+  response: Response | null;
+  state: 'off' | 'up' | 'down';
+  probeStatusCode: number | null;
+}
+
+export async function evaluateMaintenanceGateForRequest(
   request: Request,
   options: MaintenanceGateOptions,
-): Promise<Response | null> {
+): Promise<MaintenanceGateEvaluation> {
   const productionGateEnabled = options.environment === 'production';
   const optedInPreviewGateEnabled =
     options.environment === 'preview' && options.previewGateEnabled === true;
-  if (!productionGateEnabled && !optedInPreviewGateEnabled) return null;
-  if (request.method !== 'GET' && request.method !== 'HEAD') return null;
-  if (!request.headers.get('accept')?.toLowerCase().includes('text/html')) return null;
+  if (!productionGateEnabled && !optedInPreviewGateEnabled) {
+    return { response: null, state: 'off', probeStatusCode: null };
+  }
+  if (request.method !== 'GET' && request.method !== 'HEAD') {
+    return { response: null, state: 'off', probeStatusCode: null };
+  }
+  if (!request.headers.get('accept')?.toLowerCase().includes('text/html')) {
+    return { response: null, state: 'off', probeStatusCode: null };
+  }
 
-  const ready = await cachedApiReadiness(options.apiBaseUrl ?? '', {
+  const readiness = await cachedApiReadiness(options.apiBaseUrl ?? '', {
     ...options.probeOptions,
     ...(options.fetcher ? { fetcher: options.fetcher } : {}),
   });
-  if (ready) return null;
+  if (readiness.ready) {
+    return { response: null, state: 'up', probeStatusCode: readiness.statusCode };
+  }
 
   const headers = new Headers({
     'Cache-Control': 'no-store, max-age=0',
@@ -123,8 +141,36 @@ export async function maintenanceResponseForRequest(
     'X-Robots-Tag': 'noindex, nofollow, noarchive',
   });
 
-  return new Response(request.method === 'HEAD' ? null : MAINTENANCE_HTML, {
-    status: 503,
+  return {
+    response: new Response(request.method === 'HEAD' ? null : MAINTENANCE_HTML, {
+      status: 503,
+      headers,
+    }),
+    state: 'down',
+    probeStatusCode: readiness.statusCode,
+  };
+}
+
+export async function maintenanceResponseForRequest(
+  request: Request,
+  options: MaintenanceGateOptions,
+): Promise<Response | null> {
+  return (await evaluateMaintenanceGateForRequest(request, options)).response;
+}
+
+export function addMaintenanceGateDiagnostics(
+  response: Response,
+  evaluation: MaintenanceGateEvaluation,
+): Response {
+  const headers = new Headers(response.headers);
+  headers.set('x-maintenance-gate', evaluation.state);
+  headers.set(
+    'x-maintenance-probe-status',
+    evaluation.probeStatusCode === null ? 'no-response' : String(evaluation.probeStatusCode),
+  );
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
     headers,
   });
 }

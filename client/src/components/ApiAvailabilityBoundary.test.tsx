@@ -9,9 +9,16 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
+function readyResponse() {
+  return new Response(JSON.stringify({ kind: 'readiness', ok: true }), {
+    status: 200,
+    headers: { 'content-type': 'application/json; charset=utf-8' },
+  });
+}
+
 describe('ApiAvailabilityBoundary', () => {
   it('keeps the site visible when the API is healthy', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 200 })));
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(readyResponse()));
 
     render(
       <HelmetProvider>
@@ -97,7 +104,7 @@ describe('ApiAvailabilityBoundary', () => {
           );
         });
       }
-      return Promise.resolve(new Response(null, { status: 200 }));
+      return Promise.resolve(readyResponse());
     });
     vi.stubGlobal('fetch', fetcher);
 
@@ -123,7 +130,7 @@ describe('ApiAvailabilityBoundary', () => {
       .fn()
       .mockResolvedValueOnce(new Response(null, { status: 503 }))
       .mockResolvedValueOnce(new Response(null, { status: 503 }))
-      .mockResolvedValueOnce(new Response(null, { status: 200 }));
+      .mockResolvedValueOnce(readyResponse());
     vi.stubGlobal('fetch', fetcher);
 
     render(

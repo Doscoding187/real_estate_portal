@@ -1,12 +1,21 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   MAINTENANCE_READINESS_CACHE_TTL_MS,
+  addMaintenanceGateDiagnostics,
+  evaluateMaintenanceGateForRequest,
   maintenanceResponseForRequest,
 } from '../maintenanceGate';
 
 function documentRequest() {
   return new Request('https://propertylistifysa.co.za/property-for-sale', {
     headers: { accept: 'text/html,application/xhtml+xml' },
+  });
+}
+
+function readyResponse() {
+  return new Response(JSON.stringify({ kind: 'readiness', ok: true }), {
+    status: 200,
+    headers: { 'content-type': 'application/json; charset=utf-8' },
   });
 }
 
@@ -20,7 +29,7 @@ afterEach(() => vi.useRealTimers());
 
 describe('production API maintenance gate', () => {
   it('passes document requests through when readiness is healthy', async () => {
-    const fetcher = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
+    const fetcher = vi.fn().mockResolvedValue(readyResponse());
 
     const response = await maintenanceResponseForRequest(documentRequest(), {
       ...production,
@@ -32,6 +41,70 @@ describe('production API maintenance gate', () => {
       'https://api.propertylistifysa.co.za/api/readiness',
       expect.objectContaining({ method: 'GET', cache: 'no-store' }),
     );
+  });
+
+  it('fails closed when a 2xx response contains attended-maintenance HTML, not readiness JSON', async () => {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(
+          '<h1>Access denied — Property Listify is temporarily unavailable for attended maintenance.</h1>',
+          { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } },
+        ),
+      );
+
+    const response = await maintenanceResponseForRequest(documentRequest(), {
+      ...production,
+      fetcher,
+    });
+
+    expect(response?.status).toBe(503);
+    expect(response?.headers.get('x-robots-tag')).toBe('noindex, nofollow, noarchive');
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+
+  it('reports the failed readiness status on the maintenance response', async () => {
+    const fetcher = vi.fn().mockResolvedValue(
+      new Response('Railway unavailable', {
+        status: 403,
+        headers: { 'content-type': 'text/html' },
+      }),
+    );
+
+    const evaluation = await evaluateMaintenanceGateForRequest(documentRequest(), {
+      ...production,
+      fetcher,
+    });
+    const response =
+      evaluation.response && addMaintenanceGateDiagnostics(evaluation.response, evaluation);
+
+    expect(response?.status).toBe(503);
+    expect(response?.headers.get('x-maintenance-gate')).toBe('down');
+    expect(response?.headers.get('x-maintenance-probe-status')).toBe('403');
+  });
+
+  it('reports healthy and disabled gate decisions on pass-through responses', async () => {
+    const healthyFetcher = vi.fn().mockResolvedValue(readyResponse());
+    const healthyEvaluation = await evaluateMaintenanceGateForRequest(documentRequest(), {
+      ...production,
+      fetcher: healthyFetcher,
+    });
+    const healthyResponse = addMaintenanceGateDiagnostics(new Response('site'), healthyEvaluation);
+
+    expect(healthyResponse.headers.get('x-maintenance-gate')).toBe('up');
+    expect(healthyResponse.headers.get('x-maintenance-probe-status')).toBe('200');
+
+    const disabledEvaluation = await evaluateMaintenanceGateForRequest(documentRequest(), {
+      ...production,
+      environment: 'preview',
+    });
+    const disabledResponse = addMaintenanceGateDiagnostics(
+      new Response('site'),
+      disabledEvaluation,
+    );
+
+    expect(disabledResponse.headers.get('x-maintenance-gate')).toBe('off');
+    expect(disabledResponse.headers.get('x-maintenance-probe-status')).toBe('no-response');
   });
 
   it('returns a noindex 503 maintenance page after readiness fails twice', async () => {
@@ -60,7 +133,7 @@ describe('production API maintenance gate', () => {
           );
         });
       }
-      return Promise.resolve(new Response(null, { status: 200 }));
+      return Promise.resolve(readyResponse());
     });
 
     const responsePromise = maintenanceResponseForRequest(documentRequest(), {
@@ -79,7 +152,7 @@ describe('production API maintenance gate', () => {
       .fn()
       .mockResolvedValueOnce(new Response(null, { status: 503 }))
       .mockResolvedValueOnce(new Response(null, { status: 503 }))
-      .mockResolvedValueOnce(new Response(null, { status: 200 }));
+      .mockResolvedValueOnce(readyResponse());
 
     const unavailable = await maintenanceResponseForRequest(documentRequest(), {
       ...production,
@@ -103,7 +176,7 @@ describe('production API maintenance gate', () => {
 
   it('caches readiness for three seconds and then probes again', async () => {
     vi.useFakeTimers();
-    const fetcher = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
+    const fetcher = vi.fn().mockResolvedValue(readyResponse());
     const options = {
       ...production,
       apiBaseUrl: 'https://maintenance-cache.example',
