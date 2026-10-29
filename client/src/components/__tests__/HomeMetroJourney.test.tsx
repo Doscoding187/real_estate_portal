@@ -79,10 +79,11 @@ describe.each(['buy', 'rent'] as const)('Country-wide homepage %s scope clarific
       const dialog = screen.getByRole('dialog');
       expect(within(dialog).getByText('Choose a Place')).toBeInTheDocument();
       expect(within(dialog).queryByRole('option')).toBeNull();
-      fireEvent.click(within(dialog).getByRole('button', { name: 'Search this Place' }));
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Explore areas' }));
       const url = new URL(navigate.mock.calls[0][0], 'http://localhost');
-      expect(url.pathname).toBe(journey === 'buy' ? '/property-for-sale' : '/property-to-rent');
-      expect(url.searchParams.get('canonicalPlaceId')).toBe(location.canonicalPlaceId);
+      expect(url.pathname).toBe(location.canonicalPath);
+      expect(url.searchParams.get('mode')).toBe(journey === 'buy' ? 'sale' : 'rent');
+      expect(url.searchParams.get('canonicalPlaceId')).toBeNull();
     },
   );
 });
@@ -112,15 +113,23 @@ it('keeps municipality-context town selection on its exact Place identity', asyn
       onConfirm={confirm}
     />,
   );
-  fireEvent.change(screen.getByRole('combobox', { name: 'Search a city, town, suburb or locality' }), {
-    target: { value: 'Alberton' },
-  });
+  fireEvent.change(
+    screen.getByRole('combobox', { name: 'Search a city, town, suburb or locality' }),
+    {
+      target: { value: 'Alberton' },
+    },
+  );
   fireEvent.click(await screen.findByRole('option', { name: /Alberton.*Ekurhuleni/ }));
   expect(confirm).not.toHaveBeenCalled();
-  fireEvent.click(screen.getByRole('button', { name: 'Search this Place' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Explore areas' }));
   expect(confirm).toHaveBeenCalledWith(
     expect.objectContaining({
-      locations: [expect.objectContaining({ canonicalPlaceId: 'pl-place-01-00000000000000000000000c', name: 'Alberton' })],
+      locations: [
+        expect.objectContaining({
+          canonicalPlaceId: 'pl-place-01-00000000000000000000000c',
+          name: 'Alberton',
+        }),
+      ],
     }),
   );
 });
