@@ -1,4 +1,34 @@
 -- Read-only Azure checks. Results contain only row IDs and counts; no personal data.
+-- 0. Confirm the production data shape and Place classification counts.
+SELECT
+  (SELECT COUNT(*) FROM users) AS users,
+  (SELECT COUNT(*) FROM listings) AS listings,
+  (SELECT COUNT(*) FROM developments) AS developments,
+  (SELECT COUNT(*) FROM leads) AS leads,
+  (SELECT COUNT(*) FROM service_provider_locations) AS service_provider_locations,
+  (SELECT COUNT(*) FROM place) AS places_total,
+  (SELECT COUNT(*) FROM place
+    WHERE licensing_classification IN ('mixed_odbl_supported', 'permissive_supported')) AS places_non_osm,
+  (SELECT COUNT(*) FROM place
+    WHERE licensing_classification = 'osm_only_odbl_provisional') AS places_osm_only,
+  (SELECT COUNT(*) FROM place
+    WHERE licensing_classification IS NULL) AS places_unclassified,
+  (SELECT MIN(created_at) FROM place) AS places_first_created_at,
+  (SELECT MAX(created_at) FROM place) AS places_last_created_at;
+
+-- 0a. Show the applied migration checksums at the production baseline.
+-- Compare every full checksum with the committed SQL file and manifest entry.
+SELECT filename, checksum
+FROM sql_migration_history
+WHERE numeric_version BETWEEN 107 AND 111
+ORDER BY numeric_version, filename;
+
+-- 0b. Any row means a failed, blocked, running, or unfinished attempt: stop.
+SELECT attempt_id, migration_filename, state, failure_class, started_at, finished_at
+FROM sql_migration_attempts
+WHERE state IN ('running', 'failed', 'blocked') OR finished_at IS NULL
+ORDER BY started_at, attempt_id;
+
 -- 1. Identify which Place the current listing(s) reference.
 SELECT id AS listing_id, canonical_place_id AS place_id
 FROM listings

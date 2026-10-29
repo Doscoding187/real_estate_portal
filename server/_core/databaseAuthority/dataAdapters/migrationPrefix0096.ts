@@ -148,7 +148,7 @@ function assertFields(row: Record<string, unknown> | undefined, expected: Record
   for (const [field, value] of Object.entries(expected)) {
     const actual = rowValue(row, field);
     const jsonValue =
-      typeof value === 'string' && /^[\[{]/.test(value.trim())
+      typeof value === 'string' && /^[{[]/.test(value.trim())
         ? JSON.stringify(JSON.parse(typeof actual === 'string' ? actual : JSON.stringify(actual)))
         : undefined;
     const matches = typeof value === 'number'
