@@ -32,6 +32,10 @@ import {
 } from './plePublicationEntitlement';
 import { PLE_REVIEWER_FIXTURE_DIGEST, PLE_REVIEWER_FIXTURE_VERSION } from './pleReviewerFixture';
 import {
+  MIGRATION_PREFIX_0096_DIGEST,
+  MIGRATION_PREFIX_0096_VERSION,
+} from './migrationPrefix0096';
+import {
   SEARCH_TO_LEAD_SCENARIO_DIGEST,
   SEARCH_TO_LEAD_SCENARIO_VERSION,
 } from './searchToLeadScenario';
@@ -258,6 +262,22 @@ export const DATA_ROLE_MANIFEST: Readonly<{
       transaction: 'bounded',
       schemaMutation: false,
       requiredFor: ['ple-reviewer-acceptance'],
+    },
+    {
+      key: 'test-fixture.migration-prefix-0096',
+      role: 'test-fixture',
+      adapter: 'migration-prefix-0096',
+      adapterPath: 'server/_core/databaseAuthority/dataAdapters/migrationPrefix0096.ts',
+      version: MIGRATION_PREFIX_0096_VERSION,
+      digest: MIGRATION_PREFIX_0096_DIGEST,
+      prepareCommand: 'db:migration-prefix-0096:seed',
+      verifyCommand: 'db:migration-prefix-0096:verify',
+      prepareOperation: 'test-fixture',
+      verifyOperation: 'verification',
+      targetClasses: DISPOSABLE_TARGETS,
+      transaction: 'bounded',
+      schemaMutation: false,
+      requiredFor: ['b08-upgrade-rehearsal'],
     },
   ] as const),
 });

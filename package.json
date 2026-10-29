@@ -227,6 +227,8 @@
     "db:ple-publication-entitlement:verify": "cross-env NODE_ENV=development APP_ENV=development tsx scripts/databaseAuthorityCli.ts ple-publication-entitlement:verify",
     "db:ple-reviewer:prepare": "cross-env NODE_ENV=development APP_ENV=development tsx scripts/databaseAuthorityCli.ts ple-reviewer:prepare",
     "db:ple-reviewer:verify": "cross-env NODE_ENV=development APP_ENV=development tsx scripts/databaseAuthorityCli.ts ple-reviewer:verify",
+    "db:migration-prefix-0096:seed": "cross-env NODE_ENV=development APP_ENV=development tsx scripts/databaseAuthorityCli.ts migration-prefix-0096:seed",
+    "db:migration-prefix-0096:verify": "cross-env NODE_ENV=development APP_ENV=development tsx scripts/databaseAuthorityCli.ts migration-prefix-0096:verify",
     "db:prepare:local": "tsx scripts/retiredDatabaseMutation.ts db:prepare:local",
     "db:prospect-journey-e2e:drop": "tsx scripts/retiredDatabaseMutation.ts db:prospect-journey-e2e:drop",
     "db:prospect-journey-e2e:reset": "tsx scripts/retiredDatabaseMutation.ts db:prospect-journey-e2e:reset",

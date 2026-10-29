@@ -101,6 +101,10 @@ import {
   verifyPleReviewerFixture,
 } from '../server/_core/databaseAuthority/dataAdapters/pleReviewerFixture';
 import {
+  prepareMigrationPrefix0096,
+  verifyMigrationPrefix0096,
+} from '../server/_core/databaseAuthority/dataAdapters/migrationPrefix0096';
+import {
   compareNormalizedSchemas,
   normalizedDesiredSchema,
   normalizedPhysicalSchema,
@@ -178,7 +182,9 @@ type Command =
   | 'ple-publication-entitlement:prepare'
   | 'ple-publication-entitlement:verify'
   | 'ple-reviewer:prepare'
-  | 'ple-reviewer:verify';
+  | 'ple-reviewer:verify'
+  | 'migration-prefix-0096:seed'
+  | 'migration-prefix-0096:verify';
 
 function option(name: string): string | undefined {
   const prefix = `--${name}=`;
@@ -520,6 +526,7 @@ async function run(command: Command): Promise<void> {
           : 'migration-apply',
       acceptedOldHead: option('accepted-old-head') === 'none' ? null : option('accepted-old-head'),
       expectedNewHead: option('expected-new-head'),
+      ancestorHead: option('ancestor-head'),
       acknowledgement: option('ack'),
       expectedPlanDigest: releaseOperation && !planOnly ? requiredOption('plan-digest') : undefined,
     });
@@ -900,6 +907,26 @@ async function run(command: Command): Promise<void> {
     return;
   }
 
+  if (command === 'migration-prefix-0096:seed' || command === 'migration-prefix-0096:verify') {
+    const isPrepare = command.endsWith(':seed');
+    const operation = isPrepare ? 'test-fixture' : 'verification';
+    const authority = authorityFor(operation, isPrepare ? 'local-owner' : undefined);
+    const decision = authorizationFor(authority);
+    const connection = await createAuthoritySqlConnection(authority, decision);
+    try {
+      print(
+        await (isPrepare ? prepareMigrationPrefix0096 : verifyMigrationPrefix0096)({
+          authority,
+          decision,
+          connection,
+        }),
+      );
+    } finally {
+      await connection.end();
+    }
+    return;
+  }
+
   const authority = authorityFor('diagnostics');
   const decision = authorizationFor(authority);
   const connection = await createAuthoritySqlConnection(authority, decision);
@@ -1017,6 +1044,8 @@ const commands = new Set<Command>([
   'ple-publication-entitlement:verify',
   'ple-reviewer:prepare',
   'ple-reviewer:verify',
+  'migration-prefix-0096:seed',
+  'migration-prefix-0096:verify',
 ]);
 
 if (process.argv[1] && resolve(process.argv[1]) === new URL(import.meta.url).pathname) {

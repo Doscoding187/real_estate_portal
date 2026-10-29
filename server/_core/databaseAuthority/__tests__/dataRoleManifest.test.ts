@@ -26,6 +26,7 @@ describe('Database Authority data-role manifest', () => {
       'scenario.search-to-lead',
       'test-fixture.ple-publication-entitlement',
       'test-fixture.ple-reviewer',
+      'test-fixture.migration-prefix-0096',
     ]);
 
     for (const role of DATA_ROLE_MANIFEST.roles) {
