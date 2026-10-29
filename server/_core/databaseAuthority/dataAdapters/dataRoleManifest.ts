@@ -40,6 +40,8 @@ import {
   FORDSBURG_RETIREMENT_VERSION,
 } from './fordsburgPlaceRetirement';
 import {
+  GAUTENG_EVIDENCE_NOTE_MISMATCH_DIGEST,
+  GAUTENG_EVIDENCE_NOTE_MISMATCH_VERSION,
   MIGRATION_PREFIX_0111_DIGEST,
   MIGRATION_PREFIX_0111_VERSION,
 } from './migrationPrefix0111';
@@ -338,6 +340,22 @@ export const DATA_ROLE_MANIFEST: Readonly<{
       transaction: 'bounded',
       schemaMutation: false,
       requiredFor: ['b08-upgrade-rehearsal-from-0111'],
+    },
+    {
+      key: 'test-fixture.gauteng-evidence-note-mismatch',
+      role: 'test-fixture',
+      adapter: 'gauteng-evidence-note-mismatch-rehearsal',
+      adapterPath: 'server/_core/databaseAuthority/dataAdapters/migrationPrefix0111.ts',
+      version: GAUTENG_EVIDENCE_NOTE_MISMATCH_VERSION,
+      digest: GAUTENG_EVIDENCE_NOTE_MISMATCH_DIGEST,
+      prepareCommand: 'db:places:type-reconciliation:mismatch-seed',
+      verifyCommand: 'db:places:type-reconciliation:mismatch-verify',
+      prepareOperation: 'test-fixture',
+      verifyOperation: 'verification',
+      targetClasses: DISPOSABLE_TARGETS,
+      transaction: 'bounded',
+      schemaMutation: false,
+      requiredFor: ['gauteng-reviewed-type-reconciliation-negative-rehearsal'],
     },
   ] as const),
 });

@@ -16,6 +16,7 @@ import {
 } from './common';
 import {
   buildPlaceReleaseBatches,
+  loadPlaceReleaseCandidate,
   PLACE_RELEASE_TABLES,
   type PlaceReleaseRows,
 } from './placeRelease';
@@ -31,6 +32,16 @@ export const MIGRATION_PREFIX_0111_HEAD = '0111_properties_canonical_place_refer
 export const MIGRATION_PREFIX_0111_FINAL_HEAD = '0197_drop_seller_prospects_province.sql' as const;
 export const MIGRATION_PREFIX_0111_SOURCE_DIGEST =
   '4235e111dd8db8b803cb8d35e06975f1f183bfea6ece7ee0e5d260ab397a7bcc' as const;
+export const GAUTENG_EVIDENCE_NOTE_MISMATCH_VERSION =
+  'gauteng-evidence-note-mismatch-rehearsal-v1' as const;
+export const GAUTENG_EVIDENCE_NOTE_MISMATCH_PLACE_ID =
+  'pl-place-01-00dbe14e9aefa6f6a0425875' as const;
+export const GAUTENG_EVIDENCE_NOTE_MISMATCH_DIGEST = stableDigest({
+  version: GAUTENG_EVIDENCE_NOTE_MISMATCH_VERSION,
+  sourceDigest: MIGRATION_PREFIX_0111_SOURCE_DIGEST,
+  placeId: GAUTENG_EVIDENCE_NOTE_MISMATCH_PLACE_ID,
+  mutation: 'append-rehearsal-only-evidence-note-mismatch-sentinel-v1',
+});
 const RETIRED_PLACE_ID = 'pl-place-01-99dcb8ba9d808741e35b258e';
 const LISTING_ID = 19960962;
 const BASE_USER_ID = 19960961;
@@ -285,5 +296,206 @@ export async function verifyMigrationPrefix0111(input: Input): Promise<Migration
     historicalPackageDigest: MIGRATION_PREFIX_0111_SOURCE_DIGEST,
     counts,
     listingPlaceId: String(listing[0].canonical_place_id),
+  };
+}
+
+type EvidenceNoteMismatchInput = {
+  authority: ResolvedDatabaseAuthority;
+  decision: AuthorizedDatabaseOperation;
+  connection: AuthoritySqlConnection;
+};
+
+type GautengEvidenceNoteMismatchEvidence = AdapterEvidence & {
+  placeId: typeof GAUTENG_EVIDENCE_NOTE_MISMATCH_PLACE_ID;
+  evidenceRowCount: number;
+  expectedOldNoteSha256: string;
+  storedNoteSha256: string;
+  placeType: 'town';
+  searchScope: 'metro_city';
+  seeded?: boolean;
+  placeRowsUnchanged?: number;
+  evidenceRowsUnchanged?: number;
+  mismatchStillPresent?: boolean;
+};
+
+function noteSha256(note: string): string {
+  return createHash('sha256').update(note, 'utf8').digest('hex');
+}
+
+async function inspectGautengEvidenceNoteMismatch(input: EvidenceNoteMismatchInput) {
+  const root = input.authority.context.repository.root;
+  const expectedRows = loadHistoricalPlaceRows(root).place_evidence.filter(
+    row => row.place_id === GAUTENG_EVIDENCE_NOTE_MISMATCH_PLACE_ID,
+  );
+  if (expectedRows.length !== 1)
+    throw new Error('Gauteng note-mismatch fixture refused: pinned historical note is not unique.');
+  const expectedNote = String(expectedRows[0].note ?? '');
+  const injectedNote = `${expectedNote};rehearsal_mismatch=seeded`;
+  const [placeRows, evidenceRows] = await Promise.all([
+    queryRows(
+      input.connection,
+      'SELECT place_type, search_scope FROM `place` WHERE place_id = ?',
+      [GAUTENG_EVIDENCE_NOTE_MISMATCH_PLACE_ID],
+    ),
+    queryRows(
+      input.connection,
+      'SELECT place_id, note FROM `place_evidence` WHERE place_id = ?',
+      [GAUTENG_EVIDENCE_NOTE_MISMATCH_PLACE_ID],
+    ),
+  ]);
+  if (
+    placeRows.length !== 1 ||
+    placeRows[0].place_type !== 'town' ||
+    placeRows[0].search_scope !== 'metro_city' ||
+    evidenceRows.length !== 1
+  ) {
+    throw new Error('Gauteng note-mismatch fixture refused: target row shape is not the expected 0111 source state.');
+  }
+  const storedNote = String(evidenceRows[0].note ?? '');
+  const storedHash = noteSha256(storedNote);
+  const expectedHash = noteSha256(expectedNote);
+  const injectedHash = noteSha256(injectedNote);
+  return {
+    expectedNote,
+    expectedHash,
+    injectedNote,
+    injectedHash,
+    storedNote,
+    storedHash,
+    evidenceRowCount: evidenceRows.length,
+  };
+}
+
+async function verifyGautengMismatchReconciliationMadeNoWrites(
+  input: EvidenceNoteMismatchInput,
+  injectedNote: string,
+) {
+  const root = input.authority.context.repository.root;
+  const historicalPlaces = readRows(
+    root,
+    'data/gauteng-place-admission-v0.1/gauteng_place_admission_v0.1.jsonl',
+  );
+  const historicalEvidence = readRows(
+    root,
+    'data/gauteng-place-admission-v0.1/gauteng_place_evidence_v0.1.jsonl',
+  );
+  const candidate = loadPlaceReleaseCandidate(root);
+  const candidatePlaces = new Map(candidate.desired.place.map(row => [String(row.place_id), row]));
+  const corrections = historicalPlaces.filter(old => {
+    const current = candidatePlaces.get(String(old.place_id));
+    return current && (
+      old.place_type !== current.place_type ||
+      old.search_scope !== current.search_scope
+    );
+  });
+  if (corrections.length !== 48)
+    throw new Error('Gauteng note-mismatch fixture refused: reviewed Place set is not exactly 48 IDs.');
+  const ids = corrections.map(row => String(row.place_id));
+  const placeholders = ids.map(() => '?').join(', ');
+  const [actualPlaces, actualEvidence] = await Promise.all([
+    queryRows(
+      input.connection,
+      `SELECT place_id, place_type, search_scope FROM place WHERE place_id IN (${placeholders})`,
+      ids,
+    ),
+    queryRows(
+      input.connection,
+      `SELECT place_id, note FROM place_evidence WHERE place_id IN (${placeholders})`,
+      ids,
+    ),
+  ]);
+  const oldPlaces = new Map(corrections.map(row => [String(row.place_id), row]));
+  const oldNotes = new Map<string, string[]>();
+  for (const row of historicalEvidence) {
+    const placeId = String(row.place_id);
+    if (!oldPlaces.has(placeId)) continue;
+    oldNotes.set(placeId, [...(oldNotes.get(placeId) ?? []), String(row.note ?? '')]);
+  }
+  const actualNotes = new Map<string, string[]>();
+  for (const row of actualEvidence) {
+    const placeId = String(row.place_id);
+    actualNotes.set(placeId, [...(actualNotes.get(placeId) ?? []), String(row.note ?? '')]);
+  }
+  const placeRowsUnchanged = actualPlaces.length === 48 && actualPlaces.every(row => {
+    const old = oldPlaces.get(String(row.place_id));
+    return old && row.place_type === old.place_type && row.search_scope === old.search_scope;
+  });
+  const evidenceRowsUnchanged = historicalEvidence
+    .filter(row => oldPlaces.has(String(row.place_id)))
+    .every(row => {
+      const placeId = String(row.place_id);
+      const expected = placeId === GAUTENG_EVIDENCE_NOTE_MISMATCH_PLACE_ID
+        ? [injectedNote]
+        : oldNotes.get(placeId) ?? [];
+      return JSON.stringify(actualNotes.get(placeId) ?? []) === JSON.stringify(expected);
+    });
+  const expectedEvidenceRows = historicalEvidence.filter(row => oldPlaces.has(String(row.place_id))).length;
+  if (
+    actualEvidence.length !== expectedEvidenceRows ||
+    !placeRowsUnchanged ||
+    !evidenceRowsUnchanged
+  ) {
+    throw new Error('Gauteng note-mismatch fixture verification refused: reconciliation changed a reviewed row.');
+  }
+  return { placeRowsUnchanged: 48, evidenceRowsUnchanged: expectedEvidenceRows };
+}
+
+export async function seedGautengEvidenceNoteMismatch(
+  input: EvidenceNoteMismatchInput,
+): Promise<GautengEvidenceNoteMismatchEvidence> {
+  const authorityEvidence = requireFixtureTarget(input, 'test-fixture');
+  await requireMigrationHead(input, MIGRATION_PREFIX_0111_FINAL_HEAD, false);
+  const before = await inspectGautengEvidenceNoteMismatch(input);
+  if (before.storedHash !== before.expectedHash)
+    throw new Error('Gauteng note-mismatch fixture refused: seed requires the exact historical v0.1 note.');
+  await withTransaction(input.connection, async () => {
+    await input.connection.execute(
+      'UPDATE `place_evidence` SET `note` = ? WHERE `place_id` = ? AND `note` = ?',
+      [before.injectedNote, GAUTENG_EVIDENCE_NOTE_MISMATCH_PLACE_ID, before.expectedNote],
+    );
+    const after = await inspectGautengEvidenceNoteMismatch(input);
+    if (after.storedHash !== before.injectedHash)
+      throw new Error('Gauteng note-mismatch fixture refused: sentinel did not persist inside transaction.');
+  });
+  const result = await inspectGautengEvidenceNoteMismatch(input);
+  if (result.storedHash !== result.injectedHash)
+    throw new Error('Gauteng note-mismatch fixture refused: seeded sentinel did not verify after commit.');
+  return {
+    ...authorityEvidence,
+    adapter: 'gauteng-evidence-note-mismatch-rehearsal',
+    version: GAUTENG_EVIDENCE_NOTE_MISMATCH_VERSION,
+    digest: GAUTENG_EVIDENCE_NOTE_MISMATCH_DIGEST,
+    placeId: GAUTENG_EVIDENCE_NOTE_MISMATCH_PLACE_ID,
+    evidenceRowCount: result.evidenceRowCount,
+    expectedOldNoteSha256: result.expectedHash,
+    storedNoteSha256: result.storedHash,
+    placeType: 'town',
+    searchScope: 'metro_city',
+    seeded: result.storedHash === result.injectedHash,
+  };
+}
+
+export async function verifyGautengEvidenceNoteMismatch(
+  input: EvidenceNoteMismatchInput,
+): Promise<GautengEvidenceNoteMismatchEvidence> {
+  const authorityEvidence = requireFixtureTarget(input, 'verification');
+  await requireMigrationHead(input, MIGRATION_PREFIX_0111_FINAL_HEAD, false);
+  const result = await inspectGautengEvidenceNoteMismatch(input);
+  if (result.evidenceRowCount !== 1 || result.storedHash !== result.injectedHash)
+    throw new Error('Gauteng note-mismatch fixture verification refused: seeded mismatch was changed or disappeared.');
+  const noWrites = await verifyGautengMismatchReconciliationMadeNoWrites(input, result.injectedNote);
+  return {
+    ...authorityEvidence,
+    adapter: 'gauteng-evidence-note-mismatch-rehearsal',
+    version: GAUTENG_EVIDENCE_NOTE_MISMATCH_VERSION,
+    digest: GAUTENG_EVIDENCE_NOTE_MISMATCH_DIGEST,
+    placeId: GAUTENG_EVIDENCE_NOTE_MISMATCH_PLACE_ID,
+    evidenceRowCount: result.evidenceRowCount,
+    expectedOldNoteSha256: result.expectedHash,
+    storedNoteSha256: result.storedHash,
+    placeType: 'town',
+    searchScope: 'metro_city',
+    ...noWrites,
+    mismatchStillPresent: true,
   };
 }

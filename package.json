@@ -231,6 +231,8 @@
     "db:migration-prefix-0096:verify": "cross-env NODE_ENV=development APP_ENV=development tsx scripts/databaseAuthorityCli.ts migration-prefix-0096:verify",
     "db:migration-prefix-0111:seed": "cross-env NODE_ENV=development APP_ENV=development tsx scripts/databaseAuthorityCli.ts migration-prefix-0111:seed",
     "db:migration-prefix-0111:verify": "cross-env NODE_ENV=development APP_ENV=development tsx scripts/databaseAuthorityCli.ts migration-prefix-0111:verify",
+    "db:places:type-reconciliation:mismatch-seed": "cross-env NODE_ENV=development APP_ENV=development tsx scripts/databaseAuthorityCli.ts gauteng-evidence-note-mismatch:seed",
+    "db:places:type-reconciliation:mismatch-verify": "cross-env NODE_ENV=development APP_ENV=development tsx scripts/databaseAuthorityCli.ts gauteng-evidence-note-mismatch:verify",
     "db:prepare:local": "tsx scripts/retiredDatabaseMutation.ts db:prepare:local",
     "db:prospect-journey-e2e:drop": "tsx scripts/retiredDatabaseMutation.ts db:prospect-journey-e2e:drop",
     "db:prospect-journey-e2e:reset": "tsx scripts/retiredDatabaseMutation.ts db:prospect-journey-e2e:reset",

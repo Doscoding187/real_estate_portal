@@ -15,6 +15,8 @@ import {
 import { retireFordsburgDuplicate } from '../server/_core/databaseAuthority/dataAdapters/fordsburgPlaceRetirement';
 import { reconcileGautengReviewedTypes } from '../server/_core/databaseAuthority/dataAdapters/gautengReviewedTypeReconciliation';
 import {
+  seedGautengEvidenceNoteMismatch,
+  verifyGautengEvidenceNoteMismatch,
   prepareMigrationPrefix0111,
   verifyMigrationPrefix0111,
 } from '../server/_core/databaseAuthority/dataAdapters/migrationPrefix0111';
@@ -194,7 +196,11 @@ type Command =
   | 'ple-reviewer:prepare'
   | 'ple-reviewer:verify'
   | 'migration-prefix-0096:seed'
-  | 'migration-prefix-0096:verify';
+  | 'migration-prefix-0096:verify'
+  | 'migration-prefix-0111:seed'
+  | 'migration-prefix-0111:verify'
+  | 'gauteng-evidence-note-mismatch:seed'
+  | 'gauteng-evidence-note-mismatch:verify';
 
 function option(name: string): string | undefined {
   const prefix = `--${name}=`;
@@ -985,6 +991,29 @@ async function run(command: Command): Promise<void> {
   }
 
   if (
+    command === 'gauteng-evidence-note-mismatch:seed' ||
+    command === 'gauteng-evidence-note-mismatch:verify'
+  ) {
+    const isSeed = command.endsWith(':seed');
+    const authority = authorityFor(
+      isSeed ? 'test-fixture' : 'verification',
+      isSeed ? 'local-owner' : undefined,
+    );
+    const decision = authorizationFor(authority);
+    const connection = await createAuthoritySqlConnection(authority, decision);
+    try {
+      print(
+        await (isSeed ? seedGautengEvidenceNoteMismatch : verifyGautengEvidenceNoteMismatch)(
+          { authority, decision, connection },
+        ),
+      );
+    } finally {
+      await connection.end();
+    }
+    return;
+  }
+
+  if (
     command === 'migration-prefix-0096:seed' || command === 'migration-prefix-0096:verify' ||
     command === 'migration-prefix-0111:seed' || command === 'migration-prefix-0111:verify'
   ) {
@@ -1132,6 +1161,8 @@ const commands = new Set<Command>([
   'migration-prefix-0096:verify',
   'migration-prefix-0111:seed',
   'migration-prefix-0111:verify',
+  'gauteng-evidence-note-mismatch:seed',
+  'gauteng-evidence-note-mismatch:verify',
 ]);
 
 if (process.argv[1] && resolve(process.argv[1]) === new URL(import.meta.url).pathname) {

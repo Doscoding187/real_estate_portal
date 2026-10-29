@@ -1532,6 +1532,11 @@
       "purpose": "SQL query example, not a migration file."
     },
     {
+      "path": "docs/operations/gauteng-place-azure-read-only-checks.sql",
+      "classification": "documentation/example",
+      "purpose": "Founder-run read-only Azure diagnostics for Gauteng Place reconciliation; not a migration or mutation script."
+    },
+    {
       "path": "server/migrations/0133_distribution_application_requirement_document_fk_drop.sql",
       "classification": "canonical active",
       "purpose": "Drops the obsolete foreign key from Distribution application requirements to Developer-owned sales collateral.",

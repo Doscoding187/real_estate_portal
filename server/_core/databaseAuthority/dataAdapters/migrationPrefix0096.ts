@@ -154,7 +154,7 @@ function assertFields(row: Record<string, unknown> | undefined, expected: Record
     const matches = typeof value === 'number'
       ? Number(actual) === value
       : jsonValue !== undefined
-        ? jsonValue === JSON.stringify(JSON.parse(value))
+        ? jsonValue === JSON.stringify(JSON.parse(String(value)))
         : String(actual ?? '') === String(value ?? '');
     if (!matches) {
       throw new Error(`Migration prefix fixture detected ${label} identity/data drift at ${field}.`);
