@@ -1,8 +1,48 @@
 # Fordsburg duplicate identity review — 2026-10-28
 
-**Status:** Candidate-only hold implemented in Gauteng source authority v0.4 and Place admission v0.3; package and owned-disposable database verification passed.
+**Status:** The founder's 2026-10-29 identity-continuity decision below supersedes the 2026-10-28 hold. The runtime retirement is drafted for the next approved release; no production row has been changed.
 
-## Decision
+## Superseding founder decision — 2026-10-29
+
+Retire `pl-place-01-99dcb8ba9d808741e35b258e` from runtime as a duplicate of
+the supported Fordsburg suburb `pl-place-01-435b493de124264b676f708f`. Preserve
+the allocated identity and its historical source records in the committed
+admission package and this review; do not create or reuse a Place ID.
+
+The pre-release retirement step will verify the exact historical row bundle,
+move any canonical entity references to the supported suburb, remove this
+Place's runtime names, relationship, evidence and external mappings, then
+remove the duplicate Place row. The supported suburb's own names, evidence,
+mappings and Gauteng/Johannesburg relationships remain its authority. Extra or
+changed references stop the step for review. No eligibility flags are changed.
+
+The prior candidate-only decision remains historical context only. Its
+"do not merge or retire" conclusion is no longer the active decision.
+
+## Runtime reference disposition
+
+Before deleting the Place row, the governed step checks direct canonical Place
+references in `listings`, `properties`, `saved_searches`,
+`development_place_assignments`, `explore_content`, `land_parcels`,
+`commercial_assets`, `sl_places`, `service_provider_locations`,
+`service_leads`, `demand_campaigns`, `seller_prospects`, and
+`search_area_member`. It moves each reference to the supported suburb in the
+same transaction. A foreign-key or uniqueness conflict stops and rolls back.
+There is no direct Place foreign key on `leads` or `developments`; development
+locations use `development_place_assignments`.
+
+| Stored data attached to the duplicate | Release treatment |
+| --- | --- |
+| Listing or other entity reference | Point to the supported suburb; keep the listing/entity itself. |
+| `Fordsburg` and `ZAFBG` names | Delete from the duplicate; the suburb's existing preferred `Fordsburg` name remains, and `ZAFBG` is not transferred. |
+| Administrative relationship to Gauteng | Delete; keep only the suburb's existing reviewed relationships. |
+| GeoNames/NGA source evidence and external mappings | Delete from runtime tables; retain the two source records, attribution, and decision trail in committed admission history. Do not attach them to the suburb. |
+
+Production reference counts are deliberately not asserted in this draft. The
+disposable rehearsal seeded one listing and found one reference to remap; the
+release plan must report actual production counts after the verified backup.
+
+## Historical decision — 2026-10-28 (superseded)
 
 Keep the supported Fordsburg suburb as the admitted Place. Treat the second
 Fordsburg locality as a held candidate with no runtime Place until its identity is
@@ -14,7 +54,7 @@ This applies the existing quarantine recommendation in the [Gauteng city-scope
 membership plan](launch-readiness-and-product-convergence/74-city-scope-membership-implementation-plan-2026-10-23.md#L523)
 and the fail-closed identity rules in the [Geography Coverage Contract](geography-coverage-contract.md#L363).
 
-## Evidence
+## Evidence recorded for the 2026-10-28 hold
 
 Before this hold, `gauteng-place-admission-v0.2` contained two active, searchable
 Places with the preferred name `Fordsburg`:
@@ -36,17 +76,18 @@ three withheld fuzzy proposals, two ambiguous source matches, and an unresolved
 candidate type. Its admitted public name is still marked active and searchable in
 v0.2, even though the implementation plan calls this identity a hold.
 
-The admission builder only merges settlement identities with the same normalized
-name and admitted administrative context when their points are within 15 km
+At the time of the hold, the admission builder merged settlement identities with
+the same normalized name and admitted administrative context only when their
+points were within 15 km
 ([builder policy](../../tools/place-admission/README.md#L68)). At 19.3 km, these
 records are intentionally left separate. Its schema 0.2 reviewed overlays support
 type corrections and settlement membership, not identity demotion
-([overlay contract](../../tools/place-admission/README.md#L86)). The held
-disposition must therefore be made in the governed source-admission inputs: keep
-the source identity and evidence in the candidate disposition, remove it from the
-factual-geography input, then regenerate a new versioned source and admission
-package. A one-row edit to generated admission files would be overwritten by the
-next deterministic build.
+([overlay contract](../../tools/place-admission/README.md#L86)). Implementing
+that then-proposed hold required a governed source-admission input change: keep
+the source identity and evidence in the candidate disposition, remove it from
+the factual-geography input, then regenerate a versioned source and admission
+package. A one-row edit to generated admission files would have been overwritten
+by the next deterministic build.
 
 The v0.2 admission ledger recorded the locality as
 `admitted_as_place_primary` with `human_review_required=false`. A different
@@ -68,27 +109,28 @@ Repository evidence:
   that fail admission gates to remain out of runtime; ambiguity is a first-class
   result and must not be collapsed ([contract lines 335–389](geography-coverage-contract.md#L335)).
 
-## Applied disposition
+## Historical applied hold — 2026-10-28 (superseded)
 
-The hold is now recorded in `data/gauteng-source-authority-v0.4/` and built into
-`data/gauteng-place-admission-v0.3/`. Source-authority v0.2/v0.3 and admission
-v0.2 remain unchanged. The v0.4 derivation pins its v0.3 input manifest and the
-reviewed v0.2 admission evidence, and carries a separate reviewed identity-hold
-artifact with the prior candidate, its two original source-link records and
-licensing attribution, and the previous admitted rows.
+On 2026-10-28, the hold was recorded in `data/gauteng-source-authority-v0.4/`
+and built into `data/gauteng-place-admission-v0.3/`. Source-authority v0.2/v0.3
+and admission v0.2 were left unchanged. The v0.4 derivation pinned its v0.3
+input manifest and the reviewed v0.2 admission evidence, and carried a separate
+reviewed identity-hold artifact with the prior candidate, its two original
+source-link records and licensing attribution, and the previous admitted rows.
 
-The source disposition marks `pl-geo-v01-za-gp-cdaee93a6835fd8f1544`
-`candidate_only`, requires human review, and flags it for a priority probe. It is
-absent from factual geography, public names, source links, Place rows,
+That historical source disposition marked `pl-geo-v01-za-gp-cdaee93a6835fd8f1544`
+`candidate_only`, required human review, and flagged it for a priority probe. It
+was absent from factual geography, public names, source links, Place rows,
 relationships, and external mappings. Its former Place ID,
 `pl-place-01-99dcb8ba9d808741e35b258e`, remains allocated but is not admitted.
-No identity was merged or retired.
+At that time, no identity was merged or retired. The founder's 2026-10-29
+decision above supersedes that disposition for runtime release.
 
 The supported suburb remains `pl-place-01-435b493de124264b676f708f`, with its
 reviewed `settlement_within` edge to Johannesburg unchanged. Fordsburg now has
 exactly one searchable Gauteng result.
 
-## Verification
+## Historical verification — 2026-10-28
 
 - Source derivation check passed byte-for-byte; all eight compact source
   artifacts verify against source-authority v0.4's manifest.
@@ -113,5 +155,6 @@ exactly one searchable Gauteng result.
   consumer or perform publication. No protected database or geography release
   was changed.
 
-The source package retains the earlier licensing review gate for government GIS
-terms and attribution. This identity hold does not sign off that separate gate.
+The earlier licensing review gate is superseded by the founder's standing rule
+that licensing is not a launch blocker. Keep attribution in the existing source
+fields; this retirement does not add a licensing gate.

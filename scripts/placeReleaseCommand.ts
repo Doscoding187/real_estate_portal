@@ -8,7 +8,11 @@ export type PlaceReleaseCommand =
   | 'release-reference:verify'
   | 'release-reference:inspect'
   | 'places:release-preview:prepare'
-  | 'places:release-preview:verify';
+  | 'places:release-preview:verify'
+  | 'places:identity-retirement:prepare'
+  | 'places:identity-retirement:verify'
+  | 'places:type-reconciliation:prepare'
+  | 'places:type-reconciliation:verify';
 type TransactionOutcome =
   | PlaceReleaseFailure['outcome']
   | 'committed'

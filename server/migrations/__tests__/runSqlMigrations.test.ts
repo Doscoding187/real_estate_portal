@@ -1035,6 +1035,103 @@ describe('manifest migration planning and durable attempts', () => {
       }),
     ).toThrow('application tables exist');
   });
+
+  it('plans only through an exact manifest ancestor and includes that head in the digest', () => {
+    const fixture = migrationFixture();
+    const manifest = {
+      document: { expectedHead: fixture.entries.at(-1)!.filename },
+      manifestDigest: 'manifest',
+      orderedMigrations: fixture.entries.map(item => ({ ...item, statementCount: 1 })),
+    } as any;
+    const plan = buildMigrationPlan({
+      manifest,
+      targetFingerprintHash: 'fingerprint',
+      applied: [],
+      applicationTableCount: 0,
+      acceptedOldHead: null,
+      ancestorHead: fixture.entries[0].filename,
+    });
+    const fullPlan = buildMigrationPlan({
+      manifest,
+      targetFingerprintHash: 'fingerprint',
+      applied: [],
+      applicationTableCount: 0,
+      acceptedOldHead: null,
+    });
+
+    expect(plan.pending.map(item => item.filename)).toEqual([fixture.entries[0].filename]);
+    expect(plan.expectedNewHead).toBe(fixture.entries[0].filename);
+    expect(plan.planDigest).not.toBe(fullPlan.planDigest);
+  });
+
+  it('rejects an unknown, current-head, or already-passed ancestor', () => {
+    const fixture = migrationFixture();
+    const manifest = {
+      document: { expectedHead: fixture.entries.at(-1)!.filename },
+      manifestDigest: 'manifest',
+      orderedMigrations: fixture.entries.map(item => ({ ...item, statementCount: 1 })),
+    } as any;
+    const build = (input: Record<string, unknown>) => buildMigrationPlan({
+      manifest,
+      targetFingerprintHash: 'fingerprint',
+      applied: [],
+      ...input,
+    } as any);
+
+    expect(() => build({ ancestorHead: '0096_missing.sql' })).toThrow('absent from the validated manifest');
+    expect(() => build({ ancestorHead: fixture.entries.at(-1)!.filename })).toThrow('proper ancestor');
+    expect(() => build({
+      applied: fixture.entries.map(item => ({ fileName: item.filename, checksum: item.checksum })),
+      ancestorHead: fixture.entries[0].filename,
+    })).toThrow('precedes the accepted old head');
+    expect(() => build({
+      ancestorHead: fixture.entries[0].filename,
+      expectedNewHead: fixture.entries[1].filename,
+    })).toThrow('choose either the manifest head or one ancestor head');
+  });
+
+  it('refuses ancestor-head plans on protected targets before connecting', async () => {
+    const fixture = migrationFixture();
+    const { authority, authorization } = protectedAuthorityFor('plan');
+    let connected = false;
+
+    await expect(runSqlMigrations({
+      mode: 'plan',
+      operation: 'release-plan',
+      migrationsDir: fixture.root,
+      manifestPath: fixture.manifestPath,
+      authority,
+      authorization,
+      ancestorHead: fixture.entries[0].filename,
+      connectionFactory: async () => {
+        connected = true;
+        return new FakeMigrationConnection(authority.context.databaseName);
+      },
+    })).rejects.toThrow('limited to the exact owned disposable local worktree target');
+    expect(connected).toBe(false);
+  });
+
+  it('applies only the validated ancestor prefix on an owned disposable worktree', async () => {
+    const fixture = migrationFixture();
+    const { authority, authorization } = authorityFor('apply');
+    const connection = new FakeMigrationConnection(authority.context.databaseName);
+
+    const result = await runSqlMigrations({
+      mode: 'apply',
+      migrationsDir: fixture.root,
+      manifestPath: fixture.manifestPath,
+      authority,
+      authorization,
+      acceptedOldHead: null,
+      ancestorHead: fixture.entries[0].filename,
+      connectionFactory: async () => connection,
+    });
+
+    expect(result.plan.expectedNewHead).toBe(fixture.entries[0].filename);
+    expect(result.applied).toEqual([fixture.entries[0].filename]);
+    expect(connection.calls.some(call => call.statement.startsWith('ALTER TABLE'))).toBe(false);
+    expect(connection.history.has(fixture.entries[1].filename)).toBe(false);
+  });
 });
 
 describe('legacy pure guards retained as compatibility adapters', () => {

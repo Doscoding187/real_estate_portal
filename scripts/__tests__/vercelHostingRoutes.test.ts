@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-type Route = { src: string; dest: string; headers?: Record<string, string> };
+type Route = { src: string; dest?: string; status?: number; headers?: Record<string, string> };
 
 async function loadVercelConfig(env: Record<string, string | undefined>) {
   vi.resetModules();
@@ -53,6 +53,33 @@ describe('hosting route contract', () => {
     expect(index?.dest).toBe('https://api.propertylistifysa.co.za/sitemap.xml');
     const guides = config.routes.find(route => route.src === '/sitemap-(.*)\\.xml');
     expect(guides?.dest).toBe('https://api.propertylistifysa.co.za/sitemap-$1.xml');
+  });
+
+  it('permanently redirects superseded Gauteng Place URLs before the SPA fallback', async () => {
+    const config = await loadVercelConfig({
+      VERCEL_ENV: 'production',
+      VITE_DEPLOY_ENV: 'production',
+    });
+    const redirects = [
+      ['/gauteng/baragwanath/?', '/gauteng/johannesburg/baragwanath'],
+      ['/gauteng/van-wyksrus/?', '/gauteng/city-of-johannesburg/van-wyksrus'],
+      ['/gauteng/marshallstown/?', '/gauteng/johannesburg/marshallstown'],
+      ['/gauteng/randjesfontein/?', '/gauteng/midrand/randjesfontein'],
+    ] as const;
+    const fallbackIndex = config.routes.findIndex(
+      route => route.src === '/(.*)' && route.dest === '/index.html',
+    );
+
+    for (const [source, destination] of redirects) {
+      const routeIndex = config.routes.findIndex(route => route.src === source);
+      expect(routeIndex).toBeGreaterThanOrEqual(0);
+      expect(routeIndex).toBeLessThan(fallbackIndex);
+      expect(config.routes[routeIndex]).toMatchObject({
+        src: source,
+        status: 308,
+        headers: { Location: destination },
+      });
+    }
   });
 
   it('keeps non-production deployments out of the index', async () => {

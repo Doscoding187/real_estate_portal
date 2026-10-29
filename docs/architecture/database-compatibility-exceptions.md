@@ -11,6 +11,59 @@ current controlled production release packet for that status.
 
 ## Compatibility exception records
 
+### Exception ID: DBX-MIGRATION-REHEARSAL-0096-HISTORICAL-SEED-2026-10-29-Edward
+
+Status: Approved one-time disposable rehearsal by Edward on 2026-10-29
+
+Owner: Property Listify senior product engineering
+
+Business reason: The Azure upgrade rehearsal starts from migration 0096 and needs
+synthetic user, listing, development and lead rows to verify row identity and
+data effects through migration 0197. The fixture intentionally writes only the
+historical 0096 development location fields listed below; it is not a runtime
+compatibility path. Lead delivery attempts were already removed at migration
+0076 and are not part of this fixture.
+
+Canonical authority: `server/migrations/manifest.json` and its fully validated
+lineage. The fixture may seed only when the exact owned disposable worktree is
+at `0096_user_founder_authority_unique.sql`; the new migration prefix option is
+limited to the exact owned disposable local MySQL worktree.
+
+Exact files: `server/_core/databaseAuthority/dataAdapters/migrationPrefix0096.ts`,
+`server/_core/databaseAuthority/dataAdapters/dataRoleManifest.ts`,
+`scripts/databaseAuthorityCli.ts`, `server/migrations/runSqlMigrations.ts`,
+and the migration runner/role contract tests.
+
+Tables and columns: one synthetic row each in `users`, `listings`,
+`developments`, and `leads`; historical fields under observation are
+`developments.city`, `developments.province`, `developments.suburb`,
+and `developments.location_id`.
+
+Permitted read direction: Verify only the exact synthetic identities and
+selected stable values after the active head is reached, and confirm whether
+replacement Place/delivery records exist. Do not read or seed any live data.
+
+Permitted write direction: The registered `migration-prefix-0096` test-fixture
+adapter may insert exactly its fixed four rows on an exact owned local
+`disposable-worktree` database at migration 0096. It may not update, delete,
+upsert, or write to another target. No schema DDL is permitted.
+
+Failure and observability behavior: Wrong target, head, manifest, checksum,
+existing fixture identity, incomplete migration attempt, or post-upgrade row
+drift fails closed. The adapter emits the synthetic row snapshot and final
+identity/effect evidence; migration attempts remain governed by the canonical
+runner.
+
+Automated evidence: Exact ancestor planning and protected-target refusal tests,
+the registered data-role contract, and one successful local 0096-to-0197 seeded
+rehearsal with row verification.
+
+Expiry or objective removal condition: Remove the fixture adapter, its
+data-role entry, CLI/package commands and this exception after Edward accepts
+the seeded rehearsal evidence and B08 is closed, and before production release.
+
+Removal workstream: B08 Azure MySQL upgrade rehearsal closure.
+
 ### Exception ID: DBX-PLE-2B-property-taxonomy-enum-expansion
 
 Status: Approved for the PLE-2B implementation slice
