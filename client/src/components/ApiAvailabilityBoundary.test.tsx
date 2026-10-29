@@ -6,6 +6,7 @@ import { ApiAvailabilityBoundary } from './ApiAvailabilityBoundary';
 afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
 });
 
 describe('ApiAvailabilityBoundary', () => {
@@ -23,6 +24,48 @@ describe('ApiAvailabilityBoundary', () => {
 
     expect(screen.getByText('Property search')).toBeInTheDocument();
     expect(screen.queryByText('We’re upgrading Property Listify')).not.toBeInTheDocument();
+  });
+
+  it('leaves a Preview disabled by default', async () => {
+    vi.stubEnv('VITE_DEPLOY_ENV', 'preview');
+    vi.stubEnv('VITE_MAINTENANCE_GATE_ENABLED', '');
+    const fetcher = vi.fn();
+    vi.stubGlobal('fetch', fetcher);
+
+    render(
+      <HelmetProvider>
+        <ApiAvailabilityBoundary apiBaseUrl="https://api.example.test">
+          <div>Property search</div>
+        </ApiAvailabilityBoundary>
+      </HelmetProvider>,
+    );
+    await act(async () => {});
+
+    expect(screen.getByText('Property search')).toBeInTheDocument();
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it('enables the gate in Preview with its scoped opt-in variable', async () => {
+    vi.useFakeTimers();
+    vi.stubEnv('VITE_DEPLOY_ENV', 'preview');
+    vi.stubEnv('VITE_MAINTENANCE_GATE_ENABLED', 'true');
+    const fetcher = vi.fn().mockResolvedValue(new Response(null, { status: 503 }));
+    vi.stubGlobal('fetch', fetcher);
+
+    render(
+      <HelmetProvider>
+        <ApiAvailabilityBoundary apiBaseUrl="https://api.example.test">
+          <div>Property search</div>
+        </ApiAvailabilityBoundary>
+      </HelmetProvider>,
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(250);
+    });
+
+    expect(screen.getByRole('status')).toHaveTextContent('We’re upgrading Property Listify');
+    expect(screen.queryByText('Property search')).not.toBeInTheDocument();
+    expect(fetcher).toHaveBeenCalledTimes(2);
   });
 
   it('shows maintenance only after the readiness retry fails', async () => {

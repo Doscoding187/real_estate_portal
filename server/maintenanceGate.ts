@@ -1,5 +1,62 @@
 import { isApiReady, type ApiReadinessProbeOptions } from '../shared/apiReadiness';
 
+export const MAINTENANCE_READINESS_CACHE_TTL_MS = 3_000;
+const MAX_READINESS_CACHE_ENTRIES = 16;
+
+interface ReadinessCacheEntry {
+  expiresAt: number;
+  result: Promise<boolean>;
+}
+
+const readinessCache = new WeakMap<typeof fetch, Map<string, ReadinessCacheEntry>>();
+
+function cachedApiReadiness(
+  apiBaseUrl: string,
+  options: ApiReadinessProbeOptions,
+): Promise<boolean> {
+  const fetcher = options.fetcher ?? fetch;
+  let cache = readinessCache.get(fetcher);
+  if (!cache) {
+    cache = new Map();
+    readinessCache.set(fetcher, cache);
+  }
+
+  const key = JSON.stringify([
+    apiBaseUrl,
+    options.attempts ?? null,
+    options.timeoutMs ?? null,
+    options.retryDelayMs ?? null,
+  ]);
+  const now = Date.now();
+  const existing = cache.get(key);
+  if (existing && existing.expiresAt > now) return existing.result;
+
+  const entry: ReadinessCacheEntry = {
+    expiresAt: Number.POSITIVE_INFINITY,
+    result: Promise.resolve(false),
+  };
+  entry.result = isApiReady(apiBaseUrl, { ...options, fetcher })
+    .then(ready => {
+      if (cache?.get(key) === entry) {
+        entry.expiresAt = Date.now() + MAINTENANCE_READINESS_CACHE_TTL_MS;
+      }
+      return ready;
+    })
+    .catch(error => {
+      if (cache?.get(key) === entry) cache.delete(key);
+      throw error;
+    });
+  cache.set(key, entry);
+
+  while (cache.size > MAX_READINESS_CACHE_ENTRIES) {
+    const oldestKey = cache.keys().next().value;
+    if (oldestKey === undefined) break;
+    cache.delete(oldestKey);
+  }
+
+  return entry.result;
+}
+
 const MAINTENANCE_HTML = `<!doctype html>
 <html lang="en">
   <head>
@@ -31,6 +88,7 @@ const MAINTENANCE_HTML = `<!doctype html>
 export interface MaintenanceGateOptions {
   environment: string | undefined;
   apiBaseUrl: string | undefined;
+  previewGateEnabled?: boolean;
   fetcher?: typeof fetch;
   probeOptions?: Omit<ApiReadinessProbeOptions, 'fetcher'>;
 }
@@ -39,11 +97,14 @@ export async function maintenanceResponseForRequest(
   request: Request,
   options: MaintenanceGateOptions,
 ): Promise<Response | null> {
-  if (options.environment !== 'production') return null;
+  const productionGateEnabled = options.environment === 'production';
+  const optedInPreviewGateEnabled =
+    options.environment === 'preview' && options.previewGateEnabled === true;
+  if (!productionGateEnabled && !optedInPreviewGateEnabled) return null;
   if (request.method !== 'GET' && request.method !== 'HEAD') return null;
   if (!request.headers.get('accept')?.toLowerCase().includes('text/html')) return null;
 
-  const ready = await isApiReady(options.apiBaseUrl ?? '', {
+  const ready = await cachedApiReadiness(options.apiBaseUrl ?? '', {
     ...options.probeOptions,
     ...(options.fetcher ? { fetcher: options.fetcher } : {}),
   });

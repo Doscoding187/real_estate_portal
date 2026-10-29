@@ -13,6 +13,7 @@ export default async function middleware(request: Request): Promise<Response> {
   const maintenanceResponse = await maintenanceResponseForRequest(request, {
     environment: process.env.VERCEL_ENV,
     apiBaseUrl: publicApiOrigin(process.env),
+    previewGateEnabled: process.env.VITE_MAINTENANCE_GATE_ENABLED === 'true',
   });
   if (maintenanceResponse) return maintenanceResponse;
 

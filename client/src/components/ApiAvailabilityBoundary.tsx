@@ -15,7 +15,8 @@ export interface ApiAvailabilityBoundaryProps {
 /** Covers an already-open SPA when its API becomes unavailable, and restores it after recovery. */
 export function ApiAvailabilityBoundary({
   children,
-  enabled = import.meta.env.VITE_DEPLOY_ENV === 'production',
+  enabled = import.meta.env.VITE_DEPLOY_ENV === 'production' ||
+    import.meta.env.VITE_MAINTENANCE_GATE_ENABLED === 'true',
   apiBaseUrl = API_BASE_URL,
 }: ApiAvailabilityBoundaryProps) {
   const [maintenance, setMaintenance] = useState(false);

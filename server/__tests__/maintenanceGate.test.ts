@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { maintenanceResponseForRequest } from '../maintenanceGate';
+import {
+  MAINTENANCE_READINESS_CACHE_TTL_MS,
+  maintenanceResponseForRequest,
+} from '../maintenanceGate';
 
 function documentRequest() {
   return new Request('https://propertylistifysa.co.za/property-for-sale', {
@@ -71,6 +74,7 @@ describe('production API maintenance gate', () => {
   });
 
   it('returns to the normal site on the next request after API recovery', async () => {
+    vi.useFakeTimers();
     const fetcher = vi
       .fn()
       .mockResolvedValueOnce(new Response(null, { status: 503 }))
@@ -81,13 +85,54 @@ describe('production API maintenance gate', () => {
       ...production,
       fetcher,
     });
+    const stillUnavailable = await maintenanceResponseForRequest(documentRequest(), {
+      ...production,
+      fetcher,
+    });
+    await vi.advanceTimersByTimeAsync(MAINTENANCE_READINESS_CACHE_TTL_MS);
     const recovered = await maintenanceResponseForRequest(documentRequest(), {
       ...production,
       fetcher,
     });
 
     expect(unavailable?.status).toBe(503);
+    expect(stillUnavailable?.status).toBe(503);
     expect(recovered).toBeNull();
+    expect(fetcher).toHaveBeenCalledTimes(3);
+  });
+
+  it('caches readiness for three seconds and then probes again', async () => {
+    vi.useFakeTimers();
+    const fetcher = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
+    const options = {
+      ...production,
+      apiBaseUrl: 'https://maintenance-cache.example',
+      fetcher,
+      probeOptions: { attempts: 1, timeoutMs: 100, retryDelayMs: 0 },
+    };
+
+    await maintenanceResponseForRequest(documentRequest(), options);
+    await maintenanceResponseForRequest(documentRequest(), options);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(MAINTENANCE_READINESS_CACHE_TTL_MS);
+    await maintenanceResponseForRequest(documentRequest(), options);
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+
+  it('allows a Preview-scoped opt-in while leaving previews off by default', async () => {
+    const fetcher = vi.fn().mockResolvedValue(new Response(null, { status: 503 }));
+    const response = await maintenanceResponseForRequest(documentRequest(), {
+      ...production,
+      environment: 'preview',
+      previewGateEnabled: true,
+      apiBaseUrl: 'https://maintenance-preview.example',
+      fetcher,
+    });
+
+    expect(response?.status).toBe(503);
+    expect(response?.headers.get('x-robots-tag')).toBe('noindex, nofollow, noarchive');
+    expect(fetcher).toHaveBeenCalledTimes(2);
   });
 
   it('does not gate previews, assets, or non-document requests', async () => {
