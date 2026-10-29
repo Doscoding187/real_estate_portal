@@ -167,25 +167,20 @@ geography row.**
 
 **Consequences:**
 
-1. The ODbL determination does **not** need a founder decision to unblock the platform. The
-   policy is written, enforced and already applied. What remains is engineering: re-source the
-   blocked rows from the attribution-licensed foundation and close the OSM-only gate.
+1. The founder's 2026-10-29 direction supersedes this licensing hold: no licence research or
+   approval gate is needed for launch; use publicly available data and keep source/URL in the
+   existing fields. The remaining engineering work is to remove the obsolete target restriction.
 2. The `provisional` status must stop being derived from licensing in the runtime projection.
    Place status must come from the Place Authority's own release status.
 3. The two legacy defects — licensing-derived suppression and provider-written geography —
    disappear with the projection itself. That is the strongest argument for retiring it rather
    than maintaining it.
 
-**What genuinely remains a founder or lawyer question** — small, and explicitly not blocking:
-
-- Whether to buy commercial boundary data (Mapbox / HERE / TomTom) instead of maintaining our
-  own geometry. This is a budget decision, not a judgement call.
-- One scoped South African lawyer opinion on how a SA court would characterise our specific
-  schema, and whether the Municipal Demarcation Board's and Stats SA's non-resale clauses bind
-  a paid product. Note their terms: the MDB allows use in value-added applications with
-  attribution but forbids selling the data or appropriating it for commercial use; Stats SA
-  forbids selling or reprocessed versions without permission. Both are permission conversations,
-  not dead ends.
+**Historical deferred questions — not launch gates.** This packet previously listed commercial
+boundary purchases and a legal opinion as future questions. The founder's 2026-10-29 direction is
+to treat licensing as no launch blocker: use publicly available data as-is and keep source and
+URL in the existing fields. Do not research licences or create approval gates for launch. This
+records a product decision, not a legal conclusion.
 
 ## The ordered plan to launch
 
@@ -194,15 +189,15 @@ geography row.**
 | 1   | Land the guide pilot and the geography boundary                                                                               | The launch is blocked on the guides being published and served. Done in this branch.                                                                                       |
 | 2   | **Correct the place status rule**: take place status from the Place Authority release, not from licensing                     | Removes the reason Rosebank, Soweto, Krugersdorp, Vereeniging, Magaliesburg and 1,100 others are invisible. It is a rule change in the projection loader, not a data hunt. |
 | 3   | **Re-parent the places that are in the wrong tier** (Rosebank first, then a census of the rest) against the municipal records | The market's own leader gets this wrong for Vereeniging. This is where we beat them.                                                                                       |
-| 4   | Re-source the licensing-held rows from GeoNames / geoBoundaries / NGA GNS and close the OSM-only gate                         | Engineering, not a decision.                                                                                                                                               |
+| 4   | Keep source and URL recorded in the existing Place evidence fields; release all admitted public data without a licensing gate  | Founder direction 2026-10-29; no extra licence research or approval step is part of launch.                                                                                  |
 | 5   | Build the country funnel page and the province → municipality → city → suburb guide ladder                                    | Edward's SEO vision, and the one Property24 does not have.                                                                                                                 |
 | 6   | Index gating on real demand: a suburb page earns indexation only with listings and unique data; thin pages 301 to the parent  | Google's rules, and the guardrail against the "mass catalogue of thin pages" the audit warned about. Already implemented for the pilot.                                    |
 | 7   | Switch the remaining 19 legacy consumers to the Place Authority, then retire the projection tables                            | The mechanical end of the retirement. Each consumer is one allow-list entry.                                                                                               |
 
-**Approval burden after this packet.** Items 2, 3, 4, 5, 6 and 7 are researchable, buildable
-and testable, and should proceed without founder approval. The founder is needed only for
-spend (item: commercial boundary data, a scoped lawyer opinion) and for accepting a business
-risk that cannot be researched away. That is the correct division of labour for this programme.
+**Approval burden after this packet.** Items 2, 3, 4, 5, 6 and 7 are buildable and testable.
+Licensing research and a licence approval gate are not launch prerequisites under the founder's
+2026-10-29 direction. The founder retains the final product GO decision recorded in the release
+runbook.
 
 ## What is not decided here
 
@@ -234,18 +229,30 @@ later correction can find every affected record.
 
 **Coverage effect, measured on the disposable target.**
 
+**Count correction — 2026-10-29.** The current package has 17,663 Places, not
+17,664: the founder has decided to retire the duplicate Fordsburg locality
+`pl-place-01-99dcb8ba9d808741e35b258e`, leaving the supported suburb. This is a
+package count for the next release; Azure's existing 16,944 rows are unchanged
+until a separately approved release. The Fordsburg decision record and
+pre-release retirement step are in
+[`fordsburg-duplicate-identity-review-2026-10-28.md`](../fordsburg-duplicate-identity-review-2026-10-28.md).
+
 |                                    | Before          | After      |
 | ---------------------------------- | --------------- | ---------- |
-| Places released                    | 16,944          | **17,664** |
-| Places searchable                  | 16,224          | **16,944** |
+| Places released                    | 16,944          | **17,663** |
+| Places searchable                  | 16,224          | **16,943** |
 | Places publishable as a guide page | 68 per province | unchanged  |
-| Gauteng places searchable          | 714             | **1,434**  |
+| Gauteng places searchable          | 714             | **1,433**  |
 
-**The licence position that remains open.** The OpenStreetMap tail is a small, non-systematic
-part of a collection that is 16,472 permissively-licensed places. That is the fact the written
-opinion should test, together with whether combining them in one collection is a collective
-database under the ODbL. Until that opinion is held, this is a founder decision on the release
-policy, recorded here and in the release evidence, and not a settled legal position.
+**Historical licence note — superseded for launch.** The OpenStreetMap tail was previously
+treated as a legal review item. The founder's 2026-10-29 direction supersedes that release hold:
+publicly available data is used as-is, source and URL stay in existing fields, and licensing
+review does not block the launch. This is not a legal opinion.
+
+**Founder launch direction — 2026-10-29.** This historical legal-review request and its proposed
+gate are superseded for launch. Use publicly available data as-is, preserve its source and URL in
+the existing fields, and do not block loading or release on licensing review. This records the
+founder's product decision; it makes no legal determination.
 
 The alternative that avoids the question entirely is to not hold a browsable OpenStreetMap
 gazetteer and to resolve a location at the moment an agent lists a property instead. That

@@ -31,15 +31,14 @@
  * - **unable to silently remap**: a stored `place_id` that disagrees with the
  *   package aborts the load rather than being reused.
  *
- * Two guards are specific to this authority:
+ * One guard is specific to this authority:
  *
- * 1. **OSM-only gate.** Places whose licensing classification is
- *    `osm_only_odbl_provisional` may only be materialized on a disposable
- *    target. A non-disposable target must refuse the load until the founder
- *    ODbL gate is cleared (contract D3).
- * 2. **Identity stability.** A stored Place whose identity-bearing fields differ
+ * 1. **Identity stability.** A stored Place whose identity-bearing fields differ
  *    from the package aborts the load. A changed admission assertion must never
  *    silently mutate an existing identity.
+ *
+ * Licensing classifications and their source attribution remain recorded, but
+ * they do not block loading publicly available Place data.
  */
 
 import { createHash } from 'node:crypto';
@@ -84,7 +83,7 @@ export const CANONICAL_PLACES_DIGEST = createHash('sha256')
       'canonical-places',
       CANONICAL_PLACES_VERSION,
       'place,place_name,place_relationship,place_evidence,place_external_mapping',
-      'osm_only_disposable_only_gate',
+      'source_attribution_retained_without_licensing_release_gate',
       'identity_stability_fail_closed',
       `canonical_name_index_v${PLACE_NAME_NORMALIZATION_VERSION}`,
       'idempotent_upsert',
@@ -116,6 +115,9 @@ const ARTIFACT_KEYS = {
 } as const;
 
 const PLACE_ID_PATTERN = /^pl-place-01-[a-f0-9]{24}$/;
+const isDisposableTarget = (authority: any) =>
+  authority.context.targetClass === 'disposable-worktree' ||
+  authority.context.targetClass === 'disposable-test';
 
 const sha256OfFile = (root: string, path: string) =>
   createHash('sha256')
@@ -127,15 +129,6 @@ const readJsonl = (root: string, path: string) =>
     .split('\n')
     .filter(line => line.trim().length > 0)
     .map(line => JSON.parse(line) as Record<string, unknown>);
-
-/**
- * The OSM-only gate is expressed against the resolved target class.
- * `requireReferenceAdapterTarget` already refuses every non-disposable target,
- * so a truthy value here means the target is authorized and disposable.
- */
-const isDisposableTarget = (authority: any) =>
-  authority.context.targetClass === 'disposable-worktree' ||
-  authority.context.targetClass === 'disposable-test';
 
 export interface CanonicalPlacesExpected {
   territoryId: string;
@@ -569,22 +562,13 @@ export async function prepareCanonicalPlaces(input: {
   requireReferenceAdapterTarget(authority);
   await requireAcceptedMigrationHead({ authority, connection });
   const root = input.root ?? process.cwd();
+  const disposable = isDisposableTarget(authority);
   const ref: CanonicalPlacesPackageRef = input.territoryId
     ? { territoryId: input.territoryId }
     : {};
 
   const { manifest, rows, verifiedDigest } = loadCanonicalPlacePackage(root, ref);
   const expected = canonicalPlacesExpected(root, ref);
-  const disposable = isDisposableTarget(authority);
-
-  // Guard 1: OSM-only materialization is disposable-only (contract D3).
-  if (expected.osmOnlyPlaces > 0 && !disposable) {
-    throw new Error(
-      `canonical-places refused: ${expected.osmOnlyPlaces} OSM-only Places require the founder ODbL gate ` +
-        `before any non-disposable target may hold them`,
-    );
-  }
-
   const existing = await queryRows(connection, 'SELECT place_id FROM `place`');
   const alreadyLoaded = existing.length > 0;
 
@@ -729,7 +713,6 @@ export async function prepareNationalCanonicalPlaces(input: {
   await requireAcceptedMigrationHead({ authority, connection });
   const root = input.root ?? process.cwd();
   const disposable = isDisposableTarget(authority);
-
   const { registry } = loadPlaceAdmissionTerritoryRegistry(root);
   const territoryIds = registry.territories.map(territory => territory.territoryId);
   if (territoryIds.length < 2) {
@@ -743,12 +726,6 @@ export async function prepareNationalCanonicalPlaces(input: {
   const packages = territoryIds.map((territoryId: string) => {
     const ref: CanonicalPlacesPackageRef = { territoryId };
     const expected = canonicalPlacesExpected(root, ref);
-    if (expected.osmOnlyPlaces > 0 && !disposable) {
-      throw new Error(
-        `canonical-places national refused: ${territoryId} has ${expected.osmOnlyPlaces} OSM-only ` +
-          `Places, which require the founder ODbL gate before any non-disposable target may hold them`,
-      );
-    }
     const loaded = loadCanonicalPlacePackage(root, ref);
     return { territoryId, expected, rows: loaded.rows, digest: loaded.verifiedDigest };
   });
@@ -1150,18 +1127,11 @@ export async function verifyCanonicalPlaces(input: {
   const { authority, decision, connection } = input;
   requireReferenceAdapterTarget(authority);
   const root = input.root ?? process.cwd();
+  const disposable = isDisposableTarget(authority);
   const expected = canonicalPlacesExpected(
     root,
     input.territoryId ? { territoryId: input.territoryId } : {},
   );
-  const disposable = isDisposableTarget(authority);
-
-  if (expected.osmOnlyPlaces > 0 && !disposable) {
-    throw new Error(
-      `canonical-places refused: ${expected.osmOnlyPlaces} OSM-only Places are present on a non-disposable target`,
-    );
-  }
-
   const stored = await readStored(connection);
   const problems: string[] = nameIndexProblems(stored.placeName);
 
