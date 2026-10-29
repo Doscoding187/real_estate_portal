@@ -37,6 +37,28 @@ export const config = {
           { src: '/robots.txt', dest: '/robots-staging.txt' },
           { src: '/sitemap(.*)\\.xml', dest: '/sitemap-staging.xml' },
         ]),
+    // Preserve the old public Gauteng Place URLs after the reviewed locality
+    // scope corrections. These run before the SPA fallback and are permanent.
+    {
+      src: '/gauteng/baragwanath/?',
+      status: 308,
+      headers: { Location: '/gauteng/johannesburg/baragwanath' },
+    },
+    {
+      src: '/gauteng/van-wyksrus/?',
+      status: 308,
+      headers: { Location: '/gauteng/city-of-johannesburg/van-wyksrus' },
+    },
+    {
+      src: '/gauteng/marshallstown/?',
+      status: 308,
+      headers: { Location: '/gauteng/johannesburg/marshallstown' },
+    },
+    {
+      src: '/gauteng/randjesfontein/?',
+      status: 308,
+      headers: { Location: '/gauteng/midrand/randjesfontein' },
+    },
     { src: '/assets/(.*)', dest: '/assets/$1' },
     { src: '/version.json', dest: '/version.json' },
     // The national entry gets a static document. Every geographic path below it resolves
