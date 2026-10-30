@@ -395,6 +395,14 @@ export function assertRehearsalAuthorization(
   ) {
     throw new Error('Rehearsal authorization expired, revoked or changed; review required.');
   }
+  if (
+    !Array.isArray(current.allowedOperations) ||
+    !current.allowedOperations.includes(context.operation)
+  ) {
+    throw new Error(
+      `Rehearsal operation refused: ${context.operation} is not listed in the approved registration.`,
+    );
+  }
   if ((REHEARSAL_REFERENCE_OPERATIONS as readonly string[]).includes(context.operation)) {
     assertApprovedRehearsalReferenceTarget({
       context,

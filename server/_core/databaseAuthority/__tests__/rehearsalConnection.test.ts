@@ -11,9 +11,16 @@ afterAll(() => {
 // Positive unit cases model the approved window with mocked transport only.
 vi.mock(
   '../../../../docs/database-authority/disposable-rehearsal-authorization.json',
-  async importOriginal => ({
-    default: { ...(await importOriginal<any>()).default, status: 'approved' },
-  }),
+  async importOriginal => {
+    const original = (await importOriginal<any>()).default;
+    return {
+      default: {
+        ...original,
+        status: 'approved',
+        allowedOperations: [...original.allowedOperations, 'rehearsal-regression'],
+      },
+    };
+  },
 );
 vi.mock('node:fs', async importOriginal => {
   const actual = await importOriginal<typeof import('node:fs')>();
@@ -21,9 +28,13 @@ vi.mock('node:fs', async importOriginal => {
     ...actual,
     readFileSync: (...args: any[]) => {
       const result = (actual.readFileSync as any)(...args);
-      return String(args[0]).endsWith('/disposable-rehearsal-authorization.json')
-        ? JSON.stringify({ ...JSON.parse(String(result)), status: 'approved' })
-        : result;
+      if (!String(args[0]).endsWith('/disposable-rehearsal-authorization.json')) return result;
+      const current = JSON.parse(String(result));
+      return JSON.stringify({
+        ...current,
+        status: 'approved',
+        allowedOperations: [...current.allowedOperations, 'rehearsal-regression'],
+      });
     },
   };
 });
@@ -37,7 +48,8 @@ const mocks = vi.hoisted(() => ({
   tls: 'TLS_AES_256_GCM_SHA384',
   queries: [] as string[],
 }));
-// Exercise transport against the historical approved manifest in memory only.
+// Exercise the historical regression route in memory with its operation
+// explicitly listed; the real registration remains revoked and excludes it.
 // The real registration remains revoked; the integrated manifest must be refused.
 vi.mock('../../../migrations/migrationManifest', async importOriginal => {
   const actual = await importOriginal<typeof import('../../../migrations/migrationManifest')>();

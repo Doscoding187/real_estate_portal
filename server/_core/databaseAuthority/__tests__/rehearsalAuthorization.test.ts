@@ -149,14 +149,26 @@ afterEach(() => {
 });
 
 describe('exact disposable Azure rehearsal authority', () => {
-  it('permits only the explicit bound rehearsal regression operation', () => {
+  it('refuses the bound rehearsal regression operation when it is not listed', () => {
     const a = resolve();
     expect(a.context.targetClass).toBe('disposable-rehearsal');
-    expect(approve(a).operation).toBe('rehearsal-regression');
-    expect(() => assertRehearsalResource(resource())).not.toThrow();
-    expect(
-      compileRehearsalProbe('user.insert', [0], '12345678-1234-1234-1234-123456789abc').values[0],
-    ).toBe(1900000000);
+    expect(REHEARSAL.allowedOperations).not.toContain('rehearsal-regression');
+    expect(() => approve(a)).toThrow('not listed in the approved registration');
+  });
+  it('permits the bound rehearsal regression only when explicitly listed', () => {
+    const a = resolve();
+    const operations = recordState.registration.allowedOperations as string[];
+    operations.push('rehearsal-regression');
+    try {
+      expect(approve(a).operation).toBe('rehearsal-regression');
+      expect(() => assertRehearsalResource(resource())).not.toThrow();
+      expect(
+        compileRehearsalProbe('user.insert', [0], '12345678-1234-1234-1234-123456789abc')
+          .values[0],
+      ).toBe(1900000000);
+    } finally {
+      operations.pop();
+    }
   });
   it.each([
     'mysql://fixture:fixture@propertylistify-mysql.mysql.database.azure.com/propertylistify_database',
@@ -220,10 +232,16 @@ describe('exact disposable Azure rehearsal authority', () => {
     expect(() => approve(resolve({ operation }))).toThrow();
   });
   it('does not expose generic SQL or runtime factories with a rehearsal decision', async () => {
-    const a = resolve(),
-      decision = approve(a);
-    await expect(createAuthoritySqlConnection(a, decision)).rejects.toThrow('authorization');
-    await expect(createAuthorityRuntimePool(a, decision)).rejects.toThrow('authorization');
+    const operations = recordState.registration.allowedOperations as string[];
+    operations.push('rehearsal-regression');
+    try {
+      const a = resolve();
+      const decision = approve(a);
+      await expect(createAuthoritySqlConnection(a, decision)).rejects.toThrow('authorization');
+      await expect(createAuthorityRuntimePool(a, decision)).rejects.toThrow('authorization');
+    } finally {
+      operations.pop();
+    }
   });
   it('refuses a revoked registration without connecting', () => {
     recordState.revoked = true;
