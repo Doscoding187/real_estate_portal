@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import {
+  buildCanonicalPlaceDisplayOptions,
   CanonicalPlaceSelectorView,
+  type CanonicalPlaceOption,
   type CanonicalPlaceDiscovery,
   type CanonicalPlaceSelection,
 } from '../CanonicalPlaceSelector';
@@ -37,15 +39,17 @@ function Harness({
   pending = false,
   error = false,
   initial = null,
+  queryText = 'Dunvegan',
   changed = vi.fn(),
 }: {
   discovery?: CanonicalPlaceDiscovery;
   pending?: boolean;
   error?: boolean;
   initial?: CanonicalPlaceSelection | null;
+  queryText?: string;
   changed?: (value: CanonicalPlaceSelection | null) => void;
 }) {
-  const [query, setQuery] = useState(initial?.label ?? 'Dunvegan');
+  const [query, setQuery] = useState(initial?.label ?? queryText);
   const [value, setValue] = useState(initial);
   return (
     <CanonicalPlaceSelectorView
@@ -70,7 +74,7 @@ describe('Canonical Place customer selection', () => {
     fireEvent.focus(screen.getByRole('combobox'));
     expect(screen.getByRole('status')).toHaveTextContent('Several locations match');
     expect(changed).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('option', { name: /Dunvegan suburb · Eastern Cape/ }));
+    fireEvent.click(screen.getByRole('option', { name: /Dunvegan · suburb · Eastern Cape/ }));
     expect(changed).toHaveBeenLastCalledWith({
       canonicalPlaceId: otherId,
       label: 'Dunvegan',
@@ -197,6 +201,80 @@ describe('Canonical Place customer selection', () => {
     fireEvent.focus(screen.getByRole('combobox'));
     expect(screen.getByRole('option')).toHaveTextContent('village · Limpopo / Local Municipality');
     expect(screen.queryByText(/provisional|unverified/i)).not.toBeInTheDocument();
+  });
+
+  it('returns no duplicate labels and withholds every member of an unresolved collision group', () => {
+    const colliding = [
+      {
+        ...option,
+        preferredPublicLabel: 'Rietfontein',
+        placeType: 'town',
+        context: { administrativeContext: 'Gauteng' },
+      },
+      {
+        ...option,
+        placeId: otherId,
+        preferredPublicLabel: 'Rietfontein',
+        placeType: 'town',
+        context: { administrativeContext: 'Gauteng' },
+      },
+    ];
+    const allCandidates: CanonicalPlaceOption[] = [
+      ...colliding,
+      {
+        ...option,
+        placeId: 'pl-place-01-aaaaaaaaaaaaaaaaaaaaaaaa',
+        preferredPublicLabel: 'Sandton',
+      },
+    ];
+
+    const displayOptions = buildCanonicalPlaceDisplayOptions(allCandidates);
+    const labels = displayOptions.map(item => item.displayLabel);
+    expect(labels).toEqual(['Sandton · suburb · Gauteng / Ekurhuleni']);
+    expect(new Set(labels).size).toBe(labels.length);
+    expect(displayOptions.map(item => item.option.placeId)).toEqual([
+      'pl-place-01-aaaaaaaaaaaaaaaaaaaaaaaa',
+    ]);
+  });
+
+  it('leaves a non-colliding label unchanged', () => {
+    const displayOptions = buildCanonicalPlaceDisplayOptions([option]);
+
+    expect(displayOptions).toHaveLength(1);
+    expect(displayOptions[0].displayLabel).toBe('Dunvegan · suburb · Gauteng / Ekurhuleni');
+  });
+
+  it('tells the agent to choose a nearby larger place when the matching collision is hidden', () => {
+    render(
+      <Harness
+        queryText="Rietfontein"
+        discovery={{
+          query: 'rietfontein',
+          outcome: 'ambiguous',
+          results: [
+            {
+              ...option,
+              preferredPublicLabel: 'Rietfontein',
+              placeType: 'town',
+              context: { administrativeContext: 'Gauteng' },
+            },
+            {
+              ...option,
+              placeId: otherId,
+              preferredPublicLabel: 'Rietfontein',
+              placeType: 'town',
+              context: { administrativeContext: 'Gauteng' },
+            },
+          ],
+        }}
+      />,
+    );
+
+    fireEvent.focus(screen.getByRole('combobox'));
+    expect(screen.queryByRole('option')).not.toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Some matching places have the same label and are hidden. Choose a nearby larger place.',
+    );
   });
 
   it('reports unsupported locations without making a provider result selectable', () => {

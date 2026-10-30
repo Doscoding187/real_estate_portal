@@ -153,7 +153,7 @@ function canonicalRow(table: Table, row: Row): Row {
   );
 }
 
-/** D3 is a fixed hold, with no release flag capable of clearing the founder gate. */
+/** Source classifications remain observable; no licensing classification blocks release. */
 export function loadPlaceReleaseCandidate(root = process.cwd()) {
   const { registry, registrySha256 } = loadPlaceAdmissionTerritoryRegistry(root);
   const packages = registry.territories.map(t =>
@@ -404,7 +404,6 @@ async function runPlaceRelease(input: PlaceReleaseInput, disposablePreview: bool
     heldPlaceIds: candidate.heldPlaceIds,
     heldDigest: candidate.heldDigest,
     heldRows: candidate.heldRows,
-    holdReason: 'D3: founder production ODbL database-strategy gate remains uncleared',
     provinceIds: candidate.provinceIds,
     schemaMutation: false,
     providerWrites: false,
