@@ -4,7 +4,7 @@
   "createdAt": "2026-10-30T08:22:32Z",
   "expiresAt": "2026-10-30T20:22:32Z",
   "purpose": "FOUNDER-APPROVED PL DRESS REHEARSAL 20261030C",
-  "sourceCommit": "ca825f4c4175648098b766b1ab99111e0cf236c1",
+  "sourceCommit": "9ea42f4ccdf005fa7f92c063ba8cae54d6da6554",
   "subscriptionId": "384dc69e-9e22-419f-9e3d-83fbac4f58d0",
   "resourceGroup": "rg-property-listify",
   "serverName": "pl-dress-rehearsal-20261030c",
@@ -25,14 +25,16 @@
     "release-apply",
     "release-reference-plan",
     "release-reference-apply",
-    "release-reference-verify"
+    "release-reference-verify",
+    "diagnostics"
   ],
   "credentialClassesByOperation": {
     "release-plan": ["read-only"],
     "release-apply": ["migration"],
     "release-reference-plan": ["read-only"],
     "release-reference-apply": ["migration"],
-    "release-reference-verify": ["read-only", "migration"]
+    "release-reference-verify": ["read-only", "migration"],
+    "diagnostics": ["read-only"]
   },
   "allowedReferenceAdapters": [
     "fordsburg-retirement",
@@ -47,7 +49,8 @@
     "release-apply:0111-to-0197",
     "release-reference:fordsburg-retirement",
     "release-reference:gauteng-type-reconciliation",
-    "release-reference:places"
+    "release-reference:places",
+    "diagnostics:schema-congruency-read-only"
   ],
   "denied": [
     "production resource propertylistify-mysql (independently denied by the guard)",

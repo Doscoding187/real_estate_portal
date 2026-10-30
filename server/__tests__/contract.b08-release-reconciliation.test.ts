@@ -17,7 +17,7 @@ const approved = {
 };
 
 describe('B08 integration preserves established objects without extending rehearsal approval', () => {
-  it('keeps the former .c registration revoked and the diagnostics replacement inactive', () => {
+  it('keeps the .c diagnostics replacement revoked pending founder activation', () => {
     const registration = JSON.parse(
       readFileSync('docs/database-authority/disposable-rehearsal-authorization.json', 'utf8'),
     );
@@ -26,11 +26,13 @@ describe('B08 integration preserves established objects without extending rehear
     expect(registration.status).toBe('revoked');
     expect(registration.serverName).toBe('pl-dress-rehearsal-20261030c');
     expect(registration.expiresAt).toBe('2026-10-30T20:22:32Z');
+    expect(registration.sourceCommit).toBe('9ea42f4ccdf005fa7f92c063ba8cae54d6da6554');
     expect(registration.expectedOldHead).toBe('0111_properties_canonical_place_reference_fk.sql');
     expect(registration.expectedNewHead).toBe(manifest.expectedHead);
     expect(registration.manifestDigest).toBe(validatedManifest.manifestDigest);
     expect(registration.modelDigest).toBe(normalizedDesiredSchema(schema).digest);
-    expect(registration.allowedOperations).not.toContain('diagnostics');
+    expect(registration.allowedOperations).toContain('diagnostics');
+    expect(registration.credentialClassesByOperation.diagnostics).toEqual(['read-only']);
     expect(registration.deniedTargetFingerprints).toContain(
       'mysql://propertylistify-mysql.mysql.database.azure.com:3306/propertylistify_database',
     );
