@@ -261,6 +261,8 @@ From the exact production web/API pair, verify health and readiness, login/sessi
 
 ### Founder checklist: fourth dress rehearsal (draft; not authorization)
 
+**Release candidate pinned for this checklist:** `b4b3f9c49f8a91befcbf8c8a7faedcbf801d418e`. Check out this exact source for the release sequence and package; any separately approved rehearsal guard must be reviewed and named independently.
+
 **Proposed target:** `pl-dress-rehearsal-20261030d`. Do not create or connect to it until the founder separately approves the exact backup, region, SKU/storage, total cost cap, operator `/32`, and this exact target. Any `.c` registration is bound to `.c` and cannot authorize `.d`. Review the exact source commit containing the rehearsal guard first; the new registration must name that commit, expire within 12 hours, allow only `release-plan`, `release-apply`, read-only `diagnostics`, and `release-reference-plan/apply/verify`, and explicitly deny `propertylistify-mysql` and all Railway hosts. No app URL or Railway firewall rule may be copied.
 
 1. **Release gates.** Founder/operator must record the Azure public-access readback with the three existing Railway rules preserved, the Vercel Ignored Build Step readback (`Only build preview`), and the Railway deploy-trigger readback. Do not merge until the Vercel and Railway readbacks are recorded. Keep #707 held and Land disabled.
