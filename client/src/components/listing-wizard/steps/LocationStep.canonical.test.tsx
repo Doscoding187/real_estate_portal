@@ -87,7 +87,7 @@ describe('North Riding private house authoring', () => {
       ),
     ).toBeVisible();
     fireEvent.focus(screen.getByRole('combobox'));
-    fireEvent.click(screen.getByRole('option', { name: /North Riding suburb/ }));
+    fireEvent.click(screen.getByRole('option', { name: /North Riding.*suburb/ }));
     expect(screen.getByRole('button', { name: 'Confirm location' })).toBeEnabled();
     fireEvent.click(screen.getByRole('button', { name: 'Confirm location' }));
     expect(useListingWizardStore.getState().canAdvanceFromStep(6)).toBe(true);
@@ -97,7 +97,7 @@ describe('North Riding private house authoring', () => {
   it('requires explicit locality selection and preserves street/postal evidence without inventing a city', () => {
     render(<LocationStep />);
     fireEvent.focus(screen.getByRole('combobox'));
-    fireEvent.click(screen.getByRole('option', { name: /North Riding suburb/ }));
+    fireEvent.click(screen.getByRole('option', { name: /North Riding.*suburb/ }));
     fireEvent.change(screen.getByLabelText(/Street number/), { target: { value: '5' } });
     fireEvent.change(screen.getByLabelText(/Street name/), { target: { value: 'Congo Street' } });
     fireEvent.change(screen.getByLabelText(/Postal code/), { target: { value: '2169' } });
@@ -125,7 +125,7 @@ describe('North Riding private house authoring', () => {
   it('keeps house confirmation unavailable without street evidence', () => {
     render(<LocationStep />);
     fireEvent.focus(screen.getByRole('combobox'));
-    fireEvent.click(screen.getByRole('option', { name: /North Riding suburb/ }));
+    fireEvent.click(screen.getByRole('option', { name: /North Riding.*suburb/ }));
     expect(screen.getByRole('button', { name: 'Confirm location' })).toBeDisabled();
   });
 });
@@ -133,7 +133,7 @@ describe('North Riding private house authoring', () => {
 it('provider enrichment preserves North Riding identity and resets confirmation', () => {
   render(<LocationStep />);
   fireEvent.focus(screen.getByRole('combobox'));
-  fireEvent.click(screen.getByRole('option', { name: /North Riding suburb/ }));
+  fireEvent.click(screen.getByRole('option', { name: /North Riding.*suburb/ }));
   screen.getByText('Use map search').closest('details')!.open = true;
   fireEvent.click(screen.getByRole('button', { name: 'Add private map evidence' }));
   const state = useListingWizardStore.getState();
