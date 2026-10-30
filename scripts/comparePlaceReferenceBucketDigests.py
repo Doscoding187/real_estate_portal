@@ -94,6 +94,11 @@ def compare(expected_path: Path, actual_text: str) -> list[list[str]]:
                     raise ValueError(
                         f"{table} bucket {bucket}: {setting}={setting_value}; refusing digest below 16777216"
                     )
+            time_zone = row["digest_time_zone"].strip()
+            if time_zone.upper() not in utc_values:
+                raise ValueError(
+                    f"{table} bucket {bucket}: non-UTC digest_time_zone={time_zone or 'missing'}; refusing comparison"
+                )
         buckets = set(expected[table]) | set(observed)
         for bucket in sorted(buckets):
             expected_count, expected_digest = expected[table].get(
@@ -103,12 +108,7 @@ def compare(expected_path: Path, actual_text: str) -> list[list[str]]:
             actual_count = int(row["row_count"]) if row else 0
             actual_digest = row["digest_sha256"] if row else EMPTY_SHA256
             digest_match = "match" if actual_digest == expected_digest else "mismatch"
-            flags: list[str] = []
-            if row:
-                time_zone = row["digest_time_zone"].strip()
-                if time_zone.upper() not in utc_values:
-                    flags.append(f"non_utc_time_zone={time_zone or 'missing'}")
-            if expected_count != actual_count or digest_match == "mismatch" or flags:
+            if expected_count != actual_count or digest_match == "mismatch":
                 output.append(
                     [
                         table,
@@ -116,7 +116,7 @@ def compare(expected_path: Path, actual_text: str) -> list[list[str]]:
                         str(expected_count),
                         str(actual_count),
                         digest_match,
-                        ";".join(flags),
+                        "",
                     ]
                 )
     return output
