@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import * as schema from '../../drizzle/schema';
 import { normalizedDesiredSchema } from '../_core/databaseAuthority/schemaCongruency';
+import { loadAndValidateMigrationManifest } from '../migrations/migrationManifest';
 
 const approved = {
   '0091_transactional_email_deliveries.sql':
@@ -15,22 +16,26 @@ const approved = {
     '0645a178f556e24fa170d41b07a8ac73cff4e9404beedf1660a2bf54e72b4124',
 };
 
-describe('B08 integration preserves established objects without extending historical approval', () => {
-  it('keeps the historical approval revoked and distinct from the current model', () => {
+describe('B08 integration preserves established objects without extending rehearsal approval', () => {
+  it('keeps the .c diagnostics replacement revoked pending founder activation', () => {
     const registration = JSON.parse(
       readFileSync('docs/database-authority/disposable-rehearsal-authorization.json', 'utf8'),
     );
     const manifest = JSON.parse(readFileSync('server/migrations/manifest.json', 'utf8'));
+    const validatedManifest = loadAndValidateMigrationManifest();
     expect(registration.status).toBe('revoked');
-    expect(registration.expectedHead).toBe('0094_content_topics_primary_key.sql');
-    expect(registration.manifestDigest).toBe(
-      '93d871e6f8760477f460b8821685d71d212374eb86ddd53bc6e2ccfc30608efc',
+    expect(registration.serverName).toBe('pl-dress-rehearsal-20261030c');
+    expect(registration.expiresAt).toBe('2026-10-30T20:22:32Z');
+    expect(registration.sourceCommit).toBe('9ea42f4ccdf005fa7f92c063ba8cae54d6da6554');
+    expect(registration.expectedOldHead).toBe('0111_properties_canonical_place_reference_fk.sql');
+    expect(registration.expectedNewHead).toBe(manifest.expectedHead);
+    expect(registration.manifestDigest).toBe(validatedManifest.manifestDigest);
+    expect(registration.modelDigest).toBe(normalizedDesiredSchema(schema).digest);
+    expect(registration.allowedOperations).toContain('diagnostics');
+    expect(registration.credentialClassesByOperation.diagnostics).toEqual(['read-only']);
+    expect(registration.deniedTargetFingerprints).toContain(
+      'mysql://propertylistify-mysql.mysql.database.azure.com:3306/propertylistify_database',
     );
-    expect(registration.modelDigest).toBe(
-      'a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9',
-    );
-    expect(manifest.expectedHead).not.toBe(registration.expectedHead);
-    expect(normalizedDesiredSchema(schema).digest).not.toBe(registration.modelDigest);
   });
   it('preserves the four established migration byte identities and lineage', () => {
     const manifest = JSON.parse(readFileSync('server/migrations/manifest.json', 'utf8'));

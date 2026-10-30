@@ -25,7 +25,10 @@ import {
   prepareCanonicalFoundation,
   verifyCanonicalFoundation,
 } from '../dataAdapters/canonicalFoundation';
-import { requireReferenceAdapterTarget } from '../dataAdapters/common';
+import {
+  requireReferenceAdapterTarget,
+  requireReleaseReferenceTarget,
+} from '../dataAdapters/common';
 import type { AuthoritySqlConnection } from '../connectionAuthority';
 import { deriveGitWorktreeIdentity } from '../worktreeIdentity';
 import { loadAndValidateMigrationManifest } from '../../../migrations/migrationManifest';
@@ -90,6 +93,17 @@ function releaseAuthority(operation: 'release-reference-plan' | 'release-referen
   });
 }
 
+function stagingReleaseAuthority() {
+  return resolveDatabaseAuthority({
+    operation: 'release-reference-plan',
+    cwd: ROOT,
+    gitIdentity: identity(),
+    explicitDatabaseUrl: 'mysql://release-user:private@db.staging.example.com/listify_staging',
+    credentialClass: 'read-only',
+    processEnv: { NODE_ENV: 'staging', APP_ENV: 'staging' },
+  });
+}
+
 function releaseDecision(authority: ReturnType<typeof releaseAuthority>) {
   return authorizeDatabaseOperation(authority, {
     root: ROOT,
@@ -150,6 +164,20 @@ class UnexpectedConnection implements AuthoritySqlConnection {
 }
 
 describe('bounded Database Authority data adapters', () => {
+  it('keeps the existing staging and production reference gates unchanged', () => {
+    const staging = stagingReleaseAuthority();
+    const production = releaseAuthority('release-reference-plan');
+
+    expect(staging.context.targetClass).toBe('staging');
+    expect(production.context.targetClass).toBe('production');
+    expect(requireReleaseReferenceTarget(staging).targetFingerprintHash).toBe(
+      staging.context.targetFingerprintHash,
+    );
+    expect(requireReleaseReferenceTarget(production).targetFingerprintHash).toBe(
+      production.context.targetFingerprintHash,
+    );
+  });
+
   it('publishes deterministic versions for active reference and scenario adapters', () => {
     expect(SEARCH_TO_LEAD_SCENARIO_VERSION).toBe('search-to-lead-v8');
     expect(SEARCH_TO_LEAD_SCENARIO_DIGEST).toMatch(/^[a-f0-9]{64}$/);

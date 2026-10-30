@@ -46,6 +46,14 @@ async function configureUtcSession(connection: {
   await connection.execute(`SET time_zone = '${UTC_SESSION_TIME_ZONE}'`);
 }
 
+export function requiresUtcSessionConfiguration(
+  context: Pick<ResolvedDatabaseContext, 'operation' | 'targetClass'>,
+): boolean {
+  return !(
+    context.operation === 'diagnostics' && context.targetClass === 'disposable-rehearsal'
+  );
+}
+
 export class DatabaseTargetMismatchError extends Error {
   readonly code = 'DATABASE_TARGET_MISMATCH';
 
@@ -139,7 +147,12 @@ export async function createAuthoritySqlConnection(
       end: () => connection.end(),
     };
     try {
-      await configureUtcSession(wrapped);
+      // The registered rehearsal's schema diagnostics read only metadata and
+      // must issue SELECT/SHOW statements only. Other operations retain their
+      // established UTC session setup.
+      if (requiresUtcSessionConfiguration(authority.context)) {
+        await configureUtcSession(wrapped);
+      }
       await verifySelectedTarget(wrapped, authority);
     } catch (error) {
       await wrapped.end();

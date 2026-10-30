@@ -16,6 +16,8 @@ describe('Database Authority data-role manifest', () => {
     expect(DATA_ROLE_MANIFEST.roles.map(role => role.key)).toEqual([
       'reference.places',
       'reference.places-release-preview',
+      'reference.fordsburg-duplicate-retirement',
+      'reference.gauteng-reviewed-type-reconciliation',
       'reference.platform-settings',
       'foundation.launch-access',
       'demo.listing-preview-authentication',
@@ -26,6 +28,9 @@ describe('Database Authority data-role manifest', () => {
       'scenario.search-to-lead',
       'test-fixture.ple-publication-entitlement',
       'test-fixture.ple-reviewer',
+      'test-fixture.migration-prefix-0096',
+      'test-fixture.migration-prefix-0111',
+      'test-fixture.gauteng-evidence-note-mismatch',
     ]);
 
     for (const role of DATA_ROLE_MANIFEST.roles) {

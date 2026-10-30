@@ -1,7 +1,11 @@
 import { createHash } from 'node:crypto';
 import { resolve } from 'node:path';
-import type { AuthorizedDatabaseOperation } from '../authorization';
+import {
+  assertAuthorizedDatabaseOperation,
+  type AuthorizedDatabaseOperation,
+} from '../authorization';
 import type { AuthoritySqlConnection } from '../connectionAuthority';
+import { assertRehearsalReferenceAuthorization } from '../rehearsalAuthority';
 import {
   buildMigrationPlan,
   type MigrationAttempt,
@@ -159,13 +163,46 @@ export function requireProtectedCommercialReferenceTarget(
 
 export function requireReleaseReferenceTarget(
   authority: ResolvedDatabaseAuthority,
+  decision?: AuthorizedDatabaseOperation,
+  adapter = 'commercial',
 ): AdapterEvidence {
   if (!RELEASE_REFERENCE_OPERATIONS.includes(authority.context.operation)) {
     throw new Error(
       `Database Authority adapter refused: operation ${authority.context.operation} is not a release reference operation.`,
     );
   }
+  if (authority.context.targetClass === 'disposable-rehearsal') {
+    if (!decision) {
+      throw new Error('Database Authority adapter refused: rehearsal release approval is missing.');
+    }
+    assertAuthorizedDatabaseOperation(authority, decision, RELEASE_REFERENCE_OPERATIONS);
+    assertRehearsalReferenceAuthorization({
+      context: authority.context,
+      approval: {
+        actor: decision.approvalActor ?? undefined,
+        reference: decision.approvalReference ?? undefined,
+        operation: decision.operation,
+        targetFingerprintHash: decision.targetFingerprintHash,
+        credentialClass: decision.credentialClass,
+      },
+      adapter,
+    });
+    return {
+      adapter: 'database-authority-release-reference-adapter',
+      version: 'registered-disposable-rehearsal',
+      digest: 'registered-disposable-rehearsal',
+      targetFingerprintHash: authority.context.targetFingerprintHash,
+      databaseName: authority.context.databaseName,
+      ownershipKey: authority.context.worktree.ownershipKey,
+    };
+  }
   return requireProtectedCommercialReferenceTarget(authority);
+}
+
+export function isDisposableRehearsalReferenceTarget(
+  authority: ResolvedDatabaseAuthority,
+): boolean {
+  return authority.context.targetClass === 'disposable-rehearsal';
 }
 
 export async function requireAcceptedMigrationHead(input: {

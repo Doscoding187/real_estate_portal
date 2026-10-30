@@ -66,6 +66,24 @@ pnpm db:schema:congruency
 pnpm db:readiness
 ```
 
+For an explicitly approved rehearsal from a validated historical head, pass
+`--ancestor-head=<exact-active-manifest-filename>` to migration plan/apply.
+This is limited to the exact owned disposable local MySQL worktree; it is not a
+release option. The registered 0096 rehearsal uses:
+
+```sh
+pnpm db:migrate:plan -- --accepted-old-head=none --ancestor-head=0096_user_founder_authority_unique.sql
+pnpm db:migrate:apply -- --accepted-old-head=none --ancestor-head=0096_user_founder_authority_unique.sql
+pnpm db:migration-prefix-0096:seed
+pnpm db:migrate:plan -- --accepted-old-head=0096_user_founder_authority_unique.sql --expected-new-head=0197_drop_seller_prospects_province.sql
+pnpm db:migrate:apply -- --accepted-old-head=0096_user_founder_authority_unique.sql --expected-new-head=0197_drop_seller_prospects_province.sql
+pnpm db:migration-prefix-0096:verify
+```
+
+The fixture is registered in the data-role manifest and its temporary
+compatibility exception. It inserts fixed synthetic identities only and refuses
+any target or migration head outside that record.
+
 Migration is an explicit operation, never application startup work. Generic
 migration commands reject staging and production. Protected targets require the
 explicit release operation, exact protected-target approval, and release

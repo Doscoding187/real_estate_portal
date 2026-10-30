@@ -12,6 +12,14 @@ import {
   releaseCanonicalPlaces,
   previewCanonicalPlaceRelease,
 } from '../server/_core/databaseAuthority/dataAdapters/placeRelease';
+import { retireFordsburgDuplicate } from '../server/_core/databaseAuthority/dataAdapters/fordsburgPlaceRetirement';
+import { reconcileGautengReviewedTypes } from '../server/_core/databaseAuthority/dataAdapters/gautengReviewedTypeReconciliation';
+import {
+  seedGautengEvidenceNoteMismatch,
+  verifyGautengEvidenceNoteMismatch,
+  prepareMigrationPrefix0111,
+  verifyMigrationPrefix0111,
+} from '../server/_core/databaseAuthority/dataAdapters/migrationPrefix0111';
 import { inspectPlaceReleaseTarget } from '../server/_core/databaseAuthority/dataAdapters/placeReleaseInspection';
 import { resolve } from 'node:path';
 import {
@@ -25,6 +33,7 @@ import {
   protectedDatabaseApprovalFromEnvironment,
 } from '../server/_core/databaseAuthority/authorization';
 import { createAuthoritySqlConnection } from '../server/_core/databaseAuthority/connectionAuthority';
+import { assertRehearsalReferenceAdapter } from '../server/_core/databaseAuthority/rehearsalAuthority';
 import { provisionB08AzureInspectionIdentity } from '../server/_core/databaseAuthority/b08AzureInspectionIdentity';
 import {
   provisionB08AzureMigrationIdentity,
@@ -101,6 +110,10 @@ import {
   verifyPleReviewerFixture,
 } from '../server/_core/databaseAuthority/dataAdapters/pleReviewerFixture';
 import {
+  prepareMigrationPrefix0096,
+  verifyMigrationPrefix0096,
+} from '../server/_core/databaseAuthority/dataAdapters/migrationPrefix0096';
+import {
   compareNormalizedSchemas,
   normalizedDesiredSchema,
   normalizedPhysicalSchema,
@@ -151,6 +164,10 @@ type Command =
   | 'release-reference:inspect'
   | 'places:release-preview:prepare'
   | 'places:release-preview:verify'
+  | 'places:identity-retirement:prepare'
+  | 'places:identity-retirement:verify'
+  | 'places:type-reconciliation:prepare'
+  | 'places:type-reconciliation:verify'
   | 'release-reference:apply'
   | 'release-reference:verify'
   | 'legal-release:prepare'
@@ -178,7 +195,13 @@ type Command =
   | 'ple-publication-entitlement:prepare'
   | 'ple-publication-entitlement:verify'
   | 'ple-reviewer:prepare'
-  | 'ple-reviewer:verify';
+  | 'ple-reviewer:verify'
+  | 'migration-prefix-0096:seed'
+  | 'migration-prefix-0096:verify'
+  | 'migration-prefix-0111:seed'
+  | 'migration-prefix-0111:verify'
+  | 'gauteng-evidence-note-mismatch:seed'
+  | 'gauteng-evidence-note-mismatch:verify';
 
 function option(name: string): string | undefined {
   const prefix = `--${name}=`;
@@ -520,6 +543,7 @@ async function run(command: Command): Promise<void> {
           : 'migration-apply',
       acceptedOldHead: option('accepted-old-head') === 'none' ? null : option('accepted-old-head'),
       expectedNewHead: option('expected-new-head'),
+      ancestorHead: option('ancestor-head'),
       acknowledgement: option('ack'),
       expectedPlanDigest: releaseOperation && !planOnly ? requiredOption('plan-digest') : undefined,
     });
@@ -555,11 +579,51 @@ async function run(command: Command): Promise<void> {
     return;
   }
 
+  if (command === 'places:identity-retirement:prepare' || command === 'places:identity-retirement:verify') {
+    const prepare = command.endsWith(':prepare');
+    const authority = authorityFor(
+      prepare ? 'reference-seed' : 'verification',
+      prepare ? 'local-owner' : undefined,
+    );
+    const decision = authorizationFor(authority);
+    print(
+      await completePlaceReleaseCommand({
+        command,
+        open: () => createAuthoritySqlConnection(authority, decision),
+        operation: connection => retireFordsburgDuplicate({ authority, decision, connection }),
+      }),
+    );
+    return;
+  }
+
+  if (command === 'places:type-reconciliation:prepare' || command === 'places:type-reconciliation:verify') {
+    const prepare = command.endsWith(':prepare');
+    const authority = authorityFor(
+      prepare ? 'reference-seed' : 'verification',
+      prepare ? 'local-owner' : undefined,
+    );
+    const decision = authorizationFor(authority);
+    print(
+      await completePlaceReleaseCommand({
+        command,
+        open: () => createAuthoritySqlConnection(authority, decision),
+        operation: connection =>
+          reconcileGautengReviewedTypes({ authority, decision, connection }),
+      }),
+    );
+    return;
+  }
+
   if (command === 'release-reference:inspect') {
     if (requiredOption('adapter') !== 'places')
       throw new Error('Only Place release inspection is supported.');
     const authority = authorityFor('release-reference-plan', 'read-only');
     const decision = authorizationFor(authority);
+    assertRehearsalReferenceAdapter({
+      context: authority.context,
+      decision,
+      adapter: 'places-inspection',
+    });
     print(
       await completePlaceReleaseCommand({
         command,
@@ -576,7 +640,7 @@ async function run(command: Command): Promise<void> {
     command === 'release-reference:verify'
   ) {
     const adapter = option('adapter') ?? 'commercial';
-    if (!['commercial', 'places'].includes(adapter))
+    if (!['commercial', 'places', 'fordsburg-retirement', 'gauteng-type-reconciliation'].includes(adapter))
       throw new Error('Unknown reference adapter.');
     const isPlan = command.endsWith(':plan');
     const isApply = command.endsWith(':apply');
@@ -587,6 +651,7 @@ async function run(command: Command): Promise<void> {
         : 'release-reference-verify';
     const authority = authorityFor(operation, isApply ? 'migration' : 'read-only');
     const decision = authorizationFor(authority, option('ack'));
+    assertRehearsalReferenceAdapter({ context: authority.context, decision, adapter });
     if (adapter === 'places') {
       print(
         await completePlaceReleaseCommand({
@@ -594,6 +659,38 @@ async function run(command: Command): Promise<void> {
           open: () => createAuthoritySqlConnection(authority, decision),
           operation: connection =>
             releaseCanonicalPlaces({
+              authority,
+              decision,
+              connection,
+              expectedPlanDigest: isApply ? requiredOption('plan-digest') : undefined,
+            }),
+        }),
+      );
+      return;
+    }
+    if (adapter === 'fordsburg-retirement') {
+      print(
+        await completePlaceReleaseCommand({
+          command,
+          open: () => createAuthoritySqlConnection(authority, decision),
+          operation: connection =>
+            retireFordsburgDuplicate({
+              authority,
+              decision,
+              connection,
+              expectedPlanDigest: isApply ? requiredOption('plan-digest') : undefined,
+            }),
+        }),
+      );
+      return;
+    }
+    if (adapter === 'gauteng-type-reconciliation') {
+      print(
+        await completePlaceReleaseCommand({
+          command,
+          open: () => createAuthoritySqlConnection(authority, decision),
+          operation: connection =>
+            reconcileGautengReviewedTypes({
               authority,
               decision,
               connection,
@@ -900,6 +997,53 @@ async function run(command: Command): Promise<void> {
     return;
   }
 
+  if (
+    command === 'gauteng-evidence-note-mismatch:seed' ||
+    command === 'gauteng-evidence-note-mismatch:verify'
+  ) {
+    const isSeed = command.endsWith(':seed');
+    const authority = authorityFor(
+      isSeed ? 'test-fixture' : 'verification',
+      isSeed ? 'local-owner' : undefined,
+    );
+    const decision = authorizationFor(authority);
+    const connection = await createAuthoritySqlConnection(authority, decision);
+    try {
+      print(
+        await (isSeed ? seedGautengEvidenceNoteMismatch : verifyGautengEvidenceNoteMismatch)(
+          { authority, decision, connection },
+        ),
+      );
+    } finally {
+      await connection.end();
+    }
+    return;
+  }
+
+  if (
+    command === 'migration-prefix-0096:seed' || command === 'migration-prefix-0096:verify' ||
+    command === 'migration-prefix-0111:seed' || command === 'migration-prefix-0111:verify'
+  ) {
+    const isPrepare = command.endsWith(':seed');
+    const operation = isPrepare ? 'test-fixture' : 'verification';
+    const authority = authorityFor(operation, isPrepare ? 'local-owner' : undefined);
+    const decision = authorizationFor(authority);
+    const connection = await createAuthoritySqlConnection(authority, decision);
+    try {
+      if (command.startsWith('migration-prefix-0111:')) {
+        print(await (isPrepare ? prepareMigrationPrefix0111 : verifyMigrationPrefix0111)({ authority, decision, connection }));
+      } else {
+        print(await (isPrepare ? prepareMigrationPrefix0096 : verifyMigrationPrefix0096)({ authority, decision, connection }));
+      }
+    } finally {
+      await connection.end();
+    }
+    return;
+  }
+
+  if (command !== 'schema:check') {
+    throw new Error(`Database diagnostics refused for unsupported command ${command}.`);
+  }
   const authority = authorityFor('diagnostics');
   const decision = authorizationFor(authority);
   const connection = await createAuthoritySqlConnection(authority, decision);
@@ -948,8 +1092,10 @@ export async function runDatabaseAuthorityCommand(command: Command): Promise<voi
     }
     const placeCommand =
       command.startsWith('places:release-preview:') ||
+      command.startsWith('places:identity-retirement:') ||
+      command.startsWith('places:type-reconciliation:') ||
       command === 'release-reference:inspect' ||
-      (command.startsWith('release-reference:') && option('adapter') === 'places');
+      (command.startsWith('release-reference:') && ['places', 'fordsburg-retirement', 'gauteng-type-reconciliation'].includes(option('adapter') ?? ''));
     if (!placeCommand) throw error;
     const failure =
       error instanceof PlaceReleaseCommandFailure
@@ -985,6 +1131,10 @@ const commands = new Set<Command>([
   'release-reference:inspect',
   'places:release-preview:prepare',
   'places:release-preview:verify',
+  'places:identity-retirement:prepare',
+  'places:identity-retirement:verify',
+  'places:type-reconciliation:prepare',
+  'places:type-reconciliation:verify',
   'release-reference:apply',
   'release-reference:verify',
   'legal-release:prepare',
@@ -1017,6 +1167,12 @@ const commands = new Set<Command>([
   'ple-publication-entitlement:verify',
   'ple-reviewer:prepare',
   'ple-reviewer:verify',
+  'migration-prefix-0096:seed',
+  'migration-prefix-0096:verify',
+  'migration-prefix-0111:seed',
+  'migration-prefix-0111:verify',
+  'gauteng-evidence-note-mismatch:seed',
+  'gauteng-evidence-note-mismatch:verify',
 ]);
 
 if (process.argv[1] && resolve(process.argv[1]) === new URL(import.meta.url).pathname) {

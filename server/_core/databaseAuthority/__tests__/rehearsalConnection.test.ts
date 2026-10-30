@@ -8,12 +8,19 @@ afterAll(() => {
   if (previousSkipDbInit === undefined) delete process.env.SKIP_DB_INIT;
   else process.env.SKIP_DB_INIT = previousSkipDbInit;
 });
-// Positive unit cases model the previously approved window; the live registration is revoked.
+// Positive unit cases model the approved window with mocked transport only.
 vi.mock(
   '../../../../docs/database-authority/disposable-rehearsal-authorization.json',
-  async importOriginal => ({
-    default: { ...(await importOriginal<any>()).default, status: 'approved' },
-  }),
+  async importOriginal => {
+    const original = (await importOriginal<any>()).default;
+    return {
+      default: {
+        ...original,
+        status: 'approved',
+        allowedOperations: [...original.allowedOperations, 'rehearsal-regression'],
+      },
+    };
+  },
 );
 vi.mock('node:fs', async importOriginal => {
   const actual = await importOriginal<typeof import('node:fs')>();
@@ -21,9 +28,13 @@ vi.mock('node:fs', async importOriginal => {
     ...actual,
     readFileSync: (...args: any[]) => {
       const result = (actual.readFileSync as any)(...args);
-      return String(args[0]).endsWith('/disposable-rehearsal-authorization.json')
-        ? JSON.stringify({ ...JSON.parse(String(result)), status: 'approved' })
-        : result;
+      if (!String(args[0]).endsWith('/disposable-rehearsal-authorization.json')) return result;
+      const current = JSON.parse(String(result));
+      return JSON.stringify({
+        ...current,
+        status: 'approved',
+        allowedOperations: [...current.allowedOperations, 'rehearsal-regression'],
+      });
     },
   };
 });
@@ -37,7 +48,8 @@ const mocks = vi.hoisted(() => ({
   tls: 'TLS_AES_256_GCM_SHA384',
   queries: [] as string[],
 }));
-// Exercise transport against the historical approved manifest in memory only.
+// Exercise the historical regression route in memory with its operation
+// explicitly listed; the real registration remains revoked and excludes it.
 // The real registration remains revoked; the integrated manifest must be refused.
 vi.mock('../../../migrations/migrationManifest', async importOriginal => {
   const actual = await importOriginal<typeof import('../../../migrations/migrationManifest')>();
@@ -60,10 +72,18 @@ vi.mock('../../../migrations/migrationManifest', async importOriginal => {
   };
 });
 vi.mock('mysql2/promise', () => ({ default: { createConnection: mocks.create } }));
-vi.mock('../rehearsalAuthority', async importOriginal => ({
-  ...(await importOriginal<any>()),
-  verifyRehearsalResource: mocks.arm,
-}));
+vi.mock('../rehearsalAuthority', async importOriginal => {
+  const actual = await importOriginal<any>();
+  return {
+    ...actual,
+    REHEARSAL: {
+      ...actual.REHEARSAL,
+      manifestDigest: '93d871e6f8760477f460b8821685d71d212374eb86ddd53bc6e2ccfc30608efc',
+      modelDigest: 'a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9',
+    },
+    verifyRehearsalResource: mocks.arm,
+  };
+});
 vi.mock('../schemaCongruency', () => ({
   normalizedDesiredSchema: () => ({
     digest: 'a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9',
@@ -72,7 +92,10 @@ vi.mock('../schemaCongruency', () => ({
   normalizedPhysicalSchema: async () => ({}),
   compareNormalizedSchemas: () => ({ congruent: true }),
 }));
-import { createAuthorityRehearsalSession } from '../connectionAuthority';
+import {
+  createAuthorityRehearsalSession,
+  requiresUtcSessionConfiguration,
+} from '../connectionAuthority';
 import { resolveDatabaseAuthority } from '../context';
 import { authorizeDatabaseOperation, expectedDatabaseAcknowledgement } from '../authorization';
 import { REHEARSAL, REHEARSAL_RESOURCE_ID } from '../rehearsalAuthority';
@@ -100,7 +123,7 @@ function authority() {
 }
 beforeEach(() => {
   vi.useFakeTimers();
-  vi.setSystemTime(new Date('2026-09-28T12:00:00Z'));
+  vi.setSystemTime(new Date('2026-10-30T09:00:00Z'));
   mocks.dirty = false;
   mocks.currentManifest = false;
   mocks.sqlVersion = '8.4.8-azure';
@@ -137,6 +160,27 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 describe('historical rehearsal connection boundary (mock transport, no live DB)', () => {
+  it('skips session writes only for disposable-rehearsal diagnostics', () => {
+    const { a } = authority();
+    expect(
+      requiresUtcSessionConfiguration({ ...a.context, operation: 'diagnostics' }),
+    ).toBe(false);
+    expect(
+      requiresUtcSessionConfiguration({
+        ...a.context,
+        operation: 'diagnostics',
+        targetClass: 'staging',
+      }),
+    ).toBe(true);
+    expect(
+      requiresUtcSessionConfiguration({
+        ...a.context,
+        operation: 'diagnostics',
+        targetClass: 'production',
+      }),
+    ).toBe(true);
+  });
+
   it('refuses the integrated manifest before any fixture mutation', async () => {
     mocks.currentManifest = true;
     const { a, d } = authority();
@@ -219,7 +263,7 @@ describe('historical rehearsal connection boundary (mock transport, no live DB)'
     const { a, d } = authority();
     const session = await createAuthorityRehearsalSession(a, d);
     vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-10-05T00:00:00Z'));
+    vi.setSystemTime(new Date('2026-10-30T20:22:32Z'));
     await expect(session.run(0, 'user.insert', [0])).rejects.toThrow('expired');
     await expect(session.end()).resolves.toBeUndefined();
     expect(mocks.queries.some(q => /^(INSERT|UPDATE|DELETE)/.test(q))).toBe(false);

@@ -96,6 +96,16 @@ control tables when needed, records a running attempt with that lock owner,
 applies each statement, records progress, then records success. A
 failed/running/blocked attempt prevents normal continuation.
 
+For an explicitly approved migration rehearsal only, local migration plan/apply
+also accepts `--ancestor-head=<exact-active-manifest-filename>` in place of
+`--expected-new-head`. The runner accepts only a proper ancestor whose filename,
+sequence, parent chain and checksum are present in the fully validated active
+manifest; the plan digest covers the full manifest and only the ordered pending
+prefix through that ancestor. This option is limited to the exact owned
+`disposable-worktree` MySQL target and is refused for release operations or any
+other target. Normal migration and release commands continue to target the
+manifest head.
+
 ### Failed migration attempts
 
 A failed, running, or blocked attempt stops ordinary continuation. No standing

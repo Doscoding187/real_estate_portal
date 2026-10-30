@@ -14,6 +14,7 @@ import {
   type AuthoritySqlConnection,
 } from '../_core/databaseAuthority/connectionAuthority';
 import { resolveDatabaseAuthority } from '../_core/databaseAuthority/context';
+import { assertRehearsalMigrationScope } from '../_core/databaseAuthority/rehearsalAuthority';
 import type { ResolvedDatabaseAuthority } from '../_core/databaseAuthority/types';
 import { buildMysqlConnectionSecurityConfig } from '../_core/databaseTls';
 import {
@@ -83,6 +84,7 @@ export type SqlMigrationOptions = {
   authorization?: AuthorizedDatabaseOperation;
   acceptedOldHead?: string | null;
   expectedNewHead?: string;
+  ancestorHead?: string;
   applicationArtifact?: string;
   approval?: ProtectedDatabaseApproval;
   acknowledgement?: string;
@@ -424,6 +426,7 @@ export function buildMigrationPlan(input: {
   applicationTableCount?: number;
   acceptedOldHead?: string | null;
   expectedNewHead?: string;
+  ancestorHead?: string;
 }): MigrationPlan {
   const { manifest } = input;
   const appliedByName = new Map(input.applied.map(item => [item.fileName, item]));
@@ -471,14 +474,33 @@ export function buildMigrationPlan(input: {
       `Migration planning blocked: accepted old head ${input.acceptedOldHead ?? '(none)'} does not match ${oldHead ?? '(none)'}.`,
     );
   }
+  if (input.expectedNewHead !== undefined && input.ancestorHead !== undefined) {
+    throw new Error('Migration planning blocked: choose either the manifest head or one ancestor head.');
+  }
+  if (input.ancestorHead !== undefined && input.ancestorHead === manifest.document.expectedHead) {
+    throw new Error('Migration planning blocked: ancestor head must be a proper ancestor of the manifest head.');
+  }
   if (
     input.expectedNewHead !== undefined &&
     input.expectedNewHead !== manifest.document.expectedHead
   ) {
     throw new Error('Migration planning blocked: expected new head differs from the manifest head.');
   }
+  const expectedNewHead = input.ancestorHead ?? manifest.document.expectedHead;
+  const expectedHeadIndex = manifest.orderedMigrations.findIndex(
+    migration => migration.filename === expectedNewHead,
+  );
+  if (expectedHeadIndex < 0) {
+    throw new Error('Migration planning blocked: selected new head is absent from the validated manifest.');
+  }
+  const oldHeadIndex = oldHead === null
+    ? -1
+    : manifest.orderedMigrations.findIndex(migration => migration.filename === oldHead);
+  if (expectedHeadIndex < oldHeadIndex) {
+    throw new Error('Migration planning blocked: selected ancestor precedes the accepted old head.');
+  }
   const pending = manifest.orderedMigrations
-    .filter(migration => !appliedByName.has(migration.filename))
+    .slice(oldHeadIndex + 1, expectedHeadIndex + 1)
     .map(migration => ({
       sequence: migration.sequence,
       filename: migration.filename,
@@ -491,7 +513,7 @@ export function buildMigrationPlan(input: {
     targetFingerprintHash: input.targetFingerprintHash,
     acceptedOldHead: oldHead,
     pending,
-    expectedNewHead: manifest.document.expectedHead,
+    expectedNewHead,
   };
   const planDigest = planHash(digestMaterial);
   return Object.freeze({
@@ -762,8 +784,31 @@ export async function runSqlMigrations(options: SqlMigrationOptions = {}) {
   if (authority.context.operation !== operation) {
     throw new Error('Migration runner refused: resolved operation does not match runner mode.');
   }
+  assertRehearsalMigrationScope({
+    context: authority.context,
+    mode,
+    acceptedOldHead: options.acceptedOldHead,
+    expectedNewHead: options.expectedNewHead,
+    ancestorHead: options.ancestorHead,
+  });
   if (authority.context.provider !== 'mysql' || authority.context.dialect !== 'mysql') {
     throw new Error('Migration runner refused: only the canonical MySQL provider is supported.');
+  }
+  if (options.ancestorHead !== undefined) {
+    if (
+      !operation.startsWith('migration-') ||
+      authority.context.targetClass !== 'disposable-worktree' ||
+      !authority.context.local ||
+      !authority.context.worktree.registered ||
+      !authority.context.worktree.ownershipMatches
+    ) {
+      throw new Error(
+        'Migration runner refused: ancestor-head rehearsal is limited to the exact owned disposable local worktree target.',
+      );
+    }
+    if (options.expectedNewHead !== undefined) {
+      throw new Error('Migration runner refused: use either --ancestor-head or --expected-new-head, not both.');
+    }
   }
   const authorization =
     options.authorization ??
@@ -781,7 +826,7 @@ export async function runSqlMigrations(options: SqlMigrationOptions = {}) {
       'Migration apply refused: accepted old head must be explicit (use null for a verified fresh target).',
     );
   }
-  if (mode === 'apply' && options.expectedNewHead === undefined) {
+  if (mode === 'apply' && options.expectedNewHead === undefined && options.ancestorHead === undefined) {
     throw new Error('Migration apply refused: expected new manifest head must be explicit.');
   }
   assertExpectedReleasePlanDigest(operation, options.expectedPlanDigest);
@@ -809,6 +854,7 @@ export async function runSqlMigrations(options: SqlMigrationOptions = {}) {
       applicationTableCount: initialState.applicationTableCount,
       acceptedOldHead: options.acceptedOldHead,
       expectedNewHead: options.expectedNewHead,
+      ancestorHead: options.ancestorHead,
     });
 
     if (operation === 'release-apply') {
@@ -843,7 +889,8 @@ export async function runSqlMigrations(options: SqlMigrationOptions = {}) {
       incompleteAttempts: lockedState.incompleteAttempts,
       applicationTableCount: lockedState.applicationTableCount,
       acceptedOldHead: plan.acceptedOldHead,
-      expectedNewHead: plan.expectedNewHead,
+      expectedNewHead: options.expectedNewHead,
+      ancestorHead: options.ancestorHead,
     });
     if (lockedPlan.planDigest !== plan.planDigest) {
       throw new Error('Migration apply blocked: plan changed after lock acquisition.');
