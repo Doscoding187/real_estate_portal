@@ -8,7 +8,7 @@ Before every rehearsal or release command (including restore, migration plan/app
 
 The read-only bucket checks are in [place-reference-bucket-digests.sql](place-reference-bucket-digests.sql); expected historical values are in [place-reference-bucket-digests-v0.1-non-osm.csv](place-reference-bucket-digests-v0.1-non-osm.csv).
 
-Compare the five pasted MySQL result tables with `python3 scripts/comparePlaceReferenceBucketDigests.py <output.txt>`. For a differing bucket, the SELECT-only per-row hash drilldowns are in [place-reference-bucket-row-drilldown.sql](place-reference-bucket-row-drilldown.sql); run only the matching table query after replacing `__BUCKET__`.
+In the same MySQL client session, run `tee /path/to/place-reference-digest-results.txt`, then `source docs/operations/place-reference-bucket-digests.sql`, then `notee`; attach that result file for review. The SQL sets and verifies both the session digest limit and packet capacity before the five digest SELECTs. Compare it with `python3 scripts/comparePlaceReferenceBucketDigests.py /path/to/place-reference-digest-results.txt`; the comparator refuses incomplete or undersized digests and flags non-UTC results. For a differing bucket, the SELECT-only per-row hash drilldowns are in [place-reference-bucket-row-drilldown.sql](place-reference-bucket-row-drilldown.sql); run only the matching table query after replacing `__BUCKET__`.
 
 ## Founder-verified production baseline — read-only, 2026-10-30
 

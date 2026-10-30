@@ -21,6 +21,7 @@ HEADERS = (
     "digest_sha256",
     "digest_input_bytes",
     "group_concat_limit_bytes",
+    "max_allowed_packet_bytes",
     "digest_time_zone",
     "digest_complete",
 )
@@ -54,12 +55,14 @@ def read_mysql_results(text: str) -> list[dict[str, dict[str, str]]]:
             continue
         if current is None or len(cells) != len(HEADERS):
             continue
-        bucket, count, digest, _bytes, _limit, time_zone, complete = cells
+        bucket, count, digest, _bytes, group_concat_limit, max_packet, time_zone, complete = cells
         if bucket in current:
             raise ValueError(f"duplicate bucket in MySQL result: {bucket}")
         current[bucket] = {
             "row_count": count,
             "digest_sha256": digest.lower(),
+            "group_concat_limit_bytes": group_concat_limit,
+            "max_allowed_packet_bytes": max_packet,
             "digest_time_zone": time_zone,
             "digest_complete": complete,
         }
@@ -76,6 +79,21 @@ def compare(expected_path: Path, actual_text: str) -> list[list[str]]:
     output: list[list[str]] = []
     utc_values = {"+00:00", "00:00", "UTC", "ETC/UTC", "Z"}
     for table, observed in zip(TABLES, actual, strict=True):
+        for bucket, row in observed.items():
+            complete = row["digest_complete"].strip().lower()
+            if complete not in {"1", "true"}:
+                raise ValueError(
+                    f"{table} bucket {bucket}: digest_complete={complete or 'missing'}; refusing truncated digest"
+                )
+            for setting in ("group_concat_limit_bytes", "max_allowed_packet_bytes"):
+                try:
+                    setting_value = int(row[setting])
+                except ValueError as error:
+                    raise ValueError(f"{table} bucket {bucket}: invalid {setting}") from error
+                if setting_value < 16777216:
+                    raise ValueError(
+                        f"{table} bucket {bucket}: {setting}={setting_value}; refusing digest below 16777216"
+                    )
         buckets = set(expected[table]) | set(observed)
         for bucket in sorted(buckets):
             expected_count, expected_digest = expected[table].get(
@@ -87,9 +105,6 @@ def compare(expected_path: Path, actual_text: str) -> list[list[str]]:
             digest_match = "match" if actual_digest == expected_digest else "mismatch"
             flags: list[str] = []
             if row:
-                complete = row["digest_complete"].strip().lower()
-                if complete not in {"1", "true"}:
-                    flags.append(f"digest_complete={complete or 'missing'}")
                 time_zone = row["digest_time_zone"].strip()
                 if time_zone.upper() not in utc_values:
                     flags.append(f"non_utc_time_zone={time_zone or 'missing'}")
