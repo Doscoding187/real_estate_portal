@@ -1,4 +1,4 @@
--- Read-only Azure checks. Results contain only row IDs and counts; no personal data.
+-- Read-only Azure checks. Results contain IDs, counts, types, scopes and hashes; no names, note text or personal data.
 -- 0. Confirm the production data shape and Place classification counts.
 SELECT
   (SELECT COUNT(*) FROM users) AS users,
@@ -165,3 +165,14 @@ WHERE evidence_row_count <> 1
    OR stored_note_sha256 IS NULL
    OR stored_note_sha256 <> expected_old_note_sha256
 ORDER BY place_id, stored_note_sha256;
+
+-- 4. Three reviewed sample Places for before/after type and scope evidence.
+-- No display names, notes, or personal data are returned.
+SELECT place_id, place_type, search_scope
+FROM place
+WHERE place_id IN (
+  'pl-place-01-1dbb2de0670edd2d18b29dfd',
+  'pl-place-01-880f4a3a6f4c793a77df6889',
+  'pl-place-01-83f8631b4bb941634415fd27'
+)
+ORDER BY place_id;

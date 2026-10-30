@@ -169,7 +169,7 @@ mysql --defaults-extra-file="$MYSQL_READONLY_DEFAULTS" --database=propertylistif
 
 **Expected:** `reviewed_ids=2556`, `found_ids=2556`, `missing_ids=0`; unchanged old-state categories are suburbs 1,558 (1,514 verified, 44 provisional), localities 988 (975 verified, 13 provisional), and towns 10 (9 verified, 1 provisional). The old scope split is 2,546 locality and 10 metro-city. The corrected state is `publication_eligible=0`, `search_eligible=0`, `search_scope=NULL` for all 2,556; `corrected_rows=2556`, `unexpected_state_rows=0`. The 48 Gauteng type corrections have zero ID overlap. Of the old rows, 2,498 were already publication-eligible and all 2,556 were searchable; this correction removes those eligibility entries. It creates **zero** public pages, public URLs, or search entries; Place identity and URL slugs are unchanged. The query is the post-migration state gate. Migration 0115 is the only writer; it changes only the three listed fields. The following Places plan compares every governed field and stops on any mismatch, so do not add a second writer or continue after a failed count.
 
-**Direction and impact check:** The earlier claim that 2,498 rows move from ineligible to eligible was reversed. Oct 10 has 2,498 verified rows at `1/1/<scope>` and 58 provisional rows at `0/1/<scope>`; after 0115 all 2,556 are `0/0/NULL`. From the active territory registry, search-eligible `search_scope='locality'` counts are Gauteng 1,143→1,141 and national 16,643→14,097. The two Gauteng IDs are East Rand (`pl-place-01-1ac94cf7599e695a225f7e2c`) and Sandton Convention Centre (`pl-place-01-9e02b737f2b0bdac9bd1f1f4`). East Rand is an accepted broad locality identity in the package, with source evidence including GeoNames `L.AREA` and `S.RSTN`; 0115 removes its search route. Treat this as a likely over-exclusion and a release stop pending reviewer confirmation. The known KwaZulu-Natal Umhlanga ID is outside the set; a different Eastern Cape `uMhlanga` (`pl-place-01-624b0b657f4940917537c08d`, source code `S.RSD`) is inside it. Treat that same-name identity as a reviewer check before release; do not conflate it with KwaZulu-Natal Umhlanga. The source codes in the sample rows are GeoNames classes (`S.RSD` railroad siding, `S.HTL` hotel, `S.TOWR` tower, `S.RSTN` railroad station; `L.CTRB` convention/business centre), not settlement evidence by themselves. See the [GeoNames feature-code list](https://www.geonames.org/export/codes.html).
+**Direction and impact check:** The earlier claim that 2,498 rows move from ineligible to eligible was reversed. Oct 10 has 2,498 verified rows at `1/1/<scope>` and 58 provisional rows at `0/1/<scope>`; after 0115 all 2,556 are `0/0/NULL`. From the active territory registry, search-eligible `search_scope='locality'` counts are Gauteng 1,143→1,141 and national 16,643→14,097. The two Gauteng IDs are East Rand (`pl-place-01-1ac94cf7599e695a225f7e2c`) and Sandton Convention Centre (`pl-place-01-9e02b737f2b0bdac9bd1f1f4`). East Rand is an accepted broad locality identity in the package, with source evidence including GeoNames `L.AREA` and `S.RSTN`; 0115 removes its search route. **Founder decision (2026-10-30): keep East Rand excluded from buyer locality search; it is not a buyer search term. Defer SEO and advertising content that points to Ekurhuleni as a content task, not a search-eligibility rule change. Confirm the Ekurhuleni destination route when that content is drafted; do not change eligibility flags or Place IDs for this decision.** The known KwaZulu-Natal Umhlanga ID is outside the set; a different Eastern Cape `uMhlanga` (`pl-place-01-624b0b657f4940917537c08d`, source code `S.RSD`) is inside it. **Founder decision (2026-10-30): keep Eastern Cape `uMhlanga` excluded and KwaZulu-Natal Umhlanga eligible; retain separate Place IDs for same-named places.** The source codes in the sample rows are GeoNames classes (`S.RSD` railroad siding, `S.HTL` hotel, `S.TOWR` tower, `S.RSTN` railroad station; `L.CTRB` convention/business centre), not settlement evidence by themselves. See the [GeoNames feature-code list](https://www.geonames.org/export/codes.html).
 
 **Stop:** any count differs, any ID is missing, any target remains eligible/scoped, or the following Places plan reports drift. Keep maintenance and writer drain in place.
 
@@ -254,13 +254,89 @@ From the exact production web/API pair, verify health and readiness, login/sessi
 
 1. Founder approves a fresh, time-bounded disposable-rehearsal authorization for the exact new temporary server, source backup, 0111→0197 migration, Fordsburg retirement, Gauteng reconciliation, and Places load. The current `disposable-rehearsal-authorization.json` is **revoked/expired** and permits neither migration nor DDL/reference loading; do not reuse its server or approval. A new target registration/tooling change needs separate review and approval.
 2. In Azure Portal, select `propertylistify-mysql` → **Overview** → **Restore**; choose the named pre-release restore point, set a unique name such as `pl-release-dress-<date>-<random>`, select isolated networking with no Railway access, and review before creating. Azure restore makes a new server and inherits the source compute/storage settings; verify its identity and network before connecting.
-3. Run the disposable sequence only through the approved Database Authority target and release tooling. Seed/verify the Oct 10 source-pinned 0111 data, migrate 0112–0197 (including the 0115 eligibility correction), retire Fordsburg, reconcile all 48, verify the 2,556 corrected rows, load Places, and verify 17,663 / 16,943 / 720 / 0. Never point Railway/Vercel at the rehearsal.
+3. Run the disposable sequence only through the approved Database Authority target and release tooling. A restore from the Azure backup already contains the real 0111 data: verify the Oct 10 baseline, do not seed or overwrite it. Migrate 0112–0197 (including the 0115 eligibility correction), retire Fordsburg, reconcile all 48, verify the 2,556 corrected rows, load Places, and verify 17,663 / 16,943 / 720 / 0. Never point Railway/Vercel at the rehearsal.
 4. Record timings and sanitized evidence, with each command's complete stdout, stderr, and exit code saved as described above. Before deletion, confirm the logs are complete. After review, delete only the uniquely named restored server in Azure Portal → that server's **Overview** → **Delete** → enter its exact temporary server name → confirm. Verify the temporary server is gone; leave `propertylistify-mysql` and its backup untouched.
+
+### Founder checklist: fourth dress rehearsal (draft; not authorization)
+
+**Proposed target:** `pl-dress-rehearsal-20261030d`. Do not create or connect to it until the founder separately approves the exact backup, region, SKU/storage, total cost cap, operator `/32`, and this exact target. The `.c` registration is revoked/expired and cannot authorize `.d`. Review the exact source commit containing the rehearsal guard first; the new registration must name that commit, expire within 12 hours, allow only `release-plan`, `release-apply`, read-only `diagnostics`, and `release-reference-plan/apply/verify`, and explicitly deny `propertylistify-mysql` and all Railway hosts. No app URL or Railway firewall rule may be copied.
+
+1. **Release gates.** Founder/operator must record the Azure public-access readback with the three existing Railway rules preserved, the Vercel Ignored Build Step readback (`Only build preview`), and the Railway deploy-trigger readback. Do not merge until the Vercel and Railway readbacks are recorded. Keep #707 held and Land disabled.
+2. **Evidence folder.** On the operator machine, set a private persistent path and create it before any command:
+   ```sh
+   umask 077
+   export PL_EVIDENCE_DIR="/secure/operator/path/pl-dress-rehearsal-20261030d-<UTC-run-id>"
+   mkdir -p "$PL_EVIDENCE_DIR"
+   run_logged() { local step_name="$1"; shift; local status; if "$@" >"$PL_EVIDENCE_DIR/$step_name.stdout.log" 2>"$PL_EVIDENCE_DIR/$step_name.stderr.log"; then status=0; else status=$?; fi; printf '%s\n' "$status" >"$PL_EVIDENCE_DIR/$step_name.exit-code"; return "$status"; }
+   ```
+   Run every shell, SQL-client, and Authority command through `run_logged`; retain each complete output and exit code. Use a new target-specific read-only MySQL defaults file for the committed SQL checks. Never log credentials.
+3. **Restore and network.** In Azure Portal: **Azure Database for MySQL flexible servers** → `propertylistify-mysql` → **Overview** → **Restore** → choose the founder-approved automated backup → enter `pl-dress-rehearsal-20261030d` → confirm the approved source region and size/cost → **Review + create**. Do not use `--no-wait`. On `.d` only, remove inherited firewall entries, verify the list is empty, re-check the operator's current egress IP, add only that `/32`, and save a screenshot of the final list. Stop if Azure requires unapproved storage/cost or any extra firewall entry. Wait for `Ready`; founder resets the password in Portal. Supply only a fresh `.d` credential through the approved secret channel, never the app credential.
+4. **Bind and prove target.** Activate the newly reviewed exact-target registration only after showing its hostname. Supply the fresh target credential through the approved secret channel (never as a command argument). In the protected shell, run `run_logged authority-status pnpm db:authority:status` and `run_logged authority-context pnpm db:authority:context -- --operation=release-plan`; require class `disposable-rehearsal`, host `pl-dress-rehearsal-20261030d.mysql.database.azure.com`, database `propertylistify_database`, the reviewed source commit, and the unexpired registration. Any other target/class is a stop.
+5. **Old-state go-checks (read only).** Run the committed SQL files verbatim against `.d` before migration; require the Oct 10 five-table digests/counts to match, 48 old type/scope and note hashes to be 48/48, and no incomplete migration attempts:
+   ```sh
+   run_logged old-digests mysql --defaults-extra-file="$PL_DRESS_READONLY_DEFAULTS" --database=propertylistify_database < docs/operations/place-reference-bucket-digests.sql
+   run_logged old-gauteng-check mysql --defaults-extra-file="$PL_DRESS_READONLY_DEFAULTS" --database=propertylistify_database < docs/operations/gauteng-place-azure-read-only-checks.sql
+   ```
+6. **Migrate 0112–0197.** Review the exact plan before applying; its only pending range must be 86 migrations from 0111 through 0197. Then issue the exact-target release acknowledgement and apply that reviewed digest once:
+   ```sh
+   run_logged migration-plan pnpm db:release:plan -- --accepted-old-head=0111_properties_canonical_place_reference_fk.sql --expected-new-head=0197_drop_seller_prospects_province.sql
+   PL_MIGRATION_DIGEST=$(jq -er '.planDigest' "$PL_EVIDENCE_DIR/migration-plan.stdout.log")
+   run_logged migration-ack pnpm db:release:ack
+   PL_RELEASE_ACK=$(jq -er '.acknowledgement' "$PL_EVIDENCE_DIR/migration-ack.stdout.log")
+   run_logged migration-apply pnpm db:release:apply -- --accepted-old-head=0111_properties_canonical_place_reference_fk.sql --expected-new-head=0197_drop_seller_prospects_province.sql --plan-digest="$PL_MIGRATION_DIGEST" --ack="$PL_RELEASE_ACK"
+   run_logged schema-check pnpm db:schema:congruency -- --credential=read-only
+   run_logged migration-postcheck pnpm db:release:plan -- --accepted-old-head=0197_drop_seller_prospects_province.sql --expected-new-head=0197_drop_seller_prospects_province.sql
+   ```
+   Require congruent schema, enforced CHECKs 40/40, head 0197, zero pending migrations, and no failed/incomplete attempt. Migration 0115 is applied inside this batch; it is not separately replayed.
+7. **Fordsburg retirement.**
+   ```sh
+   run_logged ford-plan pnpm db:release:reference:plan -- --adapter=fordsburg-retirement
+   PL_FORD_DIGEST=$(jq -er '.planDigest' "$PL_EVIDENCE_DIR/ford-plan.stdout.log")
+   run_logged ford-ack pnpm db:release:reference:ack
+   PL_REFERENCE_ACK=$(jq -er '.acknowledgement' "$PL_EVIDENCE_DIR/ford-ack.stdout.log")
+   run_logged ford-apply pnpm db:release:reference:apply -- --adapter=fordsburg-retirement --plan-digest="$PL_FORD_DIGEST" --ack="$PL_REFERENCE_ACK"
+   run_logged ford-verify pnpm db:release:reference:verify -- --adapter=fordsburg-retirement
+   ```
+   Review the complete summary and digest before apply; require only the approved duplicate retirement/remap. Otherwise stop.
+8. **48 Gauteng corrections.** Re-run the committed pre-correction check; require old values 48/48 and no note mismatch:
+   ```sh
+   run_logged gauteng-old-check mysql --defaults-extra-file="$PL_DRESS_READONLY_DEFAULTS" --database=propertylistify_database < docs/operations/gauteng-place-azure-read-only-checks.sql
+   ```
+   Then:
+   ```sh
+   run_logged gauteng-plan pnpm db:release:reference:plan -- --adapter=gauteng-type-reconciliation
+   PL_GAUTENG_DIGEST=$(jq -er '.planDigest' "$PL_EVIDENCE_DIR/gauteng-plan.stdout.log")
+   run_logged gauteng-ack pnpm db:release:reference:ack
+   PL_REFERENCE_ACK=$(jq -er '.acknowledgement' "$PL_EVIDENCE_DIR/gauteng-ack.stdout.log")
+   run_logged gauteng-apply pnpm db:release:reference:apply -- --adapter=gauteng-type-reconciliation --plan-digest="$PL_GAUTENG_DIGEST" --ack="$PL_REFERENCE_ACK"
+   run_logged gauteng-verify pnpm db:release:reference:verify -- --adapter=gauteng-type-reconciliation
+   ```
+   Review all 48 IDs and the 96 place/evidence updates before apply. Any ID/value/hash discrepancy is a stop.
+9. **0115 and Places.** Run the committed post-migration check; require 2,556/2,556 corrected and zero unexpected state:
+   ```sh
+   run_logged 0115-check mysql --defaults-extra-file="$PL_DRESS_READONLY_DEFAULTS" --database=propertylistify_database < docs/operations/place-source-geography-eligibility-0115-read-only-check.sql
+   ```
+   Then:
+   ```sh
+   run_logged places-plan pnpm db:release:reference:plan -- --adapter=places
+   PL_PLACES_DIGEST=$(jq -er '.planDigest' "$PL_EVIDENCE_DIR/places-plan.stdout.log")
+   run_logged places-ack pnpm db:release:reference:ack
+   PL_REFERENCE_ACK=$(jq -er '.acknowledgement' "$PL_EVIDENCE_DIR/places-ack.stdout.log")
+   run_logged places-apply pnpm db:release:reference:apply -- --adapter=places --plan-digest="$PL_PLACES_DIGEST" --ack="$PL_REFERENCE_ACK"
+   run_logged places-verify pnpm db:release:reference:verify -- --adapter=places
+   ```
+   Review zero drift and the exact package digest before apply. Require **17,663 / 16,943 / 720 / 0**, no identity drift, and the listing Place ID unchanged. Any mismatch is a stop.
+   ```sh
+   run_logged final-gauteng-readback mysql --defaults-extra-file="$PL_DRESS_READONLY_DEFAULTS" --database=propertylistify_database < docs/operations/gauteng-place-azure-read-only-checks.sql
+   ```
+   Compare query 1 with the pre-change listing Place reference; it must be identical. Query 4 should show `town / metro_city` before correction for all three IDs, then `pl-place-01-1dbb2de0670edd2d18b29dfd` and `pl-place-01-880f4a3a6f4c793a77df6889` as `suburb / locality`, and `pl-place-01-83f8631b4bb941634415fd27` as `locality / locality`. Query 3 returns the 48 new-note hashes (hashes only); `gauteng-verify` remains the exact-state verification.
+10. **Close the rehearsal.** On any failure or mismatch: stop immediately, do not retry or repair, preserve `.d` and all evidence for review. After the complete evidence packet is reviewed, revoke the `.d` registration; delete only `.d` in Azure Portal; verify Azure reports it absent and record the remaining server list and cost. Never connect an app to `.d` or alter `propertylistify-mysql` data.
 
 **Cost estimate:** the restored server inherits production compute and provisioned storage. Budget roughly 2–4 hours of that SKU's hourly compute plus 2–4 hours of provisioned storage and any backup use above Azure's included allowance. The production SKU, region, and storage size were not supplied, so a currency quote cannot be responsibly stated from this record; get the Azure Portal estimate for the restored configuration before creation and set a founder-approved cost cap. Azure documents up to 100% of provisioned server storage as backup storage at no extra cost; excess is billed. See [Azure MySQL pricing](https://azure.microsoft.com/en-us/pricing/details/mysql/) and [backup storage cost](https://learn.microsoft.com/en-us/azure/mysql/flexible-server/concepts-backup-restore).
 
 ## Founder-only actions still open
 
+- **Azure public-access readback (founder/operator still must do this):** Azure Portal → **Azure Database for MySQL flexible servers** → `propertylistify-mysql` → **Networking**. Close the broad public-access setting while preserving the three existing Railway-specific rules; record the final state and rule count. Stop if the portal cannot preserve the three rules exactly. This is not verified by the agent; do not merge until the separate Vercel and Railway readbacks below are recorded.
 - **Vercel pause readback:** Vercel Dashboard → `real-estate-portal` → **Settings** → **Build and Deployment** → **Ignored Build Step**. Read the selected option and confirm it is **Only build preview**; record a dated screenshot or note. Do not change it in this review. If it is not confirmed, hold all merges. Vercel's default Git behavior can build a deployment for commits to the production branch; see [Ignored Build Step](https://vercel.com/docs/project-configuration/project-settings).
 - **Railway trigger/readback:** Railway Dashboard → project → **production** environment → each API/worker service → **Settings** → **Source**. Record connected repository, branch, autodeploy state, service name, region, and replica count. Keep autodeploy disabled for the release window so a merge cannot deploy unexpectedly. After DB/data checks pass, API service → **Deployments** → `Cmd+K` → **Deploy Latest Commit**; verify exact SHA. Railway GitHub autodeploy can deploy commits pushed to its connected branch; see [Railway GitHub autodeploys](https://docs.railway.com/deployments/github-autodeploys).
 - **AWS B11:** AWS Console → account `914683204061` → region `af-south-1` → CloudFormation → stack `listify-finance-af-south-1`; confirm `CREATE_COMPLETE` and outputs `listify-finance-914683204061-af-south-1` and `listify-finance-af-south-1-financebackup-kce1wayc2h2e`. For both S3 buckets check region `af-south-1`, Versioning enabled, SSE-S3/AES256, Bucket owner enforced, all four Block Public Access controls on, TLS-only bucket policy/no public principal. On primary verify the replication rule targets the named backup, has an empty prefix (whole bucket), delete-marker replication off, and no object-expiry lifecycle. On the backup verify versioning and retention. In IAM inspect `listify-finance-af-south-1-ProofRuntimeUser-AZx3gkrzcgMx`: one active key; only PutObject/GetObject on primary `billing-proofs/*`; no list/delete/backup/media permissions. Never reveal keys. Then in Railway Dashboard → production → API service → **Variables**, read values privately and confirm `BILLING_PROOF_STORAGE_ADAPTER=s3`, `BILLING_PROOF_S3_BUCKET` is the primary finance bucket, `BILLING_PROOF_S3_REGION=af-south-1`, and `BILLING_PROOF_S3_PREFIX=billing-proofs`; confirm `BILLING_PROOF_AWS_ACCESS_KEY_ID` and `BILLING_PROOF_AWS_SECRET_ACCESS_KEY` are set without displaying values. Verify the finance bucket differs from public `S3_BUCKET_NAME` and check `AWS_REGION`, `CLOUDFRONT_URL`, `AWS_S3_BUCKET`. In Vercel Dashboard → project → **Settings** → **Environment Variables**, read `VITE_CLOUDFRONT_URL` / `VITE_ASSETS_BASE_URL` privately and confirm they point only to public media. Do not copy secret values or keys. Repository/config evidence is summarized in PR #710's B11 readback; app binding remains a hosted check.
@@ -268,6 +344,13 @@ From the exact production web/API pair, verify health and readiness, login/sessi
 - **#707:** GitHub → repository → **Pull requests** → #707. Review the latest diff and green checks. If Sale/Rent guides are wanted in this release, the founder must explicitly comment that the hold is lifted and approve including its exact head; otherwise leave it open and exclude it. Do not merge it as part of this runbook.
 - **Azure approvals:** after rehearsal, review a fresh exact-target `db:release:plan` and reference plans; approve only the displayed Azure fingerprint and digests for that window. A previous plan or a merge is not approval.
 - **Maintenance/reopen boundary:** decide whether the app becoming reachable automatically as API readiness passes (before smoke completes) is acceptable while paid intake stays closed. If not, approve a separate reviewed server-side/edge gate task first; this runbook does not add or toggle one.
+
+## Deferred Place work — post-launch backlog
+
+- **Display disambiguation table, migration, and loader:** deferred; no migration 0198 in the launch candidate. The launch stopgap hides unresolved collision groups only in the shared listing-authoring and buyer-search pickers; public Place pages and backend eligibility remain unchanged until reviewed labels are supplied.
+- **East Rand SEO/advertising content:** deferred content pointing to Ekurhuleni; East Rand remains excluded from buyer locality search and no eligibility flag or Place ID changes.
+- **Municipality pages:** deferred until after launch.
+- **Ekurhuleni content target:** confirm the exact canonical Place route when East Rand content is drafted; do not infer a broad-place child-listing roll-up.
 
 ## Separate cleanup proposal — not part of this release
 
