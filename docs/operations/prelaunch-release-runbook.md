@@ -11,6 +11,8 @@ The founder supplied these observations from Azure Cloud Shell. The agent did no
 - The listing references `pl-place-01-6a145c6d642ba208a2c12de7`, a suburb and not the Fordsburg duplicate.
 - `place=16,944`: all non-OSM, zero OSM-only, zero unclassified; the rows were created in one bulk load at 2026-10-10 14:25.
 - The 48 reviewed Gauteng Places have old type/scope values 48/48 and old evidence-note hashes 48/48. The corrected committed Query 3 returned **Empty set**; the first 47/48 result was the Hiltonia hash typo. Go-checks must run from the committed SQL file below, never a retyped copy.
+- The founder compared all five production reference tables with the 2026-10-10 v0.1 package: `place`, `place_name`, `place_relationship`, `place_evidence`, and `place_external_mapping` match. The source package is pinned to commit `49a48572c24d1b122fcf17b025a76e5ab77f03a8`; today's files still use v0.1 filenames but include the later eligibility revision.
+- Repository decision record: commit `1dc747fbceed1687135c6b3ec46f3e4b39a91dc8` and D12 in `docs/architecture/geography-coverage-contract.md` exclude source-classified spot/facility-only records from geographic search/publication eligibility while retaining identity, names, and provenance. The repository does not contain a separate founder approval record for this Oct 14 revision; do not label that policy founder-approved based only on the implementation commit.
 - Azure reports daily full backups, 14-day retention, and an earliest available restore point of 2026-10-15. Three Railway-related firewall rules exist on the Azure server; names, ranges, and current use were not inspected here.
 
 ## Operating rules
@@ -20,6 +22,18 @@ This is a coordinated outage. Keep the current maintenance experience and paid i
 When the API becomes healthy, the current client-side `ApiAvailabilityBoundary` can automatically reveal the application; it has no separate operator-controlled "reopen" switch. If the founder requires the public app to remain unavailable until smoke tests finish, **stop before the API is brought back** and request a separately reviewed gate change. No such shared-tooling change is included or authorized here. The sequence below assumes the founder accepts the app becoming reachable once API readiness passes while paid intake remains closed.
 
 After the backup is complete, **any ambiguous or failed apply means stop, remain in maintenance, restore the named verified backup to a new server, reconnect the matching application version, and do not retry blindly**. Azure MySQL restore creates a new server; it does not roll the existing server back in place. Never use down-migrations, manual SQL edits, ledger edits, or automatic retries.
+
+**Command evidence rule:** before each release or rehearsal command, create a private evidence directory and save its complete stdout, stderr, and exit code separately before continuing. Apply this to every shell, migration, SQL-client, health-check, and reference-data command. Example template (use a unique `<step>` filename for every command):
+
+```sh
+set +e
+<exact-command> >"$EVIDENCE_DIR/<step>.stdout.log" 2>"$EVIDENCE_DIR/<step>.stderr.log"
+status=$?
+printf '%s\n' "$status" >"$EVIDENCE_DIR/<step>.exit-code"
+test "$status" -eq 0 || exit "$status"
+```
+
+Keep the complete files until the rehearsal/release evidence is reviewed. Before deleting any temporary server, confirm every command has its paired output files and exit code. Never include an admin password or credential-bearing connection string in a command or log.
 
 All commands below are future operator instructions. No command was run against production for this document.
 
@@ -33,10 +47,11 @@ All commands below are future operator instructions. No command was run against 
 
 ```sh
 pnpm release:predeploy:production
+mysql --defaults-extra-file="$MYSQL_READONLY_DEFAULTS" --database=propertylistify_database < docs/operations/place-reference-bucket-digests.sql
 mysql --defaults-extra-file="$MYSQL_READONLY_DEFAULTS" --database=propertylistify_database < docs/operations/gauteng-place-azure-read-only-checks.sql
 ```
 
-The SQL file is all `SELECT` statements. It shows row counts, full applied checksums 0107–0111, incomplete attempts, the listing's Place ID, 48 old type/scope rows, and evidence-hash anomalies. Compare the checksum output with both `server/migrations/manifest.json` and each committed migration file. Expected: target is Azure MySQL 8.4 / `propertylistify_database`; migration head 0111; checksums match; no incomplete attempts; counts and listing Place match the baseline above; query 2 is 48/48; query 3 is Empty set. `pnpm release:predeploy:production` must report a valid read-only plan to 0197 and valid reference plans.
+The bucket-digest SQL is the committed five-table read-only set from PR #714; compare its output with `docs/operations/place-reference-bucket-digests-v0.1-non-osm.csv`. Require `digest_complete=1`, UTC, and no differing bucket. The Gauteng SQL shows applied checksums 0107–0111, incomplete attempts, the listing's Place ID, 48 old type/scope rows, and evidence-hash anomalies. Compare checksums with both `server/migrations/manifest.json` and each committed migration file. Expected: target is Azure MySQL 8.4 / `propertylistify_database`; migration head 0111; checksums match; no incomplete attempts; all five tables match the Oct 10 package; listing Place matches the baseline above; Gauteng query 2 is 48/48; query 3 is Empty set. `pnpm release:predeploy:production` must report a valid read-only plan to 0197 and valid reference plans.
 
 **Stop:** target, checksum, attempt, plan, row-count, listing identity, query result, source SHA, required CI, Land flag, founder approval, or same-SHA Preview differs. Keep #707 excluded unless the founder explicitly unholds it.
 
@@ -83,7 +98,7 @@ pnpm db:release:plan -- --accepted-old-head=0111_properties_canonical_place_refe
 pnpm db:release:apply -- --accepted-old-head=0111_properties_canonical_place_reference_fk.sql --expected-new-head=0197_drop_seller_prospects_province.sql --plan-digest=<fresh-reviewed-plan-digest> --ack=<issued-release-ack>
 ```
 
-**Expected:** the plan contains only migrations 0112–0197 (86 files), exact repo checksums, accepted old head 0111, and expected head 0197; apply reports success at 0197 and no incomplete attempt.
+**Expected:** the plan contains only migrations 0112–0197 (86 files), exact repo checksums, accepted old head 0111, and expected head 0197; apply reports success at 0197 and no incomplete attempt. Migration `0115_non_geographic_place_search_eligibility.sql` is the bounded 2,556-row source-classification correction: for its exact ID set it clears only `publication_eligible`, `search_eligible`, and `search_scope`; Place IDs, type, classification, lifecycle, names, relationships, evidence and mappings stay unchanged. The full five-table Oct 10 digest check above is the old-state gate before this migration.
 
 **Stop:** any different pending set/head/checksum, failed/running/blocked attempt, timeout, ambiguous result, or missing approval.
 
@@ -142,7 +157,25 @@ pnpm db:release:reference:verify -- --adapter=gauteng-type-reconciliation
 
 **Rollback:** before commit, require transaction rollback. After commit or ambiguous result, remain in maintenance and restore the named backup with the matching app. No blind retry or hash repair.
 
-### 8. Load the current Places package
+### 8. Verify the 2,556-row migration reconciliation
+
+**Owner:** approved DB operator and Place reviewer.
+
+**Command:** run the committed read-only check after the 48-place correction and before the Places load:
+
+```sh
+mysql --defaults-extra-file="$MYSQL_READONLY_DEFAULTS" --database=propertylistify_database < docs/operations/place-source-geography-eligibility-0115-read-only-check.sql
+```
+
+**Expected:** `reviewed_ids=2556`, `found_ids=2556`, `missing_ids=0`; unchanged old-state categories are suburbs 1,558 (1,514 verified, 44 provisional), localities 988 (975 verified, 13 provisional), and towns 10 (9 verified, 1 provisional). The old scope split is 2,546 locality and 10 metro-city. The corrected state is `publication_eligible=0`, `search_eligible=0`, `search_scope=NULL` for all 2,556; `corrected_rows=2556`, `unexpected_state_rows=0`. The 48 Gauteng type corrections have zero ID overlap. Of the old rows, 2,498 were already publication-eligible and all 2,556 were searchable; this correction removes those eligibility entries. It creates **zero** public pages, public URLs, or search entries; Place identity and URL slugs are unchanged. The query is the post-migration state gate. Migration 0115 is the only writer; it changes only the three listed fields. The following Places plan compares every governed field and stops on any mismatch, so do not add a second writer or continue after a failed count.
+
+**Direction and impact check:** The earlier claim that 2,498 rows move from ineligible to eligible was reversed. Oct 10 has 2,498 verified rows at `1/1/<scope>` and 58 provisional rows at `0/1/<scope>`; after 0115 all 2,556 are `0/0/NULL`. From the active territory registry, search-eligible `search_scope='locality'` counts are Gauteng 1,143→1,141 and national 16,643→14,097. The two Gauteng IDs are East Rand (`pl-place-01-1ac94cf7599e695a225f7e2c`) and Sandton Convention Centre (`pl-place-01-9e02b737f2b0bdac9bd1f1f4`). The known KwaZulu-Natal Umhlanga ID is outside the set; a different Eastern Cape `uMhlanga` (`pl-place-01-624b0b657f4940917537c08d`, source code `S.RSD`) is inside it. Treat that same-name identity as a reviewer check before release; do not conflate it with KwaZulu-Natal Umhlanga. The source codes in the sample rows are GeoNames classes (`S.RSD` railroad siding, `S.HTL` hotel, `S.TOWR` tower, `S.RSTN` railroad station; `L.CTRB` convention/business centre), not settlement evidence by themselves. See the [GeoNames feature-code list](https://www.geonames.org/export/codes.html).
+
+**Stop:** any count differs, any ID is missing, any target remains eligible/scoped, or the following Places plan reports drift. Keep maintenance and writer drain in place.
+
+**Rollback:** this query is read-only. If it or the Places plan differs, remain in maintenance and restore the named backup with the matching app; do not rerun or manually repair migration 0115.
+
+### 9. Load the current Places package
 
 **Owner:** approved DB operator and Place reviewer.
 
@@ -160,7 +193,7 @@ pnpm db:release:reference:verify -- --adapter=places
 
 **Rollback:** remain drained/in maintenance and restore the named backup with the matching app. A partial/ambiguous load is not permission to retry.
 
-### 9. Deploy the matching API
+### 10. Deploy the matching API
 
 **Owner:** Railway operator and release lead.
 
@@ -172,7 +205,7 @@ pnpm db:release:reference:verify -- --adapter=places
 
 **Rollback:** keep the web maintenance experience and paid intake closed; restore the named DB backup and deploy the API version compatible with that backup. Railway image rollback alone is not a database rollback.
 
-### 10. Deploy the matching web build
+### 11. Deploy the matching web build
 
 **Owner:** Vercel project owner and release lead.
 
@@ -184,7 +217,7 @@ pnpm db:release:reference:verify -- --adapter=places
 
 **Rollback:** keep paid intake closed; restore the named DB backup and deploy the matching old API/web pair. Do not roll back only one side.
 
-### 11. Smoke-test the released pair
+### 12. Smoke-test the released pair
 
 **Owner:** release lead, product reviewer, and founder test-account holder.
 
@@ -205,7 +238,7 @@ From the exact production web/API pair, verify health and readiness, login/sessi
 
 **Rollback:** immediately keep paid intake closed; restore the named backup and matching previous API/web artifacts. Do not retry an uncertain mutation.
 
-### 12. Reopen only after GO
+### 13. Reopen only after GO
 
 **Owner:** founder.
 
@@ -221,8 +254,8 @@ From the exact production web/API pair, verify health and readiness, login/sessi
 
 1. Founder approves a fresh, time-bounded disposable-rehearsal authorization for the exact new temporary server, source backup, 0111→0197 migration, Fordsburg retirement, Gauteng reconciliation, and Places load. The current `disposable-rehearsal-authorization.json` is **revoked/expired** and permits neither migration nor DDL/reference loading; do not reuse its server or approval. A new target registration/tooling change needs separate review and approval.
 2. In Azure Portal, select `propertylistify-mysql` → **Overview** → **Restore**; choose the named pre-release restore point, set a unique name such as `pl-release-dress-<date>-<random>`, select isolated networking with no Railway access, and review before creating. Azure restore makes a new server and inherits the source compute/storage settings; verify its identity and network before connecting.
-3. Run the disposable sequence only through the approved Database Authority target and release tooling. Seed/verify the production-shaped 0111 data, migrate 0112–0197, retire Fordsburg, reconcile all 48, load Places, and verify 17,663 / 16,943 / 720 / 0. Never point Railway/Vercel at the rehearsal.
-4. Record timings and sanitized evidence. After review, delete only the uniquely named restored server in Azure Portal → that server's **Overview** → **Delete** → enter its exact temporary server name → confirm. Verify the temporary server is gone; leave `propertylistify-mysql` and its backup untouched.
+3. Run the disposable sequence only through the approved Database Authority target and release tooling. Seed/verify the Oct 10 source-pinned 0111 data, migrate 0112–0197 (including the 0115 eligibility correction), retire Fordsburg, reconcile all 48, verify the 2,556 corrected rows, load Places, and verify 17,663 / 16,943 / 720 / 0. Never point Railway/Vercel at the rehearsal.
+4. Record timings and sanitized evidence, with each command's complete stdout, stderr, and exit code saved as described above. Before deletion, confirm the logs are complete. After review, delete only the uniquely named restored server in Azure Portal → that server's **Overview** → **Delete** → enter its exact temporary server name → confirm. Verify the temporary server is gone; leave `propertylistify-mysql` and its backup untouched.
 
 **Cost estimate:** the restored server inherits production compute and provisioned storage. Budget roughly 2–4 hours of that SKU's hourly compute plus 2–4 hours of provisioned storage and any backup use above Azure's included allowance. The production SKU, region, and storage size were not supplied, so a currency quote cannot be responsibly stated from this record; get the Azure Portal estimate for the restored configuration before creation and set a founder-approved cost cap. Azure documents up to 100% of provisioned server storage as backup storage at no extra cost; excess is billed. See [Azure MySQL pricing](https://azure.microsoft.com/en-us/pricing/details/mysql/) and [backup storage cost](https://learn.microsoft.com/en-us/azure/mysql/flexible-server/concepts-backup-restore).
 

@@ -27,11 +27,22 @@ import {
   type MigrationAttempt,
 } from '../../../migrations/runSqlMigrations';
 
-export const MIGRATION_PREFIX_0111_VERSION = 'migration-prefix-0111-fordsburg-v1' as const;
+export const MIGRATION_PREFIX_0111_VERSION = 'migration-prefix-0111-oct10-source-v2' as const;
 export const MIGRATION_PREFIX_0111_HEAD = '0111_properties_canonical_place_reference_fk.sql' as const;
 export const MIGRATION_PREFIX_0111_FINAL_HEAD = '0197_drop_seller_prospects_province.sql' as const;
+export const MIGRATION_PREFIX_0111_SOURCE_COMMIT =
+  '49a48572c24d1b122fcf17b025a76e5ab77f03a8' as const;
 export const MIGRATION_PREFIX_0111_SOURCE_DIGEST =
-  '4235e111dd8db8b803cb8d35e06975f1f183bfea6ece7ee0e5d260ab397a7bcc' as const;
+  '166de67c63d6db86acdd5c7c9dbe2fe50b4e16a7e2a070a31c51a2c6b29636d9' as const;
+const OCT10_PLACE_ROWS_PATH =
+  'data/migration-prefix-0111-oct10-place-rows-v1.jsonl' as const;
+const OCT10_PLACE_ROWS_SHA256 =
+  '0e538c03f1923120680dd9d3456fe2185d19998408986566b98261e99ef9df9a' as const;
+const OCT10_PLACE_ROWS_COUNT = 2556;
+const PLACE_ELIGIBILITY_MIGRATION_PATH =
+  'server/migrations/0115_non_geographic_place_search_eligibility.sql' as const;
+const PLACE_ELIGIBILITY_MIGRATION_SHA256 =
+  '53c65883b900d639d1ea989041386a4d4fea28e7a9a7b35579a52c449e9d649c' as const;
 export const GAUTENG_EVIDENCE_NOTE_MISMATCH_VERSION =
   'gauteng-evidence-note-mismatch-rehearsal-v1' as const;
 export const GAUTENG_EVIDENCE_NOTE_MISMATCH_PLACE_ID =
@@ -43,6 +54,7 @@ export const GAUTENG_EVIDENCE_NOTE_MISMATCH_DIGEST = stableDigest({
   mutation: 'append-rehearsal-only-evidence-note-mismatch-sentinel-v1',
 });
 const RETIRED_PLACE_ID = 'pl-place-01-99dcb8ba9d808741e35b258e';
+const PRODUCTION_LISTING_PLACE_ID = 'pl-place-01-6a145c6d642ba208a2c12de7';
 const LISTING_ID = 19960962;
 const BASE_USER_ID = 19960961;
 const ADDITIONAL_USER_IDS = [19961121, 19961122, 19961123, 19961124, 19961125] as const;
@@ -64,9 +76,11 @@ export const MIGRATION_PREFIX_0111_DIGEST = stableDigest({
   seedHead: MIGRATION_PREFIX_0111_HEAD,
   finalHead: MIGRATION_PREFIX_0111_FINAL_HEAD,
   sourceDigest: MIGRATION_PREFIX_0111_SOURCE_DIGEST,
+  sourceCommit: MIGRATION_PREFIX_0111_SOURCE_COMMIT,
   retiredPlaceId: RETIRED_PLACE_ID,
   users: [BASE_USER_ID, ...ADDITIONAL_USER_IDS],
   listingId: LISTING_ID,
+  listingPlaceId: PRODUCTION_LISTING_PLACE_ID,
 });
 
 type Input = {
@@ -139,6 +153,10 @@ function readRows(root: string, path: string): Record<string, unknown>[] {
     .map(line => JSON.parse(line) as Record<string, unknown>);
 }
 
+function sha256(value: string | Buffer): string {
+  return createHash('sha256').update(value).digest('hex');
+}
+
 function loadHistoricalPlaceRows(root: string): PlaceReleaseRows {
   const all: PlaceReleaseRows = { place: [], place_name: [], place_relationship: [], place_evidence: [], place_external_mapping: [] };
   const packageRows: Record<(typeof ARTIFACT_KEYS)[number], Record<string, unknown>[]> = {
@@ -166,8 +184,63 @@ function loadHistoricalPlaceRows(root: string): PlaceReleaseRows {
       packageRows[key].push(...readRows(root, expectedPath));
     }
   }
+  // The v0.1 filenames were revised in place after the 2026-10-10 production load.
+  // Restore the exact 0115 target rows from the pinned Oct 10 source commit, then
+  // require the reconstructed package to match its full digest.
+  const placeRowsPath = resolve(root, OCT10_PLACE_ROWS_PATH);
+  const placeRowsBytes = readFileSync(placeRowsPath);
+  if (sha256(placeRowsBytes) !== OCT10_PLACE_ROWS_SHA256)
+    throw new Error('Migration prefix fixture refused: Oct 10 Place row fixture digest drift.');
+  const oldPlaceRows = placeRowsBytes
+    .toString('utf8')
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .map(line => JSON.parse(line) as Record<string, unknown>);
+  const oldPlaceById = new Map<string, Record<string, unknown>>();
+  for (const row of oldPlaceRows) {
+    const placeId = String(row.place_id ?? '');
+    if (
+      !/^pl-place-01-[a-f0-9]{24}$/.test(placeId) ||
+      oldPlaceById.has(placeId) ||
+      ![0, 1].includes(Number(row.publication_eligible)) ||
+      ![0, 1].includes(Number(row.search_eligible)) ||
+      !['locality', 'metro_city'].includes(String(row.search_scope))
+    ) {
+      throw new Error('Migration prefix fixture refused: invalid Oct 10 Place source row.');
+    }
+    oldPlaceById.set(placeId, row);
+  }
+  const migrationPath = resolve(root, PLACE_ELIGIBILITY_MIGRATION_PATH);
+  const migrationBytes = readFileSync(migrationPath);
+  if (sha256(migrationBytes) !== PLACE_ELIGIBILITY_MIGRATION_SHA256)
+    throw new Error('Migration prefix fixture refused: migration 0115 source drift.');
+  const migrationIds = new Set(
+    [...migrationBytes.toString('utf8').matchAll(/'(pl-place-01-[a-f0-9]{24})'/g)].map(match => match[1]),
+  );
+  if (
+    oldPlaceById.size !== OCT10_PLACE_ROWS_COUNT ||
+    migrationIds.size !== OCT10_PLACE_ROWS_COUNT ||
+    [...migrationIds].some(placeId => !oldPlaceById.has(placeId))
+  ) {
+    throw new Error('Migration prefix fixture refused: Oct 10 Place set differs from migration 0115.');
+  }
+  const placeIndexById = new Map(packageRows.places.map((row, index) => [String(row.place_id), index]));
+  for (const [placeId, old] of oldPlaceById) {
+    const index = placeIndexById.get(placeId);
+    const current = index === undefined ? undefined : packageRows.places[index];
+    if (
+      index === undefined ||
+      !current ||
+      current.publication_eligible !== 0 ||
+      current.search_eligible !== 0 ||
+      current.search_scope !== null
+    ) {
+      throw new Error(`Migration prefix fixture refused: current eligibility package state drift at ${placeId}.`);
+    }
+    packageRows.places[index] = old;
+  }
   if (stableDigest(packageRows) !== MIGRATION_PREFIX_0111_SOURCE_DIGEST)
-    throw new Error('Migration prefix fixture refused: historical 0108 reference package digest drift.');
+    throw new Error(`Migration prefix fixture refused: reconstructed Oct 10 source at ${MIGRATION_PREFIX_0111_SOURCE_COMMIT} digest drift.`);
   const nonOsmIds = new Set(
     packageRows.places
       .filter(row => row.licensing_classification !== 'osm_only_odbl_provisional')
@@ -252,7 +325,7 @@ export async function prepareMigrationPrefix0111(input: Input): Promise<Migratio
     }
     await input.connection.execute(
       'INSERT INTO listings (id, ownerId, action, propertyType, title, description, address, latitude, longitude, city, suburb, province, slug, canonical_place_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [LISTING_ID, BASE_USER_ID, 'sell', 'house', 'Migration Rehearsal Listing 0111', 'Synthetic disposable migration rehearsal row for canonical Place retirement.', '1 Rehearsal Road', -26.2041, 28.0473, 'Johannesburg', 'Fordsburg', 'Gauteng', 'migration-rehearsal-listing-0111', RETIRED_PLACE_ID],
+      [LISTING_ID, BASE_USER_ID, 'sell', 'house', 'Migration Rehearsal Listing 0111', 'Synthetic disposable migration rehearsal row for canonical Place retirement.', '1 Rehearsal Road', -26.2041, 28.0473, 'Johannesburg', 'Sandton', 'Gauteng', 'migration-rehearsal-listing-0111', PRODUCTION_LISTING_PLACE_ID],
     );
   });
   const after = await readCounts(input.connection);
@@ -261,7 +334,7 @@ export async function prepareMigrationPrefix0111(input: Input): Promise<Migratio
     'SELECT id, canonical_place_id FROM listings WHERE id = ?',
     [LISTING_ID],
   );
-  if (after.users !== 6 || after.listings !== 1 || after.developments !== 0 || after.leads !== 0 || after.places !== 16944 || after.nonOsmPlaces !== 16944 || after.osmOnlyPlaces !== 0 || after.unclassifiedPlaces !== 0 || listing.length !== 1 || String(listing[0]?.canonical_place_id) !== RETIRED_PLACE_ID)
+  if (after.users !== 6 || after.listings !== 1 || after.developments !== 0 || after.leads !== 0 || after.places !== 16944 || after.nonOsmPlaces !== 16944 || after.osmOnlyPlaces !== 0 || after.unclassifiedPlaces !== 0 || listing.length !== 1 || String(listing[0]?.canonical_place_id) !== PRODUCTION_LISTING_PLACE_ID)
     throw new Error('Migration prefix fixture refused: post-seed production-shape verification failed.');
   return {
     ...evidence,
@@ -287,7 +360,7 @@ export async function verifyMigrationPrefix0111(input: Input): Promise<Migration
     `SELECT id FROM users WHERE id IN (${[BASE_USER_ID, ...ADDITIONAL_USER_IDS].map(() => '?').join(',')}) ORDER BY id`,
     [BASE_USER_ID, ...ADDITIONAL_USER_IDS],
   );
-  if (counts.users !== 6 || counts.listings !== 1 || counts.developments !== 0 || counts.leads !== 0 || counts.places !== 16944 || counts.nonOsmPlaces !== 16944 || counts.osmOnlyPlaces !== 0 || counts.unclassifiedPlaces !== 0 || listing.length !== 1 || String(listing[0]?.canonical_place_id) !== RETIRED_PLACE_ID || userIds.length !== 6)
+  if (counts.users !== 6 || counts.listings !== 1 || counts.developments !== 0 || counts.leads !== 0 || counts.places !== 16944 || counts.nonOsmPlaces !== 16944 || counts.osmOnlyPlaces !== 0 || counts.unclassifiedPlaces !== 0 || listing.length !== 1 || String(listing[0]?.canonical_place_id) !== PRODUCTION_LISTING_PLACE_ID || userIds.length !== 6)
     throw new Error('Migration prefix fixture verification refused: seeded production shape changed before Place retirement.');
   return {
     ...evidence,
