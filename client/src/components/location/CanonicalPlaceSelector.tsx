@@ -1,10 +1,6 @@
 import { useEffect, useId, useState } from 'react';
 import { trpc } from '@/lib/trpc';
-import {
-  isCanonicalPlaceId,
-  normalizePlaceQuery,
-  type PlaceSearchScope,
-} from '@shared/placeAuthority';
+import { isCanonicalPlaceId, normalizePlaceQuery, type PlaceSearchScope } from '@shared/placeAuthority';
 
 export interface CanonicalPlaceSelection {
   canonicalPlaceId: string;
@@ -39,6 +35,40 @@ export interface CanonicalPlaceDiscovery {
 }
 
 const factualTypeLabel = (type: string) => type.replace(/_/g, ' ');
+
+export interface CanonicalPlaceDisplayOption {
+  option: CanonicalPlaceOption;
+  displayLabel: string;
+}
+
+function canonicalPlaceBaseLabel(option: CanonicalPlaceOption): string {
+  return [
+    option.preferredPublicLabel,
+    factualTypeLabel(option.placeType),
+    option.context.administrativeContext,
+    option.isAliasMatch ? `Also known as ${option.matchedName}` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+}
+
+/**
+ * Keep only unique displayed labels. An unresolved collision group is hidden
+ * as a whole; Place IDs remain internal identity and are never labels.
+ */
+export function buildCanonicalPlaceDisplayOptions(
+  options: CanonicalPlaceOption[],
+): CanonicalPlaceDisplayOption[] {
+  const groups = new Map<string, CanonicalPlaceOption[]>();
+  for (const option of options) {
+    const label = canonicalPlaceBaseLabel(option);
+    groups.set(label, [...(groups.get(label) ?? []), option]);
+  }
+
+  return [...groups.entries()]
+    .filter(([, group]) => group.length === 1)
+    .map(([displayLabel, [option]]) => ({ option, displayLabel }));
+}
 
 /**
  * Display and explicit selection only. A name match never assigns identity.
@@ -81,7 +111,7 @@ export function CanonicalPlaceSelectorView({
   const [active, setActive] = useState(-1);
   const normalized = normalizePlaceQuery(query);
   const current = Boolean(normalized && discovery?.query === normalized && !pending && !error);
-  const options = current
+  const eligibleOptions = current
     ? discovery!.results.filter(
         candidate =>
           candidate.searchEligible &&
@@ -90,9 +120,12 @@ export function CanonicalPlaceSelectorView({
           candidate.searchScope !== null,
       )
     : [];
+  const options = buildCanonicalPlaceDisplayOptions(eligibleOptions);
+  const unresolvedCollisionCount = eligibleOptions.length - options.length;
   const choose = (index: number) => {
-    const option = options[index];
-    if (!option || !current) return;
+    const displayOption = options[index];
+    if (!displayOption || !current) return;
+    const { option } = displayOption;
     const selection = {
       canonicalPlaceId: option.placeId,
       label: option.preferredPublicLabel!,
@@ -115,15 +148,17 @@ export function CanonicalPlaceSelectorView({
         : 'Location search is unavailable. Try again; your address details are preserved.'
       : pending && normalized
         ? 'Searching locations…'
-        : current && !options.length
-          ? purpose === 'search'
-            ? 'No approved location found. Try another name.'
-            : 'No approved location found. Try another name. You can save an unfinished draft.'
-          : current && discovery?.outcome === 'ambiguous'
-            ? 'Several locations match. Select the one you mean.'
-            : options.length
-              ? 'Select a location from the results.'
-              : 'Type a city, town, suburb or locality.';
+        : current && unresolvedCollisionCount > 0
+          ? 'Some matching places have the same label and are hidden. Choose a nearby larger place.'
+          : current && !options.length
+            ? purpose === 'search'
+              ? 'No approved location found. Try another name.'
+              : 'No approved location found. Try another name. You can save an unfinished draft.'
+            : current && discovery?.outcome === 'ambiguous'
+              ? 'Several locations match. Select the one you mean.'
+              : options.length
+                ? 'Select a location from the results.'
+                : 'Type a city, town, suburb or locality.';
 
   return (
     <div className="space-y-2">
@@ -202,12 +237,12 @@ export function CanonicalPlaceSelectorView({
           aria-label="Matching locations"
           className="rounded-md border bg-background"
         >
-          {options.map((option, index) => (
+          {options.map(({ option, displayLabel }, index) => (
             <li key={option.placeId} role="presentation">
               <button
                 type="button"
                 role="option"
-                aria-label={`${option.preferredPublicLabel} ${factualTypeLabel(option.placeType)}${option.context.administrativeContext ? ` · ${option.context.administrativeContext}` : ''}${option.isAliasMatch ? ` · Also known as ${option.matchedName}` : ''}`}
+                aria-label={displayLabel}
                 id={`${resultsId}-${index}`}
                 tabIndex={-1}
                 aria-selected={active === index}
