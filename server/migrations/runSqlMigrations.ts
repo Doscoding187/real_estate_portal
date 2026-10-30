@@ -14,6 +14,7 @@ import {
   type AuthoritySqlConnection,
 } from '../_core/databaseAuthority/connectionAuthority';
 import { resolveDatabaseAuthority } from '../_core/databaseAuthority/context';
+import { assertRehearsalMigrationScope } from '../_core/databaseAuthority/rehearsalAuthority';
 import type { ResolvedDatabaseAuthority } from '../_core/databaseAuthority/types';
 import { buildMysqlConnectionSecurityConfig } from '../_core/databaseTls';
 import {
@@ -783,6 +784,13 @@ export async function runSqlMigrations(options: SqlMigrationOptions = {}) {
   if (authority.context.operation !== operation) {
     throw new Error('Migration runner refused: resolved operation does not match runner mode.');
   }
+  assertRehearsalMigrationScope({
+    context: authority.context,
+    mode,
+    acceptedOldHead: options.acceptedOldHead,
+    expectedNewHead: options.expectedNewHead,
+    ancestorHead: options.ancestorHead,
+  });
   if (authority.context.provider !== 'mysql' || authority.context.dialect !== 'mysql') {
     throw new Error('Migration runner refused: only the canonical MySQL provider is supported.');
   }

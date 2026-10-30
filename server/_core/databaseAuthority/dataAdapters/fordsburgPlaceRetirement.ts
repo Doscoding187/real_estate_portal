@@ -9,6 +9,7 @@ import type { ResolvedDatabaseAuthority } from '../types';
 import {
   queryRows,
   requireAcceptedMigrationHead,
+  isDisposableRehearsalReferenceTarget,
   requireReferenceAdapterTarget,
   requireReleaseReferenceTarget,
   stableDigest,
@@ -298,10 +299,23 @@ export async function retireFordsburgDuplicate(input: Input) {
   ]);
   const operation = input.decision.operation;
   if (isLocalSeed(input)) requireReferenceAdapterTarget(input.authority);
-  else if (operation === 'release-reference-plan' || operation === 'release-reference-apply' || operation === 'release-reference-verify') {
-    const target = requireReleaseReferenceTarget(input.authority);
-    if (target.targetFingerprintHash !== B08_AZURE_TARGET_FINGERPRINT_HASH)
-      throw new Error('Fordsburg retirement refused: only the governed Azure release target is admitted.');
+  else if (
+    operation === 'release-reference-plan' ||
+    operation === 'release-reference-apply' ||
+    operation === 'release-reference-verify'
+  ) {
+    const target = requireReleaseReferenceTarget(
+      input.authority,
+      input.decision,
+      'fordsburg-retirement',
+    );
+    if (
+      target.targetFingerprintHash !== B08_AZURE_TARGET_FINGERPRINT_HASH &&
+      !isDisposableRehearsalReferenceTarget(input.authority)
+    )
+      throw new Error(
+        'Fordsburg retirement refused: only the governed Azure release target is admitted.',
+      );
   } else if (input.authority.context.targetClass !== 'disposable-worktree') {
     throw new Error('Fordsburg retirement refused: verification target is not disposable.');
   }

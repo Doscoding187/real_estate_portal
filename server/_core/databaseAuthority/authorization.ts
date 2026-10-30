@@ -229,7 +229,12 @@ export function authorizeDatabaseOperation(
     context.targetClass === 'disposable-rehearsal' ||
     context.operation === 'rehearsal-regression'
   ) {
-    assertRehearsalAuthorization(context, input.approval?.reference);
+    assertRehearsalAuthorization(
+      context,
+      context.operation === 'rehearsal-regression'
+        ? input.approval?.reference
+        : input.approval,
+    );
   }
   const policy = input.policy ?? loadDatabaseOperationPolicy(input.root ?? context.repository.root);
   const rule = policy.operations[context.operation];

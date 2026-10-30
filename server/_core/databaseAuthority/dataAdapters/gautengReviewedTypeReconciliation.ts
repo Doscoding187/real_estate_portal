@@ -12,6 +12,7 @@ import type { ResolvedDatabaseAuthority } from '../types';
 import {
   queryRows,
   requireAcceptedMigrationHead,
+  isDisposableRehearsalReferenceTarget,
   requireReferenceAdapterTarget,
   requireReleaseReferenceTarget,
   stableDigest,
@@ -335,9 +336,18 @@ export async function reconcileGautengReviewedTypes(input: Input) {
   const operation = input.decision.operation;
   if (isLocalApply(input)) requireReferenceAdapterTarget(input.authority);
   else if (operation.startsWith('release-reference-')) {
-    const target = requireReleaseReferenceTarget(input.authority);
-    if (target.targetFingerprintHash !== B08_AZURE_TARGET_FINGERPRINT_HASH)
-      throw new Error('Gauteng type reconciliation refused: only the governed Azure target is admitted.');
+    const target = requireReleaseReferenceTarget(
+      input.authority,
+      input.decision,
+      'gauteng-type-reconciliation',
+    );
+    if (
+      target.targetFingerprintHash !== B08_AZURE_TARGET_FINGERPRINT_HASH &&
+      !isDisposableRehearsalReferenceTarget(input.authority)
+    )
+      throw new Error(
+        'Gauteng type reconciliation refused: only the governed Azure target is admitted.',
+      );
   } else if (input.authority.context.targetClass !== 'disposable-worktree') {
     throw new Error('Gauteng type reconciliation refused: verification target is not disposable.');
   }

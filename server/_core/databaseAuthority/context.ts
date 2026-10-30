@@ -216,6 +216,21 @@ export function resolveDatabaseAuthority(input: {
 }): ResolvedDatabaseAuthority {
   const cwd = input.cwd ?? process.cwd();
   const processEnv = input.processEnv ?? process.env;
+  const rehearsalResourceId = processEnv.DATABASE_AUTHORITY_REHEARSAL_RESOURCE_ID?.trim();
+  const rehearsalPurpose = processEnv.DATABASE_AUTHORITY_REHEARSAL_PURPOSE?.trim();
+  if (Boolean(rehearsalResourceId) !== Boolean(rehearsalPurpose)) {
+    throw new Error('Database context resolution refused: rehearsal binding is incomplete.');
+  }
+  const rehearsal = input.rehearsal ?? (rehearsalResourceId && rehearsalPurpose
+    ? { resourceId: rehearsalResourceId, purpose: rehearsalPurpose }
+    : undefined);
+  if (
+    input.rehearsal &&
+    ((rehearsalResourceId && rehearsalResourceId !== input.rehearsal.resourceId) ||
+      (rehearsalPurpose && rehearsalPurpose !== input.rehearsal.purpose))
+  ) {
+    throw new Error('Database context resolution refused: rehearsal bindings disagree.');
+  }
   const identity = input.gitIdentity ?? readRuntimeWorktreeIdentity(cwd, { env: processEnv });
   const environment = resolveDatabaseEnvironment({
     cwd,
@@ -254,6 +269,11 @@ export function resolveDatabaseAuthority(input: {
   const resolvedPort = resolvedTargetIdentity.port;
   const resolvedDatabaseName = resolvedTargetIdentity.databaseName;
   const resolvedTargetFingerprint = resolvedTargetIdentity.fingerprint;
+  if (rehearsal && !isRegisteredRehearsal(resolvedTargetFingerprint, rehearsal)) {
+    throw new Error(
+      'Database context resolution refused: rehearsal binding applies only to its exact registered server and database.',
+    );
+  }
   const resolvedLocal = LOCAL_HOSTS.has(resolvedHost);
   const expectedTestDatabase = `listify_test_${identity.ownershipKey.slice(0, 12)}`;
   const isolatedCiTestTarget =
@@ -287,7 +307,7 @@ export function resolveDatabaseAuthority(input: {
     }
   } else if (!resolvedLocal) {
     const registeredClass = REGISTERED_PROTECTED_REMOTE_TARGETS[resolvedTargetFingerprint];
-    if (isRegisteredRehearsal(resolvedTargetFingerprint, input.rehearsal)) {
+    if (isRegisteredRehearsal(resolvedTargetFingerprint, rehearsal)) {
       targetClass = 'disposable-rehearsal';
     } else if (registeredClass) {
       targetClass = registeredClass;
@@ -368,7 +388,7 @@ export function resolveDatabaseAuthority(input: {
       : parsed.toString();
   const resolvedAt = input.resolvedAt ?? new Date();
   const context: ResolvedDatabaseContext = deepFreeze({
-    rehearsal: targetClass === 'disposable-rehearsal' ? input.rehearsal : undefined,
+    rehearsal: targetClass === 'disposable-rehearsal' ? rehearsal : undefined,
     contextVersion: 1,
     contextId: randomUUID(),
     correlationId:

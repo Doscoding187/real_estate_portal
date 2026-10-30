@@ -33,6 +33,7 @@ import {
   protectedDatabaseApprovalFromEnvironment,
 } from '../server/_core/databaseAuthority/authorization';
 import { createAuthoritySqlConnection } from '../server/_core/databaseAuthority/connectionAuthority';
+import { assertRehearsalReferenceAdapter } from '../server/_core/databaseAuthority/rehearsalAuthority';
 import { provisionB08AzureInspectionIdentity } from '../server/_core/databaseAuthority/b08AzureInspectionIdentity';
 import {
   provisionB08AzureMigrationIdentity,
@@ -618,6 +619,11 @@ async function run(command: Command): Promise<void> {
       throw new Error('Only Place release inspection is supported.');
     const authority = authorityFor('release-reference-plan', 'read-only');
     const decision = authorizationFor(authority);
+    assertRehearsalReferenceAdapter({
+      context: authority.context,
+      decision,
+      adapter: 'places-inspection',
+    });
     print(
       await completePlaceReleaseCommand({
         command,
@@ -645,6 +651,7 @@ async function run(command: Command): Promise<void> {
         : 'release-reference-verify';
     const authority = authorityFor(operation, isApply ? 'migration' : 'read-only');
     const decision = authorizationFor(authority, option('ack'));
+    assertRehearsalReferenceAdapter({ context: authority.context, decision, adapter });
     if (adapter === 'places') {
       print(
         await completePlaceReleaseCommand({
@@ -1034,6 +1041,9 @@ async function run(command: Command): Promise<void> {
     return;
   }
 
+  if (command !== 'schema:check') {
+    throw new Error(`Database diagnostics refused for unsupported command ${command}.`);
+  }
   const authority = authorityFor('diagnostics');
   const decision = authorizationFor(authority);
   const connection = await createAuthoritySqlConnection(authority, decision);

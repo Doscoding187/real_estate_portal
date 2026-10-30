@@ -13,6 +13,37 @@ The founder supplied these observations from Azure Cloud Shell. The agent did no
 - The 48 reviewed Gauteng Places have old type/scope values 48/48 and old evidence-note hashes 48/48. The corrected committed Query 3 returned **Empty set**; the first 47/48 result was the Hiltonia hash typo. Go-checks must run from the committed SQL file below, never a retyped copy.
 - Azure reports daily full backups, 14-day retention, and an earliest available restore point of 2026-10-15. Three Railway-related firewall rules exist on the Azure server; names, ranges, and current use were not inspected here.
 
+## First restore `.b` — result unverified, 2026-10-30
+
+An earlier working-draft sentence claimed that `.b` applied migrations 0112–0197 and passed schema congruency with 40/40 CHECK constraints enforced. No command output or result artifact supporting that claim is preserved in the repository. The separate `.b` restore record says the authority preflight stopped before a database connection. Treat the `.b` migration and schema-congruency claim as **unverified**, not as release evidence. No final Place counts were verified.
+
+## Restore-size behavior — verified 2026-10-30
+
+- The `.c` restore with `--storage-size` omitted completed at the source size, 20 GiB. The first `--no-wait` command returned exit 0 with a `ResourceNotFound` warning; the resource appeared later as `Ready`. This warning was premature and misleading, not proof that restore failed. Do not use `--no-wait`; wait for the restore command and verify the named resource.
+- The current Azure CLI [`flexible-server restore` reference](https://learn.microsoft.com/en-us/cli/azure/mysql/flexible-server?view=azure-cli-latest) reports a 32-GiB minimum for an explicit `--storage-size`; omitting the option preserved the 20-GiB source size in this rehearsal. Microsoft's [Flexible Server service-tier documentation](https://learn.microsoft.com/en-us/azure/mysql/flexible-server/concepts-service-tiers-storage) lists 20 GiB as the minimum for Burstable and General Purpose.
+- Exact successful `.b` restore command, with the 32-GiB override and waited result:
+
+```sh
+az mysql flexible-server restore --subscription 384dc69e-9e22-419f-9e3d-83fbac4f58d0 --resource-group rg-property-listify --name pl-dress-rehearsal-20261030b --source-server /subscriptions/384dc69e-9e22-419f-9e3d-83fbac4f58d0/resourceGroups/rg-property-listify/providers/Microsoft.DBforMySQL/flexibleServers/propertylistify-mysql --restore-time 2026-10-29T14:36:03.249897+00:00 --faster-restore Disabled --tier Burstable --sku-name Standard_B1ms --storage-size 32 --storage-auto-grow Enabled --public-access Enabled --zone 2 --yes --only-show-errors --query '{name:name,location:location,fqdn:fullyQualifiedDomainName,sku:sku.name,tier:sku.tier,storage:storage.storageSizeGb,state:state}' --output json
+```
+
+- For a production rollback restore, preserve the source's 20-GiB size by omitting `--storage-size`, wait for completion, and verify the new server before proceeding. Do not resize production or silently switch to 32 GiB.
+
+## Second restore — stopped before database connection, 2026-10-30
+
+- Restored the latest automatic full backup `daily-20261029t143600-b1759c5b-c96f-4cc8-85fc-8d66ab21425f` to `pl-dress-rehearsal-20261030b`; Azure reported `Ready`, hostname `pl-dress-rehearsal-20261030b.mysql.database.azure.com`, `Standard_B1ms` / Burstable, South Africa North, 32 GiB.
+- Azure inherited four firewall rules (three Railway IP rules and one older client IP rule). All four deletions succeeded; the final rule list was empty. No founder `/32` rule was added because the migration authority preflight blocked the sequence before connection.
+- Code review showed the current authority guard allows `disposable-rehearsal` only for `release-reference-*`; `migration-plan` and `migration-apply` are excluded by both the rehearsal authorization branch and operation policy. No new Database Authority registration was activated; no SQL connection, migration, Fordsburg retirement, Gauteng reconciliation, Places load, or listing/reference mutation occurred. Do not retry until that shared-tooling gate has separate approval and passes its tests.
+- Deleted only `pl-dress-rehearsal-20261030b`; Azure `show` returned `ResourceNotFound` and the server resource list returned `[]`. The production server was not changed. Estimated cost is about **US$0.03** using a one-hour-equivalent calculation at observed retail rates; below the US$0.50 cap. The final Place counts remain unverified.
+
+## Third restore `.c` — migrations verified; schema and data checks pending, 2026-10-30
+
+- Azure now reports `pl-dress-rehearsal-20261030c` `Ready` at `pl-dress-rehearsal-20261030c.mysql.database.azure.com`, `Standard_B1ms` / Burstable, South Africa North, 20 GiB. The later 32-GiB retry returned `Specified server name is already used`; no further restore was attempted.
+- The inherited three Railway-named firewall rules and one old client rule were removed from `.c` only. The list was empty before the fresh egress check; the final list contains only `Founder-Operator-192-143-79-84-20261030c` for `192.143.79.84/32`. No Railway rule or other server was changed.
+- The former founder registration was bound to `.c`, the `propertylistify_database` database, the 0111-to-0197 release, and the three named reference adapters. It expired 2026-10-30 20:22:32 UTC and is now marked revoked in this draft. The proposed diagnostics replacement is not active; the password variable was previously confirmed present without displaying its value, and the password was not printed.
+- After founder reset confirmation, the governed release plan matched 0111→0197 (86 migrations; digest `be3a58f9e8def3706d5ea3da9a23ab9a4fde92e6326e1b0d652e122446627eee`). The apply completed successfully in 53.344 seconds, 2026-10-30 08:38:40.960–08:39:34.304 UTC; the migration head is 0197. A fresh release plan reported zero pending migrations. These migration results are verified; the fresh plan does not verify physical schema congruency.
+- The separate `db:schema:congruency` check was not run. The replacement diagnostics registration remains revoked pending founder activation. No reference-data step ran; `17,663 / 16,943 / 720 / 0` remains unverified.
+
 ## Operating rules
 
 This is a coordinated outage. Keep the current maintenance experience and paid intake closed until the release lead says otherwise. The production maintenance experience is client-side; the parked edge 503/noindex headers are not a writer lock. Drain every Railway API and writer service before changing Azure data. Do not infer Railway service names from the three Azure firewall rules.
@@ -89,20 +120,22 @@ pnpm db:release:apply -- --accepted-old-head=0111_properties_canonical_place_ref
 
 **Rollback:** remain drained and in maintenance; restore the verified named backup to a new server, verify its head/data, and reconnect the last-known-good API built for that restored schema. No blind retry.
 
-### 5. Verify the migrated schema
+### 5. Production go-check: schema congruency and migration ledger
 
 **Owner:** DB operator and reviewer.
+
+**Target:** the founder-approved production Azure MySQL fingerprint, using the protected read-only credential and exact diagnostics approval in the ephemeral operator environment.
 
 **Command:**
 
 ```sh
-pnpm db:schema:congruency -- --credential=read-only
-pnpm db:release:plan -- --accepted-old-head=0197_drop_seller_prospects_province.sql --expected-new-head=0197_drop_seller_prospects_province.sql
+NODE_ENV=production APP_ENV=production DATABASE_CREDENTIAL_CLASS=read-only pnpm db:schema:congruency -- --credential=read-only
+NODE_ENV=production APP_ENV=production pnpm db:release:plan -- --accepted-old-head=0197_drop_seller_prospects_province.sql --expected-new-head=0197_drop_seller_prospects_province.sql
 ```
 
-**Expected:** canonical MySQL schema congruency passes; migration plan has no pending migrations and no incomplete attempts.
+**Expected:** the diagnostics result identifies `targetClass=production`, reports `congruent=true`, identical desired/actual digests, and `differences=[]`; CHECK enforcement reports `total=40`, `enforced=40`, `allEnforced=true`, and `unenforced=[]`. The fresh migration plan reports head 0197, `pending=[]`, and no incomplete attempts. These checks are separate: a no-pending plan does not prove schema congruency.
 
-**Stop:** any schema difference, pending migration, changed checksum, or attempt row needing recovery.
+**Stop:** target/approval mismatch, any schema difference, CHECK count/enforcement mismatch, pending migration, changed checksum, or attempt row needing recovery.
 
 **Rollback:** stay drained/in maintenance and restore the named backup with its compatible application. Do not edit schema by hand.
 

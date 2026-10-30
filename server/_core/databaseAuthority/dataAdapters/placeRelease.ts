@@ -14,6 +14,7 @@ import {
   queryRows,
   requireAcceptedMigrationHead,
   requireReleaseReferenceTarget,
+  isDisposableRehearsalReferenceTarget,
   requireReferenceAdapterTarget,
   stableDigest,
 } from './common';
@@ -363,8 +364,11 @@ export async function releaseCanonicalPlaces(input: PlaceReleaseInput) {
     'release-reference-apply',
     'release-reference-verify',
   ]);
-  const target = requireReleaseReferenceTarget(input.authority);
-  if (target.targetFingerprintHash !== B08_AZURE_TARGET_FINGERPRINT_HASH)
+  const target = requireReleaseReferenceTarget(input.authority, input.decision, 'places');
+  if (
+    target.targetFingerprintHash !== B08_AZURE_TARGET_FINGERPRINT_HASH &&
+    !isDisposableRehearsalReferenceTarget(input.authority)
+  )
     throw new Error(
       'Place release refused: only the governed Azure production target is admitted.',
     );

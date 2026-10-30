@@ -1,39 +1,58 @@
 {
   "status": "revoked",
-  "approvedBy": "Edward",
-  "createdAt": "2026-09-28T00:00:00Z",
-  "expiresAt": "2026-10-05T00:00:00Z",
-  "purpose": "AZURE MYSQL 8.4 RESTORED-COPY REHEARSAL",
-  "sourceCommit": "a5fa6256f3579b16223586fa579f4ecd28c59ad6",
+  "approvedBy": "Founder",
+  "createdAt": "2026-10-30T08:22:32Z",
+  "expiresAt": "2026-10-30T20:22:32Z",
+  "purpose": "FOUNDER-APPROVED PL DRESS REHEARSAL 20261030C",
+  "sourceCommit": "ca825f4c4175648098b766b1ab99111e0cf236c1",
   "subscriptionId": "384dc69e-9e22-419f-9e3d-83fbac4f58d0",
   "resourceGroup": "rg-property-listify",
-  "serverName": "pl-azure84-rehearsal-20260928",
+  "serverName": "pl-dress-rehearsal-20261030c",
   "database": "propertylistify_database",
-  "hostname": "pl-azure84-rehearsal-20260928.mysql.database.azure.com",
+  "hostname": "pl-dress-rehearsal-20261030c.mysql.database.azure.com",
   "provider": "Microsoft.DBforMySQL/flexibleServers",
   "engineFamily": "MySQL",
-  "serverCreatedAt": "2026-09-28T11:24:56.687Z",
-  "expectedHead": "0094_content_topics_primary_key.sql",
-  "manifestDigest": "93d871e6f8760477f460b8821685d71d212374eb86ddd53bc6e2ccfc30608efc",
-  "modelDigest": "a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9",
+  "serverCreatedAt": "2026-10-30T03:01:53.694097+00:00",
+  "runtimeMode": "development",
+  "targetFingerprint": "mysql://pl-dress-rehearsal-20261030c.mysql.database.azure.com:3306/propertylistify_database",
+  "targetFingerprintHash": "4d611c602fc19bd48df616120cfb78fea5de1a14049866e5e458da60f51c7fe4",
+  "manifestDigest": "4995e36715e60856bb87d925dd0eff03bcdccfcc50e1180648684c3bd2787e41",
+  "modelDigest": "869f441f3131b0f1bf4b56d416d049292bb48204918f8172d3699625c3208da7",
+  "expectedOldHead": "0111_properties_canonical_place_reference_fk.sql",
+  "expectedNewHead": "0197_drop_seller_prospects_province.sql",
+  "allowedOperations": [
+    "release-plan",
+    "release-apply",
+    "release-reference-plan",
+    "release-reference-apply",
+    "release-reference-verify"
+  ],
+  "credentialClassesByOperation": {
+    "release-plan": ["read-only"],
+    "release-apply": ["migration"],
+    "release-reference-plan": ["read-only"],
+    "release-reference-apply": ["migration"],
+    "release-reference-verify": ["read-only", "migration"]
+  },
+  "allowedReferenceAdapters": [
+    "fordsburg-retirement",
+    "gauteng-type-reconciliation",
+    "places"
+  ],
+  "deniedTargetFingerprints": [
+    "mysql://propertylistify-mysql.mysql.database.azure.com:3306/propertylistify_database"
+  ],
   "allowed": [
-    "rehearsal-regression:catalogued-synthetic-DML",
-    "transactions-rollback-savepoints",
-    "row-locking",
-    "constraint-rejection",
-    "concurrency",
-    "catalogued-read-probes"
+    "release-plan:0111-to-0197",
+    "release-apply:0111-to-0197",
+    "release-reference:fordsburg-retirement",
+    "release-reference:gauteng-type-reconciliation",
+    "release-reference:places"
   ],
   "denied": [
-    "generic-test-fixture",
-    "runtime-connect",
-    "migration",
-    "DDL",
-    "DROP",
-    "TRUNCATE",
-    "reference-seed",
-    "ledger-edit",
-    "server-settings"
+    "production resource propertylistify-mysql (independently denied by the guard)",
+    "all Railway hosts (independently denied by the guard)",
+    "unlisted migration scope, reference adapter, and generic release operation"
   ],
-  "reviewTrigger": "Expire at expiresAt; revoke on rehearsal completion or resource recreation; renew only by reviewed principal decision."
+  "reviewTrigger": "Expire at expiresAt; revoke immediately after the rehearsal and before deleting the exact target."
 }
