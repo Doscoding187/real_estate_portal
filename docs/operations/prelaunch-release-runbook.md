@@ -8,6 +8,8 @@ Before every rehearsal or release command (including restore, migration plan/app
 
 The read-only bucket checks are in [place-reference-bucket-digests.sql](place-reference-bucket-digests.sql); expected historical values are in [place-reference-bucket-digests-v0.1-non-osm.csv](place-reference-bucket-digests-v0.1-non-osm.csv).
 
+Compare the five pasted MySQL result tables with `python3 scripts/comparePlaceReferenceBucketDigests.py <output.txt>`. For a differing bucket, the SELECT-only per-row hash drilldowns are in [place-reference-bucket-row-drilldown.sql](place-reference-bucket-row-drilldown.sql); run only the matching table query after replacing `__BUCKET__`.
+
 ## Founder-verified production baseline — read-only, 2026-10-30
 
 The founder supplied these observations from Azure Cloud Shell. The agent did not connect to Azure or read/write production.
