@@ -2,6 +2,21 @@
 
 **Status:** founder-editable draft, 2026-10-31. Local repo only; no cloud/production access, no merge, and no package, Place, eligibility, or runtime change. **Reference base:** release RC `68465f0e83c91fc826ea51da776be365a7cda5b4`.
 
+## Expanded discovery packet
+
+The founder-facing and infrastructure review now also includes:
+
+- [Release status and handoff locations](release-status-and-handoff-locations-2026-10-31.md), a read-only PR/CI snapshot.
+- [Foundation, rendering and launch plan](foundation-rendering-infrastructure-launch-plan-2026-10-31.md), covering hosting alternatives, Railway coupling, query-path cost, gate crosswalk and uncertainties.
+- [Infrastructure coupling and latency appendix](infrastructure-coupling-and-latency-appendix-2026-10-31.md), with the Railway-specific dependency list, replacement-day estimates and code-derived serial query counts by endpoint.
+- [Launch gate and switchability crosswalk](launch-gate-and-switchability-crosswalk-2026-10-31.md), with B08–B18 status, uncovered gates and current engine switches/minimum usable depth.
+- [Public page rendering inventory](public-page-rendering-inventory-2026-10-31.md) for titles, descriptions, canonical URLs, OG tags, JSON-LD, visible content and sitemap coverage.
+- [62-row Place founder decision sheet](gauteng-place-founder-decision-sheet-2026-10-31.csv). It fills existing Place IDs, current/proposed URLs and non-Google source records/labels; name agreement is distinguished from unreviewed type/parent agreement. The 11 records for top launch anchors are marked priority review, not approved; founder map-check, approval and date fields remain blank. Ekurhuleni’s URL is a draft proposal and Rosebank’s is withheld pending route-context review.
+- [Eight priority Search Area option sheet](gauteng-priority-search-area-member-options-2026-10-31.csv). The 375 rows are a mix of research candidates and factual-child option pools, not loaded memberships.
+- [Single frozen Places package and separate Search Area step](single-frozen-place-package-and-area-step-2026-10-31.md), including the minimum rehearsal requirement.
+
+These artifacts are based on committed repository data, not a production database read. The current national URL projection shows 0 of 62 founder-sheet Places as publication-eligible; do not infer an eligibility change from these review files.
+
 ## Current Place records
 
 These are direct facts from the Gauteng v0.3 admission package and national URL projection. “Children” means direct `settlement_within` edges, not all descendants. All 13 records are provisional, search-eligible, publication-ineligible. The current administrative parents below are municipalities; the 13 have no settlement parent. The two `Midrand` identities are distinct.
