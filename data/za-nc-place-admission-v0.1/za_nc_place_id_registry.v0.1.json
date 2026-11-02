@@ -1559,7 +1559,7 @@
   "provenance": {
     "admission_version": "za-nc-place-admission-v0.1",
     "territory_id": "za-nc",
-    "source_snapshot_id": "df65381a2075ec898db4adf3fca9d341db6bcf7387fcde6afb7215aa9f6a8584",
+    "source_snapshot_id": "a7508ffee794867a40c80380156e201a2be320635c40564c6e1aa088cc02df21",
     "note": "Assigned canonical Place identities. Reused verbatim on every regeneration. Never remap an id."
   }
 }

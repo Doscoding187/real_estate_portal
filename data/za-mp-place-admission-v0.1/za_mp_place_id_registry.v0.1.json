@@ -1052,7 +1052,7 @@
   "provenance": {
     "admission_version": "za-mp-place-admission-v0.1",
     "territory_id": "za-mp",
-    "source_snapshot_id": "8ff5c0e94ff1f09c798018974baeff7e74333e0888383e2d875281a0d75b950b",
+    "source_snapshot_id": "ef4b79f10d11e30cecb01f4011c1c823180d771725f523ab3deda71a4cf2ad13",
     "note": "Assigned canonical Place identities. Reused verbatim on every regeneration. Never remap an id."
   }
 }

@@ -8,53 +8,58 @@
     "territory_id": "za-gp",
     "display_name": "Gauteng",
     "admission_registry_path": "data/place-admission-territories.v0.2/territory-registry.v0.2.json",
-    "admission_registry_sha256": "4d732e3f595f3f524444f5177a717fac84116a8c55963370e34a7f6f7178d03f"
+    "admission_registry_sha256": "9226b1102d54046a2724cafe89f73f24d2c33a8b66f7e49744725dc9bda2c31b"
   },
   "generated_from": {
-    "source_authority_version": "gauteng-source-authority-v0.4",
-    "source_snapshot_id": "14666e91befd11e1aea6b220c520678fbafbfc2c12383392e29c9e727fa0a06e",
-    "source_manifest_path": "data/gauteng-source-authority-v0.4/gauteng_source_manifest_v0.4.json",
-    "source_manifest_sha256": "76e06623c7c1d364fe7cf068ec55b476f2006a4041a308043914f584167402ef",
+    "source_authority_version": "gauteng-source-authority-v0.5",
+    "source_snapshot_id": "3ec5d51fb09c67ffed35aeecc11805df922bd2852e1eb63b9745dbfd43505eb5",
+    "source_manifest_path": "data/gauteng-source-authority-v0.5/gauteng_source_manifest_v0.5.json",
+    "source_manifest_sha256": "f8e6d4eaee294db6f2c75e25ae3f5f4d8879f025dc4b2e1f3f3d2b31f3832789",
     "compact_artifacts": [
       {
-        "path": "data/gauteng-source-authority-v0.4/gauteng_candidate_dispositions_v0.2.jsonl",
-        "sha256": "d5ad9aa4823407f52fe9eed27c056aeca4e21f910138ea24681e2673ffab9386",
-        "size_bytes": 14338434
+        "path": "data/gauteng-source-authority-v0.5/gauteng_candidate_dispositions_v0.2.jsonl",
+        "sha256": "713950773b1ba633b40ec07bce84a601ced534059d12195ba24caa9bce0fc7d2",
+        "size_bytes": 14339324
       },
       {
-        "path": "data/gauteng-source-authority-v0.4/gauteng_factual_canonical_geography_v0.2.jsonl",
-        "sha256": "f12b2453f70f3a7a3d8bef6167fadb5630caf69e645f65c6db65b40e9dbb2c9a",
-        "size_bytes": 7084624
+        "path": "data/gauteng-source-authority-v0.5/gauteng_factual_canonical_geography_v0.2.jsonl",
+        "sha256": "a96980f0cb60bb57f70cc97afc615d27471cc32f2b376f3116283f6f1ef21e77",
+        "size_bytes": 7088564
       },
       {
-        "path": "data/gauteng-source-authority-v0.4/gauteng_factual_canonical_names_v0.2.jsonl",
-        "sha256": "20422098b07a82ccaaa99ba7666e9307c5e52388491cba82a4050bc5e9b4c12b",
-        "size_bytes": 1211315
+        "path": "data/gauteng-source-authority-v0.5/gauteng_factual_canonical_names_v0.2.jsonl",
+        "sha256": "e3a0630bfd438ecef593bb6ecaeb70f699a9677f26f125659487326075b8da20",
+        "size_bytes": 1198097
       },
       {
-        "path": "data/gauteng-source-authority-v0.4/gauteng_fordsburg_identity_hold_decision_v0.1.json",
-        "sha256": "3e89b21d6f92cfbd3dc2f67c9152ea0dfa079ecb7717e61b60e8921599d4fec4",
-        "size_bytes": 3229
+        "path": "data/gauteng-source-authority-v0.5/gauteng_factual_canonical_source_links_v0.2.jsonl",
+        "sha256": "26af7e581c559deb50963e35ff06bbbdb8ea3424716d114a0f8847241fa4c09c",
+        "size_bytes": 3917091
       },
       {
-        "path": "data/gauteng-source-authority-v0.4/gauteng_factual_canonical_reviewed_identity_hold_v0.4.jsonl",
-        "sha256": "48258d8677cb56152a278e599f1e35cc903ffb3504be5a76db468bdd73dc6de7",
-        "size_bytes": 24321
+        "path": "data/gauteng-source-authority-v0.5/gauteng_factual_canonical_reviewed_type_corrections_v0.3.jsonl",
+        "sha256": "ca21b1f351bbf5169dd90f9ede0e099b4969f8778838bf4a32f849423065ada0",
+        "size_bytes": 18887
       },
       {
-        "path": "data/gauteng-source-authority-v0.4/gauteng_factual_canonical_reviewed_settlement_membership_v0.3.jsonl",
+        "path": "data/gauteng-source-authority-v0.5/gauteng_factual_canonical_reviewed_settlement_membership_v0.3.jsonl",
         "sha256": "8a4e9239a285602352ebb9b93c884ea78cd80884acc5cf048ca2d8c51c9ecdac",
         "size_bytes": 246649
       },
       {
-        "path": "data/gauteng-source-authority-v0.4/gauteng_factual_canonical_reviewed_type_corrections_v0.3.jsonl",
-        "sha256": "44b3610ffb9fc940ffa6cdcb4d87849a80c2aa0490e4d1619236ebad28b5d86e",
-        "size_bytes": 18233
+        "path": "data/gauteng-source-authority-v0.5/gauteng_fordsburg_identity_hold_decision_v0.1.json",
+        "sha256": "3e89b21d6f92cfbd3dc2f67c9152ea0dfa079ecb7717e61b60e8921599d4fec4",
+        "size_bytes": 3229
       },
       {
-        "path": "data/gauteng-source-authority-v0.4/gauteng_factual_canonical_source_links_v0.2.jsonl",
-        "sha256": "ca79b29d69544fc3d40fe99f49a5049ef370021cde1da42fb890ab7b724c26fb",
-        "size_bytes": 3915415
+        "path": "data/gauteng-source-authority-v0.5/gauteng_factual_canonical_reviewed_identity_hold_v0.4.jsonl",
+        "sha256": "48258d8677cb56152a278e599f1e35cc903ffb3504be5a76db468bdd73dc6de7",
+        "size_bytes": 24321
+      },
+      {
+        "path": "data/gauteng-source-authority-v0.5/gauteng_founder_geography_decisions_2026-11-02.json",
+        "sha256": "8625e35d4d4f648f2d27f132a81711024b8be1414f46ef643b2e2af33884f735",
+        "size_bytes": 3775
       }
     ],
     "comparison_baseline": {
@@ -87,8 +92,8 @@
     "source_geography_eligibility": "source-geography-eligibility-2026-10-14-v1",
     "reviewed_corrections": {
       "input": "territory-declared reviewed-correction source artifacts, digest-pinned by the source authority manifest",
-      "type_corrections_declared": 48,
-      "type_corrections_applied": 48,
+      "type_corrections_declared": 49,
+      "type_corrections_applied": 49,
       "settlement_membership_declared": 351,
       "settlement_membership_applied": 351,
       "settlement_types": "settlement_within",
@@ -96,34 +101,34 @@
     }
   },
   "counts": {
-    "source_identities": 1487,
-    "source_name_assertions": 2457,
-    "source_links": 2969,
+    "source_identities": 1488,
+    "source_name_assertions": 2441,
+    "source_links": 2970,
     "source_candidates": 4350,
-    "admitted_places": 1465,
+    "admitted_places": 1466,
     "merged_equivalence_groups": 22,
     "absorbed_source_identities": 22,
-    "single_identity_places": 1443,
+    "single_identity_places": 1444,
     "group_kinds": {
       "administrative_container": 31,
-      "single_identity": 1413,
+      "single_identity": 1414,
       "merged_same_referent": 21
     },
     "verification": {
       "provisional": 1376,
-      "verified": 89
+      "verified": 90
     },
     "licensing": {
       "mixed_odbl_supported": 472,
       "osm_only_odbl_provisional": 720,
-      "permissive_supported": 273
+      "permissive_supported": 274
     },
     "scope_establishment": {
-      "established": 1433,
+      "established": 1434,
       "not_established": 32,
       "by_scope": {
         "locality": {
-          "established": 1141,
+          "established": 1142,
           "not_established": 0
         },
         "metro_city": {
@@ -136,35 +141,36 @@
         }
       }
     },
-    "executable_places": 1433,
+    "executable_places": 1434,
     "executable_by_scope": {
-      "locality": 1141,
+      "locality": 1142,
       "metro_city": 291,
       "province": 1
     },
     "admitted_without_executable_scope": 32,
-    "names": 2474,
+    "names": 2458,
+    "google_maps_url_alias_assertions_excluded": 0,
     "name_roles": {
-      "preferred_public": 1465,
-      "common": 983,
+      "preferred_public": 1466,
+      "common": 965,
       "alternate_spelling": 18,
-      "historical": 8
+      "historical": 9
     },
-    "searchable_names": 1918,
-    "preferred_public_names": 1465,
-    "relationships": 1815,
+    "searchable_names": 1919,
+    "preferred_public_names": 1466,
+    "relationships": 1816,
     "relationship_types": {
-      "administratively_contains": 1464,
+      "administratively_contains": 1465,
       "settlement_within": 351
     },
-    "containment_parent_count": 1464,
+    "containment_parent_count": 1465,
     "evidence_rows": 4462,
-    "external_mappings": 2969,
+    "external_mappings": 2970,
     "disposition_ledger_rows": 4350,
     "dispositions": {
-      "quarantined_candidate": 2755,
+      "quarantined_candidate": 2754,
       "rejected_non_independent": 108,
-      "admitted_as_place_primary": 1465,
+      "admitted_as_place_primary": 1466,
       "admitted_merged_into_place": 22
     },
     "parent_evidence_inputs": 103,
@@ -206,8 +212,8 @@
   },
   "place_id_registry": {
     "path": "data/gauteng-place-admission-v0.3/gauteng_place_id_registry.v0.3.json",
-    "allocated_ids": 1466,
-    "allocation_sequence": 1466
+    "allocated_ids": 1467,
+    "allocation_sequence": 1467
   },
   "invariants_asserted": [
     "every source identity maps to exactly one admitted Place",

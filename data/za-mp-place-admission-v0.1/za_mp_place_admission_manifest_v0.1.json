@@ -7,32 +7,32 @@
   "territory": {
     "territory_id": "za-mp",
     "display_name": "Mpumalanga",
-    "admission_registry_path": "data/place-admission-territories.v0.1/territory-registry.v0.1.json",
-    "admission_registry_sha256": "739229dd26bcfd7d74c8f29d83421e1207354a74ecacaa6d8f2964c62c658be5"
+    "admission_registry_path": "data/place-admission-territories.v0.2/territory-registry.v0.2.json",
+    "admission_registry_sha256": "9226b1102d54046a2724cafe89f73f24d2c33a8b66f7e49744725dc9bda2c31b"
   },
   "generated_from": {
-    "source_authority_version": "za-mp-source-authority-v0.2",
-    "source_snapshot_id": "8ff5c0e94ff1f09c798018974baeff7e74333e0888383e2d875281a0d75b950b",
-    "source_manifest_path": "data/za-mp-source-authority-v0.2/za_mp_source_manifest_v0.2.json",
-    "source_manifest_sha256": "e1aceeb667cda374c7912ce0af6b1b6587ed1d7ab2b2ca2e6a78bb9c914d4d63",
+    "source_authority_version": "za-mp-source-authority-v0.3",
+    "source_snapshot_id": "ef4b79f10d11e30cecb01f4011c1c823180d771725f523ab3deda71a4cf2ad13",
+    "source_manifest_path": "data/za-mp-source-authority-v0.3/za_mp_source_manifest_v0.3.json",
+    "source_manifest_sha256": "8c8e033d2ecc1d6d1f09fa63467799befe3f8c59766fea021e745035693ae779",
     "compact_artifacts": [
       {
-        "path": "data/za-mp-source-authority-v0.2/za_mp_candidate_dispositions_v0.2.jsonl",
+        "path": "data/za-mp-source-authority-v0.3/za_mp_candidate_dispositions_v0.2.jsonl",
         "sha256": "7c85b24f94b3028ed0c5927dfb643d94effd0cfe546a0355811a6143032693ae",
         "size_bytes": 7918687
       },
       {
-        "path": "data/za-mp-source-authority-v0.2/za_mp_factual_canonical_geography_v0.2.jsonl",
+        "path": "data/za-mp-source-authority-v0.3/za_mp_factual_canonical_geography_v0.2.jsonl",
         "sha256": "53878ae06b2da08a31a3c8e13c44392c0c9970fbf4780e319230e24a11d7b203",
         "size_bytes": 3498561
       },
       {
-        "path": "data/za-mp-source-authority-v0.2/za_mp_factual_canonical_names_v0.2.jsonl",
-        "sha256": "3041bada04486154b50787ab0eef5430c79f71b5bf560743a2fe2e6eea2028eb",
-        "size_bytes": 2045407
+        "path": "data/za-mp-source-authority-v0.3/za_mp_factual_canonical_names_v0.2.jsonl",
+        "sha256": "69c9ecef577b66affb64d7cb81f653d3e62327b76aa1ef2fde2a7d3defe1a639",
+        "size_bytes": 2036185
       },
       {
-        "path": "data/za-mp-source-authority-v0.2/za_mp_factual_canonical_source_links_v0.2.jsonl",
+        "path": "data/za-mp-source-authority-v0.3/za_mp_factual_canonical_source_links_v0.2.jsonl",
         "sha256": "c7907df2dc9b6d47b07bd6e3236a6d93f0835996d965afc2a1e794b462f74164",
         "size_bytes": 1139537
       }
@@ -64,11 +64,20 @@
     "one_containment_parent_per_place": true,
     "search_scope_authorization_in_slice_2": 0,
     "place_id_allocation": "assigned from a committed registry; never derived from name, slug, coordinates, parent, classification, natural key or source identity",
-    "source_geography_eligibility": "source-geography-eligibility-2026-10-14-v1"
+    "source_geography_eligibility": "source-geography-eligibility-2026-10-14-v1",
+    "reviewed_corrections": {
+      "input": "territory-declared reviewed-correction source artifacts, digest-pinned by the source authority manifest",
+      "type_corrections_declared": 0,
+      "type_corrections_applied": 0,
+      "settlement_membership_declared": 0,
+      "settlement_membership_applied": 0,
+      "settlement_types": "settlement_within",
+      "notes": "no reviewed-correction overlay declared for this territory"
+    }
   },
   "counts": {
     "source_identities": 1078,
-    "source_name_assertions": 1626,
+    "source_name_assertions": 1620,
     "source_links": 1078,
     "source_candidates": 5855,
     "admitted_places": 1045,
@@ -112,10 +121,11 @@
       "province": 1
     },
     "admitted_without_executable_scope": 250,
-    "names": 1607,
+    "names": 1601,
+    "google_maps_url_alias_assertions_excluded": 0,
     "name_roles": {
       "preferred_public": 1045,
-      "common": 550,
+      "common": 544,
       "historical": 2,
       "alternate_spelling": 10
     },
@@ -406,7 +416,9 @@
     "no artificial settlement parent is introduced to complete a search hierarchy",
     "no municipality is re-typed or promoted into the metro_city search tier",
     "a Place without a governed executable scope stays admitted but is neither searchable nor publishable",
-    "the disposition ledger covers every source candidate"
+    "the disposition ledger covers every source candidate",
+    "reviewed type corrections reconcile to exactly the admitted Places they anchor, and settle their type within the governed settlement vocabulary",
+    "reviewed settlement membership is recorded with its declared evidence and never search-authorizing"
   ],
   "outputs": {
     "places": "data/za-mp-place-admission-v0.1/za_mp_place_admission_v0.1.jsonl",

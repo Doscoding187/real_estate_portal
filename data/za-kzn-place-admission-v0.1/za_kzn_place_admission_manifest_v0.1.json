@@ -7,32 +7,32 @@
   "territory": {
     "territory_id": "za-kzn",
     "display_name": "KwaZulu-Natal",
-    "admission_registry_path": "data/place-admission-territories.v0.1/territory-registry.v0.1.json",
-    "admission_registry_sha256": "739229dd26bcfd7d74c8f29d83421e1207354a74ecacaa6d8f2964c62c658be5"
+    "admission_registry_path": "data/place-admission-territories.v0.2/territory-registry.v0.2.json",
+    "admission_registry_sha256": "9226b1102d54046a2724cafe89f73f24d2c33a8b66f7e49744725dc9bda2c31b"
   },
   "generated_from": {
-    "source_authority_version": "za-kzn-source-authority-v0.2",
-    "source_snapshot_id": "8700a40784ae3cb208e8f9320c93b241f715c80d20eae56a78fe67545cad99ff",
-    "source_manifest_path": "data/za-kzn-source-authority-v0.2/za_kzn_source_manifest_v0.2.json",
-    "source_manifest_sha256": "6c8ddb9c74b7d0ced4178e5018f16183b1b171a39b7a93511b06d08f0ab42888",
+    "source_authority_version": "za-kzn-source-authority-v0.3",
+    "source_snapshot_id": "8c75e66228e5d383b2bb59bc9b2ed95b80ff93832991aebe54d80523d402721c",
+    "source_manifest_path": "data/za-kzn-source-authority-v0.3/za_kzn_source_manifest_v0.3.json",
+    "source_manifest_sha256": "2c62ae2afd118b3a421cdd2eb9479ab20e01a7a26a9406ffb2b2a0cffa4a05cf",
     "compact_artifacts": [
       {
-        "path": "data/za-kzn-source-authority-v0.2/za_kzn_candidate_dispositions_v0.2.jsonl",
+        "path": "data/za-kzn-source-authority-v0.3/za_kzn_candidate_dispositions_v0.2.jsonl",
         "sha256": "2917c4c6b7117cb0f338493e302e1b3b096e46d7602f1c512b1962a0cb066364",
         "size_bytes": 12439999
       },
       {
-        "path": "data/za-kzn-source-authority-v0.2/za_kzn_factual_canonical_geography_v0.2.jsonl",
+        "path": "data/za-kzn-source-authority-v0.3/za_kzn_factual_canonical_geography_v0.2.jsonl",
         "sha256": "4fc3b1e0233d235c55540b27265ffe56b4ee724e70441e4cfc21891182d0e432",
         "size_bytes": 7031272
       },
       {
-        "path": "data/za-kzn-source-authority-v0.2/za_kzn_factual_canonical_names_v0.2.jsonl",
-        "sha256": "f90b018c822a4b6b4cdc7a6b302616f73ccd5bec3ff5abd48f9631d2789f6ee1",
-        "size_bytes": 4434931
+        "path": "data/za-kzn-source-authority-v0.3/za_kzn_factual_canonical_names_v0.2.jsonl",
+        "sha256": "584b15ef1bbc6202ffefed7e3fa5a65d2b8b9969eab3ecbe2b23624e5b9f5fc4",
+        "size_bytes": 4403457
       },
       {
-        "path": "data/za-kzn-source-authority-v0.2/za_kzn_factual_canonical_source_links_v0.2.jsonl",
+        "path": "data/za-kzn-source-authority-v0.3/za_kzn_factual_canonical_source_links_v0.2.jsonl",
         "sha256": "7320a80a65af2378dd5d3634db7fef02ce5f61eeb8c3af391f7dd3bf2143117c",
         "size_bytes": 2305931
       }
@@ -64,11 +64,20 @@
     "one_containment_parent_per_place": true,
     "search_scope_authorization_in_slice_2": 0,
     "place_id_allocation": "assigned from a committed registry; never derived from name, slug, coordinates, parent, classification, natural key or source identity",
-    "source_geography_eligibility": "source-geography-eligibility-2026-10-14-v1"
+    "source_geography_eligibility": "source-geography-eligibility-2026-10-14-v1",
+    "reviewed_corrections": {
+      "input": "territory-declared reviewed-correction source artifacts, digest-pinned by the source authority manifest",
+      "type_corrections_declared": 0,
+      "type_corrections_applied": 0,
+      "settlement_membership_declared": 0,
+      "settlement_membership_applied": 0,
+      "settlement_types": "settlement_within",
+      "notes": "no reviewed-correction overlay declared for this territory"
+    }
   },
   "counts": {
     "source_identities": 2170,
-    "source_name_assertions": 3507,
+    "source_name_assertions": 3487,
     "source_links": 2170,
     "source_candidates": 9176,
     "admitted_places": 2090,
@@ -112,10 +121,11 @@
       "province": 1
     },
     "admitted_without_executable_scope": 520,
-    "names": 3429,
+    "names": 3409,
+    "google_maps_url_alias_assertions_excluded": 0,
     "name_roles": {
       "preferred_public": 2090,
-      "common": 1334,
+      "common": 1314,
       "historical": 5
     },
     "searchable_names": 3014,
@@ -797,7 +807,9 @@
     "no artificial settlement parent is introduced to complete a search hierarchy",
     "no municipality is re-typed or promoted into the metro_city search tier",
     "a Place without a governed executable scope stays admitted but is neither searchable nor publishable",
-    "the disposition ledger covers every source candidate"
+    "the disposition ledger covers every source candidate",
+    "reviewed type corrections reconcile to exactly the admitted Places they anchor, and settle their type within the governed settlement vocabulary",
+    "reviewed settlement membership is recorded with its declared evidence and never search-authorizing"
   ],
   "outputs": {
     "places": "data/za-kzn-place-admission-v0.1/za_kzn_place_admission_v0.1.jsonl",

@@ -24,6 +24,7 @@ import { commercialTermNoticeScheduler } from '../services/commercialTermNoticeS
 import { distributionReferralEvidenceRetentionScheduler } from '../services/distributionReferralEvidenceRetentionScheduler';
 import sitemapRouter from '../routes/sitemap';
 import developmentSupersessionRedirectRouter from '../routes/developmentSupersessionRedirect';
+import canonicalPlaceUrlRedirect from '../routes/canonicalPlaceUrlRedirect';
 import agentOnboardingRouter from '../routes/agentOnboarding';
 import { ENV } from './env';
 import { registerLocalMediaRoutes } from './localMediaRoutes';
@@ -235,6 +236,7 @@ async function startServer() {
   app.use(domainRoutingMiddleware);
   app.use(customDomainMiddleware);
 
+  app.use(canonicalPlaceUrlRedirect);
   app.use('/', sitemapRouter);
   app.use('/', developmentSupersessionRedirectRouter);
   registerAuthRoutes(app);

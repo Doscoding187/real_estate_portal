@@ -188,10 +188,7 @@ describe('Slice 3: discovery resolves canonical identity', () => {
     }
   });
 
-  it('separates search eligibility from publication eligibility', async () => {
-    // OSM-only Places are searchable but must never be publishable. A consumer
-    // that treats "searchable" as "publishable" would leak attribution-free
-    // content, so the two gates are asserted as independent facts.
+  it('allows an attributed OSM area page while retaining provisional status', async () => {
     const db = await getDb();
     const osmOnly = await db.execute(sql`
       SELECT p.place_id AS placeId, p.verification_status AS verificationStatus,
@@ -205,15 +202,14 @@ describe('Slice 3: discovery resolves canonical identity', () => {
     expect(rows[0].placeId).toBe(requiredOsmPlaceId);
     expect(rows[0].licensingClassification).toBe('osm_only_odbl_provisional');
     expect(Number(rows[0].searchEligible)).toBe(1);
-    expect(Number(rows[0].publicationEligible)).toBe(0);
+    expect(Number(rows[0].publicationEligible)).toBe(1);
     expect(rows[0].verificationStatus).toBe('provisional');
     expect(
       isPublishable({
         publicationEligible: Number(rows[0].publicationEligible) === 1,
-        verificationStatus: String(rows[0].verificationStatus),
         lifecycleStatus: 'active',
       }),
-    ).toBe(false);
+    ).toBe(true);
   });
 });
 

@@ -1,0 +1,12 @@
+{
+  "schema_version": "0.1",
+  "redirects": [
+    {
+      "source_path": "/gauteng/lyttelton",
+      "target_place_id": "pl-place-01-1a30ae4d635ef747d6c987df",
+      "status_code": 308,
+      "decision_id": "gauteng-founder-geography-decisions-2026-11-02",
+      "approved_on": "2026-11-02"
+    }
+  ]
+}

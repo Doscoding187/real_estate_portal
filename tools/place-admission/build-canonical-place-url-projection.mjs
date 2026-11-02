@@ -17,6 +17,7 @@ import {
 const SCRIPT_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(SCRIPT_DIRECTORY, '../..');
 const OUTPUT = 'data/place-url-projection-national-v0.1.json';
+const REDIRECT_DECISIONS = 'data/canonical-place-url-redirect-decisions-national-v0.1.json';
 const CHECK_ONLY = process.argv.includes('--check');
 
 function sha256(bytes) {
@@ -55,6 +56,11 @@ function createProjection() {
     ROOT,
     PLACE_ADMISSION_TERRITORY_REGISTRY_PATH,
   );
+  const redirectDecisionBytes = readFileSync(path.resolve(ROOT, REDIRECT_DECISIONS));
+  const redirectDecisionDocument = JSON.parse(redirectDecisionBytes.toString('utf8'));
+  if (redirectDecisionDocument.schema_version !== '0.1' || !Array.isArray(redirectDecisionDocument.redirects)) {
+    throw new Error('canonical-place-url projection refused: redirect decision file has an unsupported shape');
+  }
   const territories = registryLoad.registry.territories.map(territory => {
     const packagePaths = resolvePlaceAdmissionPackagePaths(territory);
     const packageManifestBytes = readFileSync(path.resolve(ROOT, packagePaths.manifest));
@@ -84,13 +90,13 @@ function createProjection() {
       );
     }
 
-    const artifactEntries = ['places', 'names', 'relationships'].map(key => {
+    const artifactEntries = ['places', 'names', 'relationships', 'evidence'].map(key => {
       const artifactPath = packagePaths.artifacts[key];
       const bytes = readFileSync(path.resolve(ROOT, artifactPath));
       return { path: artifactPath, sha256: sha256(bytes), bytes };
     });
     const artifactByKey = new Map(
-      ['places', 'names', 'relationships'].map((key, index) => [key, artifactEntries[index]]),
+      ['places', 'names', 'relationships', 'evidence'].map((key, index) => [key, artifactEntries[index]]),
     );
     return {
       territory_id: territory.territoryId,
@@ -108,12 +114,21 @@ function createProjection() {
         artifactByKey.get('relationships').bytes,
         artifactByKey.get('relationships').path,
       ),
+      evidence: readJsonl(
+        artifactByKey.get('evidence').bytes,
+        artifactByKey.get('evidence').path,
+      ),
     };
   });
 
   return buildCanonicalPlaceUrlProjection({
     registryPath: registryLoad.registryPath,
     registrySha256: registryLoad.registrySha256,
+    redirectDecisionSource: {
+      path: REDIRECT_DECISIONS,
+      sha256: sha256(redirectDecisionBytes),
+    },
+    redirectDecisions: redirectDecisionDocument.redirects,
     territories,
   });
 }

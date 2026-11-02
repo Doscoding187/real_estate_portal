@@ -264,9 +264,8 @@ describe('Place admission: source identity is not Place identity', () => {
     expect(quarantined.every(row => row.place_id === null)).toBe(true);
   });
 
-  it('never creates a Place from a licence-blocked or evidence-blocked candidate', () => {
+  it('never creates a Place from a remaining licence-blocked or evidence-blocked candidate', () => {
     for (const name of [
-      'Kyalami',
       'Khayalami',
       'Sky City',
       'Eden Park',

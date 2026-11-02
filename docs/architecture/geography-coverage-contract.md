@@ -2,13 +2,17 @@
 
 **Status:** Active authority for territory geography coverage work
 **Owner:** OX Alpha (implementation) / Edward (founder approval boundary)
-**Version:** 0.6 (2026-10-07)
+**Version:** 0.7 (2026-11-02)
 **Supersedes:** ad-hoc per-location additions; complements the runtime
 convergence v0.1 bounded slice without rewriting it; supersedes v0.3
 Section 2 D1, D4 and D8 as noted inline; records the approved typed canonical
 Place Authority doctrine and the reviewed Gauteng checkpoint.
 Version 0.6 additionally records Edward's explicit launch province search
 projection approval in Section 22; identity and admission evidence are unchanged.
+Version 0.7 records Edward's decision that one traceable source may support an
+accepted Place, safe provisional area pages may be public, and OSM data is
+accepted with attribution. It also records the Kyalami admission and the held
+boundary-conflict cohort.
 
 This contract records the product and data decisions that govern the
 territory-wide geography coverage pipeline. It is the Phase 0 artifact of the
@@ -66,9 +70,9 @@ coverage path.
 These decisions are binding until explicitly revised.
 
 **v0.5 provenance.** D0–D13 are recorded by senior architecture review. D1, D4
-and D8 are carried forward from v0.3 with the supersessions stated inline. D2,
-D3, D5, D6 and D7 are carried forward unchanged; v0.3 notes on D3 and D6 record
-current enforcement gaps without weakening the rule. D9–D13 are new.
+and D8 are carried forward from v0.3 with the supersessions stated inline. D5,
+D6, D9–D13 are carried forward as recorded. Version 0.7 revises D2, D3, D7
+and D12 under the founder decision recorded in Section 25.
 
 ### D0 — Canonical identity is a typed Place, not a storage level (v0.5)
 
@@ -117,14 +121,16 @@ scopes. Place type is preserved on every Place and every projection; no type is
 rewritten to fit storage. Unsupported or ambiguous resolution must fail
 visibly; there is no silent widening (D5, D12).
 
-### D2 — Provisional identities are selectable
+### D2 — Provisional identities are selectable and may be published
 
 Tier B (executable provisional) identities are searchable and selectable with
 status `provisional`. They carry an internal review obligation through the
-disposition artifact; they must never be used to invent or widen a boundary,
-and they are excluded from SEO page generation until promoted to Tier A.
-Public UI must not display alarm labels for provisional status, but internal
-surfaces (admin coverage dashboard, research queue) expose it.
+disposition artifact; they must never be used to invent or widen a boundary.
+Tier B status alone does not block a public area page. The independent
+`publication_eligible` decision follows D7 and requires a bounded executable
+scope, supported spatial evidence and no unresolved boundary conflict. The
+public page does not describe a provisional identity as verified. Internal
+surfaces continue to expose its review status.
 
 ### D3 — Acceptable sources and licences
 
@@ -132,14 +138,14 @@ surfaces (admin coverage dashboard, research queue) expose it.
   publications; GeoNames (CC BY 4.0, attribution required); Wikidata (CC0);
   geoBoundaries gbOpen (CC BY 4.0 distribution; preserve each layer's upstream
   licence and notices); OSM/Geofabrik (ODbL 1.0); NGA GNS (no restriction).
-- Google Places and any future commercial provider are **evidence and
-  enrichment only**. Provider place IDs can never become public identity, and a
-  provider observation must never create or promote a public geography row.
-- ODbL obligation: `osm_only_odbl_provisional` rows may be materialized in
-  disposable development/preview targets under this contract. Any staging or
-  production release of OSM-only rows requires the founder-owned production
-  ODbL database-strategy gate to be cleared first. The adapter must keep row
-  licensing classification observable so that gate is enforceable mechanically.
+- Google Maps content and provider URLs are not stored in active Place packages
+  or cited as a geography source. A founder map check is recorded only as Y/N
+  plus the approval date. Other commercial providers remain enrichment only;
+  their IDs never become public Place identity.
+- OSM/Geofabrik data is accepted for search and public Place pages with visible
+  `© OpenStreetMap contributors` attribution. `osm_only_odbl_provisional`
+  remains an observable provenance classification; it is not a release or
+  publication hold under the founder decision of 2026-11-02.
 
 **v0.5 correction:** the v0.3 text of this decision is normative but was
 unenforced. Three live runtime paths can currently write provider observations
@@ -208,10 +214,18 @@ recorded. This is tracked as a required condition in Section 14.
 
 ### D7 — SEO pages
 
-SEO pages are generated for Tier A identities at province/city/locality levels
-with listing supply or strategic market value. Tier B remains search-only
-until promoted. Same-name localities require disambiguated paths (parent
-segments) before any page generation.
+Public pages are generated for active, search-eligible `province`, `city`,
+`town`, `township`, `suburb`, `neighbourhood` and `locality` Places when all
+source identities have supported spatial evidence and no boundary conflict.
+There is no minimum provider count: one traceable accepted source is
+sufficient. OSM is allowed with the attribution in D3. Existing verified
+village pages remain eligible; villages are not part of the broad page
+expansion. Municipalities and facility/spot records remain excluded because
+they have no executable area scope.
+
+Pages may launch thin and grow from sourced facts. Listing supply or a separate
+strategic-value review is not required. Same-name localities use their
+disambiguated parent paths; no page may widen search to a parent or sibling.
 
 ### D8 — Names are assertions attached to Places (v0.5: supplemented)
 
@@ -285,13 +299,16 @@ Relationship storage is **relational**. A graph database is not adopted.
 ### D11 — Factual and non-statutory admission
 
 Admission of a Place to public geographic authority requires evidenced
-referent identity.
+referent identity. A single traceable source may be enough; two independent
+providers are not a universal admission requirement. Provisional identity and
+type uncertainty remain recorded rather than being rewritten as verified.
 
 - **Search demand, provider suggestions and commercial submissions create
   candidates and research priority. They never create public geographic
   authority.**
 - Candidate status is visible in internal surfaces and does not confer public
-  searchability or SEO eligibility.
+  searchability or page eligibility. A reviewed admission decision can move a
+  candidate to a provisional Place without claiming Tier A verification.
 - A non-statutory Place requires sufficient evidence of its referent before it
   may be published as geographic authority (D4).
 - Provider and commercial signals raise **research priority**; they are never
@@ -315,9 +332,10 @@ Existing stored authority requires a bounded transactional data migration;
 replaying a reference adapter must not silently rewrite stored assertions.
 
 Publication and search eligibility are recorded **per Place**, separately from
-identity, classification and lifecycle. Eligibility is a deterministic function
-of recorded lifecycle, verification, licence and tier state — never an ad hoc
-per-surface decision.
+identity, classification and lifecycle. Search eligibility follows the
+executable scope rules. Publication eligibility follows D7; it does not require
+Tier A verification or a non-OSM licence classification. The recorded flags
+remain deterministic and shared by pages, metadata and sitemap generation.
 
 Search scopes are deterministic projections from Place identity plus **accepted**
 relationships (D1). Only relationship types **explicitly authorized** to affect
@@ -361,8 +379,8 @@ listings, statistics or market facts associated with it is not.
 
 | Tier                        | Meaning                                                                                  | Runtime behavior                                             |
 | --------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| A — verified                | Identity, parent chain, scope, licensing all supported                                   | status `verified`; fully searchable/selectable; SEO eligible |
-| B — provisional             | Identity and parent safe enough to search; evidence provisional or OSM-only pending gate | status `provisional`; searchable/selectable; no SEO          |
+| A — verified                | Identity, parent chain, scope, licensing all supported                                   | status `verified`; fully searchable/selectable; D7 eligible  |
+| B — provisional             | Searchable identity with a recorded review obligation                                    | status `provisional`; selectable; may publish under D7       |
 | C — candidate/alias pending | Fails identity, parent, ambiguity, or natural-key gates                                  | No runtime row; recorded in disposition + review queue       |
 | D — rejected/retired        | Duplicate, non-independent, retired, licence-blocked                                     | Never public; retained as provenance                         |
 
@@ -457,8 +475,9 @@ plus representative same-name / alias / ambiguous cases.
 
 `*` Extension probes validate the alias/pattern machinery and the Tier C
 routing when the underlying identity has not been accepted; they do not
-promote anything by themselves. Kyalami must stay non-public while its
-commercial-reuse gate is open.
+promote anything by themselves. Kyalami is a verified suburb under City of
+Johannesburg, with the corroborating sources and limits recorded in Section 25.
+The other Kyalami-named candidates remain separate and unmerged.
 
 Probe outcomes are asserted against the projection artifacts (always) and the
 materialized environment (via `db:reference:verify` and the readiness flow).
@@ -525,7 +544,8 @@ closes them.
 | `data/geography-coverage-v0.1/output/gauteng_factual_runtime_mapping_v0.2.jsonl`                                                                                                                                    | **CANONICAL**           | Frozen current factual-to-runtime disposition bridge. Every factual identity remains distinct, including co-published members.                                                                                                                                                                                                                                   | Superseded only by an activated successor mapping with recorded digests.                                                                                                                      |
 | `data/geography-coverage-v0.1/output/gauteng_coverage_disposition_v0.1.json` and `gauteng_review_queue_v0.1.jsonl`                                                                                                  | **CANONICAL**           | Preserve counts, reasons, candidate evidence, and research obligations; never materialize blocked rows publicly.                                                                                                                                                                                                                                                 | —                                                                                                                                                                                             |
 | `data/geography-coverage-v0.1/territory-catalog.v0.1.json`                                                                                                                                                          | **CANONICAL**           | Digest-pinned registry of immutable territory artifacts. It contains no copied geography rows and cannot override a source artifact.                                                                                                                                                                                                                             | Default until an activation slice repoints `LOCATION_AUTHORITY_CATALOG_INDEX_PATH`.                                                                                                           |
-| `data/place-admission-territories.v0.1/territory-registry.v0.1.json`                                                                                                                                                | **CANONICAL**           | The single authority for a territory's _admission_ inputs and outputs (Section 21): source-authority directory, digest-pinned source manifest, source artifact filenames, admission version, package directory and package artifact filenames. Names locations; holds no geography rows and adjudicates nothing.                                                 | —                                                                                                                                                                                             |
+| `data/place-admission-territories.v0.2/territory-registry.v0.2.json`                                                                                                                                                | **CANONICAL**           | The active authority for a territory's _admission_ inputs and outputs: source-authority directory, digest-pinned source manifest, source artifact filenames, admission version, package directory and package artifact filenames. Names locations; holds no geography rows and adjudicates nothing.                                              | —                                                                                                                                                                                             |
+| `data/place-url-projection-national-v0.1.json` and `data/canonical-place-url-redirect-decisions-national-v0.1.json`                                                                                                | **CANONICAL**           | Deterministic exact paths, per-Place source credits and founder-approved permanent route redirects derived from the active territory packages. The redirect decision input is digest-pinned in the generated projection.                                                                                                                        | Superseded by a reviewed path-policy version and regenerated projection.                                                                                                                      |
 | `shared/factualRuntimeGeographyBridge.ts`, `shared/runtimeGeography.ts`, and the governed runtime reference loader                                                                                                  | **CANONICAL**           | Validate IDs, projection shape, natural-key hierarchy, and exact governed co-publication. Reject malformed or ambiguous source data.                                                                                                                                                                                                                             | —                                                                                                                                                                                             |
 | `server/_core/databaseAuthority/dataAdapters/canonicalGeography.ts`                                                                                                                                                 | **CANONICAL**           | Materialize and verify governed natural keys on authorized targets. Numeric IDs are environment-local handles. The adapter's target **row shape** is transitional (see next row); its upsert-by-natural-key and fail-closed conflict behaviour are canonical.                                                                                                    | —                                                                                                                                                                                             |
 | `place`, `place_name`, `place_relationship`, `place_evidence`, `place_external_mapping`, `search_area`, `search_area_member` (migrations 0091–0097)                                                                 | **CANONICAL**           | The minimum V1 Place Authority foundation approved in Section 14, established by Slice 1. Identity is the opaque `place_id` primary key; no numeric surrogate exists. Identity dimensions are separate columns, and every contract invariant is a database CHECK constraint. Empty by design: no Place is populated and no consumer references these tables yet. | —                                                                                                                                                                                             |
@@ -790,7 +810,7 @@ satisfied or remaining-open with evidence, so the gate is not assumed.
 | ------------ | ----------------------------------------------------------------- | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1            | D0 recorded, versioned, reviewed                                  | **satisfied**                 | D0 is Section 2 of this v0.5 contract.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | 2            | V1 concepts frozen; model declared with digests                   | **satisfied**                 | Migrations `0091`–`0097`; all seven tables present in `drizzle/schema/canonical-model-inventory.json`; 39 Place Authority CHECK constraints enforced.                                                                                                                                                                                                                                                                                                                                                                                                      |
-| 3            | Gauteng admission repair landed                                   | **satisfied for admission**   | `gauteng-place-admission-v0.1` admits 1,466 Places from 1,488 source identities and is physically proven from zero on a fresh disposable target. Section 7 probes resolve **1705/1705**. `Kyalami` stays `quarantined_candidate` with a null `place_id`, so `must_stay_non_public` holds. The v0.1→v0.2 runtime row delta is **0** (1,414 → 1,414), so it is non-negative.                                                                                                                                                                                 |
+| 3            | Gauteng admission repair landed                                   | **satisfied for admission**   | `gauteng-place-admission-v0.1` admits 1,466 Places from 1,488 source identities and is physically proven from zero on a fresh disposable target. Section 7 probes resolve **1705/1705**. At that historical v0.1 checkpoint, `Kyalami` was `quarantined_candidate` with a null `place_id`; the later admission and verification in Section 25 supersede that status. The v0.1→v0.2 runtime row delta is **0** (1,414 → 1,414), so it is non-negative.                                                                                                                                                                                 |
 | 3 (residual) | Section 13.3 reconciliation                                       | **open, by design**           | The figures are reconciled as _different measured states_, not conflicts. The `v0.2 candidate, uncommitted` rows describe the Slice 1 geography-coverage review queue. Regeneration remains fail-closed under Section 11 because the exact v0.1 factual source is unrecoverable: `geography:coverage:check` exits non-zero with "Canonical layer files not found… Restore the approved canonical-root worktree." That is the recorded Section 11 state, not a regression, and the checked-in digests plus generated probes remain the executable evidence. |
 | 4            | D3 violation closed                                               | **satisfied**                 | `server/services/locationPagesServiceEnhanced.ts` is absent; `saveGooglePlaceLocation` has zero occurrences in `server/locationRouter.ts`; no legacy geography inserts remain in `listingLocationResolver.ts`. Asserted executably by the Slice 3 discovery contract.                                                                                                                                                                                                                                                                                      |
 | 5            | D6.6 unresolved-search evidence reaches a governed queue          | **satisfied for persistence** | `placeDiscoveryService.recordCoverageSignal` persists `unresolved_query` and `ambiguous_query` evidence with `researchPriority` 0 or 1. The governed _triage_ cadence and queue ownership remain a Phase 6 item; persistence and prioritization are proven.                                                                                                                                                                                                                                                                                                |
@@ -986,9 +1006,9 @@ name assertions rather than input order. 18 extension surface forms
 (`Ext N` ↔ `Extension N` ↔ `Ext. N`) were generated as **names** for Places the
 source had already admitted; no Place was ever generated from a name pattern.
 
-**Kyalami was not admitted.** It has no accepted identity in the source and its
-candidate remains quarantined, so the licence and evidence gate is respected.
-Commercial importance is not an evidence class.
+**Historical v0.5 checkpoint:** Kyalami was not yet admitted at that time. This
+statement is superseded by the founder-approved Kyalami identity recorded in
+Section 25; the other similarly named candidates remain distinct.
 
 **Materializer.** `dataAdapters/canonicalPlaces.ts` is the smallest Database
 Authority mechanism the governed admission source now justifies. It is
@@ -1237,6 +1257,12 @@ this policy revision.
 
 ## 23. Protected Place reference release candidate (2026-10-08)
 
+**Historical candidate.** Its `admitted-national-non-osm-only-v1` policy and
+16,944-place protected subset were the October 8 release position. Section 25
+records the later founder decision that accepts OSM with attribution and the
+current 17,664-place package. This section remains historical evidence; it is
+not the active source or public-page policy.
+
 The integration candidate registers a Place-specific protected reference adapter
 on the existing Database Authority release-reference operations. It does not
 reuse the numeric catalog's `--adapter=geography` materialiser, grant provider
@@ -1298,3 +1324,58 @@ protected legacy path. Any remaining Development consumer is an open cutover
 defect; the model migration is not complete until those reads and writes and
 then the columns themselves are removed. Existing text values are not
 automatically converted into reviewed assignments.
+
+## 25. Founder-approved national Place refresh (2026-11-02)
+
+**Approval:** Edward directed that two independent sources are not a universal
+admission rule, searchable area Places should receive thin public pages, OSM is
+accepted with attribution, and known boundary conflicts stay held. He approved
+one permanent Place ID for the exact Kyalami suburb candidate and confirmed the
+Centurion preferred label and former-path redirect.
+
+The active checked-in territory registry now resolves to nine regenerated
+Place packages. Their verified package totals are **17,664 admitted Places**,
+**14,808 searchable Places**, and **3,659 public-page-eligible Places**. The
+public-page total is 3,656 non-village area pages plus the 3 previously verified
+village pages. The remaining 11,060 searchable villages stay available in
+search without individual public pages. These counts describe checked-in
+packages, not production database contents.
+
+The 89 searchable non-village area Places with boundary-conflict evidence stay
+out of public pages: every held Place has at least one conflicting source
+identity (87 have conflicts on every member identity; 2 are mixed groups).
+Municipalities and facility/spot records remain context or excluded records;
+they do not become searchable areas or public pages. A broad Place page never
+rolls up child listings, and the page's search remains that exact Place scope.
+
+**Priority exception still unresolved:** Ekurhuleni is currently represented by
+`pl-place-01-0e54c64a0664c0d63f098e03` as a `local_municipality` with no search
+scope. D7 therefore excludes it, despite the earlier founder decision that
+Ekurhuleni must have a public page. This refresh does not silently reclassify a
+municipality or create a second Ekurhuleni identity; the founder must decide
+whether this priority is a governed Search Area or a separately evidenced city
+Place.
+
+Kyalami Place `pl-place-01-c99102768b2e6f4c99fefd54` is verified as a City of
+Johannesburg suburb. Its machine-readable point and GeoNames attribution come
+from GeoNames record 7302796. The City lists Kyalami among Region A suburbs;
+Government Gazette 40081, Notice 730 records Khayalami as the spelling
+correction from Kyalami and classifies it as a township in the City of Joburg
+area, Gauteng. These references support the identity, type, and municipal
+context; they do not define a surveyed perimeter. The preferred public name
+remains Kyalami, the founder map-check is N, and Kyalami Park, the Grand Prix
+Circuit, Kyalami Manor, and both Kyalami View candidates remain separate.
+
+Place `pl-place-01-1a30ae4d635ef747d6c987df` now prefers **Centurion**;
+**Lyttelton** remains a searchable alias. The URL projection records a 308
+permanent redirect from `/gauteng/lyttelton` to `/gauteng/centurion`. The active
+generated Place-name artifacts contain no Google Maps URL aliases. The current
+`origin/main` packages contained 106 such aliases (17 Gauteng), not the earlier
+103 total; historical superseded package snapshots are retained as audit
+history and are not selected by the active registry.
+
+The URL projection exposes source-specific credits, including
+`© OpenStreetMap contributors`, GeoNames, geoBoundaries and NGA GNS where they
+support a Place. This package refresh does not apply data to production. Public
+Place page bodies are still client-rendered in the current app; the server
+metadata and sitemap checks do not prove server-rendered page content.

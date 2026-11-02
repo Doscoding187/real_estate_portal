@@ -8,11 +8,11 @@
       "display_name": "Gauteng",
       "admission_version": "gauteng-place-admission-v0.3",
       "source_authority": {
-        "authority_version": "gauteng-source-authority-v0.4",
-        "directory": "data/gauteng-source-authority-v0.4",
+        "authority_version": "gauteng-source-authority-v0.5",
+        "directory": "data/gauteng-source-authority-v0.5",
         "manifest": {
-          "path": "data/gauteng-source-authority-v0.4/gauteng_source_manifest_v0.4.json",
-          "sha256": "76e06623c7c1d364fe7cf068ec55b476f2006a4041a308043914f584167402ef"
+          "path": "data/gauteng-source-authority-v0.5/gauteng_source_manifest_v0.5.json",
+          "sha256": "f8e6d4eaee294db6f2c75e25ae3f5f4d8879f025dc4b2e1f3f3d2b31f3832789"
         },
         "artifacts": {
           "geography": "gauteng_factual_canonical_geography_v0.2.jsonl",
@@ -52,14 +52,14 @@
         }
       },
       "expected_counts": {
-        "source_identities": 1487,
-        "admitted_places": 1465,
-        "names": 2474,
-        "relationships": 1815,
+        "source_identities": 1488,
+        "admitted_places": 1466,
+        "names": 2458,
+        "relationships": 1816,
         "evidence_rows": 4462,
-        "external_mappings": 2969,
+        "external_mappings": 2970,
         "disposition_ledger_rows": 4350,
-        "executable_places": 1433
+        "executable_places": 1434
       }
     },
     {
@@ -67,11 +67,11 @@
       "display_name": "Western Cape",
       "admission_version": "za-wc-place-admission-v0.1",
       "source_authority": {
-        "authority_version": "za-wc-source-authority-v0.2",
-        "directory": "data/za-wc-source-authority-v0.2",
+        "authority_version": "za-wc-source-authority-v0.3",
+        "directory": "data/za-wc-source-authority-v0.3",
         "manifest": {
-          "path": "data/za-wc-source-authority-v0.2/za_wc_source_manifest_v0.2.json",
-          "sha256": "4c2de8a535106b9ef48c632a3e8da2d3549446814ec69cd351404db9efd18677"
+          "path": "data/za-wc-source-authority-v0.3/za_wc_source_manifest_v0.3.json",
+          "sha256": "096692be934634075de1d8cd63aa1c9cd53a5d67b1d5b7b3de5475ecbe3d0339"
         },
         "artifacts": {
           "geography": "za_wc_factual_canonical_geography_v0.2.jsonl",
@@ -111,7 +111,7 @@
       "expected_counts": {
         "source_identities": 1905,
         "admitted_places": 1862,
-        "names": 3246,
+        "names": 3231,
         "relationships": 1861,
         "evidence_rows": 11062,
         "external_mappings": 1905,
@@ -124,11 +124,11 @@
       "display_name": "KwaZulu-Natal",
       "admission_version": "za-kzn-place-admission-v0.1",
       "source_authority": {
-        "authority_version": "za-kzn-source-authority-v0.2",
-        "directory": "data/za-kzn-source-authority-v0.2",
+        "authority_version": "za-kzn-source-authority-v0.3",
+        "directory": "data/za-kzn-source-authority-v0.3",
         "manifest": {
-          "path": "data/za-kzn-source-authority-v0.2/za_kzn_source_manifest_v0.2.json",
-          "sha256": "6c8ddb9c74b7d0ced4178e5018f16183b1b171a39b7a93511b06d08f0ab42888"
+          "path": "data/za-kzn-source-authority-v0.3/za_kzn_source_manifest_v0.3.json",
+          "sha256": "2c62ae2afd118b3a421cdd2eb9479ab20e01a7a26a9406ffb2b2a0cffa4a05cf"
         },
         "artifacts": {
           "geography": "za_kzn_factual_canonical_geography_v0.2.jsonl",
@@ -168,7 +168,7 @@
       "expected_counts": {
         "source_identities": 2170,
         "admitted_places": 2090,
-        "names": 3429,
+        "names": 3409,
         "relationships": 2089,
         "evidence_rows": 9660,
         "external_mappings": 2170,
@@ -181,11 +181,11 @@
       "display_name": "Eastern Cape",
       "admission_version": "za-ec-place-admission-v0.1",
       "source_authority": {
-        "authority_version": "za-ec-source-authority-v0.2",
-        "directory": "data/za-ec-source-authority-v0.2",
+        "authority_version": "za-ec-source-authority-v0.3",
+        "directory": "data/za-ec-source-authority-v0.3",
         "manifest": {
-          "path": "data/za-ec-source-authority-v0.2/za_ec_source_manifest_v0.2.json",
-          "sha256": "2ee57a0f948b7b955e1b7239cafb665a373968620404cd9800df7a0e9d300af7"
+          "path": "data/za-ec-source-authority-v0.3/za_ec_source_manifest_v0.3.json",
+          "sha256": "7d32b4580559cb57cf9d41a8e9b8b59c529c741376928ee76fc53461b201fee1"
         },
         "artifacts": {
           "geography": "za_ec_factual_canonical_geography_v0.2.jsonl",
@@ -225,7 +225,7 @@
       "expected_counts": {
         "source_identities": 5328,
         "admitted_places": 5084,
-        "names": 6892,
+        "names": 6877,
         "relationships": 5083,
         "evidence_rows": 14951,
         "external_mappings": 5328,
@@ -238,11 +238,11 @@
       "display_name": "Free State",
       "admission_version": "za-fs-place-admission-v0.1",
       "source_authority": {
-        "authority_version": "za-fs-source-authority-v0.2",
-        "directory": "data/za-fs-source-authority-v0.2",
+        "authority_version": "za-fs-source-authority-v0.3",
+        "directory": "data/za-fs-source-authority-v0.3",
         "manifest": {
-          "path": "data/za-fs-source-authority-v0.2/za_fs_source_manifest_v0.2.json",
-          "sha256": "cddcdfb8207c7e772f5b7e4cd3cca3b4b2d084d15641c617352423dea59bc0ba"
+          "path": "data/za-fs-source-authority-v0.3/za_fs_source_manifest_v0.3.json",
+          "sha256": "1a0fc6d1cf61c100e48352e247363e9585c586c09d3833fa75f29c450cfc1d75"
         },
         "artifacts": {
           "geography": "za_fs_factual_canonical_geography_v0.2.jsonl",
@@ -282,7 +282,7 @@
       "expected_counts": {
         "source_identities": 1572,
         "admitted_places": 1544,
-        "names": 2138,
+        "names": 2128,
         "relationships": 1543,
         "evidence_rows": 7300,
         "external_mappings": 1572,
@@ -295,11 +295,11 @@
       "display_name": "Mpumalanga",
       "admission_version": "za-mp-place-admission-v0.1",
       "source_authority": {
-        "authority_version": "za-mp-source-authority-v0.2",
-        "directory": "data/za-mp-source-authority-v0.2",
+        "authority_version": "za-mp-source-authority-v0.3",
+        "directory": "data/za-mp-source-authority-v0.3",
         "manifest": {
-          "path": "data/za-mp-source-authority-v0.2/za_mp_source_manifest_v0.2.json",
-          "sha256": "e1aceeb667cda374c7912ce0af6b1b6587ed1d7ab2b2ca2e6a78bb9c914d4d63"
+          "path": "data/za-mp-source-authority-v0.3/za_mp_source_manifest_v0.3.json",
+          "sha256": "8c8e033d2ecc1d6d1f09fa63467799befe3f8c59766fea021e745035693ae779"
         },
         "artifacts": {
           "geography": "za_mp_factual_canonical_geography_v0.2.jsonl",
@@ -339,7 +339,7 @@
       "expected_counts": {
         "source_identities": 1078,
         "admitted_places": 1045,
-        "names": 1607,
+        "names": 1601,
         "relationships": 1044,
         "evidence_rows": 5059,
         "external_mappings": 1078,
@@ -352,11 +352,11 @@
       "display_name": "Limpopo",
       "admission_version": "za-li-place-admission-v0.1",
       "source_authority": {
-        "authority_version": "za-li-source-authority-v0.2",
-        "directory": "data/za-li-source-authority-v0.2",
+        "authority_version": "za-li-source-authority-v0.3",
+        "directory": "data/za-li-source-authority-v0.3",
         "manifest": {
-          "path": "data/za-li-source-authority-v0.2/za_li_source_manifest_v0.2.json",
-          "sha256": "25116e27cd114745fd9775113896772456224c0974c4938d0bfb0aee0af4001a"
+          "path": "data/za-li-source-authority-v0.3/za_li_source_manifest_v0.3.json",
+          "sha256": "fc5f7fb130787f24eb6a6d8b65d4cff54dda23b073029847f68464ee5b0b6d78"
         },
         "artifacts": {
           "geography": "za_li_factual_canonical_geography_v0.2.jsonl",
@@ -396,7 +396,7 @@
       "expected_counts": {
         "source_identities": 1747,
         "admitted_places": 1669,
-        "names": 2359,
+        "names": 2349,
         "relationships": 1668,
         "evidence_rows": 9443,
         "external_mappings": 1747,
@@ -409,11 +409,11 @@
       "display_name": "North West",
       "admission_version": "za-nw-place-admission-v0.1",
       "source_authority": {
-        "authority_version": "za-nw-source-authority-v0.2",
-        "directory": "data/za-nw-source-authority-v0.2",
+        "authority_version": "za-nw-source-authority-v0.3",
+        "directory": "data/za-nw-source-authority-v0.3",
         "manifest": {
-          "path": "data/za-nw-source-authority-v0.2/za_nw_source_manifest_v0.2.json",
-          "sha256": "ef18895522fa3c25cbc7241d3307c60e3411c9008dbe019230d421f8230abb86"
+          "path": "data/za-nw-source-authority-v0.3/za_nw_source_manifest_v0.3.json",
+          "sha256": "10987c179b750246301bb4fbe8462afc21a2920e63de2f170ebd4e4aef5c43c0"
         },
         "artifacts": {
           "geography": "za_nw_factual_canonical_geography_v0.2.jsonl",
@@ -453,7 +453,7 @@
       "expected_counts": {
         "source_identities": 1445,
         "admitted_places": 1352,
-        "names": 2086,
+        "names": 2078,
         "relationships": 1351,
         "evidence_rows": 5113,
         "external_mappings": 1445,
@@ -466,11 +466,11 @@
       "display_name": "Northern Cape",
       "admission_version": "za-nc-place-admission-v0.1",
       "source_authority": {
-        "authority_version": "za-nc-source-authority-v0.2",
-        "directory": "data/za-nc-source-authority-v0.2",
+        "authority_version": "za-nc-source-authority-v0.3",
+        "directory": "data/za-nc-source-authority-v0.3",
         "manifest": {
-          "path": "data/za-nc-source-authority-v0.2/za_nc_source_manifest_v0.2.json",
-          "sha256": "65924b97d82681250dd6756b0efcb7a5ee34574b26a4ad9661879f55e2b71ec7"
+          "path": "data/za-nc-source-authority-v0.3/za_nc_source_manifest_v0.3.json",
+          "sha256": "6982d8b33339914d426cd64813acae083d9e8714091894757f635a1e6e1f3cdd"
         },
         "artifacts": {
           "geography": "za_nc_factual_canonical_geography_v0.2.jsonl",
@@ -510,7 +510,7 @@
       "expected_counts": {
         "source_identities": 1576,
         "admitted_places": 1552,
-        "names": 2192,
+        "names": 2187,
         "relationships": 1551,
         "evidence_rows": 12874,
         "external_mappings": 1576,

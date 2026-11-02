@@ -1466,14 +1466,15 @@
     "pl-geo-v01-za-gp-72fa6843cd0cef27b7eb": "pl-place-01-93b1a12bb4dcca4502ed5c7a",
     "pl-geo-v01-za-gp-c12eccc41c6c4f90e71b": "pl-place-01-d0d185ebf645992b7cfe92a2",
     "pl-geo-v01-za-gp-4d21f76decd6447d0743": "pl-place-01-a99dcb3d548897c5e84e3425",
-    "pl-geo-v01-za-gp-5c79f50c094ac4aef6d4": "pl-place-01-3ee9270389096cb0bf4690e7"
+    "pl-geo-v01-za-gp-5c79f50c094ac4aef6d4": "pl-place-01-3ee9270389096cb0bf4690e7",
+    "pl-geo-v01-za-gp-bf3bda5e9b73324fb944": "pl-place-01-c99102768b2e6f4c99fefd54"
   },
-  "allocation_sequence": 1466,
+  "allocation_sequence": 1467,
   "namespace": "pl-place-01",
   "provenance": {
     "admission_version": "gauteng-place-admission-v0.3",
     "territory_id": "za-gp",
-    "source_snapshot_id": "14666e91befd11e1aea6b220c520678fbafbfc2c12383392e29c9e727fa0a06e",
+    "source_snapshot_id": "3ec5d51fb09c67ffed35aeecc11805df922bd2852e1eb63b9745dbfd43505eb5",
     "note": "Assigned canonical Place identities. Reused verbatim on every regeneration. Never remap an id."
   }
 }

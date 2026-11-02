@@ -1,0 +1,93 @@
+{
+  "decision_id": "gauteng-founder-geography-decisions-2026-11-02",
+  "decision": "admit_kyalami_and_relabel_centurion",
+  "founder_approval": "Edward",
+  "reviewed_and_approved_by_founder_on": "2026-11-02",
+  "centurion_label_decision": {
+    "place_id": "pl-place-01-1a30ae4d635ef747d6c987df",
+    "canonical_location_id": "pl-geo-v01-za-gp-480fa75f70ff01496501",
+    "current_preferred_label": "Lyttelton",
+    "preferred_label": "Centurion",
+    "retained_search_alias": "Lyttelton",
+    "preferred_name_assertion_id": "cln-name-c2a9290da744d6504625",
+    "alias_name_assertion_id": "cln-name-b76101fee2de8cb4c1ef",
+    "permanent_redirect": {
+      "from": "/gauteng/lyttelton",
+      "to": "/gauteng/centurion",
+      "status_code": 308
+    }
+  },
+  "kyalami_admission": {
+    "candidate_location_id": "pl-geo-v01-za-gp-bf3bda5e9b73324fb944",
+    "preferred_name": "Kyalami",
+    "decision": "verify_as_suburb_with_official_corroboration",
+    "founder_approval": "Edward",
+    "reviewed_and_approved_by_founder_on": "2026-11-02",
+    "founder_checked_on_map": "N",
+    "source_count": 1,
+    "source": {
+      "provider": "geonames",
+      "record_id": "7302796",
+      "feature_class": "P",
+      "feature_code": "PPLX",
+      "licence": "CC BY 4.0",
+      "attribution": "GeoNames geographic database; attribution required by the GeoNames licence."
+    },
+    "reviewed_external_evidence": [
+      {
+        "authority": "City of Johannesburg",
+        "title": "Suburbs in Region A",
+        "url": "https://joburg.org.za/about_/regions/Pages/Region%20A%20-%20Diepsloot,%20Midrand/suburbs.aspx",
+        "retrieved_at": "2026-11-02",
+        "finding": "The City lists Kyalami among the suburbs in Region A."
+      },
+      {
+        "authority": "South African Government Gazette",
+        "title": "Gazette 40081, Government Notice 730",
+        "published_at": "2016-06-17",
+        "url": "https://www.gov.za/sites/default/files/gcis_document/201606/40081gon730.pdf",
+        "retrieved_at": "2026-11-02",
+        "finding": "Khayalami is recorded as a spelling correction from Kyalami and as a township in the City of Joburg Municipality area, Gauteng."
+      }
+    ],
+    "identity_evidence_decision": {
+      "class": "reviewed_official_corroboration",
+      "confidence": "high",
+      "direct_cross_identifier": false,
+      "exact_contextual": true,
+      "fuzzy_proposals_withheld": 0,
+      "match_methods": {
+        "reviewed_official_name_type_context": 2
+      },
+      "match_statuses": {
+        "high_confidence": 2
+      },
+      "not_based_on_name_equality_alone": true,
+      "robust": true,
+      "very_strong": false
+    },
+    "verification_limits": [
+      "The official references support the named settlement, suburb type, and City of Johannesburg context; they do not define a surveyed Kyalami perimeter.",
+      "No boundary was inferred or changed. The founder map-check remains N."
+    ],
+    "parent_context": {
+      "name": "City of Johannesburg",
+      "factual_type": "local_municipality",
+      "role": "administrative context, not a searchable Place scope"
+    },
+    "type_decision": {
+      "preferred_type": "suburb",
+      "prior_source_type": "neighbourhood",
+      "status": "supported",
+      "reason": "The City of Johannesburg lists Kyalami as a Region A suburb; the Government Gazette corroborates the Kyalami/Khayalami settlement identity and classifies it as a township in the City of Joburg area."
+    },
+    "second_source_required": false,
+    "place_id": "allocated by the canonical Place ID registry during package generation",
+    "distinct_candidates_not_merged": [
+      "Kyalami Park",
+      "Kyalami Grand Prix Circuit",
+      "Kyalami Manor",
+      "Kyalami View (two distinct candidates)"
+    ]
+  }
+}

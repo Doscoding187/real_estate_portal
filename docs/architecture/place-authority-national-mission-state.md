@@ -1181,7 +1181,6 @@ by re-running `db:places:verify` after the suite.
 These are governed research cases. They are **not** admission defects and must
 never be closed by manufacturing a Place:
 
-- Kyalami / Khayalami — quarantined candidate, no accepted source identity
 - Sky City — absent from the approved source
 - Eden Park, Azaadville — quarantined candidates
 - `Reiger Park` (two words) — quarantined; the admitted spelling is `Reigerpark`

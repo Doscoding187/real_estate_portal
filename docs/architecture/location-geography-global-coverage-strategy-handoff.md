@@ -564,3 +564,31 @@ required SHA-256 values and the last authoritative checkpoint are recorded in
 remain blocked until those exact bytes are restored. Checked-in projection,
 mapping, disposition, queue, and probes remain frozen evidence; synthetic or
 provider-derived replacements are prohibited.
+
+## 14. Founder-approved national refresh (2026-11-02)
+
+The active authority is now geography coverage contract v0.7 and the nine
+territories selected by `data/place-admission-territories.v0.2/territory-registry.v0.2.json`.
+The refreshed packages record 17,664 Places, 14,808 searchable Places, and
+3,659 public-page-eligible Places. Searchable villages remain without individual
+public pages except for the three existing verified pages. The 89 area Places
+with any known boundary-conflict member remain held from publication.
+
+One named priority remains unresolved: Ekurhuleni is still a municipality Place
+with no search scope, so it is not among the public pages. Its earlier priority
+page decision conflicts with the rule that municipality context is not an area
+scope. Do not reclassify it or add a second identity without the founder's
+separate choice of Search Area or evidenced city Place.
+
+Admission no longer requires two independent providers in every case. The
+founder-approved Kyalami identity retains GeoNames record 7302796 plus official
+City and Gazette corroboration, and is verified as a City of Johannesburg
+suburb. Its exact perimeter is not asserted and the founder map-check remains N.
+Centurion is the preferred label of its existing Place;
+Lyttelton remains a searchable name and permanently redirects to Centurion.
+Active source/name packages exclude Google Maps URL aliases; superseded source
+snapshots remain unchanged and are not selected by the active registry.
+
+These are package and route-projection facts, not proof of production database
+contents or a production release. Place page bodies remain client-rendered in
+the current application.

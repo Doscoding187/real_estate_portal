@@ -45,7 +45,7 @@ export default function CanonicalPlacePage() {
       ? `Settlement within ${place.pathContext.name}`
       : `Administrative context: ${place.pathContext.name}`
     : place.provinceName;
-  const indexable = place.publicationEligible && place.verificationStatus === 'verified';
+  const indexable = place.publicationEligible;
   const origin = typeof window === 'undefined' ? '' : window.location.origin;
 
   return (
@@ -139,6 +139,28 @@ export default function CanonicalPlacePage() {
             </Button>
           </div>
         </section>
+
+        {place.sourceAttributions?.length ? (
+          <p className="text-xs text-muted-foreground">
+            Geographic data: {place.sourceAttributions.map((attribution, index) => (
+              <span key={attribution.provider}>
+                {index > 0 ? '; ' : ''}
+                {attribution.url ? (
+                  <a
+                    className="underline-offset-4 hover:underline"
+                    href={attribution.url}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    {attribution.label}
+                  </a>
+                ) : (
+                  attribution.label
+                )}
+              </span>
+            ))}
+          </p>
+        ) : null}
       </div>
     </PageFrame>
   );
