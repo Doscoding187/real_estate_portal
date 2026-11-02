@@ -46,7 +46,8 @@ function rowsOf(result: unknown): Record<string, unknown>[] {
 // alone are not unique in a national dataset and must never pick the first row.
 const requiredPlaces = {
   Gauteng: 'pl-place-01-131e3e75ad70424e0f9c869a',
-  Lyttelton: 'pl-place-01-1a30ae4d635ef747d6c987df',
+  Centurion: 'pl-place-01-1a30ae4d635ef747d6c987df',
+  Kyalami: 'pl-place-01-c99102768b2e6f4c99fefd54',
   Bryanston: 'pl-place-01-f175328139bb845a4645b9d4',
   Soweto: 'pl-place-01-99b91be60755ea1f09bf6349',
   Sandton: 'pl-place-01-dee61758ef3bda7cd1a258ad',

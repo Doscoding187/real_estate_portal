@@ -207,20 +207,20 @@ for (const [name, expected, why] of cases) {
 // remains a searchable historical alias.
 // The subquery may pick a same-name cross-province row, so resolve among the
 // package-scoped candidates.
-const lytteltonCandidates = await read(`SELECT DISTINCT p.place_id FROM \`place\` p
+const lytteltonAliasCandidates = await read(`SELECT DISTINCT p.place_id FROM \`place\` p
   JOIN \`place_name\` n ON n.place_id=p.place_id
  WHERE n.normalized_name='lyttelton' AND n.is_searchable=1`);
-const scopedLyttelton = lytteltonCandidates.map(r => String(r.place_id)).find(id => packagePlaceIds.has(id));
-check(!!scopedLyttelton, 'the package admits a Lyttelton Place', String(scopedLyttelton));
-const lyttelton = await read(`SELECT n.name, n.normalized_name, n.name_role, n.is_searchable FROM \`place\` p
+const centurionPlaceId = lytteltonAliasCandidates.map(r => String(r.place_id)).find(id => packagePlaceIds.has(id));
+check(!!centurionPlaceId, 'the package retains Lyttelton as a searchable name', String(centurionPlaceId));
+const centurionPlaceNames = await read(`SELECT n.name, n.normalized_name, n.name_role, n.is_searchable FROM \`place\` p
   JOIN \`place_name\` n ON n.place_id=p.place_id
- WHERE p.place_id = ?`, [scopedLyttelton ?? '']);
-const centurionRows = lyttelton.filter(r => r.normalized_name === 'centurion');
-check(centurionRows.length === 1, 'Centurion is a searchable name on the Lyttelton Place');
-check(lyttelton.some(r => r.name_role === 'preferred_public' && r.normalized_name === 'centurion'), 'Centurion is the governed preferred public name');
-check(lyttelton.some(r => r.name_role === 'historical'), 'a historical name is retained');
-check(!lyttelton.filter(r => r.name_role === 'historical').some(r => r.is_searchable !== 1), 'historical names remain searchable where the source allows');
-check(lyttelton.filter(r => r.name_role === 'preferred_public').length === 1, 'exactly one preferred public name');
+ WHERE p.place_id = ?`, [centurionPlaceId ?? '']);
+const centurionRows = centurionPlaceNames.filter(r => r.normalized_name === 'centurion');
+check(centurionRows.length === 1, 'Centurion is a searchable name on its canonical Place');
+check(centurionPlaceNames.some(r => r.name_role === 'preferred_public' && r.normalized_name === 'centurion'), 'Centurion is the governed preferred public name');
+check(centurionPlaceNames.some(r => r.name_role === 'historical'), 'a historical name is retained');
+check(!centurionPlaceNames.filter(r => r.name_role === 'historical').some(r => r.is_searchable !== 1), 'historical names remain searchable where the source allows');
+check(centurionPlaceNames.filter(r => r.name_role === 'preferred_public').length === 1, 'exactly one preferred public name');
 
 /* ---- name model behaviours ---- */
 const overlapping = await read(`SELECT place_id FROM \`place_name\`
