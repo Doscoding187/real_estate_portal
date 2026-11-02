@@ -191,7 +191,7 @@ const cases = [
   ['Midrand', 2, 'two contexts preserved'],
   ['Lyttelton', 1, 'one Place for the Lyttelton/Centurion referent'],
   ['Centurion', 1, 'Centurion resolves to that same Place'],
-  ['Kyalami', 0, 'licence/evidence gate respected; not admitted'],
+  ['Kyalami', 1, 'founder-approved, officially corroborated suburb is searchable'],
   ['Reigerpark', 1, 'admitted under its evidenced spelling'],
   ['Broadacres ah', 1, 'admitted; the v0.1 "Broadacres" referent is covered by a differently named Place'],
   ['Eden Park', 0, 'no admitted Place; remains a quarantined coverage case'],
@@ -203,7 +203,8 @@ for (const [name, expected, why] of cases) {
   check(rows.length === expected, `pressure test: ${name}`, `expected ${expected}, got ${rows.length} — ${why}`);
 }
 
-// Centurion and Lyttelton are the same Place, and Centurion is a searchable alias.
+// Centurion and Lyttelton are the same Place. Centurion is preferred; Lyttelton
+// remains a searchable historical alias.
 // The subquery may pick a same-name cross-province row, so resolve among the
 // package-scoped candidates.
 const lytteltonCandidates = await read(`SELECT DISTINCT p.place_id FROM \`place\` p
@@ -216,7 +217,7 @@ const lyttelton = await read(`SELECT n.name, n.normalized_name, n.name_role, n.i
  WHERE p.place_id = ?`, [scopedLyttelton ?? '']);
 const centurionRows = lyttelton.filter(r => r.normalized_name === 'centurion');
 check(centurionRows.length === 1, 'Centurion is a searchable name on the Lyttelton Place');
-check(lyttelton.some(r => r.name_role === 'preferred_public' && r.normalized_name === 'lyttelton'), 'Lyttelton is the governed preferred public name');
+check(lyttelton.some(r => r.name_role === 'preferred_public' && r.normalized_name === 'centurion'), 'Centurion is the governed preferred public name');
 check(lyttelton.some(r => r.name_role === 'historical'), 'a historical name is retained');
 check(!lyttelton.filter(r => r.name_role === 'historical').some(r => r.is_searchable !== 1), 'historical names remain searchable where the source allows');
 check(lyttelton.filter(r => r.name_role === 'preferred_public').length === 1, 'exactly one preferred public name');

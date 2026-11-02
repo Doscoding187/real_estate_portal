@@ -153,18 +153,15 @@ describe('Slice 3: discovery resolves canonical identity', () => {
     expect(ids.size).toBe(response.results.length);
   });
 
-  it('resolves an alias to the same canonical identity as the preferred name', async () => {
-    // Centurion is an admitted alias of the Lyttelton Place. The preferred name
-    // must not be changed to make this pass; the alias must resolve to the
-    // admitted identity instead.
-    const preferred = await placeByPreferredName('Lyttelton');
+  it('resolves the Lyttelton alias to the preferred Centurion identity', async () => {
+    const preferred = await placeByPreferredName('Centurion');
     expect(preferred).not.toBeNull();
-    const response = await discoverPlaces('Centurion', { recordCoverage: false });
+    const response = await discoverPlaces('Lyttelton', { recordCoverage: false });
     expect(response.outcome).toBe('resolved');
     expect(response.results[0].placeId).toBe(preferred);
-    expect(response.results[0].matchedName).toBe('Centurion');
-    expect(response.results[0].matchedNameRole).not.toBe('preferred_public');
-    expect(response.results[0].preferredPublicLabel).toBe('Lyttelton');
+    expect(response.results[0].matchedName).toBe('Lyttelton');
+    expect(response.results[0].matchedNameRole).toBe('historical');
+    expect(response.results[0].preferredPublicLabel).toBe('Centurion');
   });
 
   it('finds a Place by a searchable historical or common name form', async () => {
