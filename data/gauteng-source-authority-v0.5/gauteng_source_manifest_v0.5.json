@@ -931,7 +931,7 @@
       }
     },
     {
-      "kind": "reviewed_identity_hold_evidence",
+      "kind": "reviewed_identity_hold",
       "path": "data/gauteng-source-authority-v0.5/gauteng_factual_canonical_reviewed_identity_hold_v0.4.jsonl",
       "sha256": "48258d8677cb56152a278e599f1e35cc903ffb3504be5a76db468bdd73dc6de7",
       "size_bytes": 24321,

@@ -12,7 +12,7 @@
         "directory": "data/gauteng-source-authority-v0.5",
         "manifest": {
           "path": "data/gauteng-source-authority-v0.5/gauteng_source_manifest_v0.5.json",
-          "sha256": "f8e6d4eaee294db6f2c75e25ae3f5f4d8879f025dc4b2e1f3f3d2b31f3832789"
+          "sha256": "1760fc9c0ed402d5fb7d4cac5e3db1ff17f431344e39508cb93dc1dc6dfefb38"
         },
         "artifacts": {
           "geography": "gauteng_factual_canonical_geography_v0.2.jsonl",

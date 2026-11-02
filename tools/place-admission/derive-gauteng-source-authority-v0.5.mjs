@@ -412,7 +412,7 @@ const outputArtifacts = [
     derivedFrom: identityHoldDecisionPath,
   },
   {
-    kind: 'reviewed_identity_hold_evidence',
+    kind: 'reviewed_identity_hold',
     path: `${OUTPUT_DIR}/gauteng_factual_canonical_reviewed_identity_hold_v0.4.jsonl`,
     content: readBytes(identityHoldEvidencePath).toString('utf8'),
     derivedFrom: identityHoldEvidencePath,

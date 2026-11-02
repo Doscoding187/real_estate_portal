@@ -8,13 +8,13 @@
     "territory_id": "za-gp",
     "display_name": "Gauteng",
     "admission_registry_path": "data/place-admission-territories.v0.2/territory-registry.v0.2.json",
-    "admission_registry_sha256": "9226b1102d54046a2724cafe89f73f24d2c33a8b66f7e49744725dc9bda2c31b"
+    "admission_registry_sha256": "17e923e74668e521552b881dedabd4665dcf399b38f3c4e4bd6a2f4f8f99ee4b"
   },
   "generated_from": {
     "source_authority_version": "gauteng-source-authority-v0.5",
     "source_snapshot_id": "3ec5d51fb09c67ffed35aeecc11805df922bd2852e1eb63b9745dbfd43505eb5",
     "source_manifest_path": "data/gauteng-source-authority-v0.5/gauteng_source_manifest_v0.5.json",
-    "source_manifest_sha256": "f8e6d4eaee294db6f2c75e25ae3f5f4d8879f025dc4b2e1f3f3d2b31f3832789",
+    "source_manifest_sha256": "1760fc9c0ed402d5fb7d4cac5e3db1ff17f431344e39508cb93dc1dc6dfefb38",
     "compact_artifacts": [
       {
         "path": "data/gauteng-source-authority-v0.5/gauteng_candidate_dispositions_v0.2.jsonl",

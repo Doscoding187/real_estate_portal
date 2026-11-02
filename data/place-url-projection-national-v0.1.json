@@ -3,7 +3,7 @@
   "projection_id": "property-listify-national-canonical-place-url-projection-v0.1",
   "source_registry": {
     "path": "data/place-admission-territories.v0.2/territory-registry.v0.2.json",
-    "sha256": "9226b1102d54046a2724cafe89f73f24d2c33a8b66f7e49744725dc9bda2c31b"
+    "sha256": "17e923e74668e521552b881dedabd4665dcf399b38f3c4e4bd6a2f4f8f99ee4b"
   },
   "redirect_decisions": {
     "path": "data/canonical-place-url-redirect-decisions-national-v0.1.json",
@@ -25,7 +25,7 @@
       "territory_id": "za-ec",
       "admission_version": "za-ec-place-admission-v0.1",
       "package_manifest_path": "data/za-ec-place-admission-v0.1/za_ec_place_admission_manifest_v0.1.json",
-      "package_manifest_sha256": "a042e87db3f8e1ec7babf9b2124a35179d0b49c3e680dac561f532c293d2a1a5",
+      "package_manifest_sha256": "182c385d2faa488800d028a104b9fd523088d0885352f841462635fe21a541d8",
       "package_artifacts": [
         {
           "path": "data/za-ec-place-admission-v0.1/za_ec_place_admission_v0.1.jsonl",
@@ -49,7 +49,7 @@
       "territory_id": "za-fs",
       "admission_version": "za-fs-place-admission-v0.1",
       "package_manifest_path": "data/za-fs-place-admission-v0.1/za_fs_place_admission_manifest_v0.1.json",
-      "package_manifest_sha256": "4e0cb690eff9f46857ae04a30611a669d46cd9ff4d6144845b88c0cb5015c901",
+      "package_manifest_sha256": "e0b41c01ad1885d6e4fd6816624e9b7a0cf9aac0c8e55384235124aa1bc23485",
       "package_artifacts": [
         {
           "path": "data/za-fs-place-admission-v0.1/za_fs_place_admission_v0.1.jsonl",
@@ -73,7 +73,7 @@
       "territory_id": "za-gp",
       "admission_version": "gauteng-place-admission-v0.3",
       "package_manifest_path": "data/gauteng-place-admission-v0.3/gauteng_place_admission_manifest.v0.3.json",
-      "package_manifest_sha256": "8edd96959cc6e8e5bcbb7f2d9af30b126b865af64aafe2a6d537f6c0ef2934fd",
+      "package_manifest_sha256": "6ff91e663151a15e221b31abb9ef9a9b7a32031d758cdc47e9ff9c34171b7755",
       "package_artifacts": [
         {
           "path": "data/gauteng-place-admission-v0.3/gauteng_place_admission_v0.3.jsonl",
@@ -97,7 +97,7 @@
       "territory_id": "za-kzn",
       "admission_version": "za-kzn-place-admission-v0.1",
       "package_manifest_path": "data/za-kzn-place-admission-v0.1/za_kzn_place_admission_manifest_v0.1.json",
-      "package_manifest_sha256": "8b3551240c2f224788c6f00a08630dc0f2d130eb9b251f25da21ff10ebcdfe82",
+      "package_manifest_sha256": "e02a5bff10f2ccd17d8fe085d832dc9f5c77d33197204e801a70e5def6586896",
       "package_artifacts": [
         {
           "path": "data/za-kzn-place-admission-v0.1/za_kzn_place_admission_v0.1.jsonl",
@@ -121,7 +121,7 @@
       "territory_id": "za-li",
       "admission_version": "za-li-place-admission-v0.1",
       "package_manifest_path": "data/za-li-place-admission-v0.1/za_li_place_admission_manifest_v0.1.json",
-      "package_manifest_sha256": "d45f5e157bc5acbb19921d1e6f20aeea3fa817b26b23ef9adc8cf478e1ca39b8",
+      "package_manifest_sha256": "ead4366c4379c612abd9b5fa40f49fc36a7c996f3c9a1ab7909fdddc86c810e7",
       "package_artifacts": [
         {
           "path": "data/za-li-place-admission-v0.1/za_li_place_admission_v0.1.jsonl",
@@ -145,7 +145,7 @@
       "territory_id": "za-mp",
       "admission_version": "za-mp-place-admission-v0.1",
       "package_manifest_path": "data/za-mp-place-admission-v0.1/za_mp_place_admission_manifest_v0.1.json",
-      "package_manifest_sha256": "d359ce0c853192eb5670907dc5f571b4ae7ce8a0478d3e3e1ef8b378d916e378",
+      "package_manifest_sha256": "ecf5e81227e795e88650125fd927406e52428e417cbba816403de78ad7da9a7a",
       "package_artifacts": [
         {
           "path": "data/za-mp-place-admission-v0.1/za_mp_place_admission_v0.1.jsonl",
@@ -169,7 +169,7 @@
       "territory_id": "za-nc",
       "admission_version": "za-nc-place-admission-v0.1",
       "package_manifest_path": "data/za-nc-place-admission-v0.1/za_nc_place_admission_manifest_v0.1.json",
-      "package_manifest_sha256": "3a3a7e423579614f0aebd6dfaddda3109e1c78e8cda2a2821d7dbd1f3de27c9d",
+      "package_manifest_sha256": "b5cd1474cbfe2f0ddabae2798df880fd5c3d174b04e551f9c126c77311edc687",
       "package_artifacts": [
         {
           "path": "data/za-nc-place-admission-v0.1/za_nc_place_admission_v0.1.jsonl",
@@ -193,7 +193,7 @@
       "territory_id": "za-nw",
       "admission_version": "za-nw-place-admission-v0.1",
       "package_manifest_path": "data/za-nw-place-admission-v0.1/za_nw_place_admission_manifest_v0.1.json",
-      "package_manifest_sha256": "6ff79246499dc612893757662e8eada2c0a0d6ae1643eb718ba6e8fecd0b4633",
+      "package_manifest_sha256": "300239fae65197bca6f3e87325c1d1f65a00143e44036fc6ad2c525536d1f15e",
       "package_artifacts": [
         {
           "path": "data/za-nw-place-admission-v0.1/za_nw_place_admission_v0.1.jsonl",
@@ -217,7 +217,7 @@
       "territory_id": "za-wc",
       "admission_version": "za-wc-place-admission-v0.1",
       "package_manifest_path": "data/za-wc-place-admission-v0.1/za_wc_place_admission_manifest_v0.1.json",
-      "package_manifest_sha256": "9231db26a0d350343ad1e1ab4c12e377c2aaa791d94327b20ede2202b69c125e",
+      "package_manifest_sha256": "aff2c34bb584090145a4e37ac020d74b197dd0b9ad2c15149e1266e0a955d53e",
       "package_artifacts": [
         {
           "path": "data/za-wc-place-admission-v0.1/za_wc_place_admission_v0.1.jsonl",
