@@ -79,10 +79,8 @@ describe('ServiceProviderProfilePage', () => {
         locations: [
           {
             id: 1,
-            suburb: 'Rondebosch',
-            city: 'Cape Town',
-            province: 'Western Cape',
-            radiusKm: 25,
+            canonicalPlaceId: 'pl-place-01-000000000000000000000001',
+            label: 'Rondebosch, Cape Town, Western Cape',
           },
         ],
       }),
@@ -91,7 +89,7 @@ describe('ServiceProviderProfilePage', () => {
 
     expect(screen.getByText('Test Provider Co')).toBeInTheDocument();
     expect(screen.getByText('Plumbing')).toBeInTheDocument();
-    expect(screen.getByText('Rondebosch, Cape Town, Western Cape')).toBeInTheDocument();
+    expect(screen.getAllByText('Rondebosch, Cape Town, Western Cape')).toHaveLength(2);
   });
 
   it('shows a provider website when one is published', () => {
@@ -210,6 +208,8 @@ describe('ServiceProviderProfilePage', () => {
     expect(path).toContain('sourceSurface=journey_injection');
     expect(path).toContain('sourceDetail=saved_property');
     expect(path).toContain('reasonKey=move_ready');
+    expect(path).not.toContain('city=');
+    expect(path).not.toContain('province=');
   });
 
   it('has a clear unavailable state for unpublished providers', () => {
@@ -219,5 +219,38 @@ describe('ServiceProviderProfilePage', () => {
       screen.getByRole('heading', { name: /provider profile unavailable/i }),
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /browse services/i })).toBeInTheDocument();
+  });
+
+  it('presents measured response performance only when the sample gate passes', () => {
+    mockProfileData.mockReturnValue(
+      makeProfile({
+        responsePerformance: {
+          windowDays: 90,
+          measuredLeads: 2,
+          medianResponseSeconds: 3600,
+          sampleReady: false,
+        },
+      }),
+    );
+    render(<ServiceProviderProfilePage />);
+    expect(screen.queryByText(/typical first response/i)).not.toBeInTheDocument();
+  });
+
+  it('labels the computed first-response median with its measured basis', () => {
+    mockProfileData.mockReturnValue(
+      makeProfile({
+        responsePerformance: {
+          windowDays: 90,
+          measuredLeads: 5,
+          medianResponseSeconds: 7200,
+          sampleReady: true,
+        },
+      }),
+    );
+    render(<ServiceProviderProfilePage />);
+    expect(screen.getByText(/typical first response: within 2 hours/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/median measured across 5 requests in the last 90 days/i),
+    ).toBeInTheDocument();
   });
 });

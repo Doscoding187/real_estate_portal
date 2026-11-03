@@ -4,22 +4,20 @@ import { Building2, ChevronLeft, ChevronRight, List, Loader2, X } from 'lucide-r
 
 import { DevelopmentCard } from '@/components/DevelopmentCard';
 import { EnhancedNavbar } from '@/components/EnhancedNavbar';
-import { LocationAutosuggest } from '@/components/LocationAutosuggest';
+import {
+  CanonicalPlaceSelector,
+  type CanonicalPlaceSelection,
+} from '@/components/location/CanonicalPlaceSelector';
 import { MetaControl } from '@/components/seo/MetaControl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { trpc } from '@/lib/trpc';
-import {
-  createCanonicalSearchLocation,
-  type GeographySearchContext,
-} from '@/lib/geographySearchHandoff';
 import { generateIntentUrl, resolveSearchIntent, type SearchIntent } from '@/lib/searchIntent';
-import { normalizeLocationKey } from '@/lib/locationUtils';
 import {
   appendDevelopmentSearchReturn,
   normalizeDevelopmentSearchReturn,
 } from '@/lib/developmentJourneyContinuity';
-import type { LocationNode } from '@/types/location';
+import { isCanonicalPlaceId } from '@shared/placeAuthority';
 import { PROPERTY_IMAGE_FALLBACK } from '@/lib/mediaUtils';
 import type {
   PublicDevelopmentSearchAvailability,
@@ -63,7 +61,19 @@ const TRANSACTION_OPTIONS = [
 
 function removeTextLocationFilters(filters: Record<string, any>) {
   const next = { ...filters };
-  for (const key of ['search', 'province', 'city', 'suburb', 'locations', 'locations[]']) {
+  for (const key of [
+    'search',
+    'province',
+    'city',
+    'suburb',
+    'locationId',
+    'locationIds',
+    'searchAreaId',
+    'searchAreaIds',
+    'locations',
+    'locations[]',
+    'canonicalPlaceId',
+  ]) {
     delete next[key];
   }
   return next;
@@ -90,28 +100,12 @@ function updateIntentUrl(
   );
 }
 
-function canonicalLocationFromContext(context: {
-  canonicalLocationId: string;
-  type: 'province' | 'city' | 'suburb';
-  name: string;
-  slug: string;
-  hierarchy: { province: string; city?: string; suburb?: string };
-}): LocationNode {
-  return {
-    id: context.canonicalLocationId,
-    canonicalLocationId: context.canonicalLocationId,
-    slug: context.slug,
-    name: context.name,
-    type: context.type,
-    provinceSlug: normalizeLocationKey(context.hierarchy.province),
-    citySlug: context.hierarchy.city ? normalizeLocationKey(context.hierarchy.city) : undefined,
-  };
-}
-
 export default function DevelopmentsDemo() {
   const [location, setLocation] = useLocation();
   const search = useSearch();
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [placeSelection, setPlaceSelection] = useState<CanonicalPlaceSelection | null>(null);
+  const [placeQueryUnselected, setPlaceQueryUnselected] = useState(false);
 
   const intent = useMemo(
     () =>
@@ -131,6 +125,28 @@ export default function DevelopmentsDemo() {
     [location, search],
   );
 
+  const searchParams = useMemo(() => new URLSearchParams(search), [search]);
+  const placeIds = searchParams.getAll('canonicalPlaceId').map(value => value.trim());
+  const selectedCanonicalPlaceId =
+    placeIds.length === 1 && isCanonicalPlaceId(placeIds[0]) ? placeIds[0] : undefined;
+  const hasRetiredGeography = [
+    'province',
+    'city',
+    'suburb',
+    'locationId',
+    'locationIds',
+    'searchAreaId',
+    'searchAreaIds',
+    'locations',
+    'locations[]',
+    'search',
+  ].some(key => searchParams.has(key));
+  const invalidPlaceSelection =
+    hasRetiredGeography ||
+    placeIds.length > 1 ||
+    (placeIds.length === 1 && !selectedCanonicalPlaceId) ||
+    placeQueryUnselected;
+
   const queryInput = useMemo(() => {
     const developmentType = DEVELOPMENT_TYPE_OPTIONS.find(
       option => option.value === intent.filters.developmentType,
@@ -143,19 +159,7 @@ export default function DevelopmentsDemo() {
     )?.value;
 
     return {
-      locationId: intent.geography.locationId,
-      locationIds: intent.geography.locationIds,
-      searchAreaId: intent.geography.searchAreaId,
-      searchAreaIds: intent.geography.searchAreaIds,
-      province: intent.geography.province,
-      city: intent.geography.city,
-      suburb: intent.geography.suburb,
-      locations: Array.isArray(intent.filters.locations)
-        ? intent.filters.locations.filter(
-            (value: unknown): value is string => typeof value === 'string',
-          )
-        : undefined,
-      search: typeof intent.filters.search === 'string' ? intent.filters.search : undefined,
+      canonicalPlaceId: selectedCanonicalPlaceId,
       developmentType,
       developmentStatus,
       transactionType:
@@ -174,63 +178,37 @@ export default function DevelopmentsDemo() {
       page: intent.resultState.page,
       pageSize: PAGE_SIZE,
     };
-  }, [intent]);
+  }, [intent, selectedCanonicalPlaceId]);
 
   const { data, error, isLoading, isFetching } = trpc.properties.searchDevelopments.useQuery(
     queryInput,
-    { enabled: !intent.validation },
+    { enabled: !intent.validation && !invalidPlaceSelection },
   );
 
-  // Text and slug compatibility paths are accepted only at the server boundary. Once that
-  // boundary resolves a location, the browser replaces the compatibility URL with its canonical
-  // location ID so refresh/share/back all carry the same geography authority.
   useEffect(() => {
-    const context = data?.locationContext;
-    if (intent.validation || error || !context || data?.locationState !== 'resolved') return;
-
-    const hasCanonicalGeography = Boolean(
-      intent.geography.locationId ||
-      intent.geography.locationIds?.length ||
-      intent.geography.searchAreaId ||
-      intent.geography.searchAreaIds?.length,
-    );
-    const shouldCanonicalizeLocation = !hasCanonicalGeography;
-    const shouldNormalizePage = data.page !== intent.resultState.page;
-    if (!shouldCanonicalizeLocation && !shouldNormalizePage) return;
-
-    const nextGeography = shouldCanonicalizeLocation
-      ? {
-          level: context.type,
-          locationId: context.canonicalLocationId,
-          province: normalizeLocationKey(context.hierarchy.province),
-          city: context.hierarchy.city ? normalizeLocationKey(context.hierarchy.city) : undefined,
-          suburb: context.hierarchy.suburb
-            ? normalizeLocationKey(context.hierarchy.suburb)
-            : undefined,
-        }
-      : intent.geography;
-
+    if (intent.validation || error || !data || data.page === intent.resultState.page) return;
     updateIntentUrl(
       setLocation,
       intent,
       {
-        geography: nextGeography,
-        filters: shouldCanonicalizeLocation
-          ? removeTextLocationFilters(intent.filters)
-          : intent.filters,
         resultState: { page: data.page },
       },
       { replace: true },
     );
   }, [data, error, intent, setLocation]);
 
-  const currentLocation = data?.locationContext
-    ? canonicalLocationFromContext(data.locationContext)
-    : undefined;
-  const locationMessage = data?.locationMessage || intent.validation?.message;
+  const locationMessage =
+    intent.validation?.message ||
+    (hasRetiredGeography ||
+    placeIds.length > 1 ||
+    (placeIds.length === 1 && !selectedCanonicalPlaceId)
+      ? 'Choose one approved canonical Place. Text and legacy location filters are no longer supported.'
+      : placeQueryUnselected
+        ? 'Select a Place from the results or clear the Place filter before searching.'
+        : undefined);
   const hasLocationError = Boolean(
-    error ||
     intent.validation ||
+    invalidPlaceSelection ||
     data?.locationState === 'unavailable' ||
     data?.locationState === 'unresolved' ||
     data?.locationState === 'ambiguous',
@@ -271,33 +249,26 @@ export default function DevelopmentsDemo() {
     updateIntentUrl(setLocation, intent, { resultState: { page: nextPage } });
   };
 
-  const selectLocation = (selected: LocationNode) => {
-    const canonical = createCanonicalSearchLocation(selected);
-    if (!canonical) return;
-
-    const geography: SearchIntent['geography'] = { level: 'country' };
-    if (canonical.scope.kind === 'province') {
-      geography.level = 'province';
-      geography.locationId = canonical.scope.canonicalLocationId;
-    } else if (canonical.scope.kind === 'metro_city') {
-      geography.level = 'city';
-      geography.locationId = canonical.scope.canonicalLocationId;
-    } else if (canonical.scope.kind === 'locality') {
-      geography.level = 'suburb';
-      geography.locationId = canonical.scope.canonicalLocationId;
-    } else {
+  const selectPlace = (selected: CanonicalPlaceSelection | null) => {
+    setPlaceSelection(selected);
+    if (!selected) {
+      setPlaceQueryUnselected(true);
       return;
     }
-
-    Object.assign(geography, canonical.context as GeographySearchContext);
+    setPlaceQueryUnselected(false);
     updateIntentUrl(setLocation, intent, {
-      geography,
+      geography: {
+        level: 'canonical_place',
+        canonicalPlaceId: selected.canonicalPlaceId,
+      },
       filters: removeTextLocationFilters(intent.filters),
       resultState: { page: 0 },
     });
   };
 
-  const clearLocation = () => {
+  const clearPlace = () => {
+    setPlaceSelection(null);
+    setPlaceQueryUnselected(false);
     updateIntentUrl(setLocation, intent, {
       geography: { level: 'country' },
       filters: removeTextLocationFilters(intent.filters),
@@ -447,21 +418,26 @@ export default function DevelopmentsDemo() {
         <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
             <div className="min-w-0 flex-1">
-              <LocationAutosuggest
-                placeholder="Search by canonical city, suburb, or province..."
-                selectedLocations={[]}
-                maxLocations={1}
-                inputClassName="h-11 w-full rounded-xl border-slate-200 bg-white"
-                onSelect={selectLocation}
+              <CanonicalPlaceSelector
+                value={placeSelection}
+                onChange={selectPlace}
+                purpose="search"
+                label="Project Place"
+                placeholder="Search approved Places"
+                hint="Only developments assigned to this exact reviewed Place match."
               />
             </div>
-            {currentLocation ? (
+            {selectedCanonicalPlaceId ? (
               <div className="flex items-center gap-2 rounded-full bg-blue-50 px-3 py-2 text-sm font-medium text-blue-800">
-                <span>Searching {currentLocation.name}</span>
+                <span>
+                  {placeSelection?.canonicalPlaceId === selectedCanonicalPlaceId
+                    ? `Searching ${placeSelection.label}`
+                    : 'Canonical Place filter active'}
+                </span>
                 <button
                   type="button"
-                  onClick={clearLocation}
-                  aria-label="Clear development location"
+                  onClick={clearPlace}
+                  aria-label="Clear development Place"
                   className="rounded-full p-0.5 hover:bg-blue-100"
                 >
                   <X className="h-4 w-4" />
@@ -471,7 +447,7 @@ export default function DevelopmentsDemo() {
           </div>
           {hasLocationError ? (
             <p className="mt-3 text-sm font-medium text-amber-700" role="status">
-              {locationMessage}
+              {locationMessage || 'The selected canonical Place could not be used.'}
             </p>
           ) : null}
         </div>
@@ -561,7 +537,7 @@ export default function DevelopmentsDemo() {
                       )}
                       title={development.name}
                       rating={development.rating ?? undefined}
-                      location={`${development.suburb ? `${development.suburb}, ` : ''}${development.city}, ${development.province}`}
+                      location={development.locationLabels.join(', ') || 'Place assignment pending'}
                       description={development.description}
                       image={development.images[0] || PROPERTY_IMAGE_FALLBACK}
                       unitTypes={development.unitTypes.map(unit => ({

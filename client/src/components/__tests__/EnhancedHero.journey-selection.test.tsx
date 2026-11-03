@@ -2,12 +2,16 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { isLandPublicDiscoveryAvailable, isLandVerticalAvailable } from '@shared/landLaunchPolicy';
+import { LAND_VERTICAL_LAUNCH_STATE, isLandPublicDiscoveryAvailable, isLandVerticalAvailable } from '@shared/landLaunchPolicy';
 
 const { setLocation, searchDiscoveryQuery } = vi.hoisted(() => ({
   setLocation: vi.fn(),
   searchDiscoveryQuery: vi.fn(() => ({ data: [] })),
 }));
+
+const johannesburgId = 'pl-place-01-21f154cd5d0954c29ec7525f';
+const sandtonId = 'pl-place-01-dee61758ef3bda7cd1a258ad';
+const rosebankId = 'pl-place-01-c07bb29f37ad926848934844';
 
 vi.mock('wouter', () => ({
   useLocation: () => ['/', setLocation],
@@ -19,7 +23,7 @@ vi.mock('@/components/LocationAutosuggest', () => ({
       <input
         ref={props.inputRef}
         aria-describedby={props.inputAriaDescribedBy}
-        aria-label="Search by city, suburb, or area"
+        aria-label="Search admitted Places"
         onChange={event => props.onChange?.(event.target.value)}
         onKeyDown={event => {
           if (event.key === 'Enter') props.onSubmit?.();
@@ -28,8 +32,15 @@ vi.mock('@/components/LocationAutosuggest', () => ({
         role="combobox"
       />
       {props.selectedLocations?.map((location: any) => (
-        <span key={location.id} data-testid={`selected-location-${location.id}`}>
-          {location.name}
+        <span key={location.canonicalPlaceId}>
+          <span data-testid={`selected-location-${location.canonicalPlaceId}`}>{location.name}</span>
+          <button
+            type="button"
+            aria-label={`Remove ${location.name}`}
+            onClick={() => props.onRemove?.(props.selectedLocations.indexOf(location))}
+          >
+            Remove
+          </button>
         </span>
       ))}
       <button
@@ -37,12 +48,12 @@ vi.mock('@/components/LocationAutosuggest', () => ({
         data-testid="select-johannesburg"
         onClick={() =>
           props.onSelect?.({
-            id: 'city:12',
+            canonicalPlaceId: johannesburgId,
             name: 'Johannesburg',
             slug: 'johannesburg',
             type: 'city',
             provinceSlug: 'gauteng',
-            parentCanonicalLocationId: 'province:1',
+            canonicalPath: '/gauteng/johannesburg',
           })
         }
       >
@@ -53,13 +64,14 @@ vi.mock('@/components/LocationAutosuggest', () => ({
         data-testid="select-sandton"
         onClick={() =>
           props.onSelect?.({
-            id: 'suburb:34',
+            canonicalPlaceId: sandtonId,
             name: 'Sandton',
             slug: 'sandton',
             type: 'suburb',
             provinceSlug: 'gauteng',
             citySlug: 'johannesburg',
-            parentCanonicalLocationId: 'city:12',
+            canonicalPath: '/gauteng/johannesburg/sandton',
+            parentCanonicalPlaceId: johannesburgId,
           })
         }
       >
@@ -70,13 +82,14 @@ vi.mock('@/components/LocationAutosuggest', () => ({
         data-testid="select-rosebank"
         onClick={() =>
           props.onSelect?.({
-            id: 'suburb:35',
+            canonicalPlaceId: rosebankId,
             name: 'Rosebank',
             slug: 'rosebank',
             type: 'suburb',
             provinceSlug: 'gauteng',
             citySlug: 'johannesburg',
-            parentCanonicalLocationId: 'city:12',
+            canonicalPath: '/gauteng/johannesburg/rosebank',
+            parentCanonicalPlaceId: johannesburgId,
           })
         }
       >
@@ -100,6 +113,27 @@ vi.mock('@/components/LocationAutosuggest', () => ({
   ),
 }));
 
+vi.mock('@/components/location/CanonicalPlaceSelector', () => ({
+  CanonicalPlaceSelector: (props: any) => (
+    <button
+      type="button"
+      data-testid="select-development-place"
+      onClick={() =>
+        props.onChange?.({
+          canonicalPlaceId: johannesburgId,
+          label: 'Johannesburg',
+          placeType: 'city',
+          scope: 'metro_city',
+          administrativeContext: 'Gauteng',
+          canonicalPath: '/gauteng/johannesburg',
+        })
+      }
+    >
+      Select canonical development Place
+    </button>
+  ),
+}));
+
 vi.mock('@/lib/trpc', () => ({
   trpc: {
     location: {
@@ -114,6 +148,17 @@ vi.mock('@/lib/trpc', () => ({
 }));
 
 import { EnhancedHero } from '../EnhancedHero';
+
+const launchState = LAND_VERTICAL_LAUNCH_STATE as unknown as { enabled: boolean };
+function withLandLaunchEnabled(run: () => void) {
+  const previous = launchState.enabled;
+  launchState.enabled = true;
+  try {
+    run();
+  } finally {
+    launchState.enabled = previous;
+  }
+}
 
 describe('EnhancedHero explicit journey selection', () => {
   beforeEach(() => {
@@ -163,7 +208,7 @@ describe('EnhancedHero explicit journey selection', () => {
     expect(setLocation).toHaveBeenCalledWith('/gauteng/johannesburg');
   });
 
-  it('submits sibling locations as one canonical Buy OR intent from the neutral resolver', () => {
+  it('requires one canonical Place before Buy or Rent can leave the neutral resolver', () => {
     render(<EnhancedHero />);
 
     fireEvent.click(screen.getByTestId('select-sandton'));
@@ -183,13 +228,17 @@ describe('EnhancedHero explicit journey selection', () => {
         name: 'What are you looking for in Sandton and Rosebank?',
       }),
     ).toBeInTheDocument();
-    expect(screen.getByTestId('selected-location-suburb:34')).toHaveTextContent('Sandton');
-    expect(screen.getByTestId('selected-location-suburb:35')).toHaveTextContent('Rosebank');
-    expect(screen.getByTestId('homepage-location-intent-buy')).not.toBeDisabled();
+    expect(screen.getByTestId(`selected-location-${sandtonId}`)).toHaveTextContent('Sandton');
+    expect(screen.getByTestId(`selected-location-${rosebankId}`)).toHaveTextContent('Rosebank');
+    expect(screen.getByTestId('homepage-location-intent-buy')).toBeDisabled();
     expect(
-      screen.getByText('Search both selected areas together. Results can match either area.'),
+      screen.getByText(
+        'Buy and Rent searches use one canonical Place. Remove extra Places to continue.',
+      ),
     ).toBeInTheDocument();
 
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Rosebank' }));
+    expect(screen.getByTestId('homepage-location-intent-buy')).toBeEnabled();
     fireEvent.click(screen.getByTestId('homepage-location-intent-buy'));
 
     const submittedUrl = new URL(
@@ -197,8 +246,8 @@ describe('EnhancedHero explicit journey selection', () => {
       'https://listify.test',
     );
     expect(submittedUrl.pathname).toBe('/property-for-sale');
-    expect(submittedUrl.searchParams.getAll('locationIds')).toEqual(['suburb:34', 'suburb:35']);
-    expect(submittedUrl.searchParams.get('locationId')).toBeNull();
+    expect(submittedUrl.searchParams.get('canonicalPlaceId')).toBe(sandtonId);
+    expect(submittedUrl.searchParams.get('locationIds')).toBeNull();
   });
 
   it('resolves a contradictory parent and child to the latest explicit location', () => {
@@ -207,11 +256,11 @@ describe('EnhancedHero explicit journey selection', () => {
     fireEvent.click(screen.getByTestId('select-johannesburg'));
     fireEvent.click(screen.getByTestId('select-sandton'));
 
-    expect(screen.queryByTestId('selected-location-city:12')).not.toBeInTheDocument();
-    expect(screen.getByTestId('selected-location-suburb:34')).toHaveTextContent('Sandton');
+    expect(screen.queryByTestId(`selected-location-${johannesburgId}`)).not.toBeInTheDocument();
+    expect(screen.getByTestId(`selected-location-${sandtonId}`)).toHaveTextContent('Sandton');
     expect(
       screen.getByText(
-        'Sandton replaces the previous area. Multi-area search combines sibling locations at the same level.',
+        'Sandton replaces the previous selection because the places have different scopes or parents.',
       ),
     ).toBeInTheDocument();
 
@@ -222,7 +271,7 @@ describe('EnhancedHero explicit journey selection', () => {
       String(setLocation.mock.calls.at(-1)?.[0]),
       'https://listify.test',
     );
-    expect(submittedUrl.searchParams.get('locationId')).toBe('suburb:34');
+    expect(submittedUrl.searchParams.get('canonicalPlaceId')).toBe(sandtonId);
     expect(submittedUrl.searchParams.getAll('locationIds')).toEqual([]);
   });
 
@@ -252,18 +301,18 @@ describe('EnhancedHero explicit journey selection', () => {
       'https://listify.test',
     );
     expect(submittedUrl.pathname).toBe('/property-for-sale');
-    expect(submittedUrl.searchParams.get('locationId')).toBe('city:12');
+    expect(submittedUrl.searchParams.get('canonicalPlaceId')).toBe(johannesburgId);
     expect(submittedUrl.searchParams.getAll('locationIds')).toEqual([]);
   });
 
   it('routes an enabled Developments selection to the canonical search URL', () => {
     render(<EnhancedHero activeTab="developments" />);
 
-    fireEvent.click(screen.getByTestId('select-johannesburg'));
+    fireEvent.click(screen.getByTestId('select-development-place'));
     fireEvent.click(screen.getAllByRole('button', { name: 'Search', exact: true })[0]);
 
     expect(setLocation).toHaveBeenCalledWith(
-      expect.stringMatching(/^\/new-developments\?locationId=city%3A12/),
+      expect.stringMatching(new RegExp(`^/new-developments\\?canonicalPlaceId=${johannesburgId}`)),
     );
   });
 
@@ -273,20 +322,32 @@ describe('EnhancedHero explicit journey selection', () => {
     fireEvent.click(screen.getByTestId('select-johannesburg'));
     fireEvent.click(screen.getAllByRole('button', { name: 'Search', exact: true })[0]);
 
-    expect(setLocation).toHaveBeenCalledWith('/commercial?locationIds=city%3A12');
+    expect(setLocation).toHaveBeenCalledWith(`/commercial?canonicalPlaceId=${johannesburgId}`);
   });
 
-  it('opens public Land search while keeping Land publication deferred', () => {
-    render(<EnhancedHero activeTab="plot_land" />);
+  it('takes a broad Land Place directly to its guide without rolling listings up', () => {
+    withLandLaunchEnabled(() => {
+      render(<EnhancedHero activeTab="plot_land" />);
 
-    expect(isLandPublicDiscoveryAvailable()).toBe(true);
-    expect(isLandVerticalAvailable()).toBe(false);
-    expect(screen.getByText('Land type')).toBeInTheDocument();
+      expect(isLandPublicDiscoveryAvailable()).toBe(true);
+      expect(isLandVerticalAvailable()).toBe(true);
+      expect(screen.getByText('Land type')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByTestId('select-johannesburg'));
-    fireEvent.click(screen.getAllByRole('button', { name: 'Search', exact: true })[0]);
+      fireEvent.click(screen.getByTestId('select-johannesburg'));
 
-    expect(setLocation).toHaveBeenCalledWith('/plots-and-land?locationId=city%3A12');
+      expect(setLocation).toHaveBeenCalledWith('/gauteng/johannesburg');
+    });
+  });
+
+  it('keeps exact locality Land search on its selected Place ID', () => {
+    withLandLaunchEnabled(() => {
+      render(<EnhancedHero activeTab="plot_land" />);
+
+      fireEvent.click(screen.getByTestId('select-sandton'));
+      fireEvent.click(screen.getAllByRole('button', { name: 'Search', exact: true })[0]);
+
+      expect(setLocation).toHaveBeenCalledWith(`/plots-and-land?canonicalPlaceId=${sandtonId}`);
+    });
   });
 
   it('exposes Commercial Office filters that map to tenant decisions', () => {
@@ -317,7 +378,9 @@ describe('EnhancedHero explicit journey selection', () => {
       .forEach(button => expect(button).not.toBeDisabled());
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Search', exact: true })[0]);
-    expect(setLocation).toHaveBeenCalledWith(expect.stringContaining('locationId=city%3A12'));
+    expect(setLocation).toHaveBeenCalledWith(
+      expect.stringContaining(`canonicalPlaceId=${johannesburgId}`),
+    );
   });
 
   it('exposes the governed bedroom and bathroom filters for Buy', () => {
@@ -350,7 +413,9 @@ describe('EnhancedHero explicit journey selection', () => {
     fireEvent.click(screen.getAllByRole('button', { name: 'Buy' })[0]);
 
     expect(onTabChange).toHaveBeenCalledWith('buy');
-    expect(screen.getByTestId('selected-location-city:12')).toHaveTextContent('Johannesburg');
+    expect(screen.getByTestId(`selected-location-${johannesburgId}`)).toHaveTextContent(
+      'Johannesburg',
+    );
     screen
       .getAllByRole('button', { name: 'Search', exact: true })
       .forEach(button => expect(button).not.toBeDisabled());

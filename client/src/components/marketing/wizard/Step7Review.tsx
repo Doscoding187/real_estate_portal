@@ -60,12 +60,6 @@ const Step7Review: React.FC<Step7Props> = ({ data, campaignId, onBack, onNext })
             <h3 className="font-semibold">Targeting</h3>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <span className="text-slate-500 block">Locations</span>
-                <span className="font-medium">
-                  {data.targeting?.locationTargeting?.join(', ') || 'All Locations'}
-                </span>
-              </div>
-              <div>
                 <span className="text-slate-500 block">Property Types</span>
                 <span className="font-medium">
                   {data.targeting?.propertyType?.join(', ') || 'All Types'}

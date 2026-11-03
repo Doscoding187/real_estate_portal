@@ -5,6 +5,7 @@ import {
   ArrowRight,
   BadgeCheck,
   CalendarCheck,
+  Clock,
   Globe,
   Layers,
   MapPin,
@@ -21,6 +22,10 @@ import {
   type ServiceCategory,
 } from '@/features/services/catalog';
 import { servicesUi } from '@/features/services/design';
+import {
+  buildProviderBusinessStructuredData,
+  buildServiceBreadcrumbStructuredData,
+} from '@/features/services/seoStructuredData';
 import {
   ProviderBrandPlate,
   ProviderRating,
@@ -47,6 +52,18 @@ function safeDecode(value: string) {
   } catch {
     return '';
   }
+}
+
+function formatResponseLatency(seconds: number) {
+  const total = Math.max(0, Math.round(Number(seconds) || 0));
+  const minutes = Math.max(1, Math.round(total / 60));
+  const hours = Math.max(1, Math.round(total / 3600));
+  const days = Math.max(1, Math.round(total / 86400));
+  const unit = (count: number, label: string) => (count === 1 ? label : `${label}s`);
+  if (total < 60) return 'under a minute';
+  if (total < 7200) return `within ${minutes} ${unit(minutes, 'minute')}`;
+  if (total < 172800) return `within ${hours} ${unit(hours, 'hour')}`;
+  return `within ${days} ${unit(days, 'day')}`;
 }
 
 export default function ServiceProviderProfilePage() {
@@ -86,8 +103,27 @@ export default function ServiceProviderProfilePage() {
         profile?.bio ||
         'Review published services, listed coverage, and platform verification for this provider.',
       canonicalPath: `/services/provider/${encodeURIComponent(slug)}`,
+      structuredData: profile
+        ? [
+            buildServiceBreadcrumbStructuredData([
+              { label: 'Home', path: '/' },
+              { label: 'Services', path: '/services' },
+              { label: profile.companyName },
+            ]),
+            buildProviderBusinessStructuredData({
+              slug,
+              companyName: profile.companyName,
+              headline: profile.headline,
+              bio: profile.bio,
+              logoUrl: profile.logoUrl,
+              locations: profile.locations,
+              averageRating: profile?.averageRating,
+              reviewCount: profile?.reviewCount,
+            }),
+          ]
+        : undefined,
     });
-  }, [profile?.bio, profile?.companyName, profile?.headline, slug]);
+  }, [profile, slug]);
 
   if (!providerId) {
     return (
@@ -149,13 +185,13 @@ export default function ServiceProviderProfilePage() {
     journeyContext,
   );
   const primaryLocation = profile.locations[0];
-  const locationLine = primaryLocation
-    ? [primaryLocation.suburb, primaryLocation.city, primaryLocation.province]
-        .filter(Boolean)
-        .join(', ')
-    : 'Coverage on request';
+  const locationLine = primaryLocation?.label || 'Coverage on request';
 
   // Only facts the platform actually holds may be presented as trust signals.
+  const responsePerformance =
+    profile.responsePerformance && profile.responsePerformance.sampleReady
+      ? profile.responsePerformance
+      : null;
   const trustFacts = [
     {
       title: 'Platform verified',
@@ -172,6 +208,21 @@ export default function ServiceProviderProfilePage() {
       description: 'Coverage is listed exactly as the provider supplied it.',
       icon: MapPin,
     },
+    ...(responsePerformance
+      ? [
+          {
+            title: `Typical first response: ${formatResponseLatency(
+              responsePerformance.medianResponseSeconds,
+            )}`,
+            description: `Median measured across ${
+              responsePerformance.measuredLeads
+            } request${responsePerformance.measuredLeads === 1 ? '' : 's'} in the last ${
+              responsePerformance.windowDays
+            } days.`,
+            icon: Clock,
+          },
+        ]
+      : []),
     {
       title: 'Direct request',
       description: 'Your request goes straight to the provider you choose.',
@@ -471,22 +522,17 @@ export default function ServiceProviderProfilePage() {
                 </p>
                 <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {profile.locations.map(location => {
-                    const primary = location.suburb || location.city || 'Unspecified';
-                    const secondary = [location.city, location.province].filter(Boolean).join(', ');
                     return (
                       <li
-                        key={`${location.id}-${location.city}-${location.suburb}`}
+                        key={`${location.id}-${location.canonicalPlaceId}`}
                         className={`${servicesUi.surface} p-5`}
                       >
                         <p className="flex items-center gap-2 text-[14px] font-semibold text-[#0B1B2A]">
                           <MapPin className="h-4 w-4 shrink-0 text-[#168363]" aria-hidden="true" />
-                          {primary}
+                          {location.label || 'Selected Place unavailable'}
                         </p>
-                        {secondary && (
-                          <p className="mt-1.5 pl-6 text-[12px] text-[#4B5C6B]">{secondary}</p>
-                        )}
                         <p className="mt-1.5 pl-6 text-[12px] text-[#8A99A6]">
-                          Coverage label supplied by the provider
+                          Exact Place coverage
                         </p>
                       </li>
                     );

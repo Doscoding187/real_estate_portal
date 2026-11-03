@@ -6,9 +6,19 @@ head. The runner never chooses order by scanning filenames or by consulting a
 database ledger.
 
 `0000_canonical_launch_baseline.sql` is the immutable establishment migration
-for a fresh Property Listify database. It creates 180 application tables, no
-views or data, and must never be rewritten. Historical SQL under `_archived/`
-is non-executable evidence.
+for a fresh Property Listify database. It creates application tables, no views
+or data, and must never be rewritten. Historical SQL under `_archived/` is
+non-executable evidence.
+
+## Supported provider
+
+Active migrations use the MySQL dialect through the canonical Database
+Authority connection path. The intended hosted database is Azure Database for
+MySQL. Azure SQL Database is a SQL Server product and is not compatible with
+this application's MySQL driver and schema. TiDB-specific commands, checks,
+recovery code, and connection support have been retired. Historical TiDB
+approval references and archive records remain evidence only; they do not
+authorize an operational path or prove production cutover.
 
 ## Add a future migration
 
@@ -19,15 +29,12 @@ is non-executable evidence.
 4. Add one lowercase top-level SQL file and one manifest entry with exact
    checksum and parent checksum.
 5. For `incremental-ddl`, use exactly one independently verifiable DDL
-   statement. On TiDB, do not add columns and their indexes, keys, or
-   constraints in the same `ALTER TABLE`; use separately sequenced statements
-   under an approved exceptional contract. For `transactional-data`, use DML
-   only.
+   statement. For `transactional-data`, use DML only.
 6. Prove malformed identity, duplicate number, membership drift, checksum
    drift, broken ancestry, cycle, multiple heads, archive execution, and unsafe
    statement policy all fail.
-7. Run `pnpm db:migrate:plan` against an owned disposable database, then apply,
-   schema congruency, readiness, and focused consumer evidence.
+7. Run `pnpm db:migrate:plan` against an owned disposable MySQL database, then
+   apply, schema congruency, readiness, and focused consumer evidence.
 
 Do not add a product migration merely to test future sequencing; use isolated
 manifest fixtures for `0000 -> 0001 -> 0002`.
@@ -40,10 +47,12 @@ new head, manifest digest, and plan digest without locks or mutation.
 
 Apply takes the manifest lock and revalidates the plan. It stores successful
 history in `sql_migration_history` and durable running/failed/blocked/succeeded
-evidence in `sql_migration_attempts`. An incomplete attempt blocks normal
-continuation. MySQL/TiDB DDL is not transactionally rolled back; do not delete
-attempt evidence, edit history, silently retry ambiguous DDL, or record partial
-work as success.
+evidence in `sql_migration_attempts`. A failed, running, or blocked attempt
+stops ordinary continuation. There is no standing generic recovery command:
+preserve the sanitized evidence and prepare a separately reviewed MySQL-only
+incident contract. Do not retry, edit history or attempt evidence, execute
+archived SQL, or recreate a target to clear the failure. MySQL DDL is not
+transactionally rolled back.
 
 ## Commands
 
@@ -53,35 +62,12 @@ pnpm db:migrate:plan
 pnpm db:migrate:apply -- --accepted-old-head=<head-or-none> --expected-new-head=<manifest-head>
 pnpm db:release:plan
 pnpm db:release:apply -- --accepted-old-head=<head-or-none> --expected-new-head=<head> --plan-digest=<exact-reviewed-plan-digest> --ack=<exact-release-ack>
-pnpm db:release-tidb-check-constraint-convergence:plan -- --approval-reference=<reference> --approval-actor=<actor>
-pnpm db:release-tidb-check-constraint-convergence:apply -- --approval-reference=<reference> --approval-actor=<actor> --plan-digest=<exact-plan-digest> --ack=<exact-release-ack>
 pnpm db:schema:congruency
 pnpm db:readiness
 ```
 
 Migration is an explicit operation, never application startup work. Generic
-migration commands reject staging and production. Protected targets require
-the explicit release operation, exact protected-target approval, and release
+migration commands reject staging and production. Protected targets require the
+explicit release operation, exact protected-target approval, and release
 evidence; apply additionally requires exact acknowledgement. The current
 `listify_local` is quarantined and cannot be migrated.
-
-The reviewed TiDB `0046` zero-statement incident has a separately bounded
-release recovery. It archives the rejected SQL, records review evidence only,
-and leaves the canonical runner responsible for the sequenced replacement:
-
-```sh
-pnpm db:release-commercial-quote-terms-recovery:plan -- --approval-reference=<reference> --approval-actor=<actor>
-pnpm db:release-commercial-quote-terms-recovery:apply -- --approval-reference=<reference> --approval-actor=<actor> --plan-digest=<exact-plan-digest> --ack=<exact-release-ack>
-```
-
-Never execute the archived SQL or repair the attempt ledger manually. After
-recovery, create a fresh protected `db:release:plan` from the accepted `0045`
-head before applying the active replacement and later migrations.
-
-The TiDB CHECK-constraint convergence is separately bounded to the 22 desired
-Drizzle checks that were absent because the target capability was disabled. Its
-plan proves the canonical migration head, each named constraint, and zero
-violating rows before apply. Apply enables the TiDB capability and adds only
-the named missing checks under the ordinary release lock. It records durable
-progress rather than modifying migration history. Normal TiDB migration apply
-fails closed while the capability is disabled.

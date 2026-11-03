@@ -662,6 +662,9 @@ export function buildDevelopmentSubmitPayload(input: DevelopmentSubmitPayloadInp
         completedSteps: canonicalSnapshot.completedSteps,
         stepData: {
           ...(canonicalSnapshot.stepData ?? {}),
+          ...(canonicalSnapshot.stepData?.location !== undefined
+            ? { location: canonicalDevelopmentData.location }
+            : {}),
           unit_types: {
             ...(canonicalSnapshot.stepData?.unit_types ?? {}),
             unitTypes,
@@ -704,9 +707,6 @@ export function buildDevelopmentSubmitPayload(input: DevelopmentSubmitPayloadInp
     transactionType,
     ownershipType: normalizeSubmitOwnershipType(ownershipSource),
     address: canonicalDevelopmentData.location?.address,
-    city: canonicalDevelopmentData.location?.city || 'Unknown',
-    province: canonicalDevelopmentData.location?.province || 'Unknown',
-    suburb: canonicalDevelopmentData.location?.suburb,
     postalCode: canonicalDevelopmentData.location?.postalCode,
     latitude: canonicalDevelopmentData.location?.latitude,
     longitude: canonicalDevelopmentData.location?.longitude,

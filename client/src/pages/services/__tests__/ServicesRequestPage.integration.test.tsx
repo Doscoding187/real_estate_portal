@@ -3,6 +3,27 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 const mockSetLocation = vi.fn();
 const mockMutate = vi.fn();
+const PLACE_ID = 'pl-place-01-000000000000000000000000';
+const selectedPlace = {
+  canonicalPlaceId: PLACE_ID,
+  label: 'Melville, City of Johannesburg, Gauteng',
+  placeType: 'suburb',
+  scope: 'locality' as const,
+  administrativeContext: 'City of Johannesburg, Gauteng',
+  canonicalPath: '/gauteng/melville',
+  parentPlaceId: 'pl-place-01-111111111111111111111111',
+};
+
+vi.mock('@/components/location/CanonicalPlaceSelector', () => ({
+  CanonicalPlaceSelector: ({ onChange, label }: { onChange: (value: typeof selectedPlace) => void; label: string }) => (
+    <div>
+      <span>{label}</span>
+      <button type="button" onClick={() => onChange(selectedPlace)}>
+        Select approved test Place
+      </button>
+    </div>
+  ),
+}));
 
 vi.mock('@/lib/trpc', () => ({
   trpc: {
@@ -14,17 +35,16 @@ vi.mock('@/lib/trpc', () => ({
         useMutation: ({ onSuccess }: { onSuccess: (data: any) => void }) => ({
           mutate: (input: any) => {
             mockMutate(input);
-            onSuccess({
-              leadId: 99,
-              leadIds: [99],
-              providerId: 1,
-              providerIds: [1],
-              unmatched: false,
-            });
+            onSuccess({ leadId: 99, leadIds: [99], unmatched: false });
           },
           isPending: false,
           error: null,
         }),
+      },
+    },
+    placeAuthority: {
+      resolveSearchPlace: {
+        useQuery: () => ({ data: null, isLoading: false, error: null }),
       },
     },
   },
@@ -53,7 +73,20 @@ vi.mock('@/lib/seo', () => ({ applySeo: vi.fn() }));
 
 import ServicesRequestPage from '../ServicesRequestPage';
 
-describe('ServicesRequestPage', () => {
+function moveToDescription() {
+  fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+  fireEvent.click(screen.getByRole('button', { name: /select approved test place/i }));
+  fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+}
+
+function submitRequest(notes = 'Need a plumbing inspection.') {
+  fireEvent.change(screen.getByPlaceholderText(/describe what you need/i), {
+    target: { value: notes },
+  });
+  fireEvent.click(screen.getByRole('button', { name: /submit request/i }));
+}
+
+describe('ServicesRequestPage canonical Place handoff', () => {
   beforeEach(() => {
     mockSetLocation.mockReset();
     mockMutate.mockReset();
@@ -65,31 +98,23 @@ describe('ServicesRequestPage', () => {
     );
   });
 
-  it('submits the selected service and opens the persisted request result', async () => {
+  it('submits one exact selected Place and opens the persisted request result', async () => {
     render(<ServicesRequestPage />);
-
-    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
-    fireEvent.change(screen.getByLabelText(/city/i), { target: { value: 'Cape Town' } });
-    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
-    fireEvent.change(screen.getByPlaceholderText(/describe what you need/i), {
-      target: { value: 'Need a plumbing inspection.' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: /submit request/i }));
+    moveToDescription();
+    submitRequest();
 
     await waitFor(() => {
       expect(mockMutate).toHaveBeenCalledWith(
         expect.objectContaining({
           category: 'home_improvement',
-
+          canonicalPlaceId: PLACE_ID,
           intentStage: 'general',
           sourceSurface: 'directory',
           providerId: 42,
+          notes: 'Need a plumbing inspection.',
         }),
       );
-    });
-
-    await waitFor(() => {
-      expect(mockSetLocation).toHaveBeenCalledWith(expect.stringContaining('/services/results/99'));
+      expect(mockSetLocation).toHaveBeenCalledWith('/services/results/99');
     });
   });
 
@@ -105,99 +130,38 @@ describe('ServicesRequestPage', () => {
     });
 
     render(<ServicesRequestPage />);
+    moveToDescription();
+    submitRequest();
 
-    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
-    fireEvent.change(screen.getByLabelText(/city/i), { target: { value: 'Cape Town' } });
-    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
-    fireEvent.change(screen.getByPlaceholderText(/describe what you need/i), {
-      target: { value: 'Need a plumbing inspection.' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: /submit request/i }));
-
-    await waitFor(() => {
-      expect(mockSetLocation).toHaveBeenCalledWith('/services/results/99');
-    });
-
+    await waitFor(() => expect(mockSetLocation).toHaveBeenCalledWith('/services/results/99'));
     getItem.mockRestore();
     setItem.mockRestore();
     removeItem.mockRestore();
   });
 
-  it('carries the submitted location and project notes into the request context', async () => {
+  it('does not treat typed geography text as a selected request Place', () => {
     render(<ServicesRequestPage />);
-
     fireEvent.click(screen.getByRole('button', { name: /continue/i }));
-    fireEvent.change(screen.getByLabelText(/suburb/i), { target: { value: 'Rondebosch' } });
-    fireEvent.change(screen.getByLabelText(/city/i), { target: { value: 'Cape Town' } });
-    fireEvent.change(screen.getByLabelText(/province/i), { target: { value: 'Western Cape' } });
     fireEvent.click(screen.getByRole('button', { name: /continue/i }));
-    fireEvent.change(screen.getByPlaceholderText(/describe what you need/i), {
-      target: { value: 'Need a full plumbing inspection before transfer.' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: /submit request/i }));
 
-    await waitFor(() => {
-      expect(mockMutate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          city: 'Cape Town',
-          province: 'Western Cape',
-          suburb: 'Rondebosch',
-          notes: 'Need a full plumbing inspection before transfer.',
-        }),
-      );
-    });
-    expect(mockSetLocation).toHaveBeenCalledWith('/services/results/99');
+    expect(screen.getByRole('alert')).toHaveTextContent(/select an approved place/i);
+    expect(mockMutate).not.toHaveBeenCalled();
   });
 
-  it('forwards a selected provider id and service context', async () => {
+  it('forwards the complete allowlisted journey context without a text location', async () => {
     window.history.pushState(
       {},
       '',
-      '/services/request/home_improvement?providerId=42&serviceCode=plumbing',
+      '/services/request/moving?providerId=42&serviceCode=removals&propertyId=7&listingId=8&developmentId=9&intentStage=buyer_move_ready&sourceSurface=journey_injection&sourceDetail=saved_property&reasonKey=move_ready&propertyLinked=true&city=Cape%20Town',
     );
     render(<ServicesRequestPage />);
-
-    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
-    fireEvent.change(screen.getByLabelText(/city/i), { target: { value: 'Cape Town' } });
-    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
-    fireEvent.change(screen.getByPlaceholderText(/describe what you need/i), {
-      target: { value: 'Need a plumbing inspection.' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: /submit request/i }));
+    moveToDescription();
+    submitRequest('Please quote for a move.');
 
     await waitFor(() => {
       expect(mockMutate).toHaveBeenCalledWith(
         expect.objectContaining({
-          providerId: 42,
-
-          serviceCode: 'plumbing',
-        }),
-      );
-    });
-  });
-
-  it('forwards the complete contextual journey into the request mutation', async () => {
-    window.history.pushState(
-      {},
-      '',
-      '/services/request/moving?providerId=42&serviceCode=removals&propertyId=7&listingId=8&developmentId=9&intentStage=buyer_move_ready&sourceSurface=journey_injection&sourceDetail=saved_property&reasonKey=move_ready&propertyLinked=true&suburb=Rondebosch&city=Cape%20Town&province=Western%20Cape',
-    );
-    render(<ServicesRequestPage />);
-
-    const requestKeyStorageKey = 'services-request-key:42:removals:moving';
-    expect(sessionStorage.getItem(requestKeyStorageKey)).toBeTruthy();
-    expect(requestKeyStorageKey).not.toContain('property');
-
-    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
-    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
-    fireEvent.change(screen.getByPlaceholderText(/describe what you need/i), {
-      target: { value: 'Please quote for a move.' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: /submit request/i }));
-
-    await waitFor(() => {
-      expect(mockMutate).toHaveBeenCalledWith(
-        expect.objectContaining({
+          canonicalPlaceId: PLACE_ID,
           propertyId: 7,
           listingId: 8,
           developmentId: 9,
@@ -211,6 +175,10 @@ describe('ServicesRequestPage', () => {
           },
         }),
       );
+      const mutation = mockMutate.mock.calls[0]?.[0];
+      expect(mutation).not.toHaveProperty('city');
+      expect(mutation).not.toHaveProperty('province');
+      expect(mutation).not.toHaveProperty('suburb');
     });
   });
 
@@ -222,9 +190,7 @@ describe('ServicesRequestPage', () => {
     );
     render(<ServicesRequestPage />);
 
-    expect(
-      screen.getByRole('heading', { name: /journey context unavailable/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /journey context unavailable/i })).toBeInTheDocument();
     expect(mockMutate).not.toHaveBeenCalled();
   });
 
@@ -232,15 +198,7 @@ describe('ServicesRequestPage', () => {
     window.history.pushState({}, '', '/services/request/home_improvement');
     render(<ServicesRequestPage />);
 
-    expect(
-      screen.getByRole('heading', { name: /choose a provider and service/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /choose a provider and service/i })).toBeInTheDocument();
     expect(mockMutate).not.toHaveBeenCalled();
-  });
-
-  it('renders the request flow with an explicit service choice', () => {
-    render(<ServicesRequestPage />);
-    expect(screen.getByText('Step 1 of 3')).toBeInTheDocument();
-    expect(screen.getByRole('radiogroup')).toBeInTheDocument();
   });
 });

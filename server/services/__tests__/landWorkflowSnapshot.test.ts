@@ -14,6 +14,7 @@ function databaseForSnapshot() {
         id: 9,
         ownerId: 77,
         askingPrice: '950000',
+        canonicalPlaceId: 'pl-place-01-000000000000000000000001',
         city: 'Pretoria',
         province: 'Gauteng',
         title: 'Corner residential stand',
@@ -21,7 +22,7 @@ function databaseForSnapshot() {
       },
     ],
     [{ id: 41, classification: 'residential_stand' }],
-    [{ id: 21, extentM2: '600', provinceId: 1, cityId: 2 }],
+    [{ id: 21, extentM2: '600', canonicalPlaceId: 'pl-place-01-000000000000000000000001' }],
     [
       {
         id: 31,

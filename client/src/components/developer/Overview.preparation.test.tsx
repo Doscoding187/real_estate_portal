@@ -9,7 +9,7 @@ const state = vi.hoisted(() => ({
         identity: {
           id: 41,
           name: 'Harbour View',
-          location: { city: 'Cape Town', province: 'Western Cape' },
+          location: { canonicalPlaceId: null, locationLabels: ['Cape Town'] },
         },
         lifecycle: { state: 'approved_private', latestReview: null },
         readiness: { status: 'ready', blockerCount: 0 },

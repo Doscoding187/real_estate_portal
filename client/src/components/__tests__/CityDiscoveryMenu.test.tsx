@@ -1,23 +1,10 @@
 import type { AnchorHTMLAttributes, ReactNode } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CityDiscoveryMenu, locationHref } from '@/components/CityDiscoveryMenu';
 
-const { popularCitiesQuery, cityDataQuery } = vi.hoisted(() => ({
-  popularCitiesQuery: vi.fn(),
-  cityDataQuery: vi.fn(),
-}));
-
-vi.mock('@/lib/trpc', () => ({
-  trpc: {
-    locationPages: {
-      getPopularCities: { useQuery: popularCitiesQuery },
-      getCityData: { useQuery: cityDataQuery },
-    },
-  },
-}));
+const { selectSuggestion } = vi.hoisted(() => ({ selectSuggestion: vi.fn() }));
 
 vi.mock('wouter', () => ({
   Link: ({
@@ -32,148 +19,78 @@ vi.mock('wouter', () => ({
 }));
 
 vi.mock('@/components/LocationAutosuggest', () => ({
-  LocationAutosuggest: ({ placeholder }: { placeholder: string }) => (
-    <input aria-label="Location search" placeholder={placeholder} />
+  LocationAutosuggest: ({
+    onSelect,
+    placeholder,
+  }: {
+    onSelect?: (location: {
+      canonicalPlaceId: string;
+      canonicalPath: string;
+      name: string;
+      slug: string;
+      type: 'province' | 'city' | 'suburb';
+    }) => void;
+    placeholder: string;
+  }) => (
+    <div>
+      <input aria-label="Place search" placeholder={placeholder} />
+      <button type="button" onClick={() => onSelect?.(selectSuggestion())}>
+        Select admitted place
+      </button>
+    </div>
   ),
 }));
 
-const cities = [
-  {
-    id: 1,
-    name: 'Johannesburg',
-    slug: 'johannesburg',
-    provinceSlug: 'gauteng',
-    listingCount: 1284,
-  },
-  { id: 2, name: 'Cape Town', slug: 'cape-town', provinceSlug: 'western-cape', listingCount: 980 },
-];
-
-const cityData = {
-  johannesburg: {
-    city: { name: 'Johannesburg', slug: 'johannesburg', provinceSlug: 'gauteng' },
-    stats: { totalListings: 1284 },
-    suburbs: [
-      { name: 'Sandton', slug: 'sandton', listingCount: 420 },
-      { name: 'Rosebank', slug: 'rosebank', listingCount: 130 },
-    ],
-  },
-  'cape-town': {
-    city: { name: 'Cape Town', slug: 'cape-town', provinceSlug: 'western-cape' },
-    stats: { totalListings: 980 },
-    suburbs: [{ name: 'Sea Point', slug: 'sea-point', listingCount: 88 }],
-  },
+const canonicalPlace = {
+  canonicalPlaceId: 'pl-place-01-000000000000000000000001',
+  canonicalPath: '/gauteng/johannesburg/sandton',
+  name: 'Display text is never used to build this path',
+  slug: 'untrusted-display-slug',
+  type: 'suburb' as const,
 };
 
-function renderMenu() {
-  return render(<CityDiscoveryMenu onNavigate={vi.fn()} />);
-}
-
-describe('CityDiscoveryMenu', () => {
+describe('CityDiscoveryMenu canonical Place navigation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    popularCitiesQuery.mockReturnValue({ data: cities, isLoading: false, isError: false });
-    cityDataQuery.mockImplementation((input: { citySlug: keyof typeof cityData }) => ({
-      data: cityData[input.citySlug],
-      isLoading: false,
-      isError: false,
-    }));
   });
 
-  it('renders backend-ranked city names and keeps the real count in the summary', () => {
-    renderMenu();
+  it('uses the exact path supplied with a canonical Place identity', () => {
+    expect(locationHref(canonicalPlace)).toBe('/gauteng/johannesburg/sandton');
+  });
 
-    const johannesburg = screen.getByRole('link', { name: 'Johannesburg' });
-    expect(johannesburg.textContent).toBe('Johannesburg');
-    expect(johannesburg).toHaveAttribute('href', '/gauteng/johannesburg');
-    expect(johannesburg).toHaveAttribute('data-active', 'true');
-    expect(screen.getByText('Areas in Johannesburg')).toBeInTheDocument();
-    expect(document.querySelector('.public-navbar__city-count-summary')?.textContent).toMatch(
-      /1\s+284 active listings/,
+  it('fails closed when the Place identity or projected path is invalid', () => {
+    expect(locationHref({ ...canonicalPlace, canonicalPlaceId: 'city:12' })).toBe('/');
+    expect(locationHref({ ...canonicalPlace, canonicalPath: '' })).toBe('/');
+    expect(locationHref({ ...canonicalPlace, canonicalPath: 'gauteng/johannesburg/sandton' })).toBe(
+      '/',
     );
   });
 
-  it('updates the active city and only renders that city’s areas on hover', async () => {
-    renderMenu();
-    await userEvent.setup().hover(screen.getByRole('link', { name: 'Cape Town' }));
+  it('shows canonical discovery and navigates with the selected Place path', () => {
+    const onNavigate = vi.fn();
+    selectSuggestion.mockReturnValue(canonicalPlace);
+    render(<CityDiscoveryMenu onNavigate={onNavigate} />);
 
-    expect(screen.getByText('Areas in Cape Town')).toBeInTheDocument();
-    const seaPoint = screen.getByRole('link', { name: 'Sea Point' });
-    expect(seaPoint.textContent).toBe('Sea Point');
-    expect(seaPoint).toHaveAttribute('href', '/western-cape/cape-town/sea-point');
-    expect(screen.queryByRole('link', { name: 'Sandton' })).not.toBeInTheDocument();
-  });
-
-  it('updates the summary from keyboard focus and links suburbs canonically', () => {
-    renderMenu();
-    const sandton = screen.getByRole('link', { name: 'Sandton' });
-    fireEvent.focus(sandton);
-
-    expect(document.querySelector('.public-navbar__city-parent')?.textContent).toBe('Johannesburg');
-    expect(document.querySelector('.public-navbar__city-count-summary')?.textContent).toBe(
-      '420 active listings',
+    expect(screen.getByRole('heading', { name: 'Find a place' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Browse all locations/ })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('textbox', { name: 'Place search' })).toHaveAttribute(
+      'placeholder',
+      'Search South African places',
     );
-    expect(screen.getByRole('link', { name: /View all properties in Sandton/ })).toHaveAttribute(
-      'href',
-      '/gauteng/johannesburg/sandton',
-    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Select admitted place' }));
+    expect(onNavigate).toHaveBeenCalledWith('/gauteng/johannesburg/sandton');
   });
 
-  it('keeps all three columns visible while location data loads or fails', () => {
-    popularCitiesQuery.mockReturnValue({ data: undefined, isLoading: true, isError: false });
-    cityDataQuery.mockReturnValue({ data: undefined, isLoading: true, isError: false });
-    const { rerender } = renderMenu();
-    expect(screen.getByRole('heading', { name: 'Find a location' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Areas and suburbs' })).toBeInTheDocument();
-    expect(document.querySelectorAll('.public-navbar__city-skeleton')).toHaveLength(6);
-    expect(screen.getByRole('textbox', { name: 'Location search' })).toBeInTheDocument();
-
-    popularCitiesQuery.mockReturnValue({ data: undefined, isLoading: false, isError: true });
-    cityDataQuery.mockReturnValue({ data: undefined, isLoading: false, isError: true });
-    rerender(<CityDiscoveryMenu onNavigate={vi.fn()} />);
-    expect(screen.getByRole('heading', { name: 'Find a location' })).toBeInTheDocument();
-    expect(screen.getByText('No featured cities are available yet.')).toBeInTheDocument();
-    expect(screen.getByText('Search for your city, suburb or area.')).toBeInTheDocument();
-    expect(screen.getByText('Choose a city to see its suburbs and areas.')).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Johannesburg' })).not.toBeInTheDocument();
-  });
-
-  it('renders a truthful area empty state when city data has no active suburbs', () => {
-    cityDataQuery.mockReturnValue({
-      data: { city: cityData.johannesburg.city, stats: { totalListings: 0 }, suburbs: [] },
-      isLoading: false,
-      isError: false,
+  it('uses the neutral discovery entry when a selected result has no valid Place identity', () => {
+    const onNavigate = vi.fn();
+    selectSuggestion.mockReturnValue({
+      ...canonicalPlace,
+      canonicalPlaceId: 'city:12',
     });
-    renderMenu();
+    render(<CityDiscoveryMenu onNavigate={onNavigate} />);
 
-    expect(screen.queryByRole('link', { name: 'Sandton' })).not.toBeInTheDocument();
-    expect(
-      screen.getByText('No active areas are available for this city yet.'),
-    ).toBeInTheDocument();
-    expect(screen.getByText('No active listings')).toBeInTheDocument();
-    expect(
-      screen.getByRole('link', { name: /View all properties in Johannesburg/ }),
-    ).toHaveAttribute('href', '/gauteng/johannesburg');
-  });
-
-  it('keeps the empty state when a successful popular-city response is empty', () => {
-    popularCitiesQuery.mockReturnValue({ data: [], isLoading: false, isError: false });
-    cityDataQuery.mockReturnValue({ data: undefined, isLoading: false, isError: false });
-    renderMenu();
-
-    expect(screen.queryByRole('link', { name: 'Johannesburg' })).not.toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Find a location' })).toBeInTheDocument();
-    expect(screen.getByText('No featured cities are available yet.')).toBeInTheDocument();
-    expect(screen.getByText('Choose a city to see its suburbs and areas.')).toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: 'Location search' })).toBeInTheDocument();
-    expect(cityDataQuery).toHaveBeenCalledWith(
-      { provinceSlug: '', citySlug: '' },
-      expect.objectContaining({ enabled: false }),
-    );
-  });
-
-  it('routes a province selected from the shared location search to its canonical page', () => {
-    expect(locationHref({ type: 'province', slug: 'gauteng', provinceSlug: 'gauteng' })).toBe(
-      '/gauteng',
-    );
+    fireEvent.click(screen.getByRole('button', { name: 'Select admitted place' }));
+    expect(onNavigate).toHaveBeenCalledWith('/');
   });
 });

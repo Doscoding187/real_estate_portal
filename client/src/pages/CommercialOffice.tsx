@@ -1,6 +1,9 @@
 import { Link } from 'wouter';
 import { useEffect, useMemo, useState } from 'react';
 import { trpc } from '@/lib/trpc';
+import { CanonicalPlaceSelector, type CanonicalPlaceSelection } from '@/components/location/CanonicalPlaceSelector';
+import { COMMERCIAL_CANONICAL_ASSIGNMENT_BLOCKER } from '@shared/commercial-domain';
+import { isCanonicalPlaceId } from '@shared/placeAuthority';
 
 const PAGE_SIZE = 24;
 
@@ -17,7 +20,6 @@ const money = (minor?: number | null) =>
     ? 'To confirm'
     : `R ${(minor / 100).toLocaleString('en-ZA', { maximumFractionDigits: 0 })}`;
 
-const numberParam = (value: string) => (value.trim() ? Number(value) : undefined);
 
 function parseUseTypes(value: string | null): CommercialUseType[] {
   const known = new Set(COMMERCIAL_USE_TYPES.map(type => type.value));
@@ -42,16 +44,37 @@ function primaryCommercialImage(space: any): string | null {
 
 export default function CommercialOffice() {
   const handoffParams = useMemo(() => new URLSearchParams(window.location.search), []);
-  const initialLocation = handoffParams.get('location') || '';
-  const initialLocationIds = handoffParams
-    .getAll('locationIds')
-    .map(value => value.trim())
-    .filter(Boolean);
-  const mixedLocationAuthority = Boolean(initialLocation.trim() && initialLocationIds.length);
-  const unsupportedLocationScope =
-    handoffParams.get('searchError') === 'unsupported-location-scope' || mixedLocationAuthority;
-  const [location, setLocation] = useState(initialLocation);
-  const [locationIds, setLocationIds] = useState(initialLocationIds);
+  const retiredGeographyKeys = ['location', 'locationIds', 'city', 'province', 'suburb'];
+  const hasRetiredGeography = retiredGeographyKeys.some(key => handoffParams.has(key));
+  const initialPlaceId = handoffParams.get('canonicalPlaceId') || undefined;
+  const initialUnsupportedLocationScope =
+    hasRetiredGeography || Boolean(initialPlaceId && !isCanonicalPlaceId(initialPlaceId));
+  const [unsupportedLocationScope, setUnsupportedLocationScope] = useState(
+    initialUnsupportedLocationScope,
+  );
+  const [canonicalPlaceId, setCanonicalPlaceId] = useState(
+    initialUnsupportedLocationScope ? undefined : initialPlaceId,
+  );
+  const [selection, setSelection] = useState<CanonicalPlaceSelection | null>(null);
+  const selectedPlace = trpc.placeAuthority.resolveSearchPlace.useQuery(
+    { placeId: canonicalPlaceId || '' },
+    { enabled: Boolean(canonicalPlaceId), retry: false, staleTime: 300_000 },
+  );
+  useEffect(() => {
+    const place = selectedPlace.data;
+    setSelection(
+      place
+        ? {
+            canonicalPlaceId: place.placeId,
+            label: place.label,
+            placeType: place.placeType,
+            scope: place.searchScope,
+            administrativeContext: place.administrativeContext,
+            canonicalPath: place.canonicalPath,
+          }
+        : null,
+    );
+  }, [selectedPlace.data]);
   const [useTypes, setUseTypes] = useState<CommercialUseType[]>(() =>
     parseUseTypes(handoffParams.get('useTypes')),
   );
@@ -96,30 +119,7 @@ export default function CommercialOffice() {
   );
   const [page, setPage] = useState(Number(handoffParams.get('page')) || 0);
 
-  const searchInput = {
-    location: locationIds.length ? undefined : location || undefined,
-    locationIds: locationIds.length ? locationIds : undefined,
-    useTypes: useTypes.length ? useTypes : undefined,
-    minAreaM2: numberParam(minAreaM2),
-    maxAreaM2: numberParam(maxAreaM2),
-    maxMonthlyBudgetMinor: budget ? Math.round(Number(budget) * 100) : undefined,
-    availability: availability || undefined,
-    pricingMode: pricingMode || undefined,
-    fitOutCondition: fitOutCondition || undefined,
-    minParkingBays: numberParam(minParkingBays),
-    minEavesHeightM: numberParam(minEavesHeightM),
-    minPowerCapacityKva: numberParam(minPowerCapacityKva),
-    minLoadingDocks: numberParam(minLoadingDocks),
-    yardHardstand: yardHardstand || undefined,
-    extractionCapability: extractionCapability || undefined,
-    backupPower: backupPower || undefined,
-    backupWater: backupWater || undefined,
-    fibreConnectivity: fibreConnectivity || undefined,
-  };
-  const results = trpc.commercial.search.useQuery(searchInput, {
-    enabled: !unsupportedLocationScope,
-  });
-  const allSpaces = results.data || [];
+  const allSpaces: any[] = [];
   const totalResults = allSpaces.length;
   const pageCount = Math.max(1, Math.ceil(totalResults / PAGE_SIZE));
   const safePage = Math.min(page, pageCount - 1);
@@ -127,8 +127,7 @@ export default function CommercialOffice() {
 
   useEffect(() => {
     const next = new URLSearchParams();
-    if (location) next.set('location', location);
-    locationIds.forEach(locationId => next.append('locationIds', locationId));
+    if (canonicalPlaceId) next.set('canonicalPlaceId', canonicalPlaceId);
     if (useTypes.length) next.set('useTypes', useTypes.join(','));
     if (minAreaM2) next.set('minAreaM2', minAreaM2);
     if (maxAreaM2) next.set('maxAreaM2', maxAreaM2);
@@ -159,8 +158,7 @@ export default function CommercialOffice() {
     extractionCapability,
     fibreConnectivity,
     fitOutCondition,
-    location,
-    locationIds,
+    canonicalPlaceId,
     maxAreaM2,
     minAreaM2,
     minEavesHeightM,
@@ -204,43 +202,30 @@ export default function CommercialOffice() {
           role="alert"
           className="rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
         >
-          {mixedLocationAuthority
-            ? 'Commercial search received both a text location and canonical location IDs. Choose one location authority and try again.'
-            : 'Choose a city, suburb or province to continue into Commercial search. Search Area handoff is not available yet.'}
+          This link used retired text or numeric geography. Choose an admitted canonical Place to continue.
         </p>
       ) : null}
 
+      <p role="status" className="rounded border border-sky-200 bg-sky-50 p-3 text-sm text-sky-950">
+        {COMMERCIAL_CANONICAL_ASSIGNMENT_BLOCKER}
+      </p>
+
       <section className="space-y-4 rounded border bg-slate-50 p-4" aria-label="Commercial filters">
         <div className="grid gap-3 md:grid-cols-4">
-          <label className="grid gap-1 text-sm">
-            <span>Location</span>
-            <input
-              aria-label="Location"
-              className="rounded border p-2"
-              value={location}
-              onChange={event => {
-                setLocation(event.target.value);
-                setLocationIds([]);
+          <div className="md:col-span-2">
+            <CanonicalPlaceSelector
+              value={selection}
+              onChange={value => {
+                setSelection(value);
+                setCanonicalPlaceId(value?.canonicalPlaceId);
+                setUnsupportedLocationScope(false);
                 setPage(0);
               }}
-              placeholder="Location"
+              purpose="search"
+              label="Canonical Place"
+              placeholder="Search admitted Places"
             />
-            {locationIds.length ? (
-              <span className="flex items-center justify-between gap-2 text-xs text-slate-600">
-                Canonical location scope selected from the homepage.
-                <button
-                  type="button"
-                  className="font-medium text-sky-700 underline"
-                  onClick={() => {
-                    setLocationIds([]);
-                    setPage(0);
-                  }}
-                >
-                  Clear
-                </button>
-              </span>
-            ) : null}
-          </label>
+          </div>
           <label className="grid gap-1 text-sm">
             <span>Minimum square metres</span>
             <input
@@ -492,12 +477,6 @@ export default function CommercialOffice() {
         unknown charges are never treated as R0.
       </p>
 
-      {results.isError ? (
-        <p role="alert" className="rounded border border-rose-200 bg-rose-50 p-3 text-rose-900">
-          Commercial search is temporarily unavailable. Please try again.
-        </p>
-      ) : null}
-
       <section className="grid gap-4 md:grid-cols-2" aria-live="polite">
         {visibleSpaces.map((space: any) => {
           const image = primaryCommercialImage(space);
@@ -517,7 +496,7 @@ export default function CommercialOffice() {
               ) : null}
               <div className="p-5">
                 <p className="font-semibold">
-                  {space.asset.name} — {space.asset.suburb || space.asset.city}
+                  {space.asset.name} — {space.canonicalPlace?.label || 'Location not assigned to an admitted Place'}
                 </p>
                 <p>
                   {space.space.identifier} · {Number(space.space.rentableAreaM2).toLocaleString()}{' '}
@@ -552,10 +531,6 @@ export default function CommercialOffice() {
           );
         })}
       </section>
-
-      {!unsupportedLocationScope && !results.isLoading && totalResults === 0 ? (
-        <p>No published Commercial spaces match these requirements.</p>
-      ) : null}
 
       {totalResults > PAGE_SIZE ? (
         <nav

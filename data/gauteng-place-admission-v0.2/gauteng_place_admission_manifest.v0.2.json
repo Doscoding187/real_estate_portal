@@ -1,0 +1,230 @@
+{
+  "admission_version": "gauteng-place-admission-v0.2",
+  "name_index": {
+    "normalization_version": "1",
+    "identity_effect": "none"
+  },
+  "territory": {
+    "territory_id": "za-gp",
+    "display_name": "Gauteng",
+    "admission_registry_path": "data/place-admission-territories.v0.2/territory-registry.v0.2.json",
+    "admission_registry_sha256": "7f95c112ee9873851c127464a9b303ae0d565d632a30935197d55a2645f2a49c"
+  },
+  "generated_from": {
+    "source_authority_version": "gauteng-source-authority-v0.3",
+    "source_snapshot_id": "14666e91befd11e1aea6b220c520678fbafbfc2c12383392e29c9e727fa0a06e",
+    "source_manifest_path": "data/gauteng-source-authority-v0.3/gauteng_source_manifest_v0.3.json",
+    "source_manifest_sha256": "9e8facf52f8ca1a67940b2efd354c910dad4eb19efc51093d8d05871fe707a22",
+    "compact_artifacts": [
+      {
+        "path": "data/gauteng-source-authority-v0.3/gauteng_factual_canonical_geography_v0.2.jsonl",
+        "sha256": "7bba9cc217b207466916647cb674d637366eb45ed0c7c01b88c62c625e91884e",
+        "size_bytes": 7089504
+      },
+      {
+        "path": "data/gauteng-source-authority-v0.3/gauteng_factual_canonical_names_v0.2.jsonl",
+        "sha256": "b5021e21df8728416e0bb7d0f7858c824cb9bca4bd382b8f98cbbeed285d79fd",
+        "size_bytes": 1212239
+      },
+      {
+        "path": "data/gauteng-source-authority-v0.3/gauteng_factual_canonical_source_links_v0.2.jsonl",
+        "sha256": "23559b7fd42c139aefbad4174fca3eadcfc7f9e717c5fa86b6d2b5888612dba7",
+        "size_bytes": 3918425
+      },
+      {
+        "path": "data/gauteng-source-authority-v0.3/gauteng_candidate_dispositions_v0.2.jsonl",
+        "sha256": "73212b62fb2999ae2d785b5c338bc6774e949c49b08de67252a1b6e245348943",
+        "size_bytes": 14338060
+      },
+      {
+        "path": "data/gauteng-source-authority-v0.3/gauteng_factual_canonical_reviewed_type_corrections_v0.3.jsonl",
+        "sha256": "44b3610ffb9fc940ffa6cdcb4d87849a80c2aa0490e4d1619236ebad28b5d86e",
+        "size_bytes": 18233
+      },
+      {
+        "path": "data/gauteng-source-authority-v0.3/gauteng_factual_canonical_reviewed_settlement_membership_v0.3.jsonl",
+        "sha256": "8a4e9239a285602352ebb9b93c884ea78cd80884acc5cf048ca2d8c51c9ecdac",
+        "size_bytes": 246649
+      }
+    ],
+    "comparison_baseline": {
+      "note": "The v0.1 committed artifacts are retained as comparison and regression evidence only. Their factual source JSONLs are unrecoverable and were not used as forward authority.",
+      "catalogue": "data/geography-coverage-v0.1/territory-catalog.v0.1.json",
+      "catalogue_sha256": "ad32a26dbaa40d03f63545d5f9af0918cbea2e1d65c8166817b15c52e5d6f8c4",
+      "factual_identity_count": 1480,
+      "runtime_row_count": 1414,
+      "queued_count": 116,
+      "awaiting_accepted_parent_edge": 11,
+      "duplicate_natural_key_within_parent": 8,
+      "natural_key_owned_by_accepted_row": 3,
+      "co_published_natural_keys": 14,
+      "parent_evidence_inputs": 103
+    }
+  },
+  "governed_policy": {
+    "container_types": [
+      "district_municipality",
+      "local_municipality",
+      "province"
+    ],
+    "settlement_merge_max_km": 15,
+    "merge_requires_same_administrative_context": true,
+    "type_disagreement_never_blocks_merge": true,
+    "preferred_public_name_selection": "official role, then source preferred_common; within a class the most independently sourced assertion wins, ties broken by text",
+    "one_containment_parent_per_place": true,
+    "search_scope_authorization_in_slice_2": 0,
+    "place_id_allocation": "assigned from a committed registry; never derived from name, slug, coordinates, parent, classification, natural key or source identity",
+    "source_geography_eligibility": "source-geography-eligibility-2026-10-14-v1",
+    "reviewed_corrections": {
+      "input": "territory-declared reviewed-correction source artifacts, digest-pinned by the source authority manifest",
+      "type_corrections_declared": 48,
+      "type_corrections_applied": 48,
+      "settlement_membership_declared": 351,
+      "settlement_membership_applied": 351,
+      "settlement_types": "settlement_within",
+      "notes": "type corrections override the settlement type only; verification, licensing and publication flow from the reviewed type exactly as from a source type; settlement membership is recorded, never search-authorizing"
+    }
+  },
+  "counts": {
+    "source_identities": 1488,
+    "source_name_assertions": 2459,
+    "source_links": 2971,
+    "source_candidates": 4350,
+    "admitted_places": 1466,
+    "merged_equivalence_groups": 22,
+    "absorbed_source_identities": 22,
+    "single_identity_places": 1444,
+    "group_kinds": {
+      "administrative_container": 31,
+      "single_identity": 1414,
+      "merged_same_referent": 21
+    },
+    "verification": {
+      "provisional": 1377,
+      "verified": 89
+    },
+    "licensing": {
+      "mixed_odbl_supported": 472,
+      "osm_only_odbl_provisional": 720,
+      "permissive_supported": 274
+    },
+    "scope_establishment": {
+      "established": 1434,
+      "not_established": 32,
+      "by_scope": {
+        "locality": {
+          "established": 1142,
+          "not_established": 0
+        },
+        "metro_city": {
+          "established": 291,
+          "not_established": 0
+        },
+        "province": {
+          "established": 1,
+          "not_established": 0
+        }
+      }
+    },
+    "executable_places": 1434,
+    "executable_by_scope": {
+      "locality": 1142,
+      "metro_city": 291,
+      "province": 1
+    },
+    "admitted_without_executable_scope": 32,
+    "names": 2476,
+    "name_roles": {
+      "preferred_public": 1466,
+      "common": 984,
+      "alternate_spelling": 18,
+      "historical": 8
+    },
+    "searchable_names": 1919,
+    "preferred_public_names": 1466,
+    "relationships": 1816,
+    "relationship_types": {
+      "administratively_contains": 1465,
+      "settlement_within": 351
+    },
+    "containment_parent_count": 1465,
+    "evidence_rows": 4463,
+    "external_mappings": 2971,
+    "disposition_ledger_rows": 4350,
+    "dispositions": {
+      "quarantined_candidate": 2754,
+      "rejected_non_independent": 108,
+      "admitted_as_place_primary": 1466,
+      "admitted_merged_into_place": 22
+    },
+    "parent_evidence_inputs": 103,
+    "parent_evidence_classification": {
+      "total_edges": 478,
+      "by_class": {
+        "insufficient_ambiguous_evidence": 41,
+        "non_geographic_relationship": 311,
+        "administrative_containment_candidate": 125,
+        "historical_superseded_evidence": 1
+      },
+      "by_disposition": {
+        "not_admitted_in_slice_2": 478
+      }
+    }
+  },
+  "merge_bases": {
+    "settlement_bound_km": 15,
+    "settlement_rule_enforced": "each admitted member lies within the governed distance of the group anchor (single-linkage clustering)",
+    "administrative_container_rule": "unique administrative container name merges are distance-unbounded by design, because a territory has exactly one province and one municipality per name",
+    "container_merge_groups": 1,
+    "settlement_groups_exceeding_diameter": 0,
+    "note": "Settlement groups whose diameter exceeds the bound satisfy the rule but are listed for review, because the rule compares each member to the anchor rather than to every other member. Moving to complete linkage would split these Places and is a reviewed decision, not a silent fix.",
+    "settlement_groups_over_diameter": []
+  },
+  "collation_suppressed_names": {
+    "basis": "utf8mb4_0900_ai_ci on place_name.name, which is accent- and case-insensitive",
+    "count": 1,
+    "forms": [
+      {
+        "place_id": "pl-place-01-4f15722c47d173e149e10718",
+        "name_role": "common",
+        "kept_spelling": "https://en.wikipedia.org/wiki/Springs,_Gauteng",
+        "suppressed": "https://en.wikipedia.org/wiki/Springs,_Gauteng",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      }
+    ]
+  },
+  "place_id_registry": {
+    "path": "data/gauteng-place-admission-v0.2/gauteng_place_id_registry.v0.2.json",
+    "allocated_ids": 1466,
+    "allocation_sequence": 1466
+  },
+  "invariants_asserted": [
+    "every source identity maps to exactly one admitted Place",
+    "place count equals distinct assigned ids",
+    "one preferred public name per Place",
+    "every settlement member lies within the governed distance of its group anchor, and any settlement group whose diameter exceeds the bound is listed for review",
+    "administrative container merges are governed by unique name, not by distance",
+    "every name, relationship and evidence row references an admitted Place",
+    "every relationship has evidence and is not self-referential",
+    "containment is a forest: one parent, no cycles",
+    "no relationship-driven search widening in Slice 2",
+    "scope, eligibility and classification combinations satisfy the database invariants",
+    "every scoped Place has an evidenced province context, the only mandatory ancestry requirement",
+    "no artificial settlement parent is introduced to complete a search hierarchy",
+    "no municipality is re-typed or promoted into the metro_city search tier",
+    "a Place without a governed executable scope stays admitted but is neither searchable nor publishable",
+    "the disposition ledger covers every source candidate",
+    "reviewed type corrections reconcile to exactly the admitted Places they anchor, and settle their type within the governed settlement vocabulary",
+    "reviewed settlement membership is recorded with its declared evidence and never search-authorizing"
+  ],
+  "outputs": {
+    "places": "data/gauteng-place-admission-v0.2/gauteng_place_admission_v0.2.jsonl",
+    "names": "data/gauteng-place-admission-v0.2/gauteng_place_names_v0.2.jsonl",
+    "relationships": "data/gauteng-place-admission-v0.2/gauteng_place_relationships_v0.2.jsonl",
+    "evidence": "data/gauteng-place-admission-v0.2/gauteng_place_evidence_v0.2.jsonl",
+    "external_mappings": "data/gauteng-place-admission-v0.2/gauteng_place_external_mappings_v0.2.jsonl",
+    "disposition_ledger": "data/gauteng-place-admission-v0.2/gauteng_place_disposition_ledger_v0.2.jsonl",
+    "parent_evidence_classification": "data/gauteng-place-admission-v0.2/gauteng_parent_evidence_classification.v0.2.json"
+  }
+}

@@ -53,10 +53,6 @@ import {
   exploreContent,
   exploreEngagements,
   exploreFeedSessions,
-  locations,
-  provinces,
-  cities,
-  suburbs,
   partners,
   explorePartners,
   auditLogs,
@@ -77,8 +73,6 @@ import {
   firstResponseOverdueSql,
 } from './services/leadTransitionService';
 import { type InferSelectModel, type InferInsertModel } from 'drizzle-orm';
-import { normalizeLocationFields, validateLocationForPublish } from './utils/locationUtils';
-import { locationResolver } from './services/locationResolverService';
 import {
   assertListingPublicationEntitled,
   isSameListingCommercialOwner,
@@ -96,6 +90,7 @@ import {
   validatePricingContract,
 } from '../shared/pricing-contract';
 import { normalizeRentalTerms, validateRentalTerms } from '../shared/rental-terms-contract';
+import { isCanonicalPlaceId } from '../shared/placeAuthority';
 import {
   normalizeCoordinatePair,
   storedPrecisionToPublicLocationPolicy,
@@ -412,8 +407,7 @@ async function validateCommercialListingPricing(
   return applicability;
 }
 
-// Re-export getDb from the connection module to maintain backward compatibility
-// and break circular dependency with locationResolverService
+// Re-export getDb from the connection module for established service imports.
 export { getDb } from './db-connection';
 import { getDb, _db } from './db-connection';
 import { developerIdentityService } from './services/developerIdentityService';
@@ -836,74 +830,6 @@ export async function getUserProperties(
 }
 
 /**
- * Update a property (only by owner or admin)
- */
-export async function updateProperty(
-  propertyId: number,
-  userId: number,
-  updates: Partial<InsertProperty>,
-  userRole?: string,
-): Promise<void> {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-
-  // Verify ownership
-  const property = await getPropertyById(propertyId);
-  if (!property) {
-    throw new Error('Property not found');
-  }
-
-  // Check if user owns the property or is admin (super_admin or agency_admin)
-  const isAdmin = userRole === 'super_admin' || userRole === 'agency_admin';
-  if (property.ownerId !== userId && !isAdmin) {
-    throw new Error('Unauthorized: You can only update your own properties');
-  }
-
-  assertListingBackedPropertyProjectionIsReadOnly(property, 'update this inventory');
-
-  // Normalize location fields for consistent querying
-  const normalizedUpdates = normalizeLocationFields(updates);
-
-  // Validate location if publishing
-  const finalData = { ...property, ...normalizedUpdates };
-  const validationError = validateLocationForPublish(finalData);
-  if (validationError) {
-    throw new Error(validationError);
-  }
-
-  // Resolve and populate location IDs if location fields are being updated
-  try {
-    const province = normalizedUpdates.province || property.province;
-    const city = normalizedUpdates.city || property.city;
-
-    if (province && (normalizedUpdates.province || normalizedUpdates.city)) {
-      const locationIds = await locationResolver.getLocationIds({
-        provinceSlug: province,
-        citySlug: city || undefined,
-      });
-
-      if (locationIds.provinceId) {
-        normalizedUpdates.provinceId = locationIds.provinceId;
-      }
-      if (locationIds.cityId) {
-        normalizedUpdates.cityId = locationIds.cityId;
-      }
-    }
-  } catch (error) {
-    // If location resolution fails, continue without IDs
-    console.warn('[updateProperty] Location ID resolution failed:', safeErrorSummary(error));
-  }
-
-  await db
-    .update(properties)
-    .set({
-      ...normalizedUpdates,
-      updatedAt: new Date(),
-    })
-    .where(eq(properties.id, propertyId));
-}
-
-/**
  * Delete a property (only by owner or admin)
  */
 export async function deleteProperty(
@@ -958,126 +884,6 @@ export async function deletePropertyImage(imageId: number, userId: number): Prom
   await db.delete(propertyImages).where(eq(propertyImages.id, imageId));
 }
 
-export interface PropertySearchParams {
-  city?: string;
-  province?: string;
-  propertyType?: string;
-  listingType?: string;
-  minPrice?: number;
-  maxPrice?: number;
-  minBedrooms?: number;
-  maxBedrooms?: number;
-  minArea?: number;
-  maxArea?: number;
-  status?: string;
-  amenities?: string[];
-  postedBy?: string[];
-  minLat?: number;
-  maxLat?: number;
-  minLng?: number;
-  maxLng?: number;
-  limit?: number;
-  offset?: number;
-}
-
-export async function searchProperties(params: PropertySearchParams) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-
-  const conditions: SQL[] = [
-    ne(properties.propertyType, 'commercial'),
-    excludeLandFromGenericPublicProjection(),
-  ];
-
-  // Build WHERE conditions
-  if (params.city) conditions.push(like(properties.city, `%${params.city}%`));
-  if (params.province) conditions.push(like(properties.province, `%${params.province}%`));
-  if (params.propertyType) conditions.push(eq(properties.propertyType, params.propertyType as any));
-  if (params.listingType) conditions.push(eq(properties.listingType, params.listingType as any));
-  if (params.minPrice) conditions.push(gte(properties.price, params.minPrice));
-  if (params.maxPrice) conditions.push(lte(properties.price, params.maxPrice));
-  if (params.minBedrooms) conditions.push(gte(properties.bedrooms, params.minBedrooms));
-  if (params.maxBedrooms) conditions.push(lte(properties.bedrooms, params.maxBedrooms));
-  if (params.minArea) conditions.push(gte(properties.area, params.minArea));
-  if (params.maxArea) conditions.push(lte(properties.area, params.maxArea));
-  if (params.status) conditions.push(eq(properties.status, params.status as any));
-
-  // Bounding box search
-  if (params.minLat && params.maxLat && params.minLng && params.maxLng) {
-    conditions.push(
-      and(
-        gte(sql`CAST(${properties.publicLatitude} AS DECIMAL)`, params.minLat),
-        lte(sql`CAST(${properties.publicLatitude} AS DECIMAL)`, params.maxLat),
-        gte(sql`CAST(${properties.publicLongitude} AS DECIMAL)`, params.minLng),
-        lte(sql`CAST(${properties.publicLongitude} AS DECIMAL)`, params.maxLng),
-      )!,
-    );
-  }
-
-  // Amenities filter
-  if (params.amenities && params.amenities.length > 0) {
-    for (const amenity of params.amenities) {
-      conditions.push(like(properties.amenities, `%${amenity}%`));
-    }
-  }
-
-  // Posted By filter
-  if (params.postedBy && params.postedBy.length > 0) {
-    const roleConditions: SQL[] = [];
-    if (params.postedBy.includes('Owner')) {
-      roleConditions.push(eq(users.role, 'visitor'));
-    }
-    if (params.postedBy.includes('Dealer') || params.postedBy.includes('Agent')) {
-      roleConditions.push(or(eq(users.role, 'agent'), eq(users.role, 'agency_admin'))!);
-    }
-    if (params.postedBy.includes('Builder') || params.postedBy.includes('Developer')) {
-      roleConditions.push(eq(users.role, 'property_developer'));
-    }
-
-    if (roleConditions.length > 0) {
-      conditions.push(
-        inArray(
-          properties.ownerId,
-          db
-            .select({ id: users.id })
-            .from(users)
-            .where(or(...roleConditions)!),
-        ),
-      );
-    }
-  }
-
-  // Bounds filter
-  if (params.minLat !== undefined && params.maxLat !== undefined) {
-    conditions.push(
-      sql`CAST(${properties.publicLatitude} AS DECIMAL(10, 6)) >= ${params.minLat} AND CAST(${properties.publicLatitude} AS DECIMAL(10, 6)) <= ${params.maxLat}`,
-    );
-  }
-  if (params.minLng !== undefined && params.maxLng !== undefined) {
-    conditions.push(
-      sql`CAST(${properties.publicLongitude} AS DECIMAL(10, 6)) >= ${params.minLng} AND CAST(${properties.publicLongitude} AS DECIMAL(10, 6)) <= ${params.maxLng}`,
-    );
-  }
-
-  let query = db.select().from(properties);
-
-  if (conditions.length > 0) {
-    query = query.where(and(...conditions)) as any;
-  }
-
-  query = query.orderBy(desc(properties.createdAt)) as any;
-
-  if (params.limit) {
-    query = query.limit(params.limit) as any;
-  }
-  if (params.offset) {
-    query = query.offset(params.offset) as any;
-  }
-
-  const results = await query;
-
-  return results;
-}
 
 export async function getFeaturedProperties(limit: number = 6) {
   const db = await getDb();
@@ -1327,27 +1133,6 @@ export async function getLeadsByAgent(agentId: number) {
 
   // leads already imported at top
   return await db.select().from(leads).where(eq(leads.agentId, agentId));
-}
-
-// ==================== LOCATIONS ====================
-
-export async function getAllLocations() {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-
-  // locations table would need to be imported at top if used
-  return await db.select().from(locations);
-}
-
-export async function getLocationsByType(type: string) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-
-  // locations table would need to be imported at top if used
-  return await db
-    .select()
-    .from(locations)
-    .where(eq(locations.type, type as any));
 }
 
 // ==================== AGENCY DASHBOARD ANALYTICS ====================
@@ -3534,9 +3319,6 @@ async function buildCanonicalPublicPropertyProjection(
       latitude: publicLocation.publicLatitude,
       longitude: publicLocation.publicLongitude,
       canonicalPlaceId: listing.canonicalPlaceId,
-      provinceId: listing.provinceId,
-      cityId: listing.cityId,
-      suburbId: listing.suburbId,
       publicAddress: publicLocation.publicAddress,
       publicLatitude: publicLocation.publicLatitude,
       publicLongitude: publicLocation.publicLongitude,
@@ -3670,10 +3452,6 @@ function buildApprovedRevisionSourceSnapshot(
     postalCode: revision.postalCode,
     canonicalPlaceId: revision.canonicalPlaceId,
     placeId: revision.placeId,
-    locationId: revision.locationId,
-    provinceId: revision.provinceId,
-    cityId: revision.cityId,
-    suburbId: revision.suburbId,
     privateAddress: revision.privateAddress,
     coordinateSource: revision.coordinateSource,
     locationConfirmationState: revision.locationConfirmationState,
@@ -4365,9 +4143,6 @@ export function transformListingToProperty(listing: any, media: any[] = []) {
     zipCode: listing.postalCode,
     latitude: exactPublicLocation ? finiteCoordinate(listing.latitude) : null,
     longitude: exactPublicLocation ? finiteCoordinate(listing.longitude) : null,
-    provinceId: listing.provinceId ?? null,
-    cityId: listing.cityId ?? null,
-    suburbId: listing.suburbId ?? null,
     publicLocationPrecision: exactPublicLocation ? 'exact' : 'approximate',
     publicLocationPolicy,
     // Compatibility cards receive only completed image URLs. Typed consumers
@@ -4409,8 +4184,7 @@ export function transformListingToProperty(listing: any, media: any[] = []) {
 }
 
 interface ListingSearchParams {
-  city?: string;
-  province?: string;
+  canonicalPlaceId?: string;
   propertyType?: string;
   listingType?: string;
   minPrice?: number;
@@ -4446,11 +4220,12 @@ export async function searchListings(params: ListingSearchParams) {
   // Use raw SQL to bypass Drizzle enum type mismatch
   conditions.push(sql`${listings.status} = 'published'`);
 
-  // Location filters - use LOWER for case-insensitive matching
-  if (params.city)
-    conditions.push(sql`LOWER(${listings.city}) LIKE ${`%${params.city.toLowerCase()}%`}`);
-  if (params.province)
-    conditions.push(sql`LOWER(${listings.province}) LIKE ${`%${params.province.toLowerCase()}%`}`);
+  if (params.canonicalPlaceId) {
+    if (!isCanonicalPlaceId(params.canonicalPlaceId)) {
+      throw new Error('Invalid canonicalPlaceId');
+    }
+    conditions.push(eq(listings.canonicalPlaceId, params.canonicalPlaceId));
+  }
 
   // Property type filter
   if (params.propertyType) conditions.push(eq(listings.propertyType, params.propertyType as any));
@@ -4707,8 +4482,6 @@ async function listDeveloperOrganisationRows(
   status?: 'pending' | 'approved' | 'rejected',
   filters?: {
     category?: string;
-    city?: string;
-    province?: string;
     isVerified?: number;
     limit?: number;
     offset?: number;
@@ -4720,9 +4493,6 @@ async function listDeveloperOrganisationRows(
   if (status) conditions.push(eq(developerOrganisations.status, status));
   if (filters?.category)
     conditions.push(eq(developerOrganisations.category, filters.category as any));
-  if (filters?.city) conditions.push(like(developerOrganisations.city, `%${filters.city}%`));
-  if (filters?.province)
-    conditions.push(like(developerOrganisations.province, `%${filters.province}%`));
   if (filters?.isVerified !== undefined) {
     conditions.push(eq(developerOrganisations.isVerified, filters.isVerified));
   }
@@ -4862,8 +4632,6 @@ export async function updateDeveloper(
 
 export async function listDevelopers(filters: {
   category?: string;
-  city?: string;
-  province?: string;
   isVerified?: number;
   limit?: number;
   offset?: number;

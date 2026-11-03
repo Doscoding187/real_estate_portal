@@ -97,7 +97,7 @@ describe('development submit payload helpers', () => {
     expect(unit).not.toHaveProperty('startingBid');
   });
 
-  it('builds the flat submit payload from canonical wizard data', () => {
+  it('builds the flat submit payload and drops legacy geography text', () => {
     const payload = buildDevelopmentSubmitPayload({
       amenities: ['Pool'],
       residentialConfig: {
@@ -161,8 +161,6 @@ describe('development submit payload helpers', () => {
       transactionType: 'for_sale',
       ownershipType: 'sectional-title',
       address: '1 Submit Road',
-      city: 'Cape Town',
-      province: 'Western Cape',
       priceFrom: 1_250_000,
       priceTo: 1_400_000,
       amenities: ['Pool'],
@@ -171,6 +169,10 @@ describe('development submit payload helpers', () => {
       launchDate: '2026-09-01',
       completionDate: '2027-12-31',
     });
+    expect(payload).not.toHaveProperty('suburb');
+    expect(payload).not.toHaveProperty('city');
+    expect(payload).not.toHaveProperty('province');
+    expect(payload).not.toHaveProperty('locationId');
     expect(payload.features).toEqual(
       expect.arrayContaining([
         'cfg:res_type:apartment',
@@ -644,9 +646,9 @@ describe('development submit payload helpers', () => {
     expect(resumedWizardData).toMatchObject({
       location: {
         address: '22 Canonical Lane',
-        suburb: 'Green Point',
-        city: 'Cape Town',
-        province: 'Western Cape',
+        postalCode: '8051',
+        latitude: '-33.906',
+        longitude: '18.405',
       },
       description: 'Canonical marketing summary wins.',
       tagline: 'Built from the canonical path',
@@ -654,11 +656,11 @@ describe('development submit payload helpers', () => {
       monthlyLevyFrom: 1_250,
       ratesFrom: 950,
     });
+    expect(resumedWizardData.location).not.toHaveProperty('suburb');
+    expect(resumedWizardData.location).not.toHaveProperty('city');
+    expect(resumedWizardData.location).not.toHaveProperty('province');
     expect(payload).toMatchObject({
       address: '22 Canonical Lane',
-      suburb: 'Green Point',
-      city: 'Cape Town',
-      province: 'Western Cape',
       postalCode: '8051',
       description: 'Canonical marketing summary wins.',
       tagline: 'Built from the canonical path',
@@ -671,12 +673,16 @@ describe('development submit payload helpers', () => {
       monthlyRentFrom: 15_500,
       monthlyRentTo: 18_500,
     });
+    expect(payload).not.toHaveProperty('suburb');
+    expect(payload).not.toHaveProperty('city');
+    expect(payload).not.toHaveProperty('province');
+    expect(payload).not.toHaveProperty('locationId');
     expect(payload.developmentData).toMatchObject({
       location: {
         address: '22 Canonical Lane',
-        suburb: 'Green Point',
-        city: 'Cape Town',
-        province: 'Western Cape',
+        postalCode: '8051',
+        latitude: '-33.906',
+        longitude: '18.405',
       },
       description: 'Canonical marketing summary wins.',
       tagline: 'Built from the canonical path',
@@ -684,6 +690,10 @@ describe('development submit payload helpers', () => {
       monthlyLevyFrom: 1_250,
       ratesFrom: 950,
     });
+    for (const field of ['suburb', 'city', 'province', 'locationId']) {
+      expect(payload.developmentData.location).not.toHaveProperty(field);
+      expect(payload.stepData.location).not.toHaveProperty(field);
+    }
   });
 
   it('keeps edit identity and legacy draft shell fields out of update mutation payloads', () => {
@@ -1547,7 +1557,11 @@ describe('development submit payload helpers', () => {
       { intent: 'publish' },
     );
     expect(publishPayload).not.toHaveProperty(CANONICAL_UPDATE_MODE_FIELD);
-    expect(publishPayload.city).toBe('Cape Town');
+    expect(publishPayload).not.toHaveProperty('suburb');
+    expect(publishPayload).not.toHaveProperty('city');
+    expect(publishPayload).not.toHaveProperty('province');
+    expect(publishPayload).not.toHaveProperty('locationId');
+    expect(publishPayload.stepData.location).toEqual({});
     expect(publishPayload.unitTypes).toHaveLength(1);
     expect(publishPayload.stepData.unit_types.unitTypes).toEqual(publishPayload.unitTypes);
   });

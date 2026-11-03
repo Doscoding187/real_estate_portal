@@ -4,6 +4,14 @@ import { describe, expect, it, vi } from 'vitest';
 
 import ExploreMap from '../ExploreMap';
 
+const { searchInventory } = vi.hoisted(() => ({
+  searchInventory: vi.fn(() => ({
+    data: { cards: [], total: 0 },
+    isLoading: false,
+    error: null,
+  })),
+}));
+
 vi.mock('wouter', () => ({
   Link: ({
     href,
@@ -16,32 +24,25 @@ vi.mock('wouter', () => ({
   ),
 }));
 
-vi.mock('@/components/explore-discovery/MapHybridView', () => ({
-  MapHybridView: () => <div data-testid="explore-map-hybrid" />,
+vi.mock('@/components/location/CanonicalPlaceSelector', () => ({
+  CanonicalPlaceSelector: () => <div data-testid="canonical-place-selector" />,
 }));
 
-vi.mock('@/components/explore-discovery/LifestyleCategorySelector', () => ({
-  LifestyleCategorySelector: () => <div data-testid="explore-map-categories" />,
+vi.mock('@/components/maps/GooglePropertyMap', () => ({
+  GooglePropertyMap: () => <div data-testid="canonical-property-map" />,
 }));
 
-vi.mock('@/components/explore-discovery/ResponsiveFilterPanel', () => ({
-  ResponsiveFilterPanel: () => <div data-testid="explore-map-filters" />,
-}));
-
-vi.mock('@/hooks/useExploreCommonState', () => ({
-  useExploreCommonState: () => ({
-    selectedCategoryId: null,
-    setSelectedCategoryId: vi.fn(),
-    showFilters: false,
-    setShowFilters: vi.fn(),
-    toggleFilters: vi.fn(),
-    filters: {},
-    filterActions: { getFilterCount: () => 0 },
-  }),
+vi.mock('@/lib/trpc', () => ({
+  trpc: {
+    placeAuthority: {
+      discoverSearchAreas: { useQuery: () => ({ data: { results: [] }, isError: false }) },
+    },
+    properties: { searchPublicInventory: { useQuery: searchInventory } },
+  },
 }));
 
 describe('ExploreMap', () => {
-  it('keeps deterministic parent and internal Explore navigation in the standard top bar', () => {
+  it('keeps map navigation and loads only canonical public inventory', () => {
     render(<ExploreMap />);
 
     expect(screen.getByRole('link', { name: 'Back to Property Listify' })).toHaveAttribute(
@@ -52,6 +53,11 @@ describe('ExploreMap', () => {
       'href',
       '/explore',
     );
-    expect(screen.getByTestId('explore-map-hybrid')).toBeInTheDocument();
+    expect(screen.getByTestId('canonical-place-selector')).toBeInTheDocument();
+    expect(screen.getByTestId('canonical-property-map')).toBeInTheDocument();
+    expect(searchInventory).toHaveBeenCalledWith(
+      expect.objectContaining({ listingType: 'sale', listingSource: 'manual', pageSize: 50 }),
+      expect.objectContaining({ retry: false }),
+    );
   });
 });

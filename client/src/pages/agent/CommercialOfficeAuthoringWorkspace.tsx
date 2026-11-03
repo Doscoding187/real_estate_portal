@@ -3,7 +3,9 @@ import { Link } from 'wouter';
 import { AgentAppShell } from '@/components/agent/AgentAppShell';
 import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
+import { CanonicalPlaceSelector, type CanonicalPlaceSelection } from '@/components/location/CanonicalPlaceSelector';
 import {
+  COMMERCIAL_CANONICAL_ASSIGNMENT_BLOCKER,
   COMMERCIAL_CONFIRMATION_SOURCE_LABELS,
   COMMERCIAL_CONFIRMATION_SOURCES,
   type CommercialConfirmationSource,
@@ -164,21 +166,7 @@ export default function CommercialOfficeAuthoringWorkspace() {
   const [useType, setUseType] = useState<UseType>('office');
   const [assetKind, setAssetKind] = useState<AssetKind>('office_building');
   const [spaceKind, setSpaceKind] = useState<SpaceKind>('office_suite');
-  const [assetMode, setAssetMode] = useState<'new' | 'existing'>('new');
-  const [commercialAssetId, setCommercialAssetId] = useState('');
-  const reusableAssets = trpc.commercial.reusableAssets.useQuery({ spaceClass: useType });
-  const provinces = trpc.location.getLocationHierarchy.useQuery({ depth: 'province' });
-  const [provinceId, setProvinceId] = useState('');
-  const [cityId, setCityId] = useState('');
-  const [suburbId, setSuburbId] = useState('');
-  const cities = trpc.location.getLocationHierarchy.useQuery(
-    { depth: 'city', provinceId: Number(provinceId) || undefined },
-    { enabled: Boolean(provinceId) },
-  );
-  const suburbs = trpc.location.getLocationHierarchy.useQuery(
-    { depth: 'suburb', cityId: Number(cityId) || undefined },
-    { enabled: Boolean(cityId) },
-  );
+  const [canonicalPlace, setCanonicalPlace] = useState<CanonicalPlaceSelection | null>(null);
   const [listingId, setListingId] = useState<number>();
   const [pricingMode, setPricingMode] = useState<PricingMode>('componentised');
   const [more, setMore] = useState(false);
@@ -337,7 +325,6 @@ export default function CommercialOfficeAuthoringWorkspace() {
     setUseType(nextUseType);
     setAssetKind(definition.defaultAssetKind);
     setSpaceKind(definition.defaultSpaceKind);
-    setCommercialAssetId('');
   };
 
   const textInput = (
@@ -376,16 +363,13 @@ export default function CommercialOfficeAuthoringWorkspace() {
 
   const save = async () => {
     try {
-      if (assetMode === 'existing' && !commercialAssetId) {
-        throw new Error('Select the existing Commercial asset for this space.');
+      if (!canonicalPlace) {
+        throw new Error('Select an admitted canonical Place for this Commercial asset.');
       }
-      if (assetMode === 'new' && (!provinceId || !cityId)) {
-        throw new Error('Select the canonical Province and City for this Commercial asset.');
-      }
-      if (assetMode === 'new' && !form.assetName.trim()) {
+      if (!form.assetName.trim()) {
         throw new Error('Enter a name for the Commercial asset.');
       }
-      if (assetMode === 'new' && (!form.streetName.trim() || !form.confirmLocation)) {
+      if (!form.streetName.trim() || !form.confirmLocation) {
         throw new Error('Enter the asset street and confirm its physical location.');
       }
       if (!form.identifier.trim()) {
@@ -437,24 +421,19 @@ export default function CommercialOfficeAuthoringWorkspace() {
         );
       }
 
-      const asset =
-        assetMode === 'new'
-          ? {
-              mode: 'new' as const,
-              assetKind,
-              name: form.assetName,
-              provinceId: Number(provinceId),
-              cityId: Number(cityId),
-              suburbId: suburbId ? Number(suburbId) : null,
-              privateAddress: {
-                ...(form.streetNumber ? { streetNumber: form.streetNumber } : {}),
-                streetName: form.streetName,
-                buildingName: form.assetName,
-              },
-              coordinateSource: 'manual_confirmed' as const,
-              confirmPhysicalLocation: true as const,
-            }
-          : { mode: 'existing' as const, commercialAssetId: Number(commercialAssetId) };
+      const asset = {
+        mode: 'new' as const,
+        assetKind,
+        name: form.assetName,
+        canonicalPlaceId: canonicalPlace.canonicalPlaceId,
+        privateAddress: {
+          ...(form.streetNumber ? { streetNumber: form.streetNumber } : {}),
+          streetName: form.streetName,
+          buildingName: form.assetName,
+        },
+        coordinateSource: 'manual_confirmed' as const,
+        confirmPhysicalLocation: true as const,
+      };
 
       const result = await create.mutateAsync({
         asset,
@@ -566,9 +545,6 @@ export default function CommercialOfficeAuthoringWorkspace() {
     );
   }
 
-  const selectedAsset = reusableAssets.data?.find(asset => asset.id === Number(commercialAssetId));
-  const typeLabel = USE_TYPES.find(type => type.value === useType)!.label;
-
   return (
     <AgentAppShell>
       <main className="mx-auto max-w-4xl space-y-6 p-6">
@@ -597,33 +573,7 @@ export default function CommercialOfficeAuthoringWorkspace() {
               ))}
             </select>
           </label>
-          <div className="grid gap-2 md:grid-cols-2">
-            <label className="rounded border p-3">
-              <input
-                type="radio"
-                checked={assetMode === 'new'}
-                onChange={() => setAssetMode('new')}
-              />{' '}
-              <b>Create a new asset</b>
-              <span className="block text-sm text-slate-600">
-                Use this for the first space in a building, park or centre.
-              </span>
-            </label>
-            <label className="rounded border p-3">
-              <input
-                type="radio"
-                checked={assetMode === 'existing'}
-                onChange={() => setAssetMode('existing')}
-              />{' '}
-              <b>Add to an existing asset</b>
-              <span className="block text-sm text-slate-600">
-                Only your active, physically confirmed assets are available.
-              </span>
-            </label>
-          </div>
-
-          {assetMode === 'new' ? (
-            <>
+          <>
               <label className="grid gap-1 text-sm">
                 <span>Asset type</span>
                 <select
@@ -643,62 +593,13 @@ export default function CommercialOfficeAuthoringWorkspace() {
                 {textInput('Street number (optional)', 'streetNumber')}
                 {textInput('Street name', 'streetName')}
               </div>
-              <div className="grid gap-3 md:grid-cols-3">
-                <label className="grid gap-1 text-sm">
-                  <span>Province</span>
-                  <select
-                    className="rounded border p-2"
-                    value={provinceId}
-                    onChange={event => {
-                      setProvinceId(event.target.value);
-                      setCityId('');
-                      setSuburbId('');
-                    }}
-                  >
-                    <option value="">Choose Province</option>
-                    {provinces.data?.map(province => (
-                      <option key={province.id} value={province.id}>
-                        {province.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="grid gap-1 text-sm">
-                  <span>City</span>
-                  <select
-                    className="rounded border p-2"
-                    value={cityId}
-                    disabled={!provinceId}
-                    onChange={event => {
-                      setCityId(event.target.value);
-                      setSuburbId('');
-                    }}
-                  >
-                    <option value="">Choose City</option>
-                    {cities.data?.map(city => (
-                      <option key={city.id} value={city.id}>
-                        {city.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="grid gap-1 text-sm">
-                  <span>Suburb / locality (optional)</span>
-                  <select
-                    className="rounded border p-2"
-                    value={suburbId}
-                    disabled={!cityId}
-                    onChange={event => setSuburbId(event.target.value)}
-                  >
-                    <option value="">Not specified</option>
-                    {suburbs.data?.map(suburb => (
-                      <option key={suburb.id} value={suburb.id}>
-                        {suburb.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
+              <CanonicalPlaceSelector
+                value={canonicalPlace}
+                onChange={setCanonicalPlace}
+                label="Canonical Place"
+                purpose="authoring"
+                hint="Choose an admitted Place. Address text and provider results cannot assign geography."
+              />
               <label className="flex gap-2 text-sm">
                 <input
                   type="checkbox"
@@ -708,34 +609,6 @@ export default function CommercialOfficeAuthoringWorkspace() {
                 I confirm this is the physical asset location.
               </label>
             </>
-          ) : (
-            <>
-              <label className="grid gap-1 text-sm">
-                <span>Existing {typeLabel} asset</span>
-                <select
-                  className="rounded border p-2"
-                  value={commercialAssetId}
-                  onChange={event => setCommercialAssetId(event.target.value)}
-                >
-                  <option value="">Select an asset</option>
-                  {reusableAssets.data?.map(asset => (
-                    <option key={asset.id} value={asset.id}>
-                      {asset.name}
-                      {asset.address ? ` — ${asset.address}` : ''}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              {selectedAsset ? (
-                <p className="rounded bg-slate-50 p-3 text-sm">
-                  <b>{selectedAsset.name}</b>
-                  {selectedAsset.address ? ` · ${selectedAsset.address}` : ''}
-                  <br />
-                  The asset identity and location will not change.
-                </p>
-              ) : null}
-            </>
-          )}
 
           <div className="grid gap-3 md:grid-cols-2">
             <label className="grid gap-1 text-sm">
@@ -900,7 +773,7 @@ export default function CommercialOfficeAuthoringWorkspace() {
 
         <section className="space-y-4 rounded border p-4">
           <button className="font-semibold underline" onClick={() => setMore(current => !current)}>
-            {more ? 'Hide' : 'Add'} lease terms and {typeLabel.toLowerCase()} facts
+            {more ? 'Hide' : 'Add'} lease terms and {USE_TYPES.find(type => type.value === useType)?.label.toLowerCase()} facts
           </button>
           {more ? (
             <>
@@ -959,6 +832,10 @@ export default function CommercialOfficeAuthoringWorkspace() {
                 </div>
               ) : null}
 
+              <p role="status" className="rounded border border-sky-200 bg-sky-50 p-3 text-sm text-sky-950">
+                {COMMERCIAL_CANONICAL_ASSIGNMENT_BLOCKER}
+              </p>
+
               <p className="rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
                 Zoning and permitted-use evidence is never inferred from an asset or marketing
                 description. Confirm it with the advertiser until the governed zoning record is
@@ -970,10 +847,11 @@ export default function CommercialOfficeAuthoringWorkspace() {
 
         <button
           className="rounded bg-slate-900 px-4 py-2 text-white disabled:opacity-50"
-          disabled={create.isPending}
+          disabled
           onClick={save}
+          title={COMMERCIAL_CANONICAL_ASSIGNMENT_BLOCKER}
         >
-          Save canonical Commercial draft
+          Commercial authoring unavailable
         </button>
       </main>
     </AgentAppShell>

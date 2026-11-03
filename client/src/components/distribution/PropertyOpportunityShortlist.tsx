@@ -1,6 +1,16 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { MAX_SHORTLIST_OPTIONS } from './distributionShortlistStorage';
+import { useAuth } from '@/_core/hooks/useAuth';
+import { trpc } from '@/lib/trpc';
+import type { DistributionBedroomFilter } from '@shared/distributionOpportunityMatching';
+import {
+  MAX_SHORTLIST_OPTIONS,
+  ownedSearchAssessmentIdStorageKey,
+  publicSearchAssessmentTokenStorageKey,
+  readLocalStorageValue,
+  writeLocalStorageValue,
+} from './distributionShortlistStorage';
 import { ShortlistPrintView } from './ShortlistPrintView';
 import { useDistributionShortlist } from './useDistributionShortlist';
 
@@ -19,13 +29,20 @@ export function PropertyOpportunityShortlist({
   opportunities,
   currentOpportunities,
   storageScope,
+  searchFilters,
 }: {
   marketMode: 'sale' | 'rent';
   searchSummary: string;
   opportunities: import('./distributionShortlistStorage').ShortlistOption[];
   currentOpportunities: import('./distributionShortlistStorage').ShortlistOption[];
   storageScope: string;
+  searchFilters: {
+    priceBandKey: string;
+    areaText: string;
+    bedrooms: DistributionBedroomFilter[];
+  };
 }) {
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
   const {
     selectedOptions,
     selectedIds,
@@ -40,6 +57,111 @@ export function PropertyOpportunityShortlist({
     storageScope,
     currentOpportunities,
   });
+  const publicSaveMutation = trpc.distribution.savePublicSearchAssessment.useMutation();
+  const ownedSaveMutation = trpc.distribution.saveMySearchAssessment.useMutation();
+  const [assessmentId, setAssessmentId] = useState<string | null>(null);
+  const [syncVersion, setSyncVersion] = useState(0);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState('');
+  const lastAttemptedPayloadKey = useRef('');
+  const selectedDevelopmentIds = useMemo(
+    () => selectedOptions
+      .map(selection => Number(selection.id))
+      .filter(id => Number.isSafeInteger(id) && id > 0),
+    [selectedOptions],
+  );
+  const selectedDevelopmentIdsKey = selectedDevelopmentIds.join(',');
+
+  useEffect(() => {
+    if (!user?.id) {
+      setAssessmentId(null);
+      return;
+    }
+    setAssessmentId(
+      readLocalStorageValue(ownedSearchAssessmentIdStorageKey(String(user.id), marketMode)),
+    );
+  }, [marketMode, user?.id]);
+
+  useEffect(() => {
+    if (storageScope !== 'public' || authLoading || isSaving) return;
+    const storedToken = readLocalStorageValue(publicSearchAssessmentTokenStorageKey(marketMode));
+    const storedAssessmentId = assessmentId || (user?.id
+      ? readLocalStorageValue(ownedSearchAssessmentIdStorageKey(String(user.id), marketMode))
+      : null);
+    if (!selectedDevelopmentIdsKey && !storedToken && !storedAssessmentId) return;
+
+    const payloadKey = JSON.stringify({
+      userId: user?.id ?? null,
+      marketMode,
+      searchFilters,
+      selectedDevelopmentIdsKey,
+      storedAssessmentId,
+      storedToken,
+    });
+    if (lastAttemptedPayloadKey.current === payloadKey) return;
+
+    const timer = window.setTimeout(async () => {
+      lastAttemptedPayloadKey.current = payloadKey;
+      setIsSaving(true);
+      try {
+        const payload = {
+          marketMode,
+          filters: searchFilters,
+          developmentIds: selectedDevelopmentIdsKey
+            ? selectedDevelopmentIdsKey.split(',').map(Number)
+            : [],
+        };
+        if (isAuthenticated && user?.id) {
+          const result = await ownedSaveMutation.mutateAsync({
+            ...payload,
+            ...(storedAssessmentId ? { assessmentId: storedAssessmentId } : {}),
+            ...(storedToken ? { continuityToken: storedToken } : {}),
+          });
+          writeLocalStorageValue(
+            ownedSearchAssessmentIdStorageKey(String(user.id), marketMode),
+            result.id,
+          );
+          writeLocalStorageValue(publicSearchAssessmentTokenStorageKey(marketMode), null);
+          setAssessmentId(result.id);
+          setSyncVersion(version => version + 1);
+          setSaveMessage('Saved to your account as a search-only shortlist.');
+        } else {
+          const result = await publicSaveMutation.mutateAsync({
+            ...payload,
+            ...(storedToken ? { continuityToken: storedToken } : {}),
+          });
+          if (result.continuityToken) {
+            writeLocalStorageValue(
+              publicSearchAssessmentTokenStorageKey(marketMode),
+              result.continuityToken,
+            );
+            setSyncVersion(version => version + 1);
+          }
+          setSaveMessage('Saved for this browser. Sign in to attach it to your account.');
+        }
+      } catch {
+        setSaveMessage('This shortlist is still available in this browser. Account sync will retry when it changes.');
+      } finally {
+        setIsSaving(false);
+      }
+    }, 450);
+
+    return () => window.clearTimeout(timer);
+  }, [
+    assessmentId,
+    authLoading,
+    isAuthenticated,
+    isSaving,
+    marketMode,
+    ownedSaveMutation,
+    publicSaveMutation,
+    searchFilters,
+    selectedDevelopmentIdsKey,
+    storageScope,
+    syncVersion,
+    user?.id,
+  ]);
+
   const selectionLimitReached = selectedOptions.length >= MAX_SHORTLIST_OPTIONS;
 
   return (
@@ -57,8 +179,9 @@ export function PropertyOpportunityShortlist({
             between buying and renting starts a separate shortlist.
           </p>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">
-            Your options and search preferences stay in this browser and can carry into your signed-in catalogue. Current details are refreshed before sharing. No name, ID, income, or contact details are saved here.
+            Your selection is saved as a search-only shortlist. Sign in on this browser to attach it to your account. Opportunity facts are snapshotted from the current Developer projection; no prospect name, ID, income, or contact details are saved.
           </p>
+          {saveMessage ? <p role="status" className="mt-2 text-xs text-muted-foreground">{saveMessage}</p> : null}
           {publicSelectionCount > 0 && storageScope.startsWith('partner:') ? (
             <div className="mt-3 rounded-md border border-primary/15 bg-primary/5 p-3">
               <p className="text-xs text-slate-700">

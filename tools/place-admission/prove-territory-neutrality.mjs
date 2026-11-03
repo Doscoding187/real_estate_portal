@@ -43,7 +43,7 @@ import { writeSyntheticTerritoryFixture } from './synthetic-territory-fixture.mj
 const HERE = fileURLToPath(new URL('.', import.meta.url));
 const REPO_ROOT = resolve(HERE, '../..');
 const BUILDER = resolve(HERE, 'build-place-admission.mjs');
-const REAL_REGISTRY = 'data/place-admission-territories.v0.1/territory-registry.v0.1.json';
+const REAL_REGISTRY = 'data/place-admission-territories.v0.2/territory-registry.v0.2.json';
 const REAL_CATALOG = 'data/geography-coverage-v0.1/territory-catalog.v0.1.json';
 
 const failures = [];

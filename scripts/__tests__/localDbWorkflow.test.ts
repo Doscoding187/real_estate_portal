@@ -32,7 +32,7 @@ describe('local database lifecycle sequencing', () => {
       ['pnpm', ['db:worktree:create']],
       ['pnpm', ['db:migrate:plan']],
       ['pnpm', ['db:migrate:apply']],
-      ['pnpm', ['db:reference:prepare']],
+      ['pnpm', ['db:places:prepare-national']],
       ['pnpm', ['db:foundation:prepare']],
       ['pnpm', ['db:scenario:prepare']],
       ['pnpm', ['db:readiness', '--', '--purpose=location-discovery']],
@@ -41,7 +41,7 @@ describe('local database lifecycle sequencing', () => {
 
   it('delegates verification to approved diagnostics', () => {
     expect(verificationCommandSequence()).toEqual([
-      ['pnpm', ['db:reference:verify']],
+      ['pnpm', ['db:places:verify-national']],
       ['pnpm', ['db:foundation:verify']],
       ['pnpm', ['db:scenario:verify']],
       ['pnpm', ['db:readiness', '--', '--purpose=location-discovery']],
@@ -71,7 +71,7 @@ describe('local database lifecycle sequencing', () => {
       }),
     ).rejects.toThrow('verification failed');
 
-    expect(invoked).toEqual(['pnpm db:reference:verify']);
+    expect(invoked).toEqual(['pnpm db:places:verify-national']);
   });
 });
 

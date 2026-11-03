@@ -66,7 +66,6 @@ export type AuthorityManifest = {
   canonicalCommercialReleaseEntrypoint: string;
   canonicalCommercialReleaseCommands: string[];
   operatingPlaybook: string;
-  releaseMigrationRecoveryCommands: string[];
   acceptanceScenarioAdapter: string;
 };
 
@@ -95,8 +94,8 @@ const REQUIRED_PACKAGE_SCRIPTS = [
   'db:authority:service:status',
   'db:authority:service:stop',
   'db:authority:service:recover',
-  'db:reference:prepare',
-  'db:reference:verify',
+  'db:places:prepare-national',
+  'db:places:verify-national',
   'db:foundation:prepare',
   'db:foundation:verify',
   'db:scenario:prepare',
@@ -151,7 +150,6 @@ export function validateAuthorityManifest(manifest: AuthorityManifest, root = pr
     ...manifest.approvedLocalCommands,
     ...manifest.destructiveLocalCommands,
     ...manifest.canonicalCommercialReleaseCommands,
-    ...manifest.releaseMigrationRecoveryCommands,
   ].filter(script => !scripts[script]);
   const invalid = [
     manifest.authorityVersion !== 3 ? 'authority version must be 3' : '',
@@ -249,7 +247,7 @@ export function classifyDatabaseTarget(
   if (
     runtime === 'production' ||
     database === 'listify_property_sa' ||
-    /prod|railway|tidb/i.test(host)
+    /prod|railway/i.test(host)
   ) {
     return { classification: 'production', approved: false, host, database, url };
   }

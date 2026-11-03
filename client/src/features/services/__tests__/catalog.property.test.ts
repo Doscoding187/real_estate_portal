@@ -4,9 +4,10 @@ import {
   buildServiceLocationPath,
   buildServiceRequestPath,
   formatPriceRange,
-  parseServiceLocationInput,
   serviceJourneyContextFromSearch,
 } from '../catalog';
+
+const PLACE_ID = 'pl-place-01-000000000000000000000000';
 
 describe('catalog.ts — Property-Based Tests', () => {
   describe('Property 13: ZAR price range formatting', () => {
@@ -75,9 +76,7 @@ describe('catalog.ts — Property-Based Tests', () => {
       sourceSurface: 'journey_injection',
       sourceDetail: 'saved_property',
       reasonKey: 'move_ready',
-      suburb: 'Rondebosch',
-      city: 'Cape Town',
-      province: 'Western Cape',
+      canonicalPlaceId: PLACE_ID,
     } as const;
 
     const requestPath = buildServiceRequestPath('moving', 42, 'removals', context);
@@ -87,44 +86,36 @@ describe('catalog.ts — Property-Based Tests', () => {
       Object.fromEntries(Object.entries(context).map(([key, value]) => [key, String(value)])),
     );
 
-    const localizedPath = buildServiceLocationPath(
-      'moving',
-      { city: 'Cape Town', province: 'Western Cape' },
-      context,
-    );
-    const localizedUrl = new URL(localizedPath, 'https://property-listify.test');
-    expect(localizedUrl.pathname).toBe('/services/moving/cape-town/western-cape');
-    expect(serviceJourneyContextFromSearch(localizedUrl.search)).toEqual(
+    const canonicalPath = buildServiceLocationPath('moving', PLACE_ID, context);
+    const canonicalUrl = new URL(canonicalPath, 'https://property-listify.test');
+    expect(canonicalUrl.pathname).toBe('/services/moving');
+    expect(canonicalUrl.searchParams.get('canonicalPlaceId')).toBe(PLACE_ID);
+    expect(serviceJourneyContextFromSearch(canonicalUrl.search)).toEqual(
       Object.fromEntries(Object.entries(context).map(([key, value]) => [key, String(value)])),
     );
   });
 
-  it('keeps city-only and province-only location input typed', () => {
-    expect(parseServiceLocationInput('Cape Town')).toEqual({
-      suburb: '',
+  it('does not preserve legacy typed geography as a request or search authority', () => {
+    const legacyContext = {
+      category: 'moving',
       city: 'Cape Town',
-      province: '',
-    });
-    expect(parseServiceLocationInput('Western Cape')).toEqual({
-      suburb: '',
-      city: '',
       province: 'Western Cape',
-    });
-    expect(parseServiceLocationInput('gauteng')).toEqual({
-      suburb: '',
-      city: '',
-      province: 'Gauteng',
-    });
-
-    expect(parseServiceLocationInput('Rondebosch, Cape Town, Western Cape')).toEqual({
       suburb: 'Rondebosch',
-      city: 'Cape Town',
-      province: 'Western Cape',
-    });
-    expect(parseServiceLocationInput('Rondebosch, Cape Town, western cape')).toEqual({
-      suburb: 'Rondebosch',
-      city: 'Cape Town',
-      province: 'Western Cape',
-    });
+    } as any;
+    const request = new URL(
+      buildServiceRequestPath('moving', 42, 'removals', legacyContext),
+      'https://property-listify.test',
+    );
+    const search = new URL(
+      buildServiceLocationPath('moving', null, legacyContext),
+      'https://property-listify.test',
+    );
+    expect(request.searchParams.has('city')).toBe(false);
+    expect(request.searchParams.has('province')).toBe(false);
+    expect(request.searchParams.has('suburb')).toBe(false);
+    expect(search.searchParams.has('city')).toBe(false);
+    expect(search.searchParams.has('province')).toBe(false);
+    expect(search.searchParams.has('suburb')).toBe(false);
+    expect(serviceJourneyContextFromSearch('?city=Cape+Town&province=Western+Cape')).toEqual({});
   });
 });

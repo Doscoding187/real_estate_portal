@@ -1,6 +1,10 @@
 import { useState, useCallback, useEffect, type ReactNode } from 'react';
 import { useLocation } from 'wouter';
 import { HomeAreaPicker } from '@/components/HomeAreaPicker';
+import {
+  CanonicalPlaceSelector,
+  type CanonicalPlaceSelection,
+} from '@/components/location/CanonicalPlaceSelector';
 import { useHomeSearch, type HomeAreaSelection } from '@/contexts/HomeSearchContext';
 import { needsHomeAreaClarification } from '@/lib/homeAreaSelection';
 import useEmblaCarousel from 'embla-carousel-react';
@@ -12,6 +16,7 @@ import {
 } from '@/lib/publicDiscoveryRoutes';
 import { isHomepageHeroJourneyEnabled } from '@/lib/publicNavigation';
 import { Button } from '@/components/ui/button';
+import { buildDevelopmentsSearchUrl } from '@/lib/heroJourneySearch';
 
 function DiscoveryAction({
   href,
@@ -112,21 +117,7 @@ const propertyTypes: PropertyType[] = [
   },
 ];
 
-const cities = [
-  'Cape Town', // Western Cape
-  'Johannesburg', // Gauteng
-  'Durban', // KwaZulu-Natal
-  'Bloemfontein', // Free State
-  'Gqeberha', // Eastern Cape (Port Elizabeth)
-  'Polokwane', // Limpopo
-  'Kimberley', // Northern Cape
-  'Mbombela', // Mpumalanga
-  'Mahikeng', // North West
-];
-
 interface DiscoverPropertiesProps {
-  initialCity?: string;
-  availableCities?: string[];
   title?: string;
   subtitle?: string;
   locationName?: string;
@@ -135,8 +126,6 @@ interface DiscoverPropertiesProps {
 }
 
 export function DiscoverProperties({
-  initialCity,
-  availableCities,
   title,
   subtitle,
   locationName = 'South Africa',
@@ -165,9 +154,7 @@ export function DiscoverProperties({
   const displayTitle = title || defaultTitle;
   const displaySubtitle = subtitle || defaultSubtitle;
 
-  const [selectedCity, setSelectedCity] = useState(initialCity || (homeSearch ? '' : 'Cape Town'));
-
-  const displayCities = availableCities || cities;
+  const [developmentPlace, setDevelopmentPlace] = useState<CanonicalPlaceSelection | null>(null);
 
   const [listingType, setListingType] = useState<'sale' | 'rent' | 'developments'>('sale');
   const [saleExpanded, setSaleExpanded] = useState(true);
@@ -189,25 +176,32 @@ export function DiscoverProperties({
   }, [sharedJourney]);
   const selection: HomeAreaSelection = {
     locations: homeSearch?.locations || [],
-    searchArea: homeSearch?.searchArea || null,
   };
   const areaLabel = homeSearch
-    ? selection.searchArea?.label ||
-      selection.locations.map(location => location.name).join(' + ') ||
-      selectedCity
-    : selectedCity;
+    ? selection.locations.map(location => location.name).join(' + ')
+    : '';
   const locationPhrase = areaLabel ? `in ${areaLabel}` : 'in your chosen area';
   const broadConfirmed =
     needsHomeAreaClarification(selection) &&
     Boolean(selection.locations[0]) &&
-    homeSearch?.confirmedBroadId === selection.locations[0]?.id;
+    homeSearch?.confirmedBroadPlaceId === selection.locations[0]?.canonicalPlaceId;
   const chooseCategory = (type: 'sale' | 'rent' | 'developments', category?: string) => {
+    if (type === 'developments') {
+      if (developmentPlace) {
+        setLocation(
+          buildDevelopmentsSearchUrl({ canonicalPlaceId: developmentPlace.canonicalPlaceId }),
+        );
+      } else {
+        document.getElementById('discover-development-place')?.focus();
+      }
+      return;
+    }
     if (!homeSearch) return;
     const href = buildSelectedDiscoverHref(type, selection, homeSearch.filters, category);
     if (
       href &&
       (!needsHomeAreaClarification(selection) ||
-        homeSearch.confirmedBroadId === selection.locations[0]?.id)
+        homeSearch.confirmedBroadPlaceId === selection.locations[0]?.canonicalPlaceId)
     ) {
       setLocation(href);
       return;
@@ -255,7 +249,12 @@ export function DiscoverProperties({
     },
   };
   const mobileActiveCopy = mobileSectionCopy[listingType];
-  const mobileActiveHref = buildDiscoverBrowseHref(listingType, selectedCity);
+  const developmentBrowseHref = buildDiscoverBrowseHref('developments', developmentPlace);
+  const mobileActiveHref =
+    listingType === 'developments'
+      ? developmentBrowseHref
+      : buildDiscoverBrowseHref(listingType);
+  const browseDevelopment = () => chooseCategory('developments');
 
   const handleSaleClick = () => {
     homeSearch?.onJourneyChange('buy');
@@ -299,44 +298,7 @@ export function DiscoverProperties({
           <p className="text-muted-foreground text-xs md:text-sm max-w-2xl">{displaySubtitle}</p>
         </div>
 
-        {/* City Tabs */}
-        <div className="home-section-tabs flex justify-start overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
-          <div className="inline-flex flex-nowrap justify-start gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200 h-auto">
-            {displayCities.map(city => (
-              <button
-                key={city}
-                onClick={() => {
-                  setSelectedCity(city);
-                  if (homeSearch) {
-                    homeSearch.setLocations([]);
-                    homeSearch.setSearchArea(null);
-                    homeSearch.setConfirmedBroadId(null);
-                  }
-                }}
-                className={`
-                  rounded-lg px-4 py-2 text-sm font-semibold border border-transparent transition-all whitespace-nowrap
-                  ${
-                    (
-                      homeSearch?.locations.length
-                        ? homeSearch.locations.some(location =>
-                            location.type === 'city'
-                              ? location.name === city
-                              : location.citySlug === city.toLowerCase().replace(/\s+/g, '-'),
-                          )
-                        : selectedCity === city
-                    )
-                      ? 'bg-[#2774AE] text-white shadow-sm'
-                      : 'bg-transparent text-slate-600 hover:text-[#2774AE] hover:bg-white'
-                  }
-                `}
-              >
-                {city}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {homeSearch && (
+        {homeSearch && listingType !== 'developments' && (
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-100 bg-blue-50/40 px-4 py-3">
             <div className="flex min-w-0 items-center gap-2">
               <MapPin className="h-4 w-4 shrink-0 text-[#2774AE]" aria-hidden="true" />
@@ -361,6 +323,18 @@ export function DiscoverProperties({
             </Button>
           </div>
         )}
+        {listingType === 'developments' ? (
+          <div id="discover-development-place" className="mb-4 max-w-xl">
+            <CanonicalPlaceSelector
+              value={developmentPlace}
+              onChange={setDevelopmentPlace}
+              purpose="search"
+              label="Project Place"
+              placeholder="Search approved Places"
+              hint="Only developments assigned to this exact reviewed Place match."
+            />
+          </div>
+        ) : null}
         <div className="mb-4 lg:hidden">
           <div className="flex items-center gap-6 border-b border-slate-200">
             {(
@@ -403,7 +377,13 @@ export function DiscoverProperties({
             <p className="text-sm text-slate-600 leading-relaxed">{mobileActiveCopy.description}</p>
             <DiscoveryAction
               href={mobileActiveHref}
-              onChoose={homeSearch ? () => chooseCategory(listingType) : undefined}
+              onChoose={
+                listingType === 'developments'
+                  ? browseDevelopment
+                  : homeSearch
+                    ? () => chooseCategory(listingType)
+                    : undefined
+              }
               className="mt-3 inline-flex items-center gap-1 text-sm font-bold text-blue-600 hover:text-blue-800 transition-colors group"
             >
               {mobileActiveCopy.cta}
@@ -445,7 +425,7 @@ export function DiscoverProperties({
                       Explore apartments, houses, and townhomes for sale {locationPhrase}.
                     </p>
                     <DiscoveryAction
-                      href={buildDiscoverBrowseHref('sale', selectedCity)}
+                      href={buildDiscoverBrowseHref('sale')}
                       onChoose={homeSearch ? () => chooseCategory('sale') : undefined}
                       className="text-sm font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors group"
                     >
@@ -486,7 +466,7 @@ export function DiscoverProperties({
                         {areaLabel || 'your chosen area'}.
                       </p>
                       <DiscoveryAction
-                        href={buildDiscoverBrowseHref('rent', selectedCity)}
+                        href={buildDiscoverBrowseHref('rent')}
                         onChoose={homeSearch ? () => chooseCategory('rent') : undefined}
                         className="text-sm font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors group"
                       >
@@ -529,8 +509,8 @@ export function DiscoverProperties({
                           See the newest off-plan and ready-to-move developments {locationPhrase}.
                         </p>
                         <DiscoveryAction
-                          href={buildDiscoverBrowseHref('developments', selectedCity)}
-                          onChoose={homeSearch ? () => chooseCategory('developments') : undefined}
+                          href={developmentBrowseHref}
+                          onChoose={browseDevelopment}
                           className="text-sm font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors group"
                         >
                           View Developments
@@ -555,14 +535,16 @@ export function DiscoverProperties({
                   >
                     <DiscoveryAction
                       onChoose={
-                        homeSearch
-                          ? () => chooseCategory(property.listingType, property.type)
-                          : undefined
+                        property.listingType === 'developments'
+                          ? browseDevelopment
+                          : homeSearch
+                            ? () => chooseCategory(property.listingType, property.type)
+                            : undefined
                       }
                       href={buildDiscoverCardHref(
                         property.type,
                         property.listingType,
-                        selectedCity,
+                        developmentPlace,
                       )}
                       className="group relative block h-[272px] overflow-hidden rounded-xl border border-slate-800 bg-slate-900 shadow-md transition-all duration-500 hover:shadow-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2774AE] focus-visible:ring-offset-2 sm:h-[360px]"
                     >
@@ -634,12 +616,12 @@ export function DiscoverProperties({
             journey={picker.type === 'sale' ? 'buy' : picker.type}
             category={picker.category}
             initialSelection={selection}
-            cityHint={selectedCity}
             onConfirm={next => {
               homeSearch.setLocations(next.locations);
-              homeSearch.setSearchArea(next.searchArea);
-              homeSearch.setConfirmedBroadId(
-                needsHomeAreaClarification(next) ? (next.locations[0]?.id ?? null) : null,
+              homeSearch.setConfirmedBroadPlaceId(
+                needsHomeAreaClarification(next)
+                  ? (next.locations[0]?.canonicalPlaceId ?? null)
+                  : null,
               );
               const href = buildSelectedDiscoverHref(
                 picker.type,
@@ -649,10 +631,6 @@ export function DiscoverProperties({
               );
               setPicker(null);
               if (!picker.edit && href) setLocation(href);
-            }}
-            onExplore={href => {
-              setPicker(null);
-              setLocation(href);
             }}
           />
         )}

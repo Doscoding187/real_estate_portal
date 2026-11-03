@@ -13,7 +13,6 @@ interface MobileFilterDrawerProps {
   allowedPropertyTypes?: readonly string[];
   listingType?: 'sale' | 'rent';
   showAmenities?: boolean;
-  showLocationRefinement?: boolean;
 }
 
 export function MobileFilterDrawer({
@@ -25,7 +24,6 @@ export function MobileFilterDrawer({
   allowedPropertyTypes,
   listingType,
   showAmenities = true,
-  showLocationRefinement = true,
 }: MobileFilterDrawerProps) {
   const [localFilters, setLocalFilters] = useState(filters);
   const drawerRef = useRef<HTMLDivElement>(null);
@@ -148,7 +146,6 @@ export function MobileFilterDrawer({
               allowedPropertyTypes={allowedPropertyTypes}
               listingType={listingType}
               showAmenities={showAmenities}
-              showLocationRefinement={showLocationRefinement}
               showHeader={false}
             />
           </div>

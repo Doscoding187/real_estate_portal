@@ -1,109 +1,65 @@
-import { parseCanonicalLocationId } from './locationAuthority';
-import { isSearchAreaId, MULTI_LOCATION_MAX, MULTI_LOCATION_MIN } from './searchScope';
+import { isCanonicalPlaceId } from './placeAuthority';
+import { MULTI_LOCATION_MAX, MULTI_LOCATION_MIN } from './searchScope';
 
-/**
- * Public Land accepts exactly one geography authority per request. This keeps
- * the URL, rendered filters, and parcel query boundary describing the same
- * search; a later field must never silently override an earlier one.
- */
+/** Public Land accepts one admitted Place or exact sibling Places. */
 export interface LandSearchGeographyInput {
-  city?: string;
-  province?: string;
-  locationId?: string;
-  locationIds?: readonly string[];
-  searchAreaId?: string;
+  canonicalPlaceId?: string;
+  canonicalPlaceIds?: readonly string[];
 }
 
 export interface LandSearchGeographyIssue {
-  path: 'city' | 'province' | 'locationId' | 'locationIds' | 'searchAreaId';
+  path: 'canonicalPlaceId' | 'canonicalPlaceIds';
   message: string;
 }
 
 export function validateLandSearchGeography(
   input: LandSearchGeographyInput,
 ): LandSearchGeographyIssue | undefined {
-  const hasCity = Boolean(input.city?.trim());
-  const hasProvince = Boolean(input.province?.trim());
-  const hasManualGeography = hasCity || hasProvince;
-  const locationIds = input.locationIds || [];
-  const hasLocationIds = locationIds.length > 0;
+  const canonicalPlaceId = String(input.canonicalPlaceId || '').trim();
+  const canonicalPlaceIds = (input.canonicalPlaceIds || [])
+    .map(value => String(value).trim())
+    .filter(Boolean);
 
-  if (input.searchAreaId && !isSearchAreaId(input.searchAreaId)) {
+  if (canonicalPlaceId && !isCanonicalPlaceId(canonicalPlaceId)) {
     return {
-      path: 'searchAreaId',
-      message: 'The Search Area ID must use a stable Property Listify identity.',
+      path: 'canonicalPlaceId',
+      message: 'The Place ID must use an admitted canonical Place identity.',
     };
   }
-
-  if (input.locationId && !parseCanonicalLocationId(input.locationId)) {
+  if (canonicalPlaceIds.some(placeId => !isCanonicalPlaceId(placeId))) {
     return {
-      path: 'locationId',
-      message: 'The location ID must use a canonical Property Listify identity.',
+      path: 'canonicalPlaceIds',
+      message: 'Every selected Land Place must use an admitted canonical Place identity.',
     };
   }
-
-  if (locationIds.some(locationId => !parseCanonicalLocationId(locationId))) {
+  if (canonicalPlaceIds.length > MULTI_LOCATION_MAX) {
     return {
-      path: 'locationIds',
-      message: 'Every selected Land location must use a canonical Property Listify identity.',
+      path: 'canonicalPlaceIds',
+      message: `A Land multi-Place search cannot contain more than ${MULTI_LOCATION_MAX} Places.`,
     };
   }
-
-  if (locationIds.length > MULTI_LOCATION_MAX) {
+  if (canonicalPlaceIds.length > 0 && canonicalPlaceIds.length < MULTI_LOCATION_MIN) {
     return {
-      path: 'locationIds',
-      message: `A Land multi-location search cannot contain more than ${MULTI_LOCATION_MAX} locations.`,
+      path: 'canonicalPlaceIds',
+      message: 'Use canonicalPlaceId for one Land Place or select at least two sibling Places.',
     };
   }
-
-  if (hasLocationIds && locationIds.length < MULTI_LOCATION_MIN) {
+  if (new Set(canonicalPlaceIds).size !== canonicalPlaceIds.length) {
     return {
-      path: 'locationIds',
-      message: 'Use locationId for one Land location or provide at least two sibling locations.',
+      path: 'canonicalPlaceIds',
+      message: 'A Land multi-Place search cannot repeat a Place.',
     };
   }
-
-  if (new Set(locationIds).size !== locationIds.length) {
+  if (canonicalPlaceId && canonicalPlaceIds.length > 0) {
     return {
-      path: 'locationIds',
-      message: 'A Land multi-location search cannot repeat a canonical location.',
+      path: 'canonicalPlaceIds',
+      message: 'A Land request cannot combine one Place with a multi-Place selection.',
     };
   }
-
-  if (input.locationId && hasLocationIds) {
+  if (!canonicalPlaceId && canonicalPlaceIds.length === 0) {
     return {
-      path: 'locationIds',
-      message:
-        'A Land request cannot combine one canonical location with a multi-location selection.',
-    };
-  }
-
-  if (hasManualGeography && (!hasCity || !hasProvince)) {
-    return {
-      path: hasCity ? 'province' : 'city',
-      message: 'A typed Land search requires both city and province.',
-    };
-  }
-
-  if (input.searchAreaId && (input.locationId || hasLocationIds || hasManualGeography)) {
-    return {
-      path: 'searchAreaId',
-      message: 'A Land Search Area cannot be combined with another geography authority.',
-    };
-  }
-
-  if ((input.locationId || hasLocationIds) && hasManualGeography) {
-    return {
-      path: input.locationId ? 'locationId' : 'locationIds',
-      message: 'A canonical Land location cannot be combined with typed city or province filters.',
-    };
-  }
-
-  if (!hasManualGeography && !input.locationId && !hasLocationIds && !input.searchAreaId) {
-    return {
-      path: 'city',
-      message:
-        'Choose one Land geography authority: a typed city and province, canonical location, sibling locations, or an approved Search Area.',
+      path: 'canonicalPlaceId',
+      message: 'Choose an admitted canonical Place.',
     };
   }
 

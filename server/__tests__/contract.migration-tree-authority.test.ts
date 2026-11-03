@@ -580,18 +580,10 @@ describe('migration tree authority', () => {
     expect([...manual.prohibitedManualSchemaExecutors].sort()).toEqual(
       [...manual.retiredPaths].sort(),
     );
-    expect(manual.approvedProtectedReleaseRecoveries).toEqual([
-      'server/migrations/recoverTidbCheckConstraintConvergence.ts',
-    ]);
+    expect(manual.approvedProtectedReleaseRecoveries).toEqual([]);
     expect(
       manual.directSchemaCandidateClasses['approved protected release recovery'],
     ).toEqual(manual.approvedProtectedReleaseRecoveries);
-
-    const boundedRecovery = read('server/migrations/recoverTidbCheckConstraintConvergence.ts');
-    expect(boundedRecovery).toContain('assertAuthorizedDatabaseOperation');
-    expect(boundedRecovery).toContain('assertRunnerConnectionTarget');
-    expect(boundedRecovery).toContain('acquireMigrationLock');
-    expect(boundedRecovery).toContain('TIDB_CHECK_CONSTRAINT_CONVERGENCE.approvalReference');
 
     for (const retiredPath of manual.retiredPaths) {
       expect(paths, `Retired manual schema executor returned: ${retiredPath}`).not.toContain(

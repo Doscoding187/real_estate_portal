@@ -54,21 +54,11 @@ export async function inspectPlaceReleaseTarget(input: {
   );
   const canonicalReferenceColumns = await queryRows(
     input.connection,
-    "SELECT TABLE_NAME AS table_name, COLUMN_NAME AS column_name FROM information_schema.columns WHERE table_schema = DATABASE() AND ((TABLE_NAME IN ('listings','properties') AND COLUMN_NAME = 'canonical_place_id') OR (TABLE_NAME = 'saved_searches' AND COLUMN_NAME = 'place_id')) ORDER BY TABLE_NAME, COLUMN_NAME",
+    "SELECT TABLE_NAME AS table_name, COLUMN_NAME AS column_name FROM information_schema.columns WHERE table_schema = DATABASE() AND ((TABLE_NAME IN ('listings','properties','developments','explore_content','land_parcels','commercial_assets','sl_places') AND COLUMN_NAME = 'canonical_place_id') OR (TABLE_NAME = 'saved_searches' AND COLUMN_NAME = 'place_id')) ORDER BY TABLE_NAME, COLUMN_NAME",
   );
   const checks = await queryRows(
     input.connection,
     "SELECT TABLE_NAME AS table_name, CONSTRAINT_NAME AS constraint_name, ENFORCED AS enforced FROM information_schema.table_constraints WHERE table_schema = DATABASE() AND CONSTRAINT_TYPE = 'CHECK' ORDER BY TABLE_NAME, CONSTRAINT_NAME",
-  );
-  const legacyNorthRiding = await queryRows(
-    input.connection,
-    'SELECT c.id, c.name, c.slug, c.status, p.code AS province_code FROM cities c INNER JOIN provinces p ON p.id = c.provinceId WHERE c.name = ? OR c.slug = ? ORDER BY c.id',
-    ['North Riding', 'north-riding'],
-  );
-  const legacySuburbNorthRiding = await queryRows(
-    input.connection,
-    'SELECT s.id, s.name, s.slug, s.status, c.name AS city_name, p.code AS province_code FROM suburbs s INNER JOIN cities c ON c.id = s.cityId INNER JOIN provinces p ON p.id = c.provinceId WHERE s.name = ? OR s.slug = ? ORDER BY s.id',
-    ['North Riding', 'north-riding'],
   );
   // Metadata decides whether the new tables exist; this is release planning, never runtime schema guessing.
   const placeCounts: Record<string, number> = {};
@@ -89,8 +79,6 @@ export async function inspectPlaceReleaseTarget(input: {
     physicalTables,
     canonicalReferenceColumns,
     checks,
-    legacyNorthRiding,
-    legacySuburbNorthRiding,
     placeCounts,
     databaseMutation: false,
   };

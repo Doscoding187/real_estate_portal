@@ -7,6 +7,10 @@
 **Implementation owner after handoff:** OX Alpha
 **Current pilot territory:** Gauteng, South Africa
 
+**Historical status:** This handoff describes the retired numeric
+province/city/suburb runtime. The canonical Place Authority and its registered
+territory packages supersede its runtime and consumer instructions.
+
 ## 1. Executive decision
 
 Property Listify must treat location discoverability as a product prerequisite,
@@ -509,8 +513,8 @@ The following files are the starting context for OX Alpha:
 - [Search Discovery Engine draft](../search-discovery-engine.md)
 - [Land consumer journey contract](./land-consumer-journey-contract.md)
 - [Shared location contract](../../shared/location-contract.ts)
-- [Runtime geography contract](../../shared/runtimeGeography.ts)
-- [Canonical geography adapter](../../server/_core/databaseAuthority/dataAdapters/canonicalGeography.ts)
+- [Canonical Place contract](../../shared/placeAuthority.ts)
+- [Canonical Place materializer](../../server/_core/databaseAuthority/dataAdapters/canonicalPlaces.ts)
 - [Runtime convergence generator](../../tools/gauteng-runtime-convergence/generate.mjs)
 
 Two older documents must not be treated as current authority:

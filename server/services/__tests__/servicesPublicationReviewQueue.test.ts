@@ -1,10 +1,15 @@
 import { describe, expect, it, vi } from 'vitest';
 
-const { mockGetDb } = vi.hoisted(() => ({
+const { mockGetDb, mockLoadCanonicalPlaceSearchProjection, PLACE_SANDTON } = vi.hoisted(() => ({
   mockGetDb: vi.fn(),
+  mockLoadCanonicalPlaceSearchProjection: vi.fn(),
+  PLACE_SANDTON: 'pl-place-01-000000000000000000000001',
 }));
 
 vi.mock('../../db', () => ({ getDb: mockGetDb }));
+vi.mock('../canonicalPlaceSearchService', () => ({
+  loadCanonicalPlaceSearchProjection: mockLoadCanonicalPlaceSearchProjection,
+}));
 
 import {
   computeProviderPublicationReadiness,
@@ -60,6 +65,19 @@ function mockQueueDb(
   serviceRows: unknown[] = [],
   locationRows: unknown[] = [],
 ) {
+  mockLoadCanonicalPlaceSearchProjection.mockImplementation(
+    async (_database: unknown, options: { placeIds: readonly string[] }) => ({
+      executions: new Map(
+        options.placeIds.map(placeId => [placeId, { placeId, scope: 'locality' }]),
+      ),
+      labels: new Map(
+        options.placeIds.map(placeId => [
+          placeId,
+          { canonicalPlaceId: placeId, label: 'Sandton', placeType: 'suburb', scope: 'locality' },
+        ]),
+      ),
+    }),
+  );
   const base = makeQuery(baseRows);
   const services = makeQuery(serviceRows);
   const locations = makeQuery(locationRows);
@@ -174,7 +192,7 @@ describe('Services publication review queue', () => {
           isActive: 1,
         },
       ],
-      [{ providerId: 20, province: 'Gauteng', city: 'Johannesburg', suburb: 'Sandton' }],
+      [{ providerId: 20, canonicalPlaceId: PLACE_SANDTON }],
     );
 
     const queue = await servicesEngineService.listProviderPublicationQueue();
@@ -196,12 +214,12 @@ describe('Services publication review queue', () => {
       },
     ]);
     expect(entry.coverageAreas).toEqual([
-      { province: 'Gauteng', city: 'Johannesburg', suburb: 'Sandton' },
+      { canonicalPlaceId: PLACE_SANDTON, label: 'Sandton' },
     ]);
     expect(queue.pagination.total).toBe(1);
   });
 
-  it('excludes a coverage row that carries no listed geography', async () => {
+  it('excludes a coverage row without a canonical Place assignment', async () => {
     mockQueueDb(
       [makeBaseRow()],
       [
@@ -217,7 +235,7 @@ describe('Services publication review queue', () => {
           isActive: 1,
         },
       ],
-      [{ providerId: 20, province: null, city: null, suburb: null }],
+      [{ providerId: 20, canonicalPlaceId: null }],
     );
 
     const queue = await servicesEngineService.listProviderPublicationQueue();
@@ -245,7 +263,7 @@ describe('Services publication review queue', () => {
           isActive: 0,
         },
       ],
-      [{ providerId: 20, province: 'Gauteng', city: 'Johannesburg', suburb: null }],
+      [{ providerId: 20, canonicalPlaceId: PLACE_SANDTON }],
     );
 
     const queue = await servicesEngineService.listProviderPublicationQueue();
@@ -303,8 +321,8 @@ describe('Services publication review queue', () => {
         },
       ],
       [
-        { providerId: 20, province: 'Gauteng', city: 'Pretoria', suburb: null },
-        { providerId: 21, province: 'Gauteng', city: 'Pretoria', suburb: null },
+        { providerId: 20, canonicalPlaceId: PLACE_SANDTON },
+        { providerId: 21, canonicalPlaceId: PLACE_SANDTON },
       ],
     );
 

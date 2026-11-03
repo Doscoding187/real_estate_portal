@@ -57,7 +57,10 @@ const discoveryAgent = {
   propertyTypes: null,
   yearsExperience: 12,
   areasServed: [
-    { canonicalLocationId: 'suburb:11', label: 'Bryanston, Sandton, Gauteng' },
+    {
+      canonicalPlaceId: 'pl-place-01-000000000000000000000011',
+      label: 'Bryanston, Johannesburg, Gauteng',
+    },
   ],
   languages: 'English',
   isVerified: 1,
