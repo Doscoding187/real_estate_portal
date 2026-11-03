@@ -22,6 +22,10 @@ import {
 } from '@/features/services/catalog';
 import { servicesUi } from '@/features/services/design';
 import {
+  buildProviderBusinessStructuredData,
+  buildServiceBreadcrumbStructuredData,
+} from '@/features/services/seoStructuredData';
+import {
   ProviderBrandPlate,
   ProviderRating,
   StarRating,
@@ -86,8 +90,27 @@ export default function ServiceProviderProfilePage() {
         profile?.bio ||
         'Review published services, listed coverage, and platform verification for this provider.',
       canonicalPath: `/services/provider/${encodeURIComponent(slug)}`,
+      structuredData: profile
+        ? [
+            buildServiceBreadcrumbStructuredData([
+              { label: 'Home', path: '/' },
+              { label: 'Services', path: '/services' },
+              { label: profile.companyName },
+            ]),
+            buildProviderBusinessStructuredData({
+              slug,
+              companyName: profile.companyName,
+              headline: profile.headline,
+              bio: profile.bio,
+              logoUrl: profile.logoUrl,
+              locations: profile.locations,
+              averageRating: profile?.averageRating,
+              reviewCount: profile?.reviewCount,
+            }),
+          ]
+        : undefined,
     });
-  }, [profile?.bio, profile?.companyName, profile?.headline, slug]);
+  }, [profile, slug]);
 
   if (!providerId) {
     return (

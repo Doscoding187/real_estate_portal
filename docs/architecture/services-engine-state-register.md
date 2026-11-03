@@ -54,8 +54,10 @@ gated provider workspace. What it is *not* yet: a growth platform — no campaig
 landing capability, no provider-attributed demand capture, no response-time
 measurement, no export/handover, no provider media library, and no
 Services-specific discovery infrastructure (sitemap child, structured data).
+**2026-10-28 update:** DELTA-4 delivered its discovery infrastructure on
+`feat/services-seo-infrastructure-20261028` (§3), pending the PR-chain merge.
 Next authorized work after the V3 contract decision: P0 set in the gap
-assessment §5 (§3 DELTAs 3, 4, 7 + hygiene sweep).
+assessment §5 (§3 DELTAs 3, 7 + hygiene sweep; DELTA-4 already landed).
 
 ## §2 Supersession ledger
 
@@ -206,9 +208,15 @@ remain per their rows below.
    pass; `pnpm check` clean.
 
 Remaining hygiene item:
-1. Uncanonicalized category slug aliases (`/services/inspection_compliance` renders
-   while canonical head says `inspection-compliance`); localized page redirects,
-   category page does not — folded into DELTA-4.
+1. ~~Uncanonicalized category slug aliases~~ — **Resolved 2026-10-28 inside DELTA-4**:
+   `ServicesCategoryPage` now redirects legacy underscore/hyphen aliases (and any
+   non-canonical rendering of a known category) to its canonical `/services/<hyphen-slug>`
+   path by replace-navigation, preserving campaign query context; topic pages
+   (`/services/home-loans` etc.) are explicitly excluded from canonicalization. Tests:
+   `ServicesCategoryPage.test.tsx` (alias redirect preserved query, canonical route kept
+   in place, topics untouched, BreadcrumbList emitted). §4.6 has no open items; the
+   only hygiene line left overall is the `App.tsx:88` `ProProfilePage` lazy import
+   (advances with DELTA-7).
 
 ## §5 Maintenance
 
