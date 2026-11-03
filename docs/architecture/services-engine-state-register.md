@@ -51,11 +51,12 @@ property/listing/development context, provider lead custody with a six-state
 lifecycle and notes, verified-request reviews with moderation/report triage and
 transactionally recomputed aggregates, a super-admin review workspace, and a
 gated provider workspace. What it is *not* yet: a growth platform — no campaign
-landing capability, no provider-attributed demand capture, no response-time
-measurement, no export/handover, no provider media library, and no
-Services-specific discovery infrastructure (sitemap child, structured data).
-Next authorized work after the V3 contract decision: P0 set in the gap
-assessment §5 (§3 DELTAs 3, 4, 7 + hygiene sweep).
+landing capability, no provider-attributed demand capture, no export/handover,
+no provider media library, and no Services-specific discovery infrastructure
+(sitemap child, structured data). Measured first-response performance is
+implemented in #701 and pending review and merge. Next authorized work after
+the V3 contract decision: P0 set in the gap assessment §5 (§3 DELTA 7 + hygiene
+sweep; DELTA-3 implemented in #701 pending review and merge).
 
 ## §2 Supersession ledger
 
@@ -77,7 +78,7 @@ Statuses: `Proposed` (awaiting founder/V3 approval) · `Approved, not started` �
 | --- | --- | --- | --- | --- |
 | DELTA-1 Provider web presence (profile → homepage; per-service detail pages) | Code | Proposed — first slice after V3 contract | V2 §6.4 sequencing; no schema |
 | DELTA-2 Campaign landing pages + provider-attributed demand capture | Code + contract | Proposed | New context vocabulary; idempotency semantics preserved; `noindex`-by-default policy is a contract clause |
-| DELTA-3 Measured response performance from `service_lead_events` | Code | Proposed | Honest second rung of the trust ladder; computed truth only |
+| DELTA-3 Measured response performance from `service_lead_events` | Code | Implemented in #701, pending review and merge | Median first response over a 90-day window from recorded response events only; public display requires at least three measured leads; read-only, no schema change |
 | DELTA-4 Services SEO infrastructure (sitemap child, JSON-LD, slug canonicalization) | Code | Proposed | Mirrors agent/guide sitemap editorial pattern |
 | DELTA-5 Provider media library | Schema (DB authority) | Proposed, evidence-gated | V2 MINI-1 |
 | DELTA-6 Provider content model (case studies/projects) | Schema (DB authority) | Proposed, evidence-gated | V2 MINI-2 |
