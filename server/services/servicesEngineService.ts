@@ -3380,13 +3380,14 @@ export class ServicesEngineService {
         ),
       );
 
-    const placeIds = Array.from(
-      new Set(
-        rows
-          .map(row => row.canonicalPlaceId)
-          .filter((placeId): placeId is string => isCanonicalPlaceId(placeId)),
-      ),
-    );
+    const placeIds: string[] = [];
+    const seenPlaceIds = new Set<string>();
+    for (const row of rows) {
+      const candidate: unknown = row.canonicalPlaceId;
+      if (!isCanonicalPlaceId(candidate) || seenPlaceIds.has(candidate)) continue;
+      seenPlaceIds.add(candidate);
+      placeIds.push(candidate);
+    }
     const placeProjection = await loadCanonicalPlaceSearchProjection(db as never, { placeIds });
     const eligibleProviders = new Map<number, ServiceSitemapProviderEntry>();
     for (const row of rows) {
