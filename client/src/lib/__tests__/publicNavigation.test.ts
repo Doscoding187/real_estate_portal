@@ -343,7 +343,7 @@ describe('public navigation authority', () => {
     [{ role: 'property_developer' }, '/developer/dashboard'],
     [{ role: 'agency_admin' }, '/agency/overview'],
     [{ role: 'agent' }, '/agent/dashboard'],
-    [{ role: 'service_provider' }, '/service/profile'],
+    [{ role: 'service_provider' }, '/service/dashboard'],
 
     [{ role: 'visitor', hasReferrerIdentity: true }, '/distribution/partner/overview'],
     [{ role: 'visitor' }, '/user/dashboard'],
@@ -362,7 +362,7 @@ describe('public navigation authority', () => {
     [{ role: 'property_developer' }, '/developer/dashboard'],
     [{ role: 'agency_admin' }, '/agency/overview'],
     [{ role: 'agent' }, '/agent/dashboard'],
-    [{ role: 'service_provider' }, '/service/profile'],
+    [{ role: 'service_provider' }, '/service/dashboard'],
 
     [{ role: 'visitor', hasReferrerIdentity: true }, '/distribution/partner/overview'],
     [{ role: 'referrer' }, '/distribution/partner/overview'],
