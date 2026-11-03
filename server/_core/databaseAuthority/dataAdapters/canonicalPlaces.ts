@@ -92,6 +92,20 @@ export const CANONICAL_PLACES_DIGEST = createHash('sha256')
   )
   .digest('hex');
 
+/** National adapter contract pinned to every admitted territory version. */
+export const CANONICAL_PLACES_NATIONAL_VERSION = 'canonical-places-national-v1' as const;
+export const CANONICAL_PLACES_NATIONAL_DIGEST = createHash('sha256')
+  .update(
+    [
+      CANONICAL_PLACES_NATIONAL_VERSION,
+      CANONICAL_PLACES_DIGEST,
+      ...loadPlaceAdmissionTerritoryRegistry(process.cwd())
+        .registry.territories.map(territory => `${territory.territoryId}:${territory.admissionVersion}`)
+        .sort(),
+    ].join('\n'),
+  )
+  .digest('hex');
+
 const ARTIFACT_KEYS = {
   places: 'places',
   names: 'names',
@@ -1069,8 +1083,12 @@ export async function verifyNationalCanonicalPlaces(input: {
 
   // A containment forest must not become cyclic or gain a second parent once the
   // provinces share one table: that is a hazard that only exists nationally.
+  // Governance membership edges (`settlement_within`) are reviewed attestations
+  // about where an admitted place sits; they are not containment and may
+  // legitimately co-exist with the administrative parent.
   const parents = new Map<string, string>();
   for (const edge of stored.placeRelationship) {
+    if (String(edge.relationship_type) !== 'administratively_contains') continue;
     const child = String(edge.from_place_id);
     const parent = String(edge.to_place_id);
     const existing = parents.get(child);

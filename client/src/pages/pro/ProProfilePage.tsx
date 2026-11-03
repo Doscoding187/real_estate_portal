@@ -5,28 +5,35 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
 import { SERVICE_CATEGORIES, type ServiceCategory } from '@/features/services/catalog';
+import {
+  CanonicalPlaceSelector,
+  type CanonicalPlaceSelection,
+} from '@/components/location/CanonicalPlaceSelector';
+import { canonicalPlaceSelectionFromResolved } from '@/lib/canonicalPlaceSelection';
 import { applySeo } from '@/lib/seo';
 import { ProNavigation } from '@/components/services/ProNavigation';
 import { useServiceProviderOnboardingStatus } from '@/hooks/useServiceProviderOnboardingStatus';
 
-function normalizeLocationValue(value: unknown) {
-  return String(value ?? '')
-    .trim()
-    .toLowerCase();
-}
+type EditableCoverageArea = {
+  id?: number;
+  place: CanonicalPlaceSelection | null;
+  isPrimary: boolean;
+};
 
-function locationIdentity(location: {
-  countryCode?: string | null;
-  province?: string | null;
-  city?: string | null;
-  suburb?: string | null;
-}) {
-  return [location.countryCode, location.province, location.city, location.suburb]
-    .map(normalizeLocationValue)
-    .join('|');
+export function coverageAreasToPayload(locations: EditableCoverageArea[]) {
+  return locations.flatMap(location =>
+    location.place
+      ? [{
+          ...(location.id ? { id: location.id } : {}),
+          canonicalPlaceId: location.place.canonicalPlaceId,
+          isPrimary: location.isPrimary,
+        }]
+      : [],
+  );
 }
 
 export function linesToServices(
@@ -66,36 +73,6 @@ export function linesToServices(
     });
 }
 
-export function linesToLocations(text: string, existingLocations: any[] = []) {
-  return text
-    .split('\n')
-    .map(line => line.trim())
-    .filter(Boolean)
-    .map((line, index) => {
-      const [suburb, city, province] = line.split(',').map(part => part.trim());
-      const identity = locationIdentity({ countryCode: 'ZA', suburb, city, province });
-      const previous =
-        existingLocations.find(
-          location =>
-            locationIdentity({
-              ...location,
-              countryCode: normalizeLocationValue(location.countryCode) || 'ZA',
-            }) === identity,
-        ) || {};
-      return {
-        id: previous.id,
-        suburb: suburb || undefined,
-        city: city || undefined,
-        province: province || undefined,
-        countryCode: previous.countryCode || 'ZA',
-        postalCode: previous.postalCode ?? undefined,
-        radiusKm: previous.radiusKm ?? 25,
-        isPrimary: previous.isPrimary ?? index === 0,
-      };
-    })
-    .filter(location => location.suburb || location.city || location.province);
-}
-
 export default function ProProfilePage() {
   const { user, loading: authLoading } = useAuth({ redirectOnUnauthenticated: true });
   const [, setLocation] = useLocation();
@@ -115,6 +92,20 @@ export default function ProProfilePage() {
   }, []);
 
   const myProfileQuery = trpc.servicesEngine.myProviderProfile.useQuery();
+  const profilePlaceIds = useMemo(
+    () =>
+      (myProfileQuery.data?.locations || [])
+        .map((location: any) => location.canonicalPlaceId)
+        .filter((placeId: unknown): placeId is string => typeof placeId === 'string'),
+    [myProfileQuery.data],
+  );
+  const resolvedProfilePlacesQuery = trpc.placeAuthority.resolveSearchPlaces.useQuery(
+    { placeIds: profilePlaceIds },
+    {
+      enabled: Boolean(myProfileQuery.data && profilePlaceIds.length > 0),
+      refetchOnWindowFocus: false,
+    },
+  );
 
   const registerIdentity = trpc.servicesEngine.registerProviderIdentity.useMutation({
     onSuccess: () => {
@@ -155,7 +146,7 @@ export default function ProProfilePage() {
   const [websiteUrl, setWebsiteUrl] = useState('');
   const [servicesText, setServicesText] = useState('');
   const [serviceActiveOverrides, setServiceActiveOverrides] = useState<Record<string, boolean>>({});
-  const [locationsText, setLocationsText] = useState('');
+  const [coverageAreas, setCoverageAreas] = useState<EditableCoverageArea[]>([]);
   const [autoBootstrapAttempted, setAutoBootstrapAttempted] = useState(false);
 
   const bootstrapCompanyName = useMemo(() => {
@@ -170,6 +161,7 @@ export default function ProProfilePage() {
 
   useEffect(() => {
     if (!profile) return;
+    if (profilePlaceIds.length > 0 && resolvedProfilePlacesQuery.isLoading) return;
     setCompanyName(profile.companyName || '');
     setHeadline(profile.headline || '');
     setBio(profile.bio || '');
@@ -182,12 +174,21 @@ export default function ProProfilePage() {
         .join('\n'),
     );
     setServiceActiveOverrides({});
-    setLocationsText(
-      (profile.locations || [])
-        .map((item: any) => [item.suburb, item.city, item.province].filter(Boolean).join(', '))
-        .join('\n'),
+    const resolvedPlaces = new Map(
+      (resolvedProfilePlacesQuery.data?.results || []).flatMap(place =>
+        place
+          ? [[place.placeId, canonicalPlaceSelectionFromResolved(place)] as const]
+          : [],
+      ),
     );
-  }, [profile]);
+    setCoverageAreas(
+      (profile.locations || []).map((item: any, index: number) => ({
+        id: item.id,
+        place: resolvedPlaces.get(item.canonicalPlaceId) || null,
+        isPrimary: item.isPrimary === true || (item.isPrimary == null && index === 0),
+      })),
+    );
+  }, [profile, profilePlaceIds.length, resolvedProfilePlacesQuery.data, resolvedProfilePlacesQuery.isLoading]);
 
   useEffect(() => {
     if (authLoading || myProfileQuery.isLoading || myProfileQuery.isFetching) return;
@@ -396,14 +397,58 @@ export default function ProProfilePage() {
                 </label>
                 <label className="space-y-1">
                   <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Locations (suburb, city, province)
+                    Exact Place coverage
                   </span>
-                  <Textarea
-                    value={locationsText}
-                    onChange={event => setLocationsText(event.target.value)}
-                    placeholder="Bryanston, Johannesburg, Gauteng"
-                    className="min-h-40"
-                  />
+                  <div className="space-y-3">
+                    {coverageAreas.map((area, index) => (
+                      <div key={area.id || `new-${index}`} className="space-y-2 rounded-xl border bg-white p-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium text-slate-500">
+                            {area.isPrimary ? 'Primary area' : `Area ${index + 1}`}
+                          </span>
+                          <button
+                            type="button"
+                            aria-label={`Remove coverage area ${index + 1}`}
+                            onClick={() => setCoverageAreas(rows => rows.filter((_, rowIndex) => rowIndex !== index))}
+                          >
+                            <Trash2 className="h-4 w-4 text-slate-500" />
+                          </button>
+                        </div>
+                        <CanonicalPlaceSelector
+                          value={area.place}
+                          onChange={place =>
+                            setCoverageAreas(rows => rows.map((row, rowIndex) =>
+                              rowIndex === index ? { ...row, place } : row,
+                            ))
+                          }
+                          purpose="authoring"
+                          label={`Coverage Place ${index + 1}`}
+                          placeholder="Search for an approved city, suburb or locality"
+                        />
+                        <label className="flex items-center gap-2 text-xs text-slate-600">
+                          <input
+                            type="checkbox"
+                            checked={area.isPrimary}
+                            onChange={event =>
+                              setCoverageAreas(rows => rows.map((row, rowIndex) => ({
+                                ...row,
+                                isPrimary: rowIndex === index ? event.target.checked : false,
+                              })))
+                            }
+                          />
+                          Primary coverage area
+                        </label>
+                      </div>
+                    ))}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={saving || coverageAreas.length >= 5}
+                      onClick={() => setCoverageAreas(rows => [...rows, { place: null, isPrimary: rows.length === 0 }])}
+                    >
+                      <Plus className="mr-2 h-4 w-4" /> Add coverage area
+                    </Button>
+                  </div>
                 </label>
               </div>
               {profile?.services && profile.services.length > 0 && (
@@ -459,10 +504,10 @@ export default function ProProfilePage() {
                 </Button>
                 <Button
                   variant="outline"
-                  disabled={saving}
+                  disabled={saving || coverageAreasToPayload(coverageAreas).length === 0}
                   onClick={() =>
                     replaceLocations.mutate({
-                      locations: linesToLocations(locationsText, profile?.locations || []),
+                      locations: coverageAreasToPayload(coverageAreas),
                     })
                   }
                 >

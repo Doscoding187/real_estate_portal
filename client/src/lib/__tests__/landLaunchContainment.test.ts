@@ -17,7 +17,7 @@ import {
 const app = readFileSync(resolve(process.cwd(), 'client/src/App.tsx'), 'utf8');
 
 describe('Land public search and retained publication containment', () => {
-  it('opens search entry while preserving publication containment and the hosted release manifest', () => {
+  it('keeps all Land entry points deferred while preserving the hosted release manifest', () => {
     const explicitHostedRelease = resolvePublicJourneyReleaseContext({
       PROD: true,
       VITE_DEPLOY_ENV: 'production',
@@ -29,13 +29,13 @@ describe('Land public search and retained publication containment', () => {
       enabled: false,
     });
     expect(isLandVerticalAvailable()).toBe(false);
-    expect(isLandPublicDiscoveryAvailable()).toBe(true);
-    expect(getPublicHeroJourney('plot_land').homepageVisible).toBe(true);
+    expect(isLandPublicDiscoveryAvailable()).toBe(false);
+    expect(getPublicHeroJourney('plot_land').homepageVisible).toBe(false);
     expect(getPublicHeroJourney('plot_land', explicitHostedRelease)).toMatchObject({
-      homepageVisible: true,
-      homepageEnabled: true,
+      homepageVisible: false,
+      homepageEnabled: false,
     });
-    expect(getHomepageHeroJourneys().map(journey => journey.key)).toContain('plot_land');
+    expect(getHomepageHeroJourneys().map(journey => journey.key)).not.toContain('plot_land');
     const noHostedRelease = resolvePublicJourneyReleaseContext({
       PROD: true,
       VITE_DEPLOY_ENV: 'production',
@@ -44,17 +44,19 @@ describe('Land public search and retained publication containment', () => {
     expect(getPublicHeroJourney('plot_land', noHostedRelease).homepageEnabled).toBe(false);
   });
 
-  it('offers Land as its own consumer search journey', () => {
-    expect(getConsumerJourneys('buy').map(journey => journey.key)).toContain('land');
-    expect(resolveConsumerJourney('buy', 'land')?.destination).toBe('/plots-and-land');
+  it('keeps the deferred Land journey out of public consumer navigation', () => {
+    expect(getConsumerJourneys('buy').map(journey => journey.key)).not.toContain('land');
+    expect(resolveConsumerJourney('buy', 'land')).toBeUndefined();
   });
 
-  it('mounts public search/detail while retaining authoring and reviewer containment', () => {
-    expect(app).toContain("const LandDeferred = lazy(() => import('./pages/LandDeferred'));");
+  it('routes authoring, review and public Land pages through the deferred state', () => {
+    expect(app).toContain("const LandAuthoringWorkspace = lazy(() => import('./pages/agent/LandAuthoringWorkspace'));");
+    expect(app).toContain("const LandReviewWorkspace = lazy(() => import('./pages/admin/LandReviewWorkspace'));");
     expect(app).toContain('<LandDeferred audience="reviewer" />');
     expect(app).toContain('<LandDeferred audience="author" />');
-    expect(app).toContain('<PlotsAndLand />');
-    expect(app).toContain('<LandDetail />');
-    expect(app).not.toContain('<Route path="/plots-and-land" component={LandDeferred} />');
+    expect(app).toContain('<LandDeferred audience="public" />');
+    expect(app).toContain('isLandVerticalAvailable() ? <LandReviewWorkspace />');
+    expect(app).toContain('isLandVerticalAvailable() ? <LandAuthoringWorkspace />');
+    expect(app).toContain('isLandPublicDiscoveryAvailable() ?');
   });
 });

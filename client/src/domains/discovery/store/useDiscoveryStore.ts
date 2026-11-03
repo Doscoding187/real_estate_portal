@@ -71,7 +71,7 @@ export const useDiscoveryStore = create<DiscoveryState>()(
         let count = 0;
 
         if (query.intent) count++;
-        if (query.location) count++;
+        if (query.canonicalPlaceId) count++;
         if (query.category) count++;
         if (query.priceRange?.min !== undefined || query.priceRange?.max !== undefined) count++;
         if (query.creatorActorId !== undefined) count++;

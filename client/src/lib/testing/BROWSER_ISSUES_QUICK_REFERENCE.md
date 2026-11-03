@@ -304,8 +304,6 @@ useEffect(() => {
   window.history.replaceState({}, '', `?${params.toString()}`);
 }, [filters]);
 ```
-**Status**: ✅ Implemented in useFilterUrlSync
-
 ---
 
 #### Issue: Mobile bottom sheet not draggable

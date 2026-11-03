@@ -1,6 +1,6 @@
 export interface DiscoveryItem {
   id: number;
-  type: 'property' | 'video' | 'neighbourhood' | 'insight';
+  type: 'property' | 'video' | 'insight';
   data: any;
   partnerId?: number | null;
 }

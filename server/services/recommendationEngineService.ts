@@ -13,17 +13,14 @@ import { eq, desc, sql } from 'drizzle-orm';
 interface UserContext {
   userId: number;
   sessionHistory?: number[];
-  location?: { lat: number; lng: number };
 }
 
 interface UserProfile {
   userId: number;
   priceRangeMin?: number;
   priceRangeMax?: number;
-  preferredLocations: string[];
   preferredPropertyTypes: string[];
   preferredLifestyleCategories: string[];
-  followedNeighbourhoods: number[];
   followedCreators: number[];
 }
 
@@ -35,10 +32,8 @@ class RecommendationEngineService {
     // Stabilization stub: prefer a safe default profile until explore preferences schema is restored.
     return {
       userId,
-      preferredLocations: [],
       preferredPropertyTypes: [],
       preferredLifestyleCategories: [],
-      followedNeighbourhoods: [],
       followedCreators: [],
     };
   }
@@ -83,7 +78,7 @@ class RecommendationEngineService {
     // Score and rank candidates
     const scored = candidates.map(item => ({
       ...item,
-      personalizedScore: this.calculatePersonalizedScore(item, userProfile, context),
+      personalizedScore: this.calculatePersonalizedScore(item, userProfile),
     }));
 
     // Sort by personalized score
@@ -100,7 +95,6 @@ class RecommendationEngineService {
   private calculatePersonalizedScore(
     content: any,
     profile: UserProfile,
-    context: UserContext,
   ): number {
     let score = 0;
 
@@ -139,20 +133,6 @@ class RecommendationEngineService {
       score += 10 * (1 - daysSinceCreation / 7);
     }
 
-    // Location proximity bonus (0-5 points)
-    if (context.location && content.locationLat && content.locationLng) {
-      const distance = this.calculateDistance(
-        context.location.lat,
-        context.location.lng,
-        content.locationLat,
-        content.locationLng,
-      );
-      if (distance < 50) {
-        // Within 50km
-        score += 5 * (1 - distance / 50);
-      }
-    }
-
     return score;
   }
 
@@ -174,29 +154,6 @@ class RecommendationEngineService {
     const userRange = userMax - userMin;
 
     return overlapRange / userRange;
-  }
-
-  /**
-   * Calculate distance between two coordinates (Haversine formula)
-   */
-  private calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
-    const R = 6371; // Earth's radius in km
-    const dLat = this.toRad(lat2 - lat1);
-    const dLng = this.toRad(lng2 - lng1);
-
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(this.toRad(lat1)) *
-        Math.cos(this.toRad(lat2)) *
-        Math.sin(dLng / 2) *
-        Math.sin(dLng / 2);
-
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-  }
-
-  private toRad(degrees: number): number {
-    return (degrees * Math.PI) / 180;
   }
 
   /**

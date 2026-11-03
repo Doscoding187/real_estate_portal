@@ -72,7 +72,6 @@ export function MobileFilterBottomSheet({
   // ✅ Unique input IDs (prevents collisions across renders / other components in test DOM)
   const minPriceId = `min-price-${reactId}`;
   const maxPriceId = `max-price-${reactId}`;
-  const locationInputId = `location-input-${reactId}`;
 
   // Get filter state from Zustand store
   const {
@@ -81,12 +80,10 @@ export function MobileFilterBottomSheet({
     priceMax,
     bedrooms,
     bathrooms,
-    location,
     setPropertyType,
     setPriceRange,
     setBedrooms,
     setBathrooms,
-    setLocation,
     clearFilters,
     getFilterCount,
   } = useExploreFiltersStore();
@@ -424,25 +421,6 @@ export function MobileFilterBottomSheet({
                 </div>
               </div>
 
-              {/* Location */}
-              {/* IMPORTANT: role="group" stays, but group is NOT labelled "Location" (prevents getByLabelText collision) */}
-              <div role="group" aria-label="Location filter">
-                <label
-                  htmlFor={locationInputId}
-                  className="block text-sm font-semibold text-gray-900 mb-3"
-                >
-                  Location
-                </label>
-                <input
-                  id={locationInputId}
-                  type="text"
-                  value={location ?? ''}
-                  onChange={e => setLocation(e.target.value || null)}
-                  placeholder="Enter location..."
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                  style={{ boxShadow: designTokens.shadows.sm }}
-                />
-              </div>
             </div>
 
             {/* Footer */}

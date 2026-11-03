@@ -32,7 +32,6 @@ const UsersPage = lazy(() => import('./UsersPage'));
 const DevelopersPage = lazy(() => import('./DevelopersPage'));
 const PropertiesPage = lazy(() => import('./PropertiesPage'));
 const RevenueCenterPage = lazy(() => import('./RevenueCenterPage'));
-const LocationMonetizationPage = lazy(() => import('./LocationMonetizationPage'));
 const SubscriptionManagementPage = lazy(() => import('./SubscriptionManagementPage'));
 const MarketingCampaignsPage = lazy(() => import('./MarketingCampaignsPage'));
 const CreateCampaignWizard = lazy(() => import('./CreateCampaignWizard'));
@@ -97,7 +96,6 @@ const ROUTES = {
 
   properties: { path: '/admin/properties', render: () => <PropertiesPage /> },
   revenue: { path: '/admin/revenue', render: () => <RevenueCenterPage /> },
-  monetization: { path: '/admin/monetization', render: () => <LocationMonetizationPage /> },
   finance: {
     path: '/admin/finance',
     render: () => <SubscriptionManagementPage initialTab="verification" />,
@@ -181,7 +179,6 @@ export const ADMIN_DASHBOARD_ROUTES: AdminDashboardRoute[] = [
   ROUTES.properties,
   ROUTES.revenue,
   ROUTES.revenueCenterAlias,
-  ROUTES.monetization,
   ROUTES.finance,
   ROUTES.subscriptions,
   ROUTES.subscriptionManagementAlias,
@@ -240,7 +237,6 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { label: 'Finance', path: ROUTES.finance.path, icon: FileText },
       { label: 'Subscriptions', path: ROUTES.subscriptions.path, icon: CreditCard },
       { label: 'Featured Placements', path: ROUTES.marketing.path, icon: Star },
-      { label: 'Location Monetization', path: ROUTES.monetization.path, icon: DollarSign },
       { label: 'Partner Network', path: ROUTES.partners.path, icon: Handshake },
       {
         label: 'Distribution Network',

@@ -7,6 +7,14 @@ const mockSetLocation = vi.fn();
 
 vi.mock('@/lib/trpc', () => ({
   trpc: {
+    placeAuthority: {
+      discover: {
+        useQuery: () => ({ data: undefined, isFetching: false, isError: false }),
+      },
+      resolveSearchPlace: {
+        useQuery: () => ({ data: undefined, isLoading: false, error: null }),
+      },
+    },
     servicesEngine: {
       directorySearch: {
         useQuery: (input: unknown, options?: { enabled?: boolean }) => {

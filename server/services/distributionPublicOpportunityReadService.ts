@@ -2,6 +2,8 @@ import {
   getDevelopmentSalesProjection,
   type DevelopmentSalesModeProjection,
 } from './distributionDeveloperReadPort';
+import type { DistributionOpportunityPlaceAssignment } from '../../shared/distributionOpportunityMatching';
+import { listDevelopmentPlaceGeography } from './developmentPlaceAssignmentService';
 
 export type DistributionPublicMarketMode = 'sale' | 'rent';
 
@@ -16,17 +18,16 @@ type DeveloperModeMap = Partial<
   Record<'for_sale' | 'for_rent', DevelopmentSalesModeProjection>
 >;
 
-export type DistributionPublicOpportunity = {
+export type DistributionPublicOpportunity = DistributionOpportunityPlaceAssignment & {
   developmentId: number;
   revision: string;
   observedAt: string;
+  locationLabels: string[];
   campaign: {
     name: string;
     tagline: string | null;
     description: string | null;
     developmentType: string;
-    city: string;
-    province: string;
     images: string[];
   };
   inventory: {
@@ -92,6 +93,7 @@ export async function listPublicDistributionOpportunities(
   }
 
   const items: DistributionPublicOpportunity[] = [];
+  const geographyByDevelopmentId = await listDevelopmentPlaceGeography(uniqueIds);
   const batchSize = 5;
   for (let offset = 0; offset < uniqueIds.length; offset += batchSize) {
     const batch = uniqueIds.slice(offset, offset + batchSize);
@@ -107,18 +109,22 @@ export async function listPublicDistributionOpportunities(
 
       const modes = toPublicModes(projection.inventory.modes);
       if (!Object.keys(modes).length) return null;
+      const geography = geographyByDevelopmentId.get(developmentId) ?? {
+        canonicalPlaceId: null,
+        locationLabels: [],
+      };
 
       return {
         developmentId: projection.developmentId,
+        canonicalPlaceId: geography.canonicalPlaceId,
         revision: projection.revision,
         observedAt: projection.observedAt,
+        locationLabels: geography.locationLabels,
         campaign: {
           name: projection.campaign.name,
           tagline: projection.campaign.tagline,
           description: projection.campaign.description,
           developmentType: projection.campaign.developmentType,
-          city: projection.campaign.city,
-          province: projection.campaign.province,
           images: projection.campaign.images,
         },
         inventory: {

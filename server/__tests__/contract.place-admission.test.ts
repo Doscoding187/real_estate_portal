@@ -15,7 +15,6 @@ import { dirname, join } from 'node:path';
 import { assessAuditCompleteness } from '../../tools/place-admission/audit-completeness.mjs';
 
 import { normalizedDesiredSchema } from '../_core/databaseAuthority/schemaCongruency';
-import { auditTidbStructuralAdmission } from '../_core/databaseAuthority/tidbStructuralAdmission';
 import * as schema from '../../drizzle/schema';
 import { PLACE_RELATIONSHIP_TYPES, PLACE_TYPES } from '../../drizzle/schema/placeAuthority';
 import {
@@ -53,9 +52,9 @@ const coverageBaselinePaths = resolvePlaceAdmissionCoverageBaselinePaths(territo
 function createIdentityGuardFixture() {
   const scratch = mkdtempSync(join(tmpdir(), 'place-identity-guard-'));
   for (const relative of [
-    'data/place-admission-territories.v0.1',
-    'data/gauteng-source-authority-v0.2',
-    'data/gauteng-place-admission-v0.1',
+    'data/place-admission-territories.v0.2',
+    territory.sourceAuthority.directory,
+    territory.admissionPackage.directory,
   ]) {
     mkdirSync(join(scratch, 'data'), { recursive: true });
     cpSync(join(packageRoot, relative), join(scratch, relative), { recursive: true });
@@ -83,9 +82,21 @@ const parentEvidence = JSON.parse(
   readFileSync(packagePaths.artifacts.parent_evidence_classification, 'utf8'),
 ) as { edges: any[]; tally: any; governed_input_count: number };
 const sourceManifest = JSON.parse(readFileSync(sourcePaths.manifest, 'utf8')) as {
-  compact_artifacts: { path: string; sha256: string }[];
+  compact_artifacts: { kind: string; path: string; sha256: string }[];
   source_snapshot_id: string;
 };
+const heldIdentityId = 'pl-geo-v01-za-gp-cdaee93a6835fd8f1544';
+const heldPriorPlaceId = 'pl-place-01-99dcb8ba9d808741e35b258e';
+const supportedFordsburgIdentityId = 'pl-geo-v01-za-gp-936e54828376d972dcf8';
+const supportedFordsburgPlaceId = 'pl-place-01-435b493de124264b676f708f';
+const sourceCandidates = readJsonl(sourcePaths.artifacts.candidate_dispositions);
+const sourceLinks = readJsonl(sourcePaths.artifacts.source_links);
+const externalMappings = readJsonl(packagePaths.artifacts.external_mappings);
+const holdEvidencePin = sourceManifest.compact_artifacts.find(
+  artifact => artifact.kind === 'reviewed_identity_hold',
+);
+if (!holdEvidencePin) throw new Error('the source authority does not pin the reviewed identity-hold evidence');
+const holdEvidence = readJsonl(join(packageRoot, holdEvidencePin.path));
 
 const placeIds = new Set(places.map(p => p.place_id));
 
@@ -99,7 +110,7 @@ describe('Place admission: source baseline', () => {
     );
   });
 
-  it('uses the reproducible v0.2 source, not the unrecoverable v0.1 factual files', () => {
+  it('uses the reproducible v0.2 source under its reviewed v0.4 authority', () => {
     const comparison = loaded.manifest.generated_from.comparison_baseline;
     expect(comparison.factual_identity_count).toBe(1480);
     expect(comparison.runtime_row_count).toBe(1414);
@@ -117,7 +128,7 @@ describe('Place admission: source baseline', () => {
 
 describe('Place admission: source identity is not Place identity', () => {
   it('admits fewer Places than source identities, and accounts for every difference', () => {
-    const identityCount = 1488;
+    const identityCount = 1487;
     const absorbed = places.reduce((sum, place) => sum + (place.source_identity_ids.length - 1), 0);
     expect(places.length + absorbed).toBe(identityCount);
     expect(places.length).toBeLessThan(identityCount);
@@ -129,6 +140,85 @@ describe('Place admission: source identity is not Place identity', () => {
     // Every source identity is mapped exactly once.
     const mapped = places.flatMap(place => place.source_identity_ids);
     expect(new Set(mapped).size).toBe(identityCount);
+  });
+
+  it('holds only the outlying Fordsburg candidate and preserves the supported suburb evidence', () => {
+    const heldPlaces = places.filter(place => place.source_identity_ids.includes(heldIdentityId));
+    expect(heldPlaces).toEqual([]);
+    expect(placeIds.has(heldPriorPlaceId)).toBe(false);
+
+    const candidate = ledger.find(row => row.source_identity_id === heldIdentityId);
+    expect(candidate).toMatchObject({
+      source_promotion_class: 'candidate_only',
+      is_accepted_source_identity: 0,
+      place_id: null,
+      disposition: 'quarantined_candidate',
+      human_review_required: 1,
+      priority_probe_review: 1,
+    });
+    expect(
+      sourceCandidates.find(row => row.candidate_location_id === heldIdentityId),
+    ).toMatchObject({
+      promotion_class: 'candidate_only',
+      factual_identity_status: 'candidate',
+      human_review_required: true,
+      priority_probe_review: true,
+      identity_hold_review_id: 'pl-geography-fordsburg-identity-hold-2026-10-28',
+    });
+
+    const searchableFordsburg = names.filter(
+      row => row.normalized_name === 'fordsburg' && row.is_searchable === 1,
+    );
+    expect(searchableFordsburg).toHaveLength(1);
+    expect(searchableFordsburg[0]).toMatchObject({
+      place_id: supportedFordsburgPlaceId,
+      source_identity_id: supportedFordsburgIdentityId,
+    });
+
+    const supportedPlace = places.find(place => place.place_id === supportedFordsburgPlaceId);
+    expect(supportedPlace).toMatchObject({
+      place_type: 'suburb',
+      source_identity_ids: [supportedFordsburgIdentityId],
+      search_eligible: 1,
+    });
+    const retainedParent = places.find(place =>
+      place.source_identity_ids.includes('pl-geo-v01-za-gp-8e70dc910ee8a62ab596'),
+    );
+    expect(retainedParent).toBeTruthy();
+    expect(
+      relationships.filter(
+        row =>
+          row.from_place_id === supportedFordsburgPlaceId &&
+          row.to_place_id === retainedParent?.place_id &&
+          row.relationship_type === 'settlement_within' &&
+          row.evidence_source === 'statsa2016-subplace',
+      ),
+    ).toHaveLength(1);
+    expect(
+      relationships.some(
+        row => row.from_place_id === heldPriorPlaceId || row.to_place_id === heldPriorPlaceId,
+      ),
+    ).toBe(false);
+
+    expect(sourceLinks.some(row => row.canonical_location_id === heldIdentityId)).toBe(false);
+    expect(externalMappings.some(row => row.source_identity_id === heldIdentityId)).toBe(false);
+    expect(holdEvidence).toHaveLength(1);
+    expect(holdEvidence[0].candidate.canonical_location_id).toBe(heldIdentityId);
+    expect(holdEvidence[0].candidate.preserved_source_links).toHaveLength(2);
+    expect(holdEvidence[0].candidate.preserved_source_links.map((row: any) => row.source).sort()).toEqual([
+      'geonames',
+      'nga_gns',
+    ]);
+    expect(holdEvidence[0].policy).toMatchObject({
+      merge_identities: false,
+      retire_identity: false,
+      preserve_prior_place_id_allocation: true,
+      preserve_source_link_provenance: true,
+    });
+
+    const allocations = loaded.registry.allocated as Record<string, string>;
+    expect(allocations[heldIdentityId]).toBe(heldPriorPlaceId);
+    expect(Object.values(allocations).filter(id => !placeIds.has(id))).toEqual([heldPriorPlaceId]);
   });
 
   it('merges only on recorded evidence, never on a name alone', () => {
@@ -162,7 +252,7 @@ describe('Place admission: source identity is not Place identity', () => {
     for (const row of ledger)
       byDisposition.set(row.disposition, (byDisposition.get(row.disposition) ?? 0) + 1);
     expect(byDisposition.get('admitted_as_place_primary')).toBe(places.length);
-    expect(byDisposition.get('quarantined_candidate')).toBe(2754);
+    expect(byDisposition.get('quarantined_candidate')).toBe(2755);
     expect(byDisposition.get('rejected_non_independent')).toBe(108);
     for (const row of ledger) {
       expect(row.disposition).toBeTruthy();
@@ -205,10 +295,15 @@ describe('Place admission: Place identity is assigned and stable', () => {
 
   it('reuses the committed registry so a rebuild never mints a new id', () => {
     const registry = loaded.registry.allocated as Record<string, string>;
+    expect(loaded.registry.registry_version).toBe(territory.admissionVersion);
     for (const place of places) {
       expect(registry[place.primary_source_identity_id]).toBe(place.place_id);
     }
-    expect(Object.keys(registry).length).toBe(places.length);
+    expect(Object.keys(registry).length).toBe(places.length + 1);
+    // The removed candidate keeps its former assignment reserved so a future
+    // reviewed re-admission can reuse its stable ID without remapping it.
+    expect(registry[heldIdentityId]).toBe(heldPriorPlaceId);
+    expect(placeIds.has(heldPriorPlaceId)).toBe(false);
   });
 
   it('regenerates deterministically and asserts it', () => {
@@ -232,7 +327,7 @@ describe('Place admission: Place identity is assigned and stable', () => {
     const repositoryRoot = createIdentityGuardFixture();
     try {
       const registryRelative =
-        'data/gauteng-place-admission-v0.1/gauteng_place_id_registry.v0.1.json';
+        `${territory.admissionPackage.directory}/${territory.admissionPackage.placeIdRegistry}`;
       const registryPath = join(repositoryRoot, registryRelative);
       const original = readFileSync(registryPath, 'utf8');
 
@@ -364,13 +459,77 @@ describe('Place admission: relationships use only the V1 vocabulary', () => {
     }
   });
 
-  it('does not invent settlement or market relationships the evidence does not support', () => {
-    // Soweto's constituents are not linked to it: the approved source carries no
-    // evidence for that containment, so no relationship is emitted.
-    expect(relationships.some(r => r.relationship_type === 'settlement_within')).toBe(false);
+  it('emits settlement membership only where reviewed evidence authored it', () => {
+    // The v0.2 factual source carried no settlement linkage for Soweto's
+    // constituents, so the v0.1 package emitted none. The v0.3 authority adds a
+    // digest-pinned reviewed membership artifact, and the builder emits exactly
+    // those rows - never an inferred membership, never anything else.
+    const settlement = relationships.filter(r => r.relationship_type === 'settlement_within');
+    expect(settlement.length).toBe(351);
+    for (const edge of settlement) {
+      expect(edge.basis).toBe('reviewed_settlement_membership');
+      expect(edge.search_scope_authorized).toBe(0);
+      expect(edge.evidence_source).toBeTruthy();
+      expect(edge.reviewed_provenance).toBeTruthy();
+      expect(edge.reviewed_provenance.membership_confidence).toBeTruthy();
+      expect(edge.reviewed_provenance.child_disposition).toBeTruthy();
+    }
+    // Membership stays a governance attestation: it is never containment and
+    // never widens search, and the unsupported vocabulary remains absent.
+    expect(relationships.some(r => r.relationship_type === 'administratively_contains' && r.basis === 'reviewed_settlement_membership')).toBe(false);
     expect(relationships.some(r => r.relationship_type === 'market_association')).toBe(false);
     expect(relationships.some(r => r.relationship_type === 'succeeds')).toBe(false);
     expect(relationships.some(r => r.relationship_type === 'co_located_with')).toBe(false);
+    const parents = new Set(settlement.map(r => r.to_place_id));
+    expect(parents.size).toBe(8);
+  });
+});
+
+describe('Place admission: reviewed type corrections are applied, not re-decided', () => {
+  // The v0.3 source authority carries the reviewed Johannesburg corrections as a
+  // digest-pinned artifact; the package must reflect them verbatim.
+  const corrections = readJsonl(
+    resolvePlaceAdmissionSourcePaths(territory).artifacts.reviewed_type_corrections,
+  ) as {
+    identity_anchor: string;
+    corrected_type: string;
+    reviewed_search_scope: string | null;
+    confidence: string;
+  }[];
+  const correctionByAnchor = new Map(corrections.map(c => [c.identity_anchor, c]));
+  const primaryAnchors = new Set(places.map(p => p.primary_source_identity_id));
+
+  it('applies every reviewed correction to a real admitted Place', () => {
+    expect(corrections.length).toBe(48);
+    for (const [anchor, correction] of correctionByAnchor) {
+      const place = places.find(p => p.primary_source_identity_id === anchor);
+      expect(place).toBeTruthy();
+      expect(place!.place_type).toBe(correction.corrected_type);
+      const provenance = (place as any).reviewed_type_correction;
+      expect(provenance.type_basis).toBeTruthy();
+      expect(provenance.confidence).toBe(correction.confidence);
+      expect(provenance.identity_anchor).toBe(anchor);
+      expect(primaryAnchors.has(anchor)).toBe(true);
+    }
+  });
+
+  it('invents no review provenance and keeps corrected types scope-bearing', () => {
+    for (const place of places) {
+      const provenance = (place as any).reviewed_type_correction;
+      if (!provenance) continue;
+      expect(correctionByAnchor.has(provenance.identity_anchor)).toBe(true);
+      const baseScope = {
+        city: 'metro_city',
+        town: 'metro_city',
+        suburb: 'locality',
+        township: 'locality',
+        neighbourhood: 'locality',
+        locality: 'locality',
+        village: 'locality',
+      } as Record<string, string>;
+      expect(place.search_scope).toBe(baseScope[place.place_type]);
+      expect(PLACE_TYPES).toContain(place.place_type);
+    }
   });
 });
 
@@ -528,24 +687,72 @@ describe('Place admission: schema alignment', () => {
     }
   });
 
-  it('keeps admission from creating unreviewed domain Place assignments', () => {
+  it('uses canonical Place foreign keys and omits the retired location hierarchy', () => {
     const normalized = normalizedDesiredSchema(schema);
     const desiredTableNames = new Set(normalized.tables.map(t => t.name));
-    // Listing convergence is separately reviewed; admission alone cannot assign
-    // any other domain or silently rewrite the transitional catalog.
-    for (const tableName of ['developments', 'land_parcels', 'commercial_assets', 'sl_places']) {
+    for (const tableName of [
+      'listings',
+      'properties',
+      'explore_content',
+      'land_parcels',
+      'commercial_assets',
+      'sl_places',
+    ]) {
       const table = normalized.tables.find(t => t.name === tableName);
       expect(
-        (table?.foreignKeys ?? []).filter(key => key.name.includes('->place.')).length,
+        (table?.foreignKeys ?? []).filter(
+          key => key.name === 'canonical_place_id->place.place_id',
+        ),
         tableName,
-      ).toBe(0);
+      ).toEqual([
+        expect.objectContaining({
+          columns: ['canonical_place_id'],
+          referencedTable: 'place',
+          referencedColumns: ['place_id'],
+          onDelete: 'restrict',
+          onUpdate: 'restrict',
+        }),
+      ]);
     }
-    // The three-level tables are still present and unchanged in shape.
-    for (const tableName of ['provinces', 'cities', 'suburbs', 'locations']) {
-      expect(desiredTableNames.has(tableName)).toBe(true);
+    const developmentAssignments = normalized.tables.find(
+      table => table.name === 'development_place_assignments',
+    );
+    expect(
+      (developmentAssignments?.foreignKeys ?? []).filter(
+        key => key.name === 'place_id->place.place_id',
+      ),
+    ).toEqual([
+      expect.objectContaining({
+        columns: ['place_id'],
+        referencedTable: 'place',
+        referencedColumns: ['place_id'],
+        onDelete: 'restrict',
+        onUpdate: 'restrict',
+      }),
+    ]);
+    expect(
+      (normalized.tables.find(table => table.name === 'developments')?.foreignKeys ?? []).filter(
+        key => key.referencedTable === 'place',
+      ),
+    ).toEqual([]);
+    for (const tableName of [
+      'provinces',
+      'cities',
+      'suburbs',
+      'locations',
+      'location_provider_mappings',
+      'location_search_cache',
+      'amenities',
+      'city_price_analytics',
+      'suburb_price_analytics',
+      'price_analytics',
+      'price_predictions',
+      'market_insights_cache',
+      'location_searches',
+      'recent_searches',
+    ]) {
+      expect(desiredTableNames.has(tableName), tableName).toBe(false);
     }
-    const report = auditTidbStructuralAdmission(normalized);
-    expect(report.admitted).toBe(false); // pre-existing reviewed interactions remain
   });
 
   it('publishes a stable expected-dataset description for the materializer', () => {
@@ -561,8 +768,8 @@ describe('Place admission: schema alignment', () => {
 });
 
 describe('Place admission: the identity guard, on the failure paths that lose allocations', () => {
-  const registryRelative = 'data/gauteng-place-admission-v0.1/gauteng_place_id_registry.v0.1.json';
-  const placesRelative = 'data/gauteng-place-admission-v0.1/gauteng_place_admission_v0.1.jsonl';
+  const registryRelative = `${territory.admissionPackage.directory}/${territory.admissionPackage.placeIdRegistry}`;
+  const placesRelative = packagePaths.artifacts.places;
 
   // Each process owns its damaged copy. Concurrent authority gates must never
   // back up, mutate or restore the shared committed identity registry.
@@ -645,9 +852,9 @@ describe('Place admission: the identity guard, on the failure paths that lose al
     const scratch = mkdtempSync(join(tmpdir(), 'place-allocation-swap-'));
     try {
       for (const relative of [
-        'data/place-admission-territories.v0.1',
-        'data/gauteng-source-authority-v0.2',
-        'data/gauteng-place-admission-v0.1',
+        'data/place-admission-territories.v0.2',
+        territory.sourceAuthority.directory,
+        territory.admissionPackage.directory,
       ]) {
         mkdirSync(join(scratch, 'data'), { recursive: true });
         cpSync(join(packageRoot, relative), join(scratch, relative), { recursive: true });
@@ -660,7 +867,7 @@ describe('Place admission: the identity guard, on the failure paths that lose al
         damaged.allocated[first],
       ];
       writeFileSync(registryPath, JSON.stringify(damaged));
-      const directory = join(scratch, 'data/gauteng-place-admission-v0.1');
+      const directory = join(scratch, territory.admissionPackage.directory);
       const snapshot = () =>
         readdirSync(directory).map(file => [file, readFileSync(join(directory, file), 'utf8')]);
       const before = snapshot();

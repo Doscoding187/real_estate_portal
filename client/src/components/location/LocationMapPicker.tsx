@@ -20,18 +20,8 @@ export interface LocationData {
   latitude: number | null;
   longitude: number | null;
   address?: string;
-  suburb?: string;
-  city?: string;
-  province?: string;
   postalCode?: string;
-  formattedAddress?: string;
-  placeId?: string;
   coordinateSource?: 'autocomplete' | 'map';
-  addressComponents?: Array<{
-    long_name: string;
-    short_name: string;
-    types: string[];
-  }>;
 }
 
 interface LocationMapPickerProps {
@@ -100,16 +90,10 @@ export function LocationMapPicker({
         return component?.long_name;
       };
 
-      // Extract address components
+      // Provider results enrich the private address and map pin only. They do
+      // not assign a canonical Place or supply geographic search labels.
       const streetNumber = getComponent('street_number');
       const route = getComponent('route');
-      const suburb =
-        getComponent('sublocality') ||
-        getComponent('sublocality_level_1') ||
-        getComponent('neighborhood') ||
-        getComponent('administrative_area_level_3');
-      const city = getComponent('locality') || getComponent('administrative_area_level_2');
-      const province = getComponent('administrative_area_level_1');
       const postalCode = getComponent('postal_code');
 
       // Build street address
@@ -119,18 +103,8 @@ export function LocationMapPicker({
         latitude: lat,
         longitude: lng,
         address: address || undefined,
-        suburb: suburb || undefined,
-        city: city || undefined,
-        province: province || undefined,
         postalCode: postalCode || undefined,
-        formattedAddress: result.formatted_address,
-        placeId: result.place_id,
         coordinateSource,
-        addressComponents: addressComponents.map(component => ({
-          long_name: component.long_name,
-          short_name: component.short_name,
-          types: component.types,
-        })),
       };
     },
     [],

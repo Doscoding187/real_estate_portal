@@ -53,7 +53,7 @@ export default function ManagerDevelopmentDealsPage() {
       (item: any) => Number(item.developmentId) === developmentId,
     );
     return selected
-      ? `${selected.developmentName} (${selected.city || 'Unknown city'})`
+      ? `${selected.developmentName} (${selected.locationLabels?.join(', ') || 'Location to be confirmed'})`
       : `Development #${developmentId}`;
   }, [assignedDevelopmentsQuery.data, developmentId]);
 

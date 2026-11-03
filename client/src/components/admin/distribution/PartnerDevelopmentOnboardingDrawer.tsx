@@ -37,8 +37,7 @@ import { ReferralIntakePolicyEditor } from './ReferralIntakePolicyEditor';
 type DevelopmentRow = {
   developmentId: number;
   developmentName: string;
-  city?: string | null;
-  province?: string | null;
+  locationLabels: string[];
   program?: any;
 };
 
@@ -1818,7 +1817,7 @@ function DevelopmentOnboardingRow({
         <div>
           <p className="font-medium">{development.developmentName}</p>
           <p className="text-xs text-slate-500">
-            {development.city || 'Unknown city'}, {development.province || 'Unknown province'}
+            {development.locationLabels?.join(', ') || 'No reviewed Place assignment'}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -2119,8 +2118,8 @@ export function PartnerDevelopmentOnboardingDrawer({
                           Configuring: {selectedDevelopment.developmentName}
                         </CardTitle>
                         <CardDescription>
-                          {selectedDevelopment.city || 'Unknown city'},{' '}
-                          {selectedDevelopment.province || 'Unknown province'}.{` `}
+                          {selectedDevelopment.locationLabels?.join(', ') ||
+                            'No reviewed Place assignment'}.{` `}
                           Save this development directly, or apply its onboarding defaults to the
                           other developments in this brand.
                         </CardDescription>

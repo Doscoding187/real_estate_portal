@@ -1,13 +1,31 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 const state = vi.hoisted(() => ({
-  search: '?province=Gauteng',
+  search: '?canonicalPlaceId=pl-place-01-000000000000000000000001',
   navigate: vi.fn(),
   profile: {} as Record<string, unknown>,
   projects: {} as Record<string, unknown>,
   directory: {} as Record<string, unknown>,
   projectLookup: vi.fn(),
   directoryLookup: vi.fn(),
+}));
+vi.mock('@/components/location/CanonicalPlaceSelector', () => ({
+  CanonicalPlaceSelector: ({ label, onChange }: { label: string; onChange: (value: unknown) => void }) => (
+    <button
+      type="button"
+      onClick={() =>
+        onChange({
+          canonicalPlaceId: 'pl-place-01-000000000000000000000002',
+          label: 'Pretoria',
+          placeType: 'metro_city',
+          scope: 'metro_city',
+          administrativeContext: 'City of Tshwane',
+        })
+      }
+    >
+      {label}
+    </button>
+  ),
 }));
 vi.mock('wouter', () => ({
   useSearch: () => state.search,
@@ -63,8 +81,8 @@ const project = {
   name: 'Local Homes',
   slug: 'local-homes',
   canonicalRoute: '/development/local-homes',
-  city: 'Johannesburg',
-  suburb: 'Sandton',
+  canonicalPlaceId: 'pl-place-01-000000000000000000000001',
+  locationLabels: ['Sandton'],
   images: [],
   priceFrom: 1800000,
   priceTo: 2200000,
@@ -75,7 +93,7 @@ const project = {
 };
 const ready = { isLoading: false, isFetching: false, isError: false, refetch: vi.fn() };
 beforeEach(() => {
-  state.search = '?province=Gauteng';
+  state.search = '?canonicalPlaceId=pl-place-01-000000000000000000000001';
   state.navigate.mockClear();
   state.projectLookup.mockClear();
   state.directoryLookup.mockClear();
@@ -111,14 +129,19 @@ describe('Public developer profile', () => {
     expect(screen.getByText('Monthly rent on request')).toBeInTheDocument();
     expect(screen.queryByText(/R1.8m/)).not.toBeInTheDocument();
   });
-  it('requests the selected province server-side and opens the actual development without a fabricated featured badge', () => {
+  it('requests the selected canonical Place and opens the development without a fabricated featured badge', () => {
     render(<DeveloperPublisherPage />);
     expect(state.projectLookup).toHaveBeenCalledWith(
-      { cataloguePublisherId: 44, province: 'Gauteng', limit: 13, offset: 0 },
+      {
+        cataloguePublisherId: 44,
+        canonicalPlaceId: 'pl-place-01-000000000000000000000001',
+        limit: 13,
+        offset: 0,
+      },
       expect.objectContaining({ enabled: true }),
     );
     expect(
-      screen.getByRole('heading', { name: 'Published projects in Gauteng' }),
+      screen.getByRole('heading', { name: 'Published projects at the selected Place' }),
     ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Local Homes.*View development/ })).toHaveAttribute(
       'href',
@@ -129,7 +152,7 @@ describe('Public developer profile', () => {
     expect(screen.getByText('Contact verified')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Back to developer directory' })).toHaveAttribute(
       'href',
-      '/developers?province=Gauteng',
+      '/developers?canonicalPlaceId=pl-place-01-000000000000000000000001',
     );
   });
   it('distinguishes a failed project request from an empty project catalogue and retries', () => {
@@ -141,10 +164,10 @@ describe('Public developer profile', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
     expect(retry).toHaveBeenCalled();
   });
-  it('keeps an empty chosen province until the visitor explicitly requests all projects', () => {
+  it('keeps an empty chosen Place until the visitor explicitly requests all projects', () => {
     state.projects = { ...ready, data: [] };
     render(<DeveloperPublisherPage />);
-    expect(screen.getByText('No published projects in Gauteng')).toBeInTheDocument();
+    expect(screen.getByText('No published projects at the selected canonical Place')).toBeInTheDocument();
     expect(state.navigate).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'View all published projects' }));
     expect(state.navigate).toHaveBeenCalledWith('/developer/local-builder#developments');
@@ -161,17 +184,17 @@ describe('Public developer profile', () => {
     ).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
-  it('does not widen an unsupported province to national projects', () => {
-    state.search = '?province=Atlantis';
+  it('does not widen a malformed canonical Place link to national projects', () => {
+    state.search = '?canonicalPlaceId=malformed';
     render(<DeveloperPublisherPage />);
     expect(state.projectLookup).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ enabled: false }),
     );
-    expect(screen.getByRole('alert')).toHaveTextContent('Choose a supported project province');
+    expect(screen.getByRole('alert')).toHaveTextContent('Choose a canonical project Place');
     expect(screen.queryByRole('heading', { name: 'Local Homes' })).not.toBeInTheDocument();
   });
-  it('paginates at the server and keeps the project province', () => {
+  it('paginates at the server and keeps the exact project Place', () => {
     state.projects = {
       ...ready,
       data: Array.from({ length: 13 }, (_, index) => ({
@@ -184,25 +207,33 @@ describe('Public developer profile', () => {
     expect(screen.getAllByRole('heading', { name: /Homes \d+/ })).toHaveLength(12);
     fireEvent.click(screen.getByRole('button', { name: 'Next projects' }));
     expect(state.projectLookup).toHaveBeenLastCalledWith(
-      expect.objectContaining({ province: 'Gauteng', offset: 12, limit: 13 }),
+      expect.objectContaining({
+        canonicalPlaceId: 'pl-place-01-000000000000000000000001',
+        offset: 12,
+        limit: 13,
+      }),
       expect.anything(),
     );
   });
 });
 describe('Developer directory', () => {
-  it('retains project province in its API and project/profile links', () => {
+  it('retains the exact project Place in its API and project/profile links', () => {
     render(<DeveloperDirectoryPage />);
     expect(state.directoryLookup).toHaveBeenCalledWith(
-      expect.objectContaining({ province: 'Gauteng', offset: 0, limit: 25 }),
+      expect.objectContaining({
+        canonicalPlaceId: 'pl-place-01-000000000000000000000001',
+        offset: 0,
+        limit: 25,
+      }),
       expect.objectContaining({ enabled: true }),
     );
     expect(screen.getByRole('link', { name: 'View projects' })).toHaveAttribute(
       'href',
-      '/developer/local-builder?province=Gauteng#developments',
+      '/developer/local-builder?canonicalPlaceId=pl-place-01-000000000000000000000001#developments',
     );
     expect(screen.getByRole('link', { name: 'Developer profile' })).toHaveAttribute(
       'href',
-      '/developer/local-builder?province=Gauteng',
+      '/developer/local-builder?canonicalPlaceId=pl-place-01-000000000000000000000001',
     );
     expect(screen.queryByText(/trusted property developers/)).not.toBeInTheDocument();
   });
@@ -215,13 +246,16 @@ describe('Developer directory', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
     expect(retry).toHaveBeenCalled();
   });
-  it('retains the selected province when clearing other filters', () => {
+  it('retains the selected Place when clearing other filters', () => {
     state.directory = { ...ready, data: [] };
     render(<DeveloperDirectoryPage />);
     fireEvent.change(screen.getByLabelText('Developer reach'), { target: { value: 'national' } });
     fireEvent.click(screen.getByRole('button', { name: 'Clear name and reach filters' }));
     expect(state.directoryLookup).toHaveBeenLastCalledWith(
-      expect.objectContaining({ province: 'Gauteng', brandTier: undefined }),
+      expect.objectContaining({
+        canonicalPlaceId: 'pl-place-01-000000000000000000000001',
+        brandTier: undefined,
+      }),
       expect.anything(),
     );
     expect(state.navigate).not.toHaveBeenCalled();
@@ -239,15 +273,19 @@ describe('Developer directory', () => {
     expect(screen.getAllByRole('link', { name: 'View projects' })).toHaveLength(24);
     fireEvent.click(screen.getByRole('button', { name: 'Next developers' }));
     expect(state.directoryLookup).toHaveBeenLastCalledWith(
-      expect.objectContaining({ province: 'Gauteng', offset: 24, limit: 25 }),
+      expect.objectContaining({
+        canonicalPlaceId: 'pl-place-01-000000000000000000000001',
+        offset: 24,
+        limit: 25,
+      }),
       expect.anything(),
     );
   });
-  it('updates the location URL through an explicit province choice', () => {
+  it('updates the location URL through an explicit canonical Place choice', () => {
     render(<DeveloperDirectoryPage />);
-    fireEvent.change(screen.getByLabelText('Project province'), {
-      target: { value: 'Western Cape' },
-    });
-    expect(state.navigate).toHaveBeenCalledWith('/developers?province=Western+Cape');
+    fireEvent.click(screen.getByRole('button', { name: 'Project Place' }));
+    expect(state.navigate).toHaveBeenCalledWith(
+      '/developers?canonicalPlaceId=pl-place-01-000000000000000000000002',
+    );
   });
 });

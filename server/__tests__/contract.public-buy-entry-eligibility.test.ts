@@ -50,38 +50,31 @@ describe('public Buy entry eligibility contract', () => {
     manualSearchCalls.forEach(call => {
       expect(call).toContain('publicOnly: true');
       expect(call).toContain('requirePhoto: true');
+      expect(call).toContain('canonicalPlaceIds: [input.canonicalPlaceId]');
     });
   });
 
-  it('never resurrects the residential-table commercial inventory on the homepage feed', () => {
+  it('accepts only the canonical Place feed contract', () => {
     const source = readFileSync(path.resolve(process.cwd(), 'server/developerRouter.ts'), 'utf8');
     const start = source.indexOf('getHomeTrendingFeed: publicProcedure');
     const end = source.indexOf('getPublicDevelopmentBySlug: publicProcedure', start);
     const homeFeed = source.slice(start, end);
 
-    // Commercial consumer intent is owned by the Commercial Leasing journey
-    // (/commercial over commercial asset tables). The trending-feed fallthrough
-    // must fail closed to an empty list instead of querying residential rows as
-    // "commercial" property.
-    expect(homeFeed).not.toContain("propertyType: ['commercial']");
-    const fallthroughMarker = homeFeed.indexOf(
-      'Commercial consumer intent is owned by the dedicated Commercial Leasing',
-    );
-    expect(fallthroughMarker).toBeGreaterThan(0);
-    const fallthrough = homeFeed.slice(fallthroughMarker);
-    expect(fallthrough).toContain("{ items: [], source: 'listings' }");
-    expect(fallthrough).not.toContain('propertySearchService.searchProperties');
+    expect(homeFeed).toContain("tab: z.enum(['buy', 'rent', 'developments'])");
+    expect(homeFeed).toContain('canonicalPlaceId: z.string()');
+    expect(homeFeed).toContain('.strict()');
+    expect(homeFeed).not.toMatch(/\b(province|city|suburb):/);
   });
 
-  it('keeps the selected homepage geography exact instead of silently widening it', () => {
+  it('keeps the selected Place exact and never widens an empty result', () => {
     const source = readFileSync(path.resolve(process.cwd(), 'server/developerRouter.ts'), 'utf8');
     const start = source.indexOf('getHomeTrendingFeed: publicProcedure');
     const end = source.indexOf('getPublicDevelopmentBySlug: publicProcedure', start);
     const homeFeed = source.slice(start, end);
 
-    expect(homeFeed).toContain('const exactLocationFilter: LocationFilter = {');
-    expect(homeFeed).toContain('const usedFallback = false;');
-    expect(homeFeed).toContain("const fallbackLevel = 'none';");
+    expect(homeFeed).toContain('canonicalPlaceIds: [input.canonicalPlaceId]');
+    expect(homeFeed).toContain('canonicalPlaceId: input.canonicalPlaceId');
+    expect(homeFeed).toContain('usedFallback: false');
     expect(homeFeed).not.toContain('locationCandidates');
   });
 });

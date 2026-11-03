@@ -4,27 +4,19 @@ import { type Request, type Response, Router } from 'express';
 import {
   agents,
   cataloguePublishers,
-  developments,
   properties,
   SERVICE_CATEGORY_VALUES,
 } from '../../drizzle/schema';
 import { ENV } from '../_core/env';
 import { getDb } from '../db-connection';
 import { APPROVED_AGENT, buildAgentPublicSlug } from '../services/agentPublicProfileService';
-import { publicDevelopmentEligibilityConditions } from '../services/publicDevelopmentEligibility';
 import { resolvePublicPropertyEligibilityIds } from '../services/publicPropertyEligibilityService';
 import { servicesEngineService } from '../services/servicesEngineService';
 
-import { getPublishedCityGuides } from '../../shared/cityGuideContent';
 import { COUNTRY_DISCOVERY_PATH } from '../../shared/countryDiscovery';
-import { getPublishedProvinceGuides } from '../../shared/provinceGuideContent';
-import {
-  slugifyLocationSegment,
-  toProviderSlug,
-  toServiceCategorySlug,
-} from '../../shared/serviceDirectorySlugs';
+import { toProviderSlug, toServiceCategorySlug } from '../../shared/serviceDirectorySlugs';
 import { SITEMAP_INDEX_CHILDREN } from '../../shared/sitemapIndex';
-import { getPublishedSuburbGuidePaths } from '../../shared/suburbGuidePolicy';
+import { publishedCanonicalPlaceUrls } from '../services/canonicalPlaceUrlService';
 
 const router = Router();
 
@@ -181,21 +173,15 @@ router.get('/sitemap.xml', (req, res) => {
   sendXml(res, xml);
 });
 
-// Editorial publication, not inventory presence, determines guide sitemap eligibility.
-router.get('/sitemap-guides.xml', (req, res) => {
+// Canonical Place admission and its publication gate determine place URL eligibility.
+router.get('/sitemap-places.xml', (req, res) => {
   const baseUrl = resolveBaseUrl(req);
   sendXml(
     res,
     buildUrlSet([
       { loc: toAbsoluteUrl(COUNTRY_DISCOVERY_PATH, baseUrl) },
-      ...getPublishedProvinceGuides().map(guide => ({
-        loc: toAbsoluteUrl(`/${guide.slug}`, baseUrl),
-      })),
-      ...getPublishedCityGuides().map(guide => ({
-        loc: toAbsoluteUrl(`/${guide.provinceSlug}/${guide.slug}`, baseUrl),
-      })),
-      ...getPublishedSuburbGuidePaths().map(path => ({
-        loc: toAbsoluteUrl(`/${path}`, baseUrl),
+      ...publishedCanonicalPlaceUrls().map(place => ({
+        loc: toAbsoluteUrl(place.path, baseUrl),
       })),
     ]),
   );
@@ -245,13 +231,11 @@ router.get('/sitemap-services.xml', async (_req, res, next) => {
     }
 
     const entries = await servicesEngineService.listServiceSitemapEntries();
-
     const categoryEntries = SERVICE_CATEGORY_VALUES.map(category => ({
       loc: toAbsoluteUrl(`/services/${toServiceCategorySlug(category)}`, baseUrl),
       changefreq: 'weekly',
       priority: 0.6,
     }));
-
     const providerEntries = entries.providers.map(provider => ({
       loc: toAbsoluteUrl(
         `/services/provider/${toProviderSlug(provider.companyName, provider.providerId)}`,
@@ -262,23 +246,7 @@ router.get('/sitemap-services.xml', async (_req, res, next) => {
       priority: 0.6,
     }));
 
-    const localizedEntries = entries.localized
-      .map(row => ({
-        categorySlug: toServiceCategorySlug(row.category),
-        citySlug: slugifyLocationSegment(row.city),
-        provinceSlug: slugifyLocationSegment(row.province),
-      }))
-      .filter(row => row.categorySlug && row.citySlug && row.provinceSlug)
-      .map(row => ({
-        loc: toAbsoluteUrl(
-          `/services/${row.categorySlug}/${row.citySlug}/${row.provinceSlug}`,
-          baseUrl,
-        ),
-        changefreq: 'weekly',
-        priority: 0.5,
-      }));
-
-    sendXml(res, buildUrlSet([...categoryEntries, ...providerEntries, ...localizedEntries]));
+    sendXml(res, buildUrlSet([...categoryEntries, ...providerEntries]));
   } catch (error) {
     next(error);
   }
@@ -327,41 +295,8 @@ router.get('/sitemap-listings.xml', async (_req, res, next) => {
   }
 });
 
-router.get('/sitemap-developments.xml', async (_req, res, next) => {
-  try {
-    const baseUrl = resolveBaseUrl(_req);
-    const db = await getDb();
-    if (!db) {
-      throw new Error('Database not available');
-    }
-
-    const rows = await db
-      .select({
-        slug: developments.slug,
-        updatedAt: developments.updatedAt,
-      })
-      .from(developments)
-      .leftJoin(cataloguePublishers, eq(developments.cataloguePublisherId, cataloguePublishers.id))
-      .where(
-        and(
-          publicDevelopmentEligibilityConditions(),
-          sql`COALESCE(${developments.slug}, '') <> ''`,
-        ),
-      );
-
-    const xml = buildUrlSet(
-      rows.map(row => ({
-        loc: toAbsoluteUrl(`/development/${row.slug}`, baseUrl),
-        lastmod: row.updatedAt,
-        changefreq: 'weekly',
-        priority: 0.8,
-      })),
-    );
-
-    sendXml(res, xml);
-  } catch (error) {
-    next(error);
-  }
+router.get('/sitemap-developments.xml', (_req, res) => {
+  sendXml(res, buildUrlSet([]));
 });
 
 router.get('/sitemap-static.xml', async (_req, res, next) => {

@@ -4,6 +4,7 @@ import { and, asc, eq, inArray } from 'drizzle-orm';
 import { getDb } from '../db-connection';
 import {
   cataloguePublishers,
+  developmentPlaceAssignments,
   managerialAuditLogs,
   developerOrganisationMemberships,
   developerOrganisations,
@@ -16,6 +17,7 @@ import {
 import { cataloguePublisherService } from '../services/cataloguePublisherService';
 import { developerIdentityService } from '../services/developerIdentityService';
 import { developmentService } from '../services/developmentService';
+import { recordReviewedDevelopmentPlaceAssignment } from '../services/developmentPlaceAssignmentService';
 import { AuditActions } from '../_core/auditLog';
 import { capturePublicLead } from '../services/publicLeadCaptureService';
 import {
@@ -76,6 +78,7 @@ const createdState: CreatedState = {
   unitTypeIds: [],
   leadIds: [],
 };
+const CANONICAL_TEST_PLACE_ID = 'pl-place-01-dee61758ef3bda7cd1a258ad';
 
 function uniqueNumbers(values: number[]) {
   return Array.from(new Set(values.filter(Boolean)));
@@ -176,9 +179,6 @@ async function insertDevelopment(
       name: `Platform Publication Development ${suffix}`,
       developmentType: 'residential',
       transactionType: options.transactionType ?? 'for_sale',
-      city: 'Johannesburg',
-      province: 'Gauteng',
-      suburb: 'Berea',
       address: '1 Platform Publication Road, Berea',
       status: 'selling',
       ownershipType: 'sectional-title',
@@ -286,6 +286,9 @@ describeWithDb('Developer Engine platform-curated publication authority integrat
       await db
         .delete(developmentApprovalQueue)
         .where(inArray(developmentApprovalQueue.developmentId, developmentIds));
+      await db
+        .delete(developmentPlaceAssignments)
+        .where(inArray(developmentPlaceAssignments.developmentId, developmentIds));
       await db.delete(developments).where(inArray(developments.id, developmentIds));
     }
 
@@ -348,6 +351,14 @@ describeWithDb('Developer Engine platform-curated publication authority integrat
     });
 
     const developmentId = await insertDevelopment(submitterId, cataloguePublisherId);
+    await recordReviewedDevelopmentPlaceAssignment({
+      developmentId,
+      phaseId: null,
+      placeId: CANONICAL_TEST_PLACE_ID,
+      assignmentKind: 'site',
+      evidenceReference: `test-fixture:platform-publication:${developmentId}`,
+      reviewerUserId: reviewerId,
+    });
     const submitted = await developmentService.submitPlatformCuratedDevelopment(
       developmentId,
       submitterId,
@@ -548,9 +559,6 @@ describeWithDb('Developer Engine platform-curated publication authority integrat
           name: deferredLandName,
           developmentType: 'land',
           transactionType: 'for_sale',
-          city: 'Johannesburg',
-          province: 'Gauteng',
-          suburb: 'Berea',
           address: '1 Deferred Land Road, Berea',
           status: 'selling',
           ownershipType: 'sectional-title',

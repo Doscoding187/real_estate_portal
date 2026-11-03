@@ -1,29 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { discoveryFeedService } from '../discoveryFeedService';
 
-const { getRecommendedFeedMock, getCategoryFeedMock, getAreaFeedMock, dbSelectChainMock } = vi.hoisted(() => ({
+const { getRecommendedFeedMock, getCategoryFeedMock, getAreaFeedMock } = vi.hoisted(() => ({
   getRecommendedFeedMock: vi.fn(),
   getCategoryFeedMock: vi.fn(),
   getAreaFeedMock: vi.fn(),
-  dbSelectChainMock: {
-    from: vi.fn(),
-    where: vi.fn(),
-    limit: vi.fn(),
-  },
 }));
 
-vi.mock('../discoveryLegacyFeedSource', () => ({
-  discoveryLegacyFeedSource: {
+vi.mock('../discoveryFeedSource', () => ({
+  discoveryFeedSource: {
     getRecommendedCandidates: getRecommendedFeedMock,
     getCategoryCandidates: getCategoryFeedMock,
     getAreaCandidates: getAreaFeedMock,
   },
-}));
-
-vi.mock('../../../../db', () => ({
-  getDb: vi.fn(async () => ({
-    select: vi.fn(() => dbSelectChainMock),
-  })),
 }));
 
 describe('discoveryFeedService', () => {
@@ -31,9 +20,6 @@ describe('discoveryFeedService', () => {
     getRecommendedFeedMock.mockReset();
     getCategoryFeedMock.mockReset();
     getAreaFeedMock.mockReset();
-    dbSelectChainMock.from.mockReturnValue(dbSelectChainMock);
-    dbSelectChainMock.where.mockReturnValue(dbSelectChainMock);
-    dbSelectChainMock.limit.mockResolvedValue([]);
   });
 
   it('routes property category queries to the legacy category feed', async () => {
@@ -220,27 +206,16 @@ describe('discoveryFeedService', () => {
     expect(result.offset).toBe(1);
   });
 
-  it('resolves discovery location ids into area feed requests', async () => {
-    dbSelectChainMock.limit.mockResolvedValue([
-      {
-        id: 7,
-        name: 'Sandton',
-        type: 'suburb',
-      },
-    ]);
-
+  it('routes one canonical Place identity into the exact area feed', async () => {
     getAreaFeedMock.mockResolvedValue({
       items: [
         {
           id: 31,
+          canonicalPlaceId: 'pl-place-01-000000000000000000000007',
           category: 'property',
           contentType: 'video',
           createdAt: '2026-03-20T10:00:00.000Z',
-          location: {
-            suburb: 'Sandton',
-            city: 'Johannesburg',
-            province: 'Gauteng',
-          },
+          location: { name: 'Sandton' },
           viewCount: 1800,
           thumbnailUrl: 'https://example.com/sandton.jpg',
         },
@@ -249,26 +224,26 @@ describe('discoveryFeedService', () => {
       feedType: 'area',
       hasMore: false,
       offset: 20,
-      metadata: { location: 'Sandton' },
+      metadata: { canonicalPlaceId: 'pl-place-01-000000000000000000000007' },
     });
 
     const result = await discoveryFeedService.getFeed({
       mode: 'feed',
-      location: {
-        type: 'suburb',
-        id: 7,
-      },
+      canonicalPlaceId: 'pl-place-01-000000000000000000000007',
       contentType: 'video',
       limit: 10,
     });
 
     expect(getAreaFeedMock).toHaveBeenCalledWith({
-      location: 'Sandton',
+      canonicalPlaceId: 'pl-place-01-000000000000000000000007',
       limit: 30,
       offset: 0,
     });
     expect(getRecommendedFeedMock).not.toHaveBeenCalled();
     expect(result.metadata?.feedType).toBe('area');
-    expect(result.metadata?.resolvedLocationLabel).toBe('Sandton');
+    expect(result.items[0]).toEqual(expect.objectContaining({
+      canonicalPlaceId: 'pl-place-01-000000000000000000000007',
+      location: { name: 'Sandton' },
+    }));
   });
 });

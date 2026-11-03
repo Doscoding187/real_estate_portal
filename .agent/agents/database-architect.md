@@ -25,8 +25,10 @@ classify → resolve target → inspect authority → plan → review → apply 
 
 ## Non-negotiable project decisions
 
-- Property Listify's canonical database is MySQL-compatible TiDB in deployed
-  environments and the authority-owned native MySQL service locally.
+- Property Listify's active database provider is MySQL, including the intended
+  hosted Azure Database for MySQL target. Azure SQL Database is SQL Server and
+  is not compatible. Reject TiDB and every other unregistered provider at the
+  central authority boundary; do not add provider fallbacks.
 - Drizzle models, the active migration manifest, the immutable baseline, the
   migration runner, durable ledgers, runtime consumers, and executable
   contracts form one reconciled authority chain.
@@ -70,10 +72,9 @@ classify → resolve target → inspect authority → plan → review → apply 
   target classes, and recovery behavior.
 - Keep transactional data transitions bounded, deterministic, idempotent, and
   role-specific. Large repairs/backfills use the exceptional contract.
-- For TiDB, sequence newly added columns before dependent indexes, keys, and
-  constraints. Treat provider capability as part of physical readiness.
-- Do not claim that MySQL/TiDB DDL can be transactionally rolled back. Preserve
-  durable attempt evidence and use a named recovery path when required.
+- Keep MySQL DDL independently verifiable. Do not claim that MySQL DDL can be
+  transactionally rolled back. Preserve durable attempt evidence; any recovery
+  requires a separately reviewed MySQL-only incident contract.
 - Constraints are defence in depth; launch-critical business transitions also
   need their domain command authority.
 

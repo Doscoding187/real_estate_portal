@@ -12,7 +12,7 @@ const state = vi.hoisted(() => ({
         identity: {
           id: 41,
           name: 'Harbour View',
-          location: { city: 'Cape Town', province: 'Western Cape' },
+          location: { canonicalPlaceId: null, locationLabels: ['Cape Town'] },
         },
         lifecycle: { state: 'live', latestReview: null },
         readiness: { status: 'ready', blockerCount: 0 },
@@ -25,7 +25,7 @@ const state = vi.hoisted(() => ({
         identity: {
           id: 42,
           name: 'Ridge Park',
-          location: { city: 'Johannesburg', province: 'Gauteng' },
+          location: { canonicalPlaceId: null, locationLabels: ['Johannesburg'] },
         },
         lifecycle: { state: 'draft_action_required', latestReview: null },
         readiness: { status: 'blocked', blockerCount: 2 },
@@ -38,7 +38,7 @@ const state = vi.hoisted(() => ({
         identity: {
           id: 43,
           name: 'Cedar Mews',
-          location: { city: 'Pretoria', province: 'Gauteng' },
+          location: { canonicalPlaceId: null, locationLabels: ['Pretoria'] },
         },
         lifecycle: { state: 'live', latestReview: null },
         readiness: { status: 'ready', blockerCount: 0 },

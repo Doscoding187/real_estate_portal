@@ -18,7 +18,7 @@ import {
 import { developmentService } from './services/developmentService';
 import { requireUser } from './_core/requireUser';
 import { agentProfilePhoneError } from '../shared/agentProfilePhone';
-import { DEVELOPER_DISCOVERY_PROVINCES } from '../shared/developerDiscovery';
+import { isPlaceId } from '../drizzle/schema/placeAuthority';
 import { safeErrorSummary } from './_core/safeError';
 
 // ============================================================================
@@ -68,22 +68,21 @@ const listPublishersSchema = z
     authorityKind: z.enum(['platform_reference', 'developer_first_party']).optional(),
     isVisible: z.boolean().optional(),
     search: z.string().optional(),
-    province: z
+    canonicalPlaceId: z
       .string()
-      .refine(
-        value => DEVELOPER_DISCOVERY_PROVINCES.includes(value),
-        'Choose a supported province',
-      )
+      .trim()
+      .refine(isPlaceId, 'Choose an approved canonical Place')
       .optional(),
     limit: z.number().int().positive().max(100).optional(),
     offset: z.number().int().min(0).optional(),
   })
+  .strict()
   .optional();
 
-const listPublishersByProvinceSchema = z.object({
-  province: z.string().trim().min(1).max(100),
+const listPublishersByPlaceSchema = z.object({
+  canonicalPlaceId: z.string().trim().refine(isPlaceId, 'Choose an approved canonical Place'),
   limit: z.number().int().positive().max(20).default(10),
-});
+}).strict();
 
 const capturePublisherLeadSchema = z.object({
   cataloguePublisherId: z.number().int().positive(),
@@ -178,10 +177,13 @@ export const cataloguePublisherRouter = router({
     return await cataloguePublisherService.listPublicPublishers(input || {});
   }),
 
-  listPublishersByProvince: publicProcedure
-    .input(listPublishersByProvinceSchema)
+  listPublishersByPlace: publicProcedure
+    .input(listPublishersByPlaceSchema)
     .query(async ({ input }) => {
-      return cataloguePublisherService.listPublicPublishersByProvince(input.province, input.limit);
+      return cataloguePublisherService.listPublicPublishersByPlace(
+        input.canonicalPlaceId,
+        input.limit,
+      );
     }),
 
   /**

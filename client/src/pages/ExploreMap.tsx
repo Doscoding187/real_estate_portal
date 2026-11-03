@@ -1,102 +1,145 @@
-/**
- * ExploreMap Page (Aligned with simplified filter API)
- *
- * - Keeps: category selector + map hybrid view + filter badge
- * - Uses ResponsiveFilterPanel with simplified API (Zustand-backed)
- * - Removes legacy prop-heavy filter wiring
- */
-
-import { motion } from 'framer-motion';
-import { SlidersHorizontal, MapPin } from 'lucide-react';
-
-import { MapHybridView } from '@/components/explore-discovery/MapHybridView';
-import { LifestyleCategorySelector } from '@/components/explore-discovery/LifestyleCategorySelector';
-import { ResponsiveFilterPanel } from '@/components/explore-discovery/ResponsiveFilterPanel';
+import { useMemo, useState } from 'react';
+import { CanonicalPlaceSelector, type CanonicalPlaceSelection } from '@/components/location/CanonicalPlaceSelector';
+import { GooglePropertyMap } from '@/components/maps/GooglePropertyMap';
+import { MapPin } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ExplorePlatformBridge } from '@/components/ExplorePlatformBridge';
-import { useExploreCommonState } from '@/hooks/useExploreCommonState';
+import { trpc } from '@/lib/trpc';
+
+type MapBounds = {
+  minLat: number;
+  maxLat: number;
+  minLng: number;
+  maxLng: number;
+};
 
 export default function ExploreMap() {
-  const {
-    selectedCategoryId,
-    setSelectedCategoryId,
-    showFilters,
-    setShowFilters,
-    toggleFilters,
-    filters,
-    filterActions,
-  } = useExploreCommonState({ initialViewMode: 'map' });
+  const [listingType, setListingType] = useState<'sale' | 'rent'>('sale');
+  const [selectedPlace, setSelectedPlace] = useState<CanonicalPlaceSelection | null>(null);
+  const [bounds, setBounds] = useState<MapBounds | null>(null);
 
-  const handlePropertyClick = (propertyId: number) => {
-    console.log('Navigate to property:', propertyId);
-    // TODO: Navigate to property detail page
+  const inventory = trpc.properties.searchPublicInventory.useQuery(
+    {
+      ...(selectedPlace ? { canonicalPlaceId: selectedPlace.canonicalPlaceId } : {}),
+      listingType,
+      listingSource: 'manual',
+      ...(bounds || {}),
+      sortOption: 'relevance',
+      page: 0,
+      pageSize: 50,
+    },
+    { retry: false, refetchOnWindowFocus: false },
+  );
+  const mapProperties = useMemo(
+    () =>
+      (inventory.data?.cards || []).flatMap(card => {
+        const id = Number(card.propertyId ?? card.id);
+        const latitude = Number(card.latitude);
+        const longitude = Number(card.longitude);
+        if (!Number.isSafeInteger(id) || id <= 0 || !Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+          return [];
+        }
+        return [
+          {
+            id,
+            title: card.title,
+            price: card.price,
+            propertyType: card.propertyType,
+            listingType: card.listingType,
+            listingSource: 'manual' as const,
+            identity: card.identity,
+            primaryBadge: card.badges?.[0],
+            latitude,
+            longitude,
+            mainImage: card.image,
+            address: card.address || card.location,
+            city: card.city,
+            bedrooms: card.bedrooms,
+            bathrooms: card.bathrooms,
+            area: card.area,
+          },
+        ];
+      }),
+    [inventory.data?.cards],
+  );
+
+  const selectPlace = (place: CanonicalPlaceSelection | null) => {
+    setSelectedPlace(place);
+    if (place) {
+      setBounds(null);
+    }
   };
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
-      {/* Top bar */}
-      <motion.div
-        className="bg-white/95 backdrop-blur-md border-b border-gray-200/50 px-4 py-3 z-20 shadow-sm"
-        initial={{ y: -20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.3, ease: 'easeOut' }}
-      >
-        <div className="flex items-center gap-3">
+    <main className="flex h-screen flex-col bg-slate-50">
+      <header className="z-20 border-b border-slate-200 bg-white px-4 py-3 shadow-sm">
+        <div className="mx-auto flex max-w-screen-2xl flex-wrap items-center gap-3">
           <ExplorePlatformBridge showExploreReturn />
-          <div className="hidden md:flex items-center gap-2 px-3 py-2 bg-indigo-50 rounded-full">
-            <MapPin className="w-4 h-4 text-indigo-600" />
-            <span className="text-sm font-medium text-indigo-900">Map View</span>
+          <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+            <MapPin className="h-4 w-4 text-indigo-600" />
+            Explore properties on the map
           </div>
-
-          <div className="flex-1 overflow-hidden">
-            <LifestyleCategorySelector
-              selectedCategoryId={selectedCategoryId ?? undefined}
-              onCategoryChange={id => setSelectedCategoryId(id ?? null)}
-              variant="light"
+          <Select value={listingType} onValueChange={value => setListingType(value as 'sale' | 'rent')}>
+            <SelectTrigger className="w-36" aria-label="Listing type">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="sale">For sale</SelectItem>
+              <SelectItem value="rent">For rent</SelectItem>
+            </SelectContent>
+          </Select>
+          <div className="min-w-64 flex-1">
+            <CanonicalPlaceSelector
+              value={selectedPlace}
+              onChange={selectPlace}
+              purpose="search"
+              label="Place"
+              placeholder="Search an admitted Place"
+              hint="Choose one Place to narrow the map."
             />
           </div>
-
-          <motion.button
-            onClick={toggleFilters}
-            className="relative flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-xl font-medium shadow-md hover:shadow-lg transition-all"
-            whileHover={{ scale: 1.02, y: -1 }}
-            whileTap={{ scale: 0.98 }}
-            aria-label="Open filters"
-          >
-            <SlidersHorizontal className="w-4 h-4" />
-            <span className="hidden sm:inline">Filters</span>
-            {filterActions.getFilterCount() > 0 && (
-              <motion.span
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                className="absolute -top-1.5 -right-1.5 min-w-[1.25rem] h-5 px-1.5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center shadow-md"
-              >
-                {filterActions.getFilterCount()}
-              </motion.span>
-            )}
-          </motion.button>
+          <div className="text-sm text-slate-500">
+            {inventory.data?.total ?? 0} listings
+          </div>
         </div>
-      </motion.div>
+        {inventory.error ? (
+          <p className="mx-auto mt-2 max-w-screen-2xl text-sm text-rose-700" role="alert">
+            {inventory.error.message}
+          </p>
+        ) : null}
+        {!selectedPlace ? (
+          <p className="mx-auto mt-2 max-w-screen-2xl text-xs text-slate-500">
+            Showing countrywide public listings. Choose one admitted Place to narrow the map.
+          </p>
+        ) : null}
+      </header>
 
-      {/* Map view */}
-      <motion.div
-        className="flex-1 overflow-hidden"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.4, delay: 0.1 }}
-      >
-        <MapHybridView
-          categoryId={selectedCategoryId ?? undefined}
-          filters={filters}
-          onPropertyClick={handlePropertyClick}
-        />
-      </motion.div>
-
-      {/* Filters (simplified API) */}
-      <ResponsiveFilterPanel
-        isOpen={showFilters}
-        onClose={() => setShowFilters(false)}
-        onApply={() => setShowFilters(false)}
-      />
-    </div>
+      <section className="min-h-0 flex-1 p-3 sm:p-5">
+        {inventory.isLoading ? (
+          <div className="flex h-full items-center justify-center rounded-xl border bg-white text-slate-500">
+            Loading public listings…
+          </div>
+        ) : (
+          <GooglePropertyMap
+            properties={mapProperties}
+            className="h-full"
+            onBoundsChange={nextBounds => {
+              const southwest = nextBounds.getSouthWest();
+              const northeast = nextBounds.getNorthEast();
+              setBounds({
+                minLat: southwest.lat(),
+                maxLat: northeast.lat(),
+                minLng: southwest.lng(),
+                maxLng: northeast.lng(),
+              });
+            }}
+            onPropertySelect={propertyId => {
+              window.location.assign(`/property/${propertyId}`);
+            }}
+            onRecoveryViewChange={() => window.location.assign('/property-for-sale')}
+          />
+        )}
+      </section>
+    </main>
   );
 }

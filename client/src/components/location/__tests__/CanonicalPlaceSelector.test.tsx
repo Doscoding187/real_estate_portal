@@ -77,6 +77,8 @@ describe('Canonical Place customer selection', () => {
       placeType: 'suburb',
       scope: 'locality',
       administrativeContext: 'Eastern Cape / Municipality',
+      canonicalPath: undefined,
+      parentPlaceId: null,
     });
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
   });

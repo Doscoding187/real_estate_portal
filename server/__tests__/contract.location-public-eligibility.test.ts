@@ -6,31 +6,25 @@ function readRepoFile(relativePath: string): string {
   return readFileSync(path.resolve(process.cwd(), relativePath), 'utf8');
 }
 
-describe('location discovery commercial-expiry boundary', () => {
-  it('rechecks map and heatmap candidates through canonical public eligibility', () => {
-    const source = readRepoFile('server/locationRouter.ts');
+describe('map inventory uses the canonical public search path', () => {
+  it('does not expose legacy map, heatmap, or duplicate location router paths', () => {
+    const locationRouter = readRepoFile('server/locationRouter.ts');
+    const rootRouter = readRepoFile('server/routers.ts');
 
-    expect(source).toContain('resolvePublicPropertyEligibilityIds');
-    expect(source.match(/resolvePublicPropertyEligibilityIds\(/g)?.length).toBeGreaterThanOrEqual(2);
-    expect(source).toContain('const candidateProperties = await db');
-    expect(source).toContain('const candidateRows = await db');
+    expect(locationRouter).not.toContain('getPropertiesOnMap:');
+    expect(locationRouter).not.toContain('getPropertyHeatmap:');
+    expect(locationRouter).not.toContain('calculateDistance:');
+    expect(rootRouter).not.toContain('enhancedLocation');
   });
 
-  it('does not paginate or aggregate enhanced-location rows before expiry filtering', () => {
-    const source = readRepoFile('server/enhancedLocationRouter.ts');
+  it('keeps inventory and Development discovery on canonical Place eligibility', () => {
+    const propertySearch = readRepoFile('server/services/propertySearchService.ts');
+    const developmentSearch = readRepoFile('server/services/publicDevelopmentSearchService.ts');
 
-    expect(source).toContain('const orderedCandidates = await orderedQuery');
-    expect(source).toContain('const eligibleCandidates = orderedCandidates.filter');
-    expect(source).toContain('const countsByCell = new Map<string, number>()');
-    expect(source).toContain('resolvePublicPropertyEligibilityIds(candidateRows.map');
-    expect(source).toContain('const similarCandidates = await db');
-  });
-
-  it('keeps generic public search and development discovery on canonical eligibility', () => {
-    const source = readRepoFile('server/services/globalSearchService.ts');
-
-    expect(source).toContain('resolvePublicPropertyEligibilityIds');
-    expect(source).toContain('publicDevelopmentEligibilityConditions()');
-    expect(source).toContain('const candidateRows =');
+    expect(propertySearch).toContain('properties.canonicalPlaceId');
+    expect(propertySearch).toContain('resolvePublicPropertyEligibilities(');
+    expect(propertySearch).toContain('loadCanonicalPlaceSearchProjection(');
+    expect(developmentSearch).toContain('publicDevelopmentEligibilityConditions()');
+    expect(developmentSearch).toContain('listDevelopmentIdsForCanonicalPlace(');
   });
 });

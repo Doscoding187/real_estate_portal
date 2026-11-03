@@ -4,7 +4,6 @@ const { getDbMock, sitemapEntries } = vi.hoisted(() => ({
   getDbMock: vi.fn(),
   sitemapEntries: {
     providers: [] as Array<{ providerId: number; companyName: string; updatedAt: string | null }>,
-    localized: [] as Array<{ category: string; city: string; province: string }>,
   },
 }));
 
@@ -42,22 +41,8 @@ function makeRes(capture: SendCapture) {
   return res;
 }
 
-async function requestServicesSitemap(
-  entries: { providers: unknown[]; localized: unknown[] },
-  path = '/sitemap-services.xml',
-): Promise<SendCapture> {
+async function requestSitemap(path: string): Promise<SendCapture> {
   getDbMock.mockResolvedValue({});
-  sitemapEntries.providers = entries.providers as Array<{
-    providerId: number;
-    companyName: string;
-    updatedAt: string | null;
-  }>;
-  sitemapEntries.localized = entries.localized as Array<{
-    category: string;
-    city: string;
-    province: string;
-  }>;
-
   const capture: SendCapture = { headers: {} };
   await new Promise<void>(resolve => {
     let settled = false;
@@ -94,11 +79,10 @@ async function requestServicesSitemap(
 describe('services sitemap contract', () => {
   beforeEach(() => {
     sitemapEntries.providers = [];
-    sitemapEntries.localized = [];
   });
 
-  it('lists every canonical service category page', async () => {
-    const capture = await requestServicesSitemap({ providers: [], localized: [] });
+  it('lists every canonical service category page and no localized category URLs', async () => {
+    const capture = await requestSitemap('/sitemap-services.xml');
     const body = String(capture.body);
 
     expect(capture.headers['Content-Type']).toContain('application/xml');
@@ -110,16 +94,15 @@ describe('services sitemap contract', () => {
     );
     expect(body).toContain('<loc>https://www.propertylistifysa.co.za/services/insurance</loc>');
     expect(body).toContain('<loc>https://www.propertylistifysa.co.za/services/media-marketing</loc>');
+    expect(body).not.toMatch(/\/services\/(?:home-improvement|finance-legal|moving|inspection-compliance|insurance|media-marketing)\/[^/<]+\/[^/<]+/);
   });
 
-  it('enumerates published provider profile urls built from the shared slug authority', async () => {
-    const capture = await requestServicesSitemap({
-      providers: [
-        { providerId: 7, companyName: 'Cape Handyman & Services!', updatedAt: '2026-10-20 12:00:00' },
-        { providerId: 9, companyName: '   ###   ', updatedAt: null },
-      ],
-      localized: [],
-    });
+  it('enumerates published provider profile URLs from the shared slug authority', async () => {
+    sitemapEntries.providers = [
+      { providerId: 7, companyName: 'Cape Handyman & Services!', updatedAt: '2026-10-20 12:00:00' },
+      { providerId: 9, companyName: '   ###   ', updatedAt: null },
+    ];
+    const capture = await requestSitemap('/sitemap-services.xml');
     const body = String(capture.body);
 
     expect(body).toContain(
@@ -129,24 +112,8 @@ describe('services sitemap contract', () => {
     expect(body.match(/<lastmod>/g) || []).toHaveLength(1);
   });
 
-  it('lists localized coverage urls only for resolvable three-segment routes', async () => {
-    const capture = await requestServicesSitemap({
-      providers: [],
-      localized: [
-        { category: 'inspection_compliance', city: 'Cape Town', province: 'Western Cape' },
-        { category: 'moving', city: '', province: 'Gauteng' },
-      ],
-    });
-    const body = String(capture.body);
-
-    expect(body).toContain(
-      '<loc>https://www.propertylistifysa.co.za/services/inspection-compliance/cape-town/western-cape</loc>',
-    );
-    expect(body).not.toContain('/moving//');
-  });
-
   it('registers the services child in the sitemap index', async () => {
-    const capture = await requestServicesSitemap({ providers: [], localized: [] }, '/sitemap.xml');
+    const capture = await requestSitemap('/sitemap.xml');
     const body = String(capture.body);
 
     expect(body).toContain('/sitemap-services.xml');

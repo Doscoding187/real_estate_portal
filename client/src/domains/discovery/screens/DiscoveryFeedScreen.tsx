@@ -44,7 +44,7 @@ function getDiscoveryBadgeLabel(itemType: string, raw: Record<string, any>): str
   if (contentType === 'walkthrough' || category === 'walkthrough') return 'Walkthrough';
   if (itemType === 'property') return 'Listing';
   if (itemType === 'development') return 'Development';
-  if (itemType === 'location') return 'Neighbourhood';
+  if (itemType === 'location') return 'Place';
   if (itemType === 'service') return 'Home service';
   if (itemType === 'insight') return 'Insight';
   return 'Discovery';
@@ -96,8 +96,7 @@ export function DiscoveryVideoViewport({
           type: itemType,
           propertyTitle: item.title,
           propertyLocation:
-            item.location?.name ||
-            [raw?.location?.suburb, raw?.location?.city].filter(Boolean).join(', '),
+            item.location?.name,
           propertyPrice: item.price,
           caption: item.description || raw?.category || '',
           highlights: raw?.highlights || [raw?.category].filter(Boolean),

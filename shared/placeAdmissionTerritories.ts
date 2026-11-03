@@ -35,20 +35,35 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
 export const PLACE_ADMISSION_TERRITORY_REGISTRY_PATH =
-  'data/place-admission-territories.v0.1/territory-registry.v0.1.json';
+  'data/place-admission-territories.v0.2/territory-registry.v0.2.json';
 
-export const PLACE_ADMISSION_TERRITORY_REGISTRY_SCHEMA_VERSION = '0.1' as const;
+export const PLACE_ADMISSION_TERRITORY_REGISTRY_SCHEMA_VERSION = '0.2' as const;
 
 /**
  * The source-authority artifacts the builder consumes, keyed by the role they
- * play in admission. The set is closed on purpose: adding a new source artifact
- * is a contract change to the admission pipeline, not a per-territory decision.
+ * play in admission. The required set is closed on purpose: adding a new
+ * required source artifact is a contract change to the admission pipeline, not
+ * a per-territory decision.
  */
 export const PLACE_ADMISSION_SOURCE_ARTIFACT_KEYS = [
   'geography',
   'names',
   'source_links',
   'candidate_dispositions',
+] as const;
+
+/**
+ * Optional reviewed-correction source artifacts. A territory that carries
+ * governed, digest-pinned review outcomes (for example a city-scope correction)
+ * declares them here; one without such an overlay leaves them out. The set is
+ * closed too: a registry may add these keys but no others, and the builder
+ * applies only artifact kinds it knows about. A corrections artifact that
+ * disappears while the registry still names it is fail-closed exactly like the
+ * required artifacts, because the builder reads declared artifacts verbatim.
+ */
+export const PLACE_ADMISSION_REVIEWED_SOURCE_ARTIFACT_KEYS = [
+  'reviewed_type_corrections',
+  'reviewed_settlement_membership',
 ] as const;
 
 /**
@@ -104,7 +119,9 @@ export interface PlaceAdmissionTerritory {
     readonly authorityVersion: string;
     readonly directory: string;
     readonly manifest: PlaceAdmissionArtifactPin;
-    readonly artifacts: Readonly<Record<SourceArtifactKey, string>>;
+    readonly artifacts: Readonly<
+      Record<SourceArtifactKey, string> & Partial<Record<ReviewedSourceArtifactKey, string>>
+    >;
   };
   readonly coverageBaseline: {
     readonly directory: string;
@@ -129,6 +146,8 @@ export interface PlaceAdmissionTerritoryRegistry {
 }
 
 export type SourceArtifactKey = (typeof PLACE_ADMISSION_SOURCE_ARTIFACT_KEYS)[number];
+export type ReviewedSourceArtifactKey =
+  (typeof PLACE_ADMISSION_REVIEWED_SOURCE_ARTIFACT_KEYS)[number];
 export type PackageArtifactKey = (typeof PLACE_ADMISSION_PACKAGE_ARTIFACT_KEYS)[number];
 export type ExpectedCountKey = (typeof PLACE_ADMISSION_EXPECTED_COUNT_KEYS)[number];
 export type CoverageBaselineCountKey =
@@ -221,6 +240,48 @@ function joinRelative(directory: string, filename: string): string {
   return `${directory.replace(/\/+$/, '')}/${filename}`;
 }
 
+/**
+ * Resolve the declared source-artifact filenames for one territory.
+ *
+ * The base `requiredKeys` must all be declared and nothing else may appear
+ * except the closed optional `optionalKeys` overlay set: a territory carrying
+ * reviewed corrections declares them, a territory without them leaves them
+ * out, and any unknown key is refused rather than silently ignored.
+ */
+function toSourceArtifactMap<TKey extends string, TOptional extends string>(
+  raw: unknown,
+  requiredKeys: readonly TKey[],
+  optionalKeys: readonly TOptional[],
+  label: string,
+): Record<TKey, string> & Partial<Record<TOptional, string>> {
+  const record = assertRecord(raw, label);
+  const allowed = new Set<string>([...requiredKeys, ...optionalKeys]);
+  for (const key of Object.keys(record)) {
+    if (!allowed.has(key)) {
+      throw new Error(
+        `${label} declares unknown source artifact ${key}. Allowed: ${[...allowed].sort().join(', ')}.`,
+      );
+    }
+  }
+  for (const key of requiredKeys) {
+    if (typeof record[key] !== 'string' || !(record[key] as string)) {
+      throw new Error(`${label} must declare the required source artifact ${key}.`);
+    }
+  }
+  const result: Record<string, string> = {};
+  for (const key of requiredKeys) {
+    assertFilename(record[key], `${label} ${key}`);
+    result[key] = record[key];
+  }
+  for (const key of optionalKeys) {
+    if (record[key] !== undefined) {
+      assertFilename(record[key], `${label} ${key}`);
+      result[key] = record[key];
+    }
+  }
+  return result as Record<TKey, string> & Partial<Record<TOptional, string>>;
+}
+
 function toArtifactMap<TKey extends string>(
   raw: unknown,
   keys: readonly TKey[],
@@ -309,9 +370,10 @@ export function assertPlaceAdmissionTerritoryRegistry(
       );
     }
     pinnedManifestPaths.add(sourceManifest.path);
-    const sourceArtifacts = toArtifactMap(
+    const sourceArtifacts = toSourceArtifactMap(
       source.artifacts,
       PLACE_ADMISSION_SOURCE_ARTIFACT_KEYS,
+      PLACE_ADMISSION_REVIEWED_SOURCE_ARTIFACT_KEYS,
       `${label} source artifacts`,
     );
     for (const filename of Object.values(sourceArtifacts)) {
@@ -377,7 +439,7 @@ export function resolvePlaceAdmissionSourcePaths(territory: PlaceAdmissionTerrit
         key,
         joinRelative(directory, filename),
       ]),
-    ) as Record<SourceArtifactKey, string>,
+    ) as Record<SourceArtifactKey, string> & Partial<Record<ReviewedSourceArtifactKey, string>>,
   };
 }
 
@@ -427,7 +489,10 @@ export function toPlaceAdmissionTerritoryRegistry(value: unknown): PlaceAdmissio
             path: source.manifest.path as string,
             sha256: source.manifest.sha256 as string,
           },
-          artifacts: { ...(source.artifacts as Record<SourceArtifactKey, string>) },
+          artifacts: {
+            ...(source.artifacts as Record<SourceArtifactKey, string> &
+              Partial<Record<ReviewedSourceArtifactKey, string>>),
+          },
         },
         coverageBaseline: {
           directory: baseline.directory as string,

@@ -1,8 +1,5 @@
-import { getCityGuideContent } from './shared/cityGuideContent';
-import { getProvinceGuideContent } from './shared/provinceGuideContent';
-import { isSuburbGuidePilot } from './shared/suburbGuidePolicy';
+import { COUNTRY_DISCOVERY_PATH } from './shared/countryDiscovery';
 import { injectSeoHead } from './server/_core/seoHead';
-import { GUIDE_HTML_ROUTES } from './shared/guideRoutes';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
@@ -44,20 +41,16 @@ function developmentSupersessionDevMiddleware(): Plugin {
   };
 }
 
-/** Every guide route that receives its own delivered document. The province, city and suburb
- *  pilot each get a static file so a crawler receives the guide, not the generic app shell. */
-export function guideEditorialHtml(): Plugin {
+/** The national entry receives a static document; Place routes are resolved by canonical IDs. */
+export function canonicalDiscoveryHtml(): Plugin {
   return {
-    name: 'province-guide-editorial-html',
+    name: 'canonical-place-discovery-html',
     transformIndexHtml: {
       order: 'post',
       handler(html, context) {
         const requestUrl = context.originalUrl || context.path;
-        const slug = new URL(requestUrl, 'http://localhost').pathname.replace(/^\/|\/$/g, '');
-        const parts = slug.split('/');
-        return getProvinceGuideContent(slug) ||
-          (parts.length === 2 && getCityGuideContent(parts[0], parts[1])) ||
-          (parts.length === 3 && isSuburbGuidePilot(parts[0], parts[1], parts[2]))
+        const pathname = new URL(requestUrl, 'http://localhost').pathname.replace(/\/$/, '') || '/';
+        return pathname === COUNTRY_DISCOVERY_PATH
           ? injectSeoHead(html, requestUrl)
           : html;
       },
@@ -68,20 +61,18 @@ export function guideEditorialHtml(): Plugin {
         const template = bundle['index.html'];
         if (!template || template.type !== 'asset')
           throw new Error('Guide HTML requires the built application shell');
-        for (const path of GUIDE_HTML_ROUTES) {
-          this.emitFile({
-            type: 'asset',
-            fileName: `${path}/index.html`,
-            source: injectSeoHead(String(template.source), `/${path}`),
-          });
-        }
+        this.emitFile({
+          type: 'asset',
+          fileName: `${COUNTRY_DISCOVERY_PATH.slice(1)}/index.html`,
+          source: injectSeoHead(String(template.source), COUNTRY_DISCOVERY_PATH),
+        });
       },
     },
   };
 }
 
 const plugins = [
-  guideEditorialHtml(),
+  canonicalDiscoveryHtml(),
   developmentSupersessionDevMiddleware(),
   react(),
   tailwindcss(),

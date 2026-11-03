@@ -108,6 +108,15 @@ import {
 } from './services/distributionProspectCheckFitService';
 import { getProspectDocumentPacks } from './services/distributionProspectDocumentPackService';
 import { listPublicDistributionOpportunities } from './services/distributionPublicOpportunityReadService';
+import { listDevelopmentPlaceGeography } from './services/developmentPlaceAssignmentService';
+import {
+  claimDistributionSearchAssessments,
+  claimPublicSearchAssessmentsInputSchema,
+  listMyDistributionSearchAssessments,
+  saveDistributionSearchAssessment,
+  saveOwnedSearchAssessmentInputSchema,
+  savePublicSearchAssessmentInputSchema,
+} from './services/distributionReferrerSearchAssessmentService';
 import {
   checkfitV1InputSchema,
   runCheckfitV1,
@@ -1317,8 +1326,8 @@ async function listProgramsForAdmin() {
       developmentName:
         references.get(Number(row.developmentId))?.displayName ||
         `Development #${row.developmentId}`,
-      city: references.get(Number(row.developmentId))?.city || null,
-      province: references.get(Number(row.developmentId))?.province || null,
+      canonicalPlaceId: references.get(Number(row.developmentId))?.canonicalPlaceId ?? null,
+      locationLabels: references.get(Number(row.developmentId))?.locationLabels ?? [],
       isActive: boolFromTinyInt(row.isActive),
       isReferralEnabled: boolFromTinyInt(row.isReferralEnabled),
     }));
@@ -1817,7 +1826,7 @@ const adminDistributionRouter = router({
           if (!visibleReferences.length) return [];
 
           const developmentIds = visibleReferences.map(reference => reference.developmentId);
-          const [programRows, managerRows] = await Promise.all([
+          const [programRows, managerRows, geographyByDevelopmentId] = await Promise.all([
             db
               .select()
               .from(distributionPrograms)
@@ -1841,6 +1850,7 @@ const adminDistributionRouter = router({
               .innerJoin(users, eq(distributionManagerAssignments.managerUserId, users.id))
               .where(inArray(distributionManagerAssignments.developmentId, developmentIds))
               .orderBy(desc(distributionManagerAssignments.assignedAt)),
+            listDevelopmentPlaceGeography(developmentIds),
           ]);
           const programByDevelopment = new Map<number, (typeof programRows)[number]>(
             programRows.map(program => [Number(program.developmentId), program] as const),
@@ -1970,8 +1980,10 @@ const adminDistributionRouter = router({
                 developmentName: projection.campaign.name,
                 cataloguePublisherId: reference.publisherId,
                 publisherName: reference.publisherName,
-                city: projection.campaign.city,
-                province: projection.campaign.province,
+                canonicalPlaceId:
+                  geographyByDevelopmentId.get(developmentId)?.canonicalPlaceId ?? null,
+                locationLabels:
+                  geographyByDevelopmentId.get(developmentId)?.locationLabels ?? [],
                 imageUrl: projection.campaign.images[0] || null,
                 campaignVisible: projection.campaign.visible === true,
                 lifecycle: projection.campaign.lifecycle,
@@ -2069,8 +2081,8 @@ const adminDistributionRouter = router({
         samples: references.slice(0, 20).map(reference => ({
           id: reference.developmentId,
           name: reference.displayName,
-          city: reference.city,
-          province: reference.province,
+          canonicalPlaceId: reference.canonicalPlaceId,
+          locationLabels: reference.locationLabels,
           isPublished: reference.isPublished,
           approvalStatus: reference.approvalStatus,
           cataloguePublisherId: reference.publisherId,
@@ -5182,12 +5194,15 @@ const managerDistributionRouter = router({
       .from(distributionManagerAssignments)
       .where(withConditions(conditions))
       .orderBy(desc(distributionManagerAssignments.assignedAt));
+    const geographyByDevelopmentId = await listDevelopmentPlaceGeography(
+      rows.map(row => Number(row.developmentId)),
+    );
 
     return rows.map(row => ({
       developmentId: Number(row.developmentId),
       developmentName: `Development #${row.developmentId}`,
-      city: null,
-      province: null,
+      locationLabels:
+        geographyByDevelopmentId.get(Number(row.developmentId))?.locationLabels ?? [],
       assignedAt: row.assignedAt,
       isPrimary: boolFromTinyInt(row.isPrimary),
     }));
@@ -6729,12 +6744,14 @@ const partnerDistributionRouter = router({
       for (const item of items) {
         const sale = item.inventory.modes.sale;
         if (!sale || sale.availableCount <= 0 || sale.priceFrom <= 0) continue;
+        // Check-fit scoring is financial only. Keep any location snapshot
+        // display-only and derive it from the single reviewed Place assignment.
+        const locationLabel = item.canonicalPlaceId ? item.locationLabels.join(', ') : '';
         opportunities.push({
           developmentId: item.developmentId,
           programId: item.program.programId,
           developmentName: item.developmentName,
-          city: item.city,
-          province: item.province,
+          locationLabel,
           entryPrice: sale.priceFrom,
           currencyCode: item.program.currencyCode || 'ZAR',
         });
@@ -7882,8 +7899,10 @@ const developerDistributionRouter = router({
         developmentName:
           referenceByDevelopmentId.get(Number(row.developmentId))?.displayName ||
           `Development #${row.developmentId}`,
-        city: referenceByDevelopmentId.get(Number(row.developmentId))?.city || '',
-        province: referenceByDevelopmentId.get(Number(row.developmentId))?.province || '',
+        canonicalPlaceId:
+          referenceByDevelopmentId.get(Number(row.developmentId))?.canonicalPlaceId ?? null,
+        locationLabels:
+          referenceByDevelopmentId.get(Number(row.developmentId))?.locationLabels ?? [],
         isActive: boolFromTinyInt(row.isActive),
         isReferralEnabled: boolFromTinyInt(row.isReferralEnabled),
       }));
@@ -7959,8 +7978,8 @@ const developerDistributionRouter = router({
           programId: number;
           developmentId: number;
           developmentName: string;
-          city: string;
-          province: string;
+          canonicalPlaceId: string | null;
+          locationLabels: string[];
           isActive: boolean;
           isReferralEnabled: boolean;
           totalDeals: number;
@@ -7975,8 +7994,8 @@ const developerDistributionRouter = router({
           programId: Number(program.programId),
           developmentId: Number(program.developmentId),
           developmentName: program.developmentName,
-          city: program.city,
-          province: program.province,
+          canonicalPlaceId: program.canonicalPlaceId,
+          locationLabels: program.locationLabels,
           isActive: program.isActive,
           isReferralEnabled: program.isReferralEnabled,
           totalDeals: 0,
@@ -8219,8 +8238,10 @@ const developerDistributionRouter = router({
         developmentName:
           developmentReferencesById.get(Number(row.developmentId))?.displayName ||
           `Development #${row.developmentId}`,
-        city: developmentReferencesById.get(Number(row.developmentId))?.city || null,
-        province: developmentReferencesById.get(Number(row.developmentId))?.province || null,
+        canonicalPlaceId:
+          developmentReferencesById.get(Number(row.developmentId))?.canonicalPlaceId ?? null,
+        locationLabels:
+          developmentReferencesById.get(Number(row.developmentId))?.locationLabels ?? [],
         agentDisplayName:
           userDirectory.get(Number(row.agentId))?.displayName || `Referrer #${row.agentId}`,
         agentEmail: userDirectory.get(Number(row.agentId))?.email || null,
@@ -8577,6 +8598,40 @@ export const distributionRouter = router({
       return listPublicDistributionOpportunities(input.developmentIds);
     }),
 
+  savePublicSearchAssessment: publicProcedure
+    .input(savePublicSearchAssessmentInputSchema)
+    .mutation(async ({ input }) => {
+      assertDistributionEnabled();
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      return saveDistributionSearchAssessment({ db, userId: null, input });
+    }),
+
+  saveMySearchAssessment: protectedProcedure
+    .input(saveOwnedSearchAssessmentInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      assertDistributionEnabled();
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      return saveDistributionSearchAssessment({ db, userId: ctx.user!.id, input });
+    }),
+
+  claimMyPublicSearchAssessments: protectedProcedure
+    .input(claimPublicSearchAssessmentsInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      assertDistributionEnabled();
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      return claimDistributionSearchAssessments({ db, userId: ctx.user!.id, assessments: input.assessments });
+    }),
+
+  listMySearchAssessments: protectedProcedure.query(async ({ ctx }) => {
+    assertDistributionEnabled();
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+    return listMyDistributionSearchAssessments({ db, userId: ctx.user!.id });
+  }),
+
   calculateCheckfit: publicProcedure.input(checkfitV1InputSchema).mutation(async ({ input }) => {
     assertDistributionEnabled();
     const db = await getDb();
@@ -8860,7 +8915,7 @@ export const distributionRouter = router({
         success: true,
         registrationId,
         userId,
-        redirectPath: '/login',
+        redirectPath: '/distribution/manager',
       };
     }),
 

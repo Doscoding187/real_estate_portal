@@ -6,6 +6,7 @@ import { getDb } from '../db-connection';
 import {
   cataloguePublishers,
   developmentRequiredDocuments,
+  developmentPlaceAssignments,
   developments,
   distributionAgentAccess,
   distributionBrandPartnerships,
@@ -16,6 +17,11 @@ import {
   users,
 } from '../../drizzle/schema';
 import { cataloguePublisherService } from '../services/cataloguePublisherService';
+import { recordReviewedDevelopmentPlaceAssignment } from '../services/developmentPlaceAssignmentService';
+import {
+  DISTRIBUTION_PREVIEW_DEMO_SLUG_PREFIX,
+  DISTRIBUTION_PREVIEW_DEMO_SOURCE_ATTRIBUTION,
+} from '../../shared/distributionPreviewDemo';
 import {
   upsertBrandPartnership,
   upsertDevelopmentAccess,
@@ -40,6 +46,7 @@ const createdState = {
   accessIds: [] as number[],
   templateIds: [] as number[],
 };
+const CANONICAL_TEST_PLACE_ID = 'pl-place-01-dee61758ef3bda7cd1a258ad';
 
 function uniqueIds(values: number[]) {
   return Array.from(new Set(values.filter(Boolean)));
@@ -110,7 +117,7 @@ async function insertNetworkedDevelopment(name: string) {
     brandName: `${name} Publisher`,
     slug: `distribution-terms-brand-${suffix}`,
     identityType: 'developer',
-    sourceAttribution: 'Publicly available referral integration fixture source',
+    sourceAttribution: DISTRIBUTION_PREVIEW_DEMO_SOURCE_ATTRIBUTION,
     isVisible: true,
     createdBy: curatorUserId,
   });
@@ -119,6 +126,7 @@ async function insertNetworkedDevelopment(name: string) {
 
   const [insertResult] = await db.insert(developments).values({
     name,
+    slug: `${DISTRIBUTION_PREVIEW_DEMO_SLUG_PREFIX}${suffix}`,
     developmentType: 'residential',
     city: 'Johannesburg',
     province: 'Gauteng',
@@ -132,6 +140,14 @@ async function insertNetworkedDevelopment(name: string) {
 
   const developmentId = Number((insertResult as any).insertId || 0);
   createdState.developmentIds.push(developmentId);
+  await recordReviewedDevelopmentPlaceAssignment({
+    developmentId,
+    phaseId: null,
+    placeId: CANONICAL_TEST_PLACE_ID,
+    assignmentKind: 'site',
+    evidenceReference: `test-fixture:distribution-terms:${suffix}`,
+    reviewerUserId: curatorUserId,
+  });
 
   const unitTypeId = randomUUID();
   await db.insert(unitTypes).values({
@@ -189,6 +205,7 @@ async function insertDevelopmentWithoutNetworkAccess(name: string) {
 
   const [insertResult] = await db.insert(developments).values({
     name,
+    slug: `${DISTRIBUTION_PREVIEW_DEMO_SLUG_PREFIX}${suffix}`,
     developmentType: 'residential',
     city: 'Johannesburg',
     province: 'Gauteng',
@@ -202,6 +219,14 @@ async function insertDevelopmentWithoutNetworkAccess(name: string) {
 
   const developmentId = Number((insertResult as any).insertId || 0);
   createdState.developmentIds.push(developmentId);
+  await recordReviewedDevelopmentPlaceAssignment({
+    developmentId,
+    phaseId: null,
+    placeId: CANONICAL_TEST_PLACE_ID,
+    assignmentKind: 'site',
+    evidenceReference: `test-fixture:distribution-terms-unnetworked:${suffix}`,
+    reviewerUserId: curatorUserId,
+  });
   return developmentId;
 }
 
@@ -315,6 +340,9 @@ describeWithDb('distribution.partner program terms', () => {
 
     const developmentIds = uniqueIds(createdState.developmentIds);
     if (developmentIds.length) {
+      await db
+        .delete(developmentPlaceAssignments)
+        .where(inArray(developmentPlaceAssignments.developmentId, developmentIds));
       await db.delete(developments).where(inArray(developments.id, developmentIds));
     }
 

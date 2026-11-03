@@ -94,6 +94,27 @@ describe('agency canvassing boundary contract', () => {
     expect(agencyRouter).toContain('mandateWork');
   });
 
+  it('uses one selected canonical Place for prospect location and area filtering', () => {
+    const canvassingRouter = readRepoFile('server/canvassingRouter.ts');
+    const canvassingSchema = readRepoFile('drizzle/schema/canvassing.ts');
+    const workspace = readRepoFile('client/src/features/canvassing/CanvassingWorkspace.tsx');
+
+    expect(sellerProspects.canonicalPlaceId).toBeDefined();
+    expect(sellerProspects).not.toHaveProperty('city');
+    expect(sellerProspects).not.toHaveProperty('suburb');
+    expect(sellerProspects).not.toHaveProperty('province');
+    expect(canvassingSchema).toContain("canonicalPlaceId: varchar('canonical_place_id'");
+    expect(canvassingRouter).toContain('requireSearchableProspectPlace');
+    expect(canvassingRouter).toContain('eq(sellerProspects.canonicalPlaceId, canonicalPlaceId)');
+    expect(canvassingRouter).not.toContain('sellerProspects.city');
+    expect(canvassingRouter).not.toContain('sellerProspects.suburb');
+    expect(canvassingRouter).not.toContain('sellerProspects.province');
+    expect(workspace).toContain('<CanonicalPlaceSelector');
+    expect(workspace).toContain('canonicalPlaceId: placeFilter?.canonicalPlaceId');
+    expect(workspace).not.toContain('setCity(');
+    expect(workspace).not.toContain('setSuburb(');
+  });
+
   it('does not permit listing readiness from incomplete private mandate evidence', () => {
     const readiness = getMandateReadiness(
       { requirements: {}, documentStatus: 'pending', status: 'preparing' },

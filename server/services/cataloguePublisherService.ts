@@ -147,11 +147,11 @@ async function listPublicPublishers(filters: CataloguePublisherFilters = {}) {
   })).map(projectPublisher);
 }
 
-async function listPublicPublishersByProvince(
-  province: string,
+async function listPublicPublishersByPlace(
+  placeId: string,
   limit?: number,
 ): Promise<LocalPublisherDiscovery[]> {
-  return developerIdentityService.listPublicPublishersByProvince(province, limit);
+  return developerIdentityService.listPublicPublishersByPlace(placeId, limit);
 }
 
 async function updatePublisher(id: number, input: UpdateCataloguePublisherCommand) {
@@ -231,7 +231,7 @@ export const cataloguePublisherService = {
   getPublicPublisherBySlug,
   listPublishers,
   listPublicPublishers,
-  listPublicPublishersByProvince,
+  listPublicPublishersByPlace,
   updatePublisher,
   toggleVisibility,
   hidePublisher,
@@ -251,7 +251,7 @@ export {
   getPublicPublisherBySlug,
   listPublishers,
   listPublicPublishers,
-  listPublicPublishersByProvince,
+  listPublicPublishersByPlace,
   updatePublisher,
   toggleVisibility,
   hidePublisher,

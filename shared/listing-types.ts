@@ -449,16 +449,10 @@ export interface LocationData {
   address: string;
   latitude: number | null;
   longitude: number | null;
-  city: string;
-  suburb?: string;
-  province: string;
   postalCode?: string;
   placeId?: string; // Google Maps Place ID
   providerLocationPlaceId?: string;
   provider?: string;
-  provinceId?: number | null;
-  cityId?: number | null;
-  suburbId?: number | null;
   privateAddress?: PrivateAddress | null;
   coordinateSource?: LocationCoordinateSource | null;
   locationConfirmationState?: LocationConfirmationState;

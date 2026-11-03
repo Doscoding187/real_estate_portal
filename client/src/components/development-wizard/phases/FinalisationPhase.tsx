@@ -430,16 +430,13 @@ export function FinalisationPhase({
           transactionType: 4,
 
           address: 5,
-          city: 5,
-          province: 5,
-          suburb: 5,
           postalCode: 5,
           latitude: 5,
           longitude: 5,
           location: 5,
           'location.address': 5,
-          'location.city': 5,
-          'location.province': 5,
+          'location.latitude': 5,
+          'location.longitude': 5,
 
           media: 9,
           images: 9,

@@ -534,15 +534,9 @@ export const useListingWizardStore = create<ListingWizardStore>()(
               previous.canonicalPlace?.canonicalPlaceId !==
                 location.canonicalPlace?.canonicalPlaceId,
               previous.address !== location.address,
-              previous.city !== location.city,
-              previous.suburb !== location.suburb,
-              previous.province !== location.province,
               previous.postalCode !== location.postalCode,
               previous.latitude !== location.latitude,
               previous.longitude !== location.longitude,
-              previous.provinceId !== location.provinceId,
-              previous.cityId !== location.cityId,
-              previous.suburbId !== location.suburbId,
               JSON.stringify(previous.privateAddress ?? null) !==
                 JSON.stringify(location.privateAddress ?? null),
               previous.providerLocationPlaceId !== location.providerLocationPlaceId,

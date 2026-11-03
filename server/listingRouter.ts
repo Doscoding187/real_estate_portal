@@ -67,10 +67,10 @@ import {
   resolveMediaDeliveryUrl,
 } from './_core/mediaStorage';
 import {
+  COMMERCIAL_CANONICAL_ASSIGNMENT_BLOCKER,
   COMMERCIAL_INVENTORY_MANAGEMENT_MESSAGE,
   isCommercialMarketingPropertyType,
 } from '../shared/commercial-domain';
-import { assertCommercialMarketingMediaCustody } from './services/commercialOfficeService';
 import {
   canManageListingContent,
   type ListingContentActor,
@@ -186,14 +186,10 @@ async function assertListingMediaCustody(
   }
 
   if (isCommercialMarketingPropertyType(listing.propertyType)) {
-    // Commercial media has a stricter active-link authority. Do not let the
-    // generic Listing content rule widen that specialised supplier boundary.
-    try {
-      await assertCommercialMarketingMediaCustody({ listingId, userId: user.id });
-    } catch {
-      throw new TRPCError({ code: 'FORBIDDEN', message });
-    }
-    return listing;
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: COMMERCIAL_CANONICAL_ASSIGNMENT_BLOCKER,
+    });
   }
 
   await assertGenericListingRouteAvailable(listingId, listing as Record<string, unknown>);

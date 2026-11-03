@@ -37,9 +37,10 @@ All filter options from the desktop side panel are available:
 - Price Range inputs
 - Bedroom count
 - Bathroom count
-- Location search
 - Apply and Reset buttons
 - Active filter count
+
+Geography is selected through the canonical Place search flow, outside this property filter sheet.
 
 ## Usage
 
@@ -153,12 +154,10 @@ const {
   priceMax,
   bedrooms,
   bathrooms,
-  location,
   setPropertyType,
   setPriceRange,
   setBedrooms,
   setBathrooms,
-  setLocation,
   clearFilters,
   getFilterCount,
 } = useExploreFiltersStore();
