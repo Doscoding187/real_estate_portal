@@ -1,4 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { MySqlDialect } from 'drizzle-orm/mysql-core';
+import type { SQL } from 'drizzle-orm';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { getDbMock } = vi.hoisted(() => ({
   getDbMock: vi.fn(),
@@ -21,14 +23,28 @@ function row(id: number, createdAt: string, firstResponseAt: string | null): Mea
   return { leadId: id, createdAt, firstResponseAt };
 }
 
-function makeFakeQueryDb(rows: MeasurementRow[]) {
+function makeFakeQueryDb(
+  rows: MeasurementRow[],
+  captureWhere?: (query: { sql: string; params: unknown[] }) => void,
+) {
   const db = {
     select: () => ({
       from: () => ({
         innerJoin: () => ({
-          where: () => ({
-            groupBy: async () => rows,
-          }),
+          where: (condition: SQL) => {
+            const query = new MySqlDialect().sqlToQuery(condition);
+            captureWhere?.(query);
+            const since = query.params.find((param): param is Date => param instanceof Date);
+
+            return {
+              groupBy: async () =>
+                rows.filter(
+                  lead =>
+                    lead.firstResponseAt !== null &&
+                    (!since || new Date(lead.createdAt).getTime() >= since.getTime()),
+                ),
+            };
+          },
         }),
       }),
     }),
@@ -108,6 +124,10 @@ describe('servicesEngineService.getProviderLeadResponsePerformance', () => {
     getDbMock.mockReset();
   });
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('measures provider leads through the recorded response-event truth', async () => {
     getDbMock.mockResolvedValue(
       makeFakeQueryDb([
@@ -132,5 +152,51 @@ describe('servicesEngineService.getProviderLeadResponsePerformance', () => {
 
     expect(result.measuredLeads).toBe(0);
     expect(result.sampleReady).toBe(false);
+  });
+
+  it('filters leads in SQL inclusively at 90 days and keeps the same median', async () => {
+    const nowMs = Date.UTC(2026, 10, 3, 12, 0, 0, 0);
+    const sinceMs = nowMs - SERVICE_LEAD_RESPONSE_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+    const responseAfter = (createdAtMs: number, minutes: number) =>
+      new Date(createdAtMs + minutes * 60 * 1000).toISOString();
+    const rows = [
+      row(1, new Date(sinceMs).toISOString(), responseAfter(sinceMs, 10)),
+      row(
+        2,
+        new Date(nowMs - 10 * 24 * 60 * 60 * 1000).toISOString(),
+        responseAfter(nowMs - 10 * 24 * 60 * 60 * 1000, 20),
+      ),
+      row(
+        3,
+        new Date(nowMs - 24 * 60 * 60 * 1000).toISOString(),
+        responseAfter(nowMs - 24 * 60 * 60 * 1000, 40),
+      ),
+      row(4, new Date(sinceMs - 1).toISOString(), responseAfter(sinceMs - 1, 120)),
+      row(5, new Date(nowMs - 2 * 24 * 60 * 60 * 1000).toISOString(), null),
+    ];
+    const whereQueries: Array<{ sql: string; params: unknown[] }> = [];
+    vi.spyOn(Date, 'now').mockReturnValue(nowMs);
+    getDbMock.mockResolvedValue(makeFakeQueryDb(rows, query => whereQueries.push(query)));
+
+    const result = await servicesEngineService.getProviderLeadResponsePerformance(44);
+    const unchangedReference = computeLeadResponsePerformance(
+      rows.filter(lead => new Date(lead.createdAt).getTime() >= sinceMs),
+      SERVICE_LEAD_RESPONSE_WINDOW_DAYS,
+    );
+
+    expect(whereQueries).toHaveLength(1);
+    expect(whereQueries[0].sql).toContain('`service_leads`.`provider_id` = ?');
+    expect(whereQueries[0].sql).toContain('`service_leads`.`created_at` >= ?');
+    expect(whereQueries[0].params).toContain(44);
+    const sqlWindowStart = whereQueries[0].params.find(
+      (param): param is Date => param instanceof Date,
+    );
+    expect(sqlWindowStart?.getTime()).toBe(sinceMs);
+    expect(result).toEqual(unchangedReference);
+    expect(result).toMatchObject({
+      measuredLeads: 3,
+      medianResponseSeconds: 1200,
+      sampleReady: true,
+    });
   });
 });

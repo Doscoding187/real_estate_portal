@@ -1114,7 +1114,7 @@ export class ServicesEngineService {
       1,
       Math.min(365, Number(windowDays) || SERVICE_LEAD_RESPONSE_WINDOW_DAYS),
     );
-    const sinceMs = Date.now() - safeWindowDays * 24 * 60 * 60 * 1000;
+    const since = new Date(Date.now() - safeWindowDays * 24 * 60 * 60 * 1000);
 
     const rows = await db
       .select({
@@ -1130,20 +1130,15 @@ export class ServicesEngineService {
           inArray(serviceLeadEvents.eventType, [...SERVICE_LEAD_RESPONSE_EVENT_TYPES]),
         ),
       )
-      .where(eq(serviceLeads.providerId, providerId))
+      .where(and(eq(serviceLeads.providerId, providerId), gte(serviceLeads.createdAt, since)))
       .groupBy(serviceLeads.id, serviceLeads.createdAt);
 
     return computeLeadResponsePerformance(
-      rows
-        .filter(row => {
-          const createdAt = new Date(String(row.createdAt || '')).getTime();
-          return Number.isFinite(createdAt) && createdAt >= sinceMs;
-        })
-        .map(row => ({
-          leadId: row.leadId,
-          createdAt: row.createdAt,
-          firstResponseAt: row.firstResponseAt,
-        })),
+      rows.map(row => ({
+        leadId: row.leadId,
+        createdAt: row.createdAt,
+        firstResponseAt: row.firstResponseAt,
+      })),
       safeWindowDays,
     );
   }
