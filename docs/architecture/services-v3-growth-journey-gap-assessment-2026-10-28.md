@@ -7,7 +7,7 @@ launch register, or any database authority. Nothing here authorizes or schedules
 
 **Date:** 2026-10-28
 **Task branch:** `feat/services-growth-journey-gap-assessment-20261028` (worktree `property-listify-services-gap-assessment-20261028`, read-only investigation; this document is the only change)
-**Method:** Read-only audit of the integrated Services engine source on `main` at `026586690` plus the two Services contracts and the canonical sitemap/navigation code.
+**Method:** Original read-only audit of `main` at `026586690`, plus a documentation reconciliation against `main` at `dd5e11114` on 2026-11-03. The reconciliation incorporates #693's retired localized route and canonical Place model, and #700's sitemap, structured data, and slug changes.
 
 ## 1. Purpose and evaluation lens
 
@@ -45,7 +45,7 @@ Everything below is evaluated against it.
 | --- | --- | --- |
 | Services home | `/services` | Hero search, ranked category rail, featured providers, spotlight, trust panels; canonical indexable; queries `directorySearch` limit 50 sort `rating` (`client/src/pages/services/ServicesHomePage.tsx:95-131`) |
 | Category directory | `/services/:category` | All six categories; filters surfaced (query, price, availability, sort); unmatched-request banner; indexable (`ServicesCategoryPage.tsx:110-136`) |
-| Localized directory | `/services/:category/:city/:province` | Canonical 3-segment redirect; indexable (`ServicesLocalizedCategoryPage.tsx:120-184`) |
+| Localized directory | `/services/:category/:city/:province` | Retired by #693; not an active or indexable route and not emitted in the sitemap |
 | Provider profile | `/services/provider/:slug` | Brand plate, verified chip, availability chip, ratings only when `reviewCount > 0`, 4 tabs (overview / services / areas / contact); fact-only trust cards; external website CTA + one request CTA; indexable (`ServiceProviderProfilePage.tsx:158-574`) |
 | Reviews page | `/services/reviews/:providerId` | Verified-request submission, moderation copy, report flow; `noindex` (`ServiceProviderReviewsPage.tsx:88-95`) |
 | Request flow | `/services/request/:category` | One attributable request; idempotency key in sessionStorage; `noindex` (`ServicesRequestPage.tsx:89-172`) |
@@ -61,14 +61,18 @@ Everything below is evaluated against it.
 - **Directory search** (router 443; service 2590–2810): eligibility conjunction
   `partners.isActive ∧ verificationStatus='verified' ∧ directoryActive=1 ∧ subscription ∈ {trial, active} ∧ ≥1 active service ∧ ≥1 coverage-valid location`
   (2626–2727). Filters: text query, category, serviceCode, ZAR price overlap,
-  `accepting` availability, province/city/suburb **exact** matching (593–639).
+  `accepting` availability, and optional exact matching on a selected canonical
+  Place ID against `service_provider_locations.canonical_place_id` (593–639).
+  Place labels are presentation data from Place Authority; display-text
+  province/city/suburb matching is not used.
   Sorts: `relevance` (deterministic Bayesian rating + completeness + supply, 326–341),
   `rating`, `name`; universal name/id tiebreak (2780–2781). Candidate scan bounded
   at 1000 rows (823).
 - **Provider public profile** (1077–1110): returns identity, headline/bio, website
-  URL, ratings, gallery (metadata URLs, max 12, 308–315), services, listed coverage,
-  published reviews. Deliberately excludes contact email/phone, tiers, radius
-  (252–267, 1064–1074).
+  URL, ratings, gallery (metadata URLs, max 12, 308–315), services, listed coverage
+  with labels projected through Place Authority, and published reviews. Deliberately
+  excludes contact email/phone and tiers (252–267, 1064–1074); there is no radius
+  field in the canonical coverage schema.
 - **Reviewed publication** (2011–2119): single writer of
   `partners.verificationStatus` + `service_provider_profiles.directoryActive`;
   fail-closed readiness recompute inside the transaction; audited
@@ -119,21 +123,16 @@ Everything below is evaluated against it.
 
 ### 2.4 SEO infrastructure (shared sitemap authority)
 
-- `shared/sitemapIndex.ts:6-12`: children are listings, developments, agents,
-  static, guides — **no services child**.
-- `server/routes/sitemap.ts:324-345`: `/services` plus the **five topic pages only**
-  are listed under `sitemap-static.xml`. Category pages, localized category pages,
-  and provider profiles are **not sitemap-listed** (contract tests lock agents and
-  guides sitemaps as editorial-publication systems; services has no equivalent).
-- `client/src/lib/seo.ts:74-143`: `applySeo` supports managed JSON-LD structured
-  data; **no services page passes it** (grep: zero `structuredData:` calls in
-  services). The Advertise engine has a full WebPage/Service/Organization/
-  Breadcrumb schema set (`components/advertise/StructuredData.tsx:135-144`);
-  Services has none — no `LocalBusiness`, no `AggregateRating`, no breadcrumbs.
-- `noindex` is correctly set on request/results/reviews/workspace; indexables set
-  canonical URLs. Category page does **not** redirect non-canonical slug spellings
-  (underscore aliases keep a separate URL form; `ServicesCategoryPage.tsx:129-136`),
-  while the localized page does redirect (120–135) — inconsistent.
+- `shared/sitemapIndex.ts`: `/sitemap-services.xml` is a child of the shared
+  sitemap index (#700).
+- `server/routes/sitemap.ts`: the services child lists canonical category and
+  eligible provider URLs. The static sitemap lists `/services` and the five topic
+  pages. The retired localized directory route is omitted.
+- Services pages now pass structured data through `applySeo`; #700 added the
+  category/provider JSON-LD and canonical slug handling. Known category aliases
+  redirect to canonical category slugs; the localized route is retired.
+- `noindex` remains set on request/results/reviews/workspace surfaces; active
+  indexable pages use canonical URLs.
 
 ## 3. Gap analysis by journey stage
 
@@ -141,13 +140,13 @@ Everything below is evaluated against it.
 
 | Capability | Class | Facts |
 | --- | --- | --- |
-| Public directory surfaces | Shipped | §2.1 — home, category, localized, profile, topics; truthful exact-matching taxonomy of "listed coverage" |
-| Provider structured data (JSON-LD) | **Missing** | No LocalBusiness/Service/Organization/AggregateRating anywhere in Services; the capability exists in `applySeo` and the pattern exists in Advertise |
-| Services sitemap (providers, categories, localized) | **Missing** | Only `/services` + 5 topic pages are listed; providers/categories/localized rely on crawl alone |
-| Canonical place geography in coverage | Out-of-authority by recorded deferral | Display-text province/city/suburb, exact non-widening matching, V1 deferral reaffirmed 2026-10-21; typed Place references are a governed Place Authority consumer slice |
-| Radius/proximity search | Out-of-authority | `radiusKm` stored (schema 160) but never used in matching (service 593–639) — truthful as listed coverage, not a distance claim |
+| Public directory surfaces | Shipped | §2.1 — home, category, profile, and topic pages; localized directory route retired by #693 |
+| Provider structured data (JSON-LD) | Shipped (#700) | Canonical category/provider JSON-LD through `applySeo`; no localized-route entries |
+| Services sitemap (providers, categories) | Shipped (#700) | `/sitemap-services.xml` is indexed; child emits category and eligible provider URLs; localized URLs omitted |
+| Canonical Place geography in coverage | Shipped canonical model | `service_provider_locations.canonical_place_id`; exact ID matching, with labels projected from Place Authority for display only |
+| Radius/proximity search | Not supported | Migration 0179 dropped `radius_km`; no distance-based matching or claim |
 | AI-discovery content depth | Partial | Topic pages are thin content; provider profiles are the crawlable business asset; guideline posts (V1 deps) have no services-specific guidance content |
-| Page slug hygiene | Partial | Un-canonicalized category aliases create duplicate indexable URL shapes; localized pages canonicalize, category pages do not |
+| Page slug hygiene | Shipped for categories | #700 redirects known category aliases to canonical slugs; localized directory URLs are retired |
 | Directory scale bound | Partial | Candidate scan capped at 1,000 providers (823) with in-memory filtering — a ceiling to revisit before growth, flagged for a governed slice when triggered |
 
 ### Stage 2 — Build a brand
@@ -227,7 +226,7 @@ database-authority workstream per `docs/architecture/database-authority-policy.m
 | DELTA-1 | **Provider web presence** — evolve the provider profile into the provider's public homepage: keep one canonical business identity; add per-service detail pages and richer brand surfaces on existing data first | Code | Follows V2 §6.4 sequencing (MINI-3/MINI-4 before any schema); no second trust/profile authority |
 | DELTA-2 | **Campaign landing pages with provider-attributed demand capture** — provider-owned campaign URLs, structured campaign source capture extending the context allow-list, landing route family, `noindex` by default with an explicit indexability decision per stage | Code + contract | New request-context vocabulary must preserve idempotency and replay semantics; doorway-page hygiene rule (no thin indexable variants) is a contract clause |
 | DELTA-3 | **Measured response performance** — compute first-response latency and responsiveness aggregates from existing `service_lead_events`; render "responds within ~Xh (measured)" only from computed truth | Code | No invented trust signals; this creates the honest second rung of the trust ladder |
-| DELTA-4 | **Services SEO infrastructure** — services sitemap child (providers, categories, localized), JSON-LD structured data (LocalBusiness/Service, AggregateRating only from recomputed aggregates), canonical slug normalization | Code | Mirrors the agent/guide sitemap editorial-publication pattern already contract-tested |
+| DELTA-4 | **Services SEO infrastructure** — sitemap child for categories and eligible providers, JSON-LD structured data, canonical category slug redirects | Code | Shipped by #700; localized URLs intentionally omitted after #693 |
 | DELTA-5 | **Provider media library** — ownership, moderation, ordering, primary cover | Schema (DB authority) | V2 MINI-1; build when provider behaviour evidences it |
 | DELTA-6 | **Provider content model** (case studies/projects) | Schema (DB authority) | V2 MINI-2; same sequencing rule |
 | DELTA-7 | **Lead workspace upgrades** — inbox filters/search/totals, per-source and per-service conversion views, event-driven analytics | Code | Dashboard must begin consuming its own event stream |
@@ -239,10 +238,11 @@ database-authority workstream per `docs/architecture/database-authority-policy.m
 ## 5. Priority reading
 
 **P0 — make the core commercial journey excellent (code-only, no schema):**
-DELTA-3, DELTA-4, DELTA-7, plus the hygiene sweep in §3.3 (auth param, account
-destination, slug canonicalization) and a V3 contract that records DELTA-1/2
-terminology. These raise the value of what already converted: presence, discovery,
-enquiry quality, responsiveness evidence.
+DELTA-4 and category slug canonicalization are shipped in #700. DELTA-3 is in
+open PR #701 and is not yet on main; DELTA-7 remains in the authorized queue.
+The V3 contract is approved and records the DELTA-1/2 terminology. Remaining
+work raises the value of what already converted: presence, discovery, enquiry
+quality, and responsiveness evidence.
 
 **P1 — provider-attributed demand (the differentiator):**
 DELTA-1 then DELTA-2, in that order, obeying V2 §6.4. Landing pages without an
@@ -272,19 +272,19 @@ DELTA-11 after market research.
 7. One request authority: campaign/enquiry/mini-site variants all write
    `service_leads` with the same idempotent request identity — no second CRM.
 
-## 7. Open decisions for Edward
+## 7. Remaining decisions and follow-ups
 
-1. Approve this as the working basis for a **Services V3 product contract**
-   (growth-journey model + web presence terminology superseding the V2 §6
-   "mini-site" vocabulary).
-2. Confirm the P0 ordering (§5) — especially whether DELTA-4 (SEO infrastructure)
-   precedes DELTA-1 (web presence), given discovery currently depends on crawl
-   luck and a five-topic sitemap.
-3. Choose whether DELTA-8 (notifications/reminder domain) or DELTA-9
+The Services V3 contract basis was approved on 2026-10-28. DELTA-4 shipped in
+#700, so the earlier questions about whether the contract is approved and whether
+SEO infrastructure precedes DELTA-1 are closed. The localized directory route
+is retired and is not part of the sitemap plan.
+
+1. Choose whether DELTA-8 (notifications/reminder domain) or DELTA-9
    (export/handover) is the first "retain or hand over" deliverable — they serve
    different provider segments (platform-only operators vs CRM carriers).
-4. Delegate the client hygiene sweep (§3.3) and unused-component cleanup as its
-   own small slice, or fold into DELTA-7.
+2. Asset retirements remain deferred while current-main references exist, as
+   recorded in the register's #698 reconciliation note. No deletion is proposed
+   by this assessment.
 
 ---
 
@@ -294,5 +294,6 @@ DELTA-11 after market research.
 `client/src/lib/publicNavigation.ts`, `client/src/lib/seo.ts`, `shared/sitemapIndex.ts`,
 `server/routes/sitemap.ts`, `client/src/pages/advertise/AdvertiseServicesPage.tsx`;
 contracts `services-v1-product-contract.md`, `services-v2-product-contract.md`;
-canonical launch register `03-launch-register.md`. All line references verified against
-`main` at `026586690` in this worktree.
+canonical launch register `03-launch-register.md`. Original line references were
+verified against `main` at `026586690`; the Services sitemap and canonical Place
+reconciliation was verified against `main` at `dd5e11114` on 2026-11-03.

@@ -42,22 +42,25 @@ task-owned worktree with evidence recorded in the register line itself.
 
 ## §1 Engine stage statement
 
-**As of `main` @ `026586690` (2026-10-28):** the Services engine is a
+**As of `main` @ `dd5e11114` (2026-11-03):** the Services engine is a
 *contract-governed pilot directory with a complete autonomous enquiry loop* —
-six-category directory (home/category/localized/profile, all indexable with
-canonicals), fail-closed reviewed publication with audit, one-to-one attributable
-requests with durable idempotent request identity and server-validated
-property/listing/development context, provider lead custody with a six-state
-lifecycle and notes, verified-request reviews with moderation/report triage and
-transactionally recomputed aggregates, a super-admin review workspace, and a
-gated provider workspace. What it is *not* yet: a growth platform — no campaign
-landing capability, no provider-attributed demand capture, no response-time
-measurement, no export/handover, no provider media library, and no
-Services-specific discovery infrastructure (sitemap child, structured data).
-**2026-10-28 update:** DELTA-4 delivered its discovery infrastructure on
-`feat/services-seo-infrastructure-20261028` (§3), pending the PR-chain merge.
-Next authorized work after the V3 contract decision: P0 set in the gap
-assessment §5 (§3 DELTAs 3, 7 + hygiene sweep; DELTA-4 already landed).
+the six-category directory (`/services` and `/services/:category`), provider
+profiles, and five topic pages are indexable with canonicals; the localized
+directory route was retired by #693. The engine also has fail-closed reviewed
+publication with audit, one-to-one attributable requests with durable idempotent
+request identity and server-validated property/listing/development context,
+provider lead custody with a six-state lifecycle and notes, verified-request
+reviews with moderation/report triage and transactionally recomputed aggregates,
+a super-admin review workspace, and a gated provider workspace. DELTA-4's
+services sitemap child, structured data, and category alias canonicalization
+landed in #700; localized URLs are omitted. Response measurement remains in
+open PR #701 and is not yet on main. The engine has no campaign landing
+capability, provider-attributed demand capture, export/handover, or provider
+media library.
+
+**2026-11-03 update:** DELTA-4 is Done on main through #700. The Services V3
+contract is approved and recorded in `services-v3-product-contract.md`; the
+next code slice is governed by that contract and the open queue below.
 
 ## §2 Supersession ledger
 
@@ -79,8 +82,8 @@ Statuses: `Proposed` (awaiting founder/V3 approval) · `Approved, not started` �
 | --- | --- | --- | --- | --- |
 | DELTA-1 Provider web presence (profile → homepage; per-service detail pages) | Code | Proposed — first slice after V3 contract | V2 §6.4 sequencing; no schema |
 | DELTA-2 Campaign landing pages + provider-attributed demand capture | Code + contract | Proposed | New context vocabulary; idempotency semantics preserved; `noindex`-by-default policy is a contract clause |
-| DELTA-3 Measured response performance from `service_lead_events` | Code | Proposed | Honest second rung of the trust ladder; computed truth only |
-| DELTA-4 Services SEO infrastructure (sitemap child, JSON-LD, slug canonicalization) | Code | Proposed | Mirrors agent/guide sitemap editorial pattern |
+| DELTA-3 Measured response performance from `service_lead_events` | Code | In flight (#701; not on main) | Honest second rung of the trust ladder; computed truth only |
+| DELTA-4 Services SEO infrastructure (sitemap child, JSON-LD, slug canonicalization) | Code | Done (#700) | Category and published-provider sitemap entries; localized URLs omitted; category aliases redirect to canonical slugs |
 | DELTA-5 Provider media library | Schema (DB authority) | Proposed, evidence-gated | V2 MINI-1 |
 | DELTA-6 Provider content model (case studies/projects) | Schema (DB authority) | Proposed, evidence-gated | V2 MINI-2 |
 | DELTA-7 Lead workspace upgrades (filters/totals/event analytics) + client hygiene sweep | Code | Proposed (hygiene items enumerable today) | Hygiene items in §4.6 |
@@ -89,9 +92,9 @@ Statuses: `Proposed` (awaiting founder/V3 approval) · `Approved, not started` �
 | DELTA-10 Coverage geography convergence (typed canonical Places) | Place Authority consumer slice | Proposed | Pre-existing recorded slice; prerequisite for `service × place` discovery pages |
 | DELTA-11 Commercial model (tiers/placement/lead fees) | Founder decision | Proposed | V2 §3.1 gate: research then approval |
 
-**Next step:** Edward decides §7 of the gap assessment (V3 contract basis, P0
-ordering, DELTA-8 vs DELTA-9 first, hygiene slice vs folded). Until then no §3
-line advances.
+**Current direction:** The V3 contract basis was approved on 2026-10-28 and is
+recorded in `services-v3-product-contract.md`. DELTA-4 is complete; remaining
+work stays governed by the statuses and evidence gates in this queue.
 
 ## §4 Asset reconciliation
 
@@ -120,16 +123,15 @@ Verification: `pnpm check` clean; targeted services vitest — 15 files / 114 te
 pass. The `ProProfilePage` lazy-import row is **not** retired; it advances to
 DELTA-7 unchanged.
 
-**Reconciliation as of 2026-11-03.** The current-main reference sweep found
-references for every candidate asset. Main commit `cbff3e7b` (#693), written
-after #698, also changed `ServiceHeroSearch` from free-text location to
-canonical Place search. This PR restores main's versions of the 16 candidate
-files still present on main and retains the `POPULAR_PROJECTS` and `COST_GUIDES`
-constants; `LeadRequestWizard.tsx` was already absent from main after #693. The
-Retire decisions below are deferred until those references are reconciled; this
-PR does not remove these assets from main.
+**Reconciliation as of 2026-11-03.** The #698 reference sweep found references
+for every candidate asset on current main. Main commit `cbff3e7b` (#693) changed
+`ServiceHeroSearch` from free-text location to canonical Place search; live
+`StarRating` imports are among the remaining references. #698 records the
+reconciliation and deletes no files. The dispositions below are historical
+retirement candidates from the 2026-10-28 audit, not current approvals; they
+remain deferred until each reference is reconciled.
 
-| Asset | Evidence | Disposition |
+| Asset | Historical evidence (2026-10-28; recheck required) | Deferred candidate disposition |
 | --- | --- | --- |
 | `components/services/ServicesSkeletons.tsx` (4 exports) | No page/route references | **Retire** in the first P0 slice |
 | `components/services/TrustBar.tsx`, `TrustStepsRow.tsx` | Only `advertise/PreviewCarousel.README.md` mention + intra-set references | **Retire** |
@@ -220,7 +222,8 @@ Remaining hygiene item:
 
 ## §5 Maintenance
 
-- **Evidence age:** audit basis `main` @ `026586690`, 2026-10-28. Any register line
+- **Evidence age:** current-main reconciliation `main` @ `dd5e11114`, 2026-11-03.
+  Any register line
   older than one merge involving its area must be re-verified before acting on it.
 - Queue and asset lines are updated **in the PR** that changes them — never in a
   follow-up chat, never in another sprint.
