@@ -34,14 +34,17 @@ function makeFakeQueryDb(
           where: (condition: SQL) => {
             const query = new MySqlDialect().sqlToQuery(condition);
             captureWhere?.(query);
-            const since = query.params.find((param): param is Date => param instanceof Date);
+            const since = query.params.find(
+              (param): param is string =>
+                typeof param === 'string' && Number.isFinite(Date.parse(param)),
+            );
 
             return {
               groupBy: async () =>
                 rows.filter(
                   lead =>
                     lead.firstResponseAt !== null &&
-                    (!since || new Date(lead.createdAt).getTime() >= since.getTime()),
+                    (!since || new Date(lead.createdAt).getTime() >= Date.parse(since)),
                 ),
             };
           },
@@ -189,9 +192,9 @@ describe('servicesEngineService.getProviderLeadResponsePerformance', () => {
     expect(whereQueries[0].sql).toContain('`service_leads`.`created_at` >= ?');
     expect(whereQueries[0].params).toContain(44);
     const sqlWindowStart = whereQueries[0].params.find(
-      (param): param is Date => param instanceof Date,
+      (param): param is string => typeof param === 'string' && Number.isFinite(Date.parse(param)),
     );
-    expect(sqlWindowStart?.getTime()).toBe(sinceMs);
+    expect(sqlWindowStart).toBe(new Date(sinceMs).toISOString());
     expect(result).toEqual(unchangedReference);
     expect(result).toMatchObject({
       measuredLeads: 3,

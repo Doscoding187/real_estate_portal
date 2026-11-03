@@ -1114,7 +1114,7 @@ export class ServicesEngineService {
       1,
       Math.min(365, Number(windowDays) || SERVICE_LEAD_RESPONSE_WINDOW_DAYS),
     );
-    const since = new Date(Date.now() - safeWindowDays * 24 * 60 * 60 * 1000);
+    const since = new Date(Date.now() - safeWindowDays * 24 * 60 * 60 * 1000).toISOString();
 
     const rows = await db
       .select({
