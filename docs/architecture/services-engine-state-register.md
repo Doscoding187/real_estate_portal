@@ -1,0 +1,189 @@
+# Services Engine State Register
+
+**Status:** Draft standing register, adopted 2026-10-28 with Edward's approval of the
+approach. Facts are audited; **dispositions marked *Proposed* require explicit
+founder approval before any execution.** This register is a scheduling-and-disposition
+authority for the Services vertical. It does not amend
+`services-v1-product-contract.md` (authority for shipped public Services behaviour),
+`services-v2-product-contract.md` (approved MVP direction), or the launch register.
+
+**Companion assessment:** `services-v3-growth-journey-gap-assessment-2026-10-28.md`
+(same branch) — the audited capability baseline. This register is the thin, standing
+layer on top; the assessment explains detail, this register answers "what stage are
+we at, what's next, what happened to the leftovers."
+
+## How to use this register
+
+1. Before touching any Services surface, read §1 (stage), §2 (what is superseded),
+   and §3 (authorized queue). Then read the journey stage of the companion
+   assessment that matches your work.
+2. **Never start Services work from chat history, branches, or discovery.** If a
+   change is not in §3, it needs a disposition entry first.
+3. When your PR touches Services, update this register in the same PR (§5 rule).
+   An unpruned branch or an unrecorded leftover after a merge is a register defect.
+
+## Scope and update rule
+
+Applies to: `client/src/pages/services/**`, `client/src/pages/pro/**`,
+`client/src/features/services/**`, `client/src/components/services/**`,
+`server/servicesEngineRouter.ts`, `server/services/servicesEngineService.ts`,
+`server/services/__tests__/servicesEngine*`,
+`drizzle/schema/servicesEngine.ts`, shared Services search types
+(`shared/searchDiscovery.ts`, services page taxonomy in `shared/`), the Services
+navigation entries in `client/src/lib/publicNavigation.ts`, and the Services
+admin surface. A PR touching any of these must:
+
+1. Update the affected queue lines (§3) — status and owning workstream.
+2. Update or retire the asset lines (§4.2–4.4) the PR disposes of, lands, or creates.
+3. Add a supersession note (§2) if the PR weakens or reinterprets recorded contract language.
+
+Destructive dispositions (Retire/Archive execution) always run in their own
+task-owned worktree with evidence recorded in the register line itself.
+
+## §1 Engine stage statement
+
+**As of `main` @ `026586690` (2026-10-28):** the Services engine is a
+*contract-governed pilot directory with a complete autonomous enquiry loop* —
+six-category directory (home/category/localized/profile, all indexable with
+canonicals), fail-closed reviewed publication with audit, one-to-one attributable
+requests with durable idempotent request identity and server-validated
+property/listing/development context, provider lead custody with a six-state
+lifecycle and notes, verified-request reviews with moderation/report triage and
+transactionally recomputed aggregates, a super-admin review workspace, and a
+gated provider workspace. What it is *not* yet: a growth platform — no campaign
+landing capability, no provider-attributed demand capture, no response-time
+measurement, no export/handover, no provider media library, and no
+Services-specific discovery infrastructure (sitemap child, structured data).
+Next authorized work after the V3 contract decision: P0 set in the gap
+assessment §5 (§3 DELTAs 3, 4, 7 + hygiene sweep).
+
+## §2 Supersession ledger
+
+| # | Artifact | Status | Disposition |
+| --- | --- | --- | --- |
+| S-1 | `services-v1-product-contract.md` | **Authority for shipped public behaviour.** Its remaining-dependency list changes: dep #5 (review authorship/moderation/aggregates) is now implemented via V2 MVP-8; dep #2 (super-admin reviewer staffing/cadence) remains an operational launch dependency; deps #1/#3/#4 unchanged. | Keep. Annotate dep #5 as implemented at next contract revision. |
+| S-2 | `services-v2-product-contract.md` | Authority for approved direction. §6 "provider mini-site" **vocabulary is superseded** by the approved web-presence/growth-journey direction; §6 *sequencing* (MINI-3/MINI-4 first, schema only when evidenced) carries forward unchanged. | Keep §6 as spec; record vocabulary supersession in the V3 contract. Proposed: V3 contract named `services-v3-product-contract.md`. |
+| S-3 | `.kiro/specs/services-marketplace-overhaul/` (`requirements.md`, `design.md`, `tasks.md`) | **Superseded.** Pre-contract UI-overhaul spec ("Angi-style" polish, wizard replacement, `Trust_Bar`, provider-card *response time and job count* — invented trust signals). It is the paper trail explaining the unmounted components in §4.2, which were built against this spec and never landed in routed code. | *Proposed: Archive in place* (no deletion, no merge). Never resurrect its response-time/job-count display: trust claims may come only from measured event truth (DELTA-3) and the platforms verified/reviews ladder. |
+| S-4 | Phase-0 notification/orphan-scheduler implementation (`feature_services-engine-phase0`, recovery copies `origin/recovery/services-engine-clean-baseline-2026-07-02`, `origin/recovery/safety-2026-07-03/feature_services-engine-phase0`) | **Retired archive-only** (recorded in `docs/operations/repository-convergence-2026-08-31-classification.md:72`). Relies on retired migration/delivery assumptions. Local branch `feature/services-engine-phase0` no longer exists; local worktree path `/home/edwardspc/Desktop/Dev/listify-services-engine-phase0` is gone. | Do not resurrect. Any notification/reminder/delivery capability is created fresh only as DELTA-8 (new domain, new owner, new contract). |
+| S-5 | `svc/future-state-wt` classification | Historical: broad alternative services-engine rewrite with retired `0062–0074` migration assumptions (convergence doc `:158`). Not a registered worktree today. | Reference-only. Any services schema replacement requires a fresh database-authority design. |
+| S-6 | Explore integration | Approved as a subsequent channel (V2 §3.4) and **not in any current slice**; `explore` source surface rejected server-side; `/service/explore` route intentionally non-existent. | Boundary holds; Explore entries remain correct-absent. |
+
+## §3 Authorized work queue
+
+Statuses: `Proposed` (awaiting founder/V3 approval) · `Approved, not started` ·
+`In flight (worktree/branch)` · `Done` · `Parked` · `Retired`.
+
+| Delta | Work | Type | Status | Notes |
+| --- | --- | --- | --- | --- |
+| DELTA-1 Provider web presence (profile → homepage; per-service detail pages) | Code | Proposed — first slice after V3 contract | V2 §6.4 sequencing; no schema |
+| DELTA-2 Campaign landing pages + provider-attributed demand capture | Code + contract | Proposed | New context vocabulary; idempotency semantics preserved; `noindex`-by-default policy is a contract clause |
+| DELTA-3 Measured response performance from `service_lead_events` | Code | Proposed | Honest second rung of the trust ladder; computed truth only |
+| DELTA-4 Services SEO infrastructure (sitemap child, JSON-LD, slug canonicalization) | Code | Proposed | Mirrors agent/guide sitemap editorial pattern |
+| DELTA-5 Provider media library | Schema (DB authority) | Proposed, evidence-gated | V2 MINI-1 |
+| DELTA-6 Provider content model (case studies/projects) | Schema (DB authority) | Proposed, evidence-gated | V2 MINI-2 |
+| DELTA-7 Lead workspace upgrades (filters/totals/event analytics) + client hygiene sweep | Code | Proposed (hygiene items enumerable today) | Hygiene items in §4.6 |
+| DELTA-8 Fresh notification/delivery domain (alerts, reminders) | Contract + ops authority | Proposed | Fresh design only; S-4 stays retired |
+| DELTA-9 Export/handover with POPIA consent semantics | Contract (+ legal review) | Proposed | Platform stays attribution system of record |
+| DELTA-10 Coverage geography convergence (typed canonical Places) | Place Authority consumer slice | Proposed | Pre-existing recorded slice; prerequisite for `service × place` discovery pages |
+| DELTA-11 Commercial model (tiers/placement/lead fees) | Founder decision | Proposed | V2 §3.1 gate: research then approval |
+
+**Next step:** Edward decides §7 of the gap assessment (V3 contract basis, P0
+ordering, DELTA-8 vs DELTA-9 first, hygiene slice vs folded). Until then no §3
+line advances.
+
+## §4 Asset reconciliation
+
+### §4.1 Disposition classes
+
+| Class | Meaning |
+| --- | --- |
+| **Advance** | Move into an authorized §3 delta as part of it |
+| **Retire** | Delete from the working tree; evidence + founder approval required |
+| **Archive** | Remove from the working tree with a provenance record; branch/archive execution in a task-owned worktree |
+| **Hold** | Remains; entry exists with reason and exit condition so it is never mistaken for debris |
+
+### §4.2 Built-but-unmounted client assets
+
+Last verified 2026-10-28 @ `026586690` by reference sweep over `client/src`
+(excluding `__tests__` and the components' own files). Built against the
+superseded S-3 spec; never wired into routed code.
+
+| Asset | Evidence | Proposed disposition |
+| --- | --- | --- |
+| `components/services/ServicesSkeletons.tsx` (4 exports) | No page/route references | **Retire** in the first P0 slice |
+| `components/services/TrustBar.tsx`, `TrustStepsRow.tsx` | Only `advertise/PreviewCarousel.README.md` mention + intra-set references | **Retire** |
+| `components/services/DemandCarousel.tsx`, `PopularProjectsGrid.tsx`, `CostGuidesSection.tsx` | No page references (referenced only by `ServicesSkeletons.tsx`) | **Retire** |
+| `components/services/CategoryShowcaseCard.tsx`, `CategoryCard.tsx` | No page references | **Retire** |
+| `components/services/ServiceHeroSearch.tsx` + `CategoryChips.tsx` | No page references (CategoryChips referenced only by ServiceHeroSearch) | **Retire** |
+| `components/services/LeadRequestWizard.tsx` | No page references (replaced by `features/services/LeadRequestFlow`) | **Retire** |
+| `components/services/MatchQualityBadge.tsx` | No page references; concept absent from V1 contract (no automated matching) | **Retire**; do not reintroduce match scores (invented trust signal) without a V3 contract clause |
+| `components/services/StarRating.tsx` (standalone) + `__tests__/StarRating.property.test.ts` | Pages consume the `StarRating` export from `ProviderShowcaseCard.tsx`, not the standalone component | **Retire** (merge tests for the surviving export) |
+| `catalog.ts` constants `POPULAR_PROJECTS`, `COST_GUIDES` | No rendering surface | **Retire** with the components |
+| `pages/pro/ProProfilePage.tsx` lazy import in `App.tsx:88` with no route | Mounted only inside `ProviderOnboardingWizard`; default export unroutable | **Advance** into DELTA-7 hygiene: either give it an explicit route or drop the lazy import |
+
+### §4.3 Unwired-but-intentional engine surfaces (Hold)
+
+| Surface | Reason it exists | Exit condition |
+| --- | --- | --- |
+| `SERVICE_SOURCE_SURFACE_VALUES.explore` (typed, server-rejected) | V1 Explore boundary; fail-closed | Explore integration slice (S-6) |
+| `service_explore_videos` table + hidden `/service/explore` | Same | S-6 |
+| Subscription tier/status columns, unwired (`billingEligible` always 0) | Preserved entitlement surface per V2 §3.1 | DELTA-11 (only after founder approval) |
+| Footer newsletter blueprint comment (`ServicesSiteFooter.tsx`) | Recorded proposed capability, intentionally not rendered | A V3-approved capture slice |
+
+### §4.4 Services branch and worktree lineage
+
+Ahead/behind vs `main` @ `026586690`, verified 2026-10-28. **Branch deletion is
+never assumed safe from ahead/behind alone; each line lists the evidence condition
+required for its disposition.**
+
+| Branch | Evidence | Proposed disposition |
+| --- | --- | --- |
+| `feat/services-publication-review-queue-20261021` | 0 ahead / 83 behind; last commit 2026-10-22 "publication review queue + marketplace v2 surfaces" | **Retire** (delete) after reviewer confirms — no unique commits |
+| `fix/services-v1-reconcile` | 0 ahead / 446 behind | **Retire** after confirmation |
+| `origin/feat/services-marketplace-overhaul` | 0 ahead / 2237 behind (2026-04-22) | **Retire** on remote after confirmation |
+| `origin/feat/services-marketplace-mvp-parity-20261022` | 0 ahead / 36 behind ("shared star rating on provider profile") | **Retire** on remote after confirmation |
+| `origin/feat/services-review-moderation-20261022` | 0 ahead / 32 behind | **Retire** on remote after confirmation |
+| `origin/feat/services-property-journey-actions` and `origin/fix/services-marketplace-followup`, `origin/feature/services-frontend-release`, `origin/feature/services-pro-release` | 0 ahead | **Retire** on remote after confirmation (#339 recorded in packet 12) |
+| `feat/services-v1-integration`, `feat/services-v1-launch-journey`, `feat/services-v1-remediation-port-20260924` | 1/1/3 ahead — single `wip: preserve … before retiring the worktree` commits against the V1 lineage (the remediation-port branch is the named workstream of the **current V1 contract header**); content arrived on `main` through integrated merge identities, so rev-list reads divergence | **Archive, then delete**: one-pass review confirms every file in the wip snapshots has an integrated successor in `main`; record confirmation in this table before deletion |
+| `origin/feature/services-engine-release` | 4 ahead — demand-engine foundation migrations `0031/0032` and subscription plan tests, **not current services content** | **Archive-only, do not merge** (converges with S-5): demand/billing migrations are a retired lineage; deletion requires the migration-tree audit to confirm no live authority import |
+| `origin/recovery/services-engine-clean-baseline-2026-07-02`, `origin/recovery/safety-2026-07-03/feature_services-engine-phase0` | Recovery namespace | **Hold** under repo-wide recovery-retention policy; separate founder decision, never auto-picked |
+| Worktree `/home/edwardspc/Desktop/Dev/listify-services-engine-clean` | Detached, dirty (1 file), DIRTY_OR_UNSAFE per packet 12 WT-37 | Owner review of the dirty file, then destroy/retain decision by Edward |
+| Worktree `…/listify-services-engine-phase0` | Path no longer exists; only remote recovery copy (above) | Record physical retirement as done in packet 12's next revision |
+
+### §4.5 Named, not ours (visibility without action)
+
+- `main` uncommitted pile: deleted geography test/service files (`git status` deletion set) —
+  **canonical-place-geography workstreams' property** (worktrees recorded in `git worktree list`);
+  this register only records that the pile is owned there and unresolved.
+- Untracked `docs/briefs/2026-10-08-*` (`b12-priority-directive/response`, `deployment-audit`)
+  and `docs/architecture/launch-readiness-and-product-convergence/evidence/b12-priority-audit-2026-10-08/`
+  — B12/hosted-runtime launch lineage, not services. Owners should either commit or
+  explicitly archive them.
+
+### §4.6 Client hygiene defects (bundle: hygiene slice inside P0)
+
+1. Auth-redirect param divergence: reviews page `/login?redirect=…` vs request page
+   and shared helper `/login?next=…` (`ServiceProviderReviewsPage.tsx:372`,
+   `publicNavigation.ts:1159`).
+2. `service_provider` canonical account destination divergence:
+   `publicNavigation.ts:1190` → `/service/profile` vs `SmartDashboardRedirect.tsx:32-33` /
+   `DeveloperRoutes.tsx:37-38` → `/service/dashboard`.
+3. Uncanonicalized category slug aliases (`/services/inspection_compliance` renders
+   while canonical head says `inspection-compliance`); localized page redirects,
+   category page does not — fold into DELTA-4 or the hygiene slice.
+
+## §5 Maintenance
+
+- **Evidence age:** audit basis `main` @ `026586690`, 2026-10-28. Any register line
+  older than one merge involving its area must be re-verified before acting on it.
+- Queue and asset lines are updated **in the PR** that changes them — never in a
+  follow-up chat, never in another sprint.
+- Disposition executions (Retire/Archive) each run in their own task-owned worktree
+  with the evidence recorded on the disposed line.
+- This register is reset-audited whenever a new Services contract (V3) is adopted:
+  §3 statuses are re-based from its definition-of-done, and §4.2 becomes empty by
+  execution, not by memory.
+
+*Verification basis: reference sweeps (`rg -l`), `git rev-list --left-right --count`,
+`git log main..<branch>`, `git status` of registered paths at `main` @ `026586690`,
+audit companion `services-v3-growth-journey-gap-assessment-2026-10-28.md`.*
