@@ -100,7 +100,7 @@
       "name": "property-listify-database-authority",
       "path": ".agent/skills/property-listify-database-authority/SKILL.md",
       "owner": "property-listify",
-      "version": "1.2.0",
+      "version": "1.2.1",
       "status": "active",
       "riskTier": "instruction-only",
       "allowedTools": ["Read", "Grep", "Glob", "Bash", "Edit", "Write"],
@@ -114,13 +114,13 @@
         "kind": "original",
         "informedBy": [
           "Property Listify Database Authority v3",
-          "2026-09-04 TiDB production cutover recovery review",
-          "2026-09-08 local-to-production schema lifecycle contract"
+          "2026-09-08 local-to-production schema lifecycle contract",
+          "2026-10-28 canonical MySQL provider retirement review"
         ],
         "copiedThirdPartyTextOrCode": false
       },
-      "reviewedAt": "2026-09-06",
-      "nextReview": "2026-12-06"
+      "reviewedAt": "2026-10-28",
+      "nextReview": "2027-01-28"
     }
   ]
 }

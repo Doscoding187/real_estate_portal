@@ -15,8 +15,7 @@ type CheckFitMatch = {
   developmentId: number;
   programId: number;
   developmentName: string;
-  city: string;
-  province: string;
+  locationLabel: string;
   entryPrice: number;
   currencyCode: string;
   qualified: boolean;
@@ -356,8 +355,7 @@ export default function PartnerProspectCheckFitPage() {
                             </h3>
                             <p className="mt-1 flex items-center gap-1 text-[11.5px] text-muted-foreground">
                               <MapPin className="h-3 w-3 shrink-0" />
-                              {[match.city, match.province].filter(Boolean).join(', ') ||
-                                'Location to be confirmed'}
+                              {match.locationLabel || 'Location to be confirmed'}
                             </p>
 
                             {developmentType || availableCount ? (
@@ -417,7 +415,7 @@ export default function PartnerProspectCheckFitPage() {
                       >
                         <span>
                           {match.developmentName} ·{' '}
-                          {[match.city, match.province].filter(Boolean).join(', ')}
+                        {match.locationLabel}
                         </span>
                         <span>From {formatAmount(match.entryPrice)}</span>
                       </li>

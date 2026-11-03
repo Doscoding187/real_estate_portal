@@ -90,9 +90,6 @@ export interface WizardData {
   cataloguePublisherId?: number;
   marketingRole?: string;
 
-  // Location FK
-  locationId?: number;
-
   // UI-only fields (will be dropped)
   _meta?: any;
   _ui?: any;
@@ -176,7 +173,6 @@ export interface NormalizedDevelopmentPayload {
 
   cataloguePublisherId?: number | null;
   marketingRole?: 'exclusive' | 'joint' | 'open' | null;
-  locationId?: number | null;
 }
 
 // ============================================================================
@@ -529,9 +525,8 @@ export function normalizeForPublish(
     // Date fields
     completionDate: wizardData.completionDate ? String(wizardData.completionDate) : null,
 
-    // Foreign keys
+    // Canonical relationships
     cataloguePublisherId: wizardData.cataloguePublisherId || null,
-    locationId: wizardData.locationId || null,
   };
 }
 

@@ -32,6 +32,10 @@ export const SHARED_LIVING_PLACE_KINDS = [
 
 export type SharedLivingPlaceKind = (typeof SHARED_LIVING_PLACE_KINDS)[number];
 
+/** Shared Living geography is closed until canonical assignment is modeled and reviewed. */
+export const SHARED_LIVING_CANONICAL_ASSIGNMENT_BLOCKER =
+  'Shared Living search and authoring are waiting for sl_places.canonical_place_id and reviewed Place assignments. Existing address labels will not be mapped automatically.';
+
 export const SHARED_LIVING_SPACE_STATUSES = ['available', 'occupied', 'paused', 'hidden'] as const;
 
 export type SharedLivingSpaceStatus = (typeof SHARED_LIVING_SPACE_STATUSES)[number];

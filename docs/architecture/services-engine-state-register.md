@@ -118,8 +118,16 @@ Verification: `pnpm check` clean; targeted services vitest — 15 files / 114 te
 pass. The `ProProfilePage` lazy-import row is **not** retired; it advances to
 DELTA-7 unchanged.
 
-| Asset | Evidence | Disposition |
+**Reconciliation as of 2026-11-03.** The current-main reference sweep found
+references for every candidate asset. Main commit `cbff3e7b` (#693), written
+after #698, also changed `ServiceHeroSearch` from free-text location to
+canonical Place search. This PR restores main's versions of the 16 candidate
+files still present on main and retains the `POPULAR_PROJECTS` and `COST_GUIDES`
+constants; `LeadRequestWizard.tsx` was already absent from main after #693. The
+Retire decisions below are deferred until those references are reconciled; this
+PR does not remove these assets from main.
 
+| Asset | Evidence | Disposition |
 
 | --- | --- | --- |
 | `components/services/ServicesSkeletons.tsx` (4 exports) | No page/route references | **Retire** in the first P0 slice |

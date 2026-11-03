@@ -9,7 +9,10 @@ const mockProviders = [
     subscriptionTier: 'directory',
     services: [{ category: 'home_improvement', code: 'plumbing', displayName: 'Plumbing' }],
     locations: [
-      { suburb: 'Rondebosch', city: 'Cape Town', province: 'Western Cape', radiusKm: 30 },
+      {
+        canonicalPlaceId: 'pl-place-01-000000000000000000000001',
+        label: 'Rondebosch, Cape Town, Western Cape',
+      },
     ],
     logoUrl: null,
     moderationTier: null,
@@ -24,7 +27,12 @@ const mockProviders = [
     verificationStatus: 'verified',
     subscriptionTier: 'directory',
     services: [{ category: 'moving', code: 'moving', displayName: 'Residential Moving' }],
-    locations: [{ suburb: 'Sandton', city: 'Johannesburg', province: 'Gauteng', radiusKm: 50 }],
+    locations: [
+      {
+        canonicalPlaceId: 'pl-place-01-000000000000000000000002',
+        label: 'Sandton, Johannesburg, Gauteng',
+      },
+    ],
     logoUrl: null,
     moderationTier: null,
     averageRating: 0,
@@ -36,6 +44,14 @@ const mockProviders = [
 
 vi.mock('@/lib/trpc', () => ({
   trpc: {
+    placeAuthority: {
+      discover: {
+        useQuery: () => ({ data: { query: '', outcome: 'none', results: [] }, isFetching: false }),
+      },
+      resolveSearchPlace: {
+        useQuery: () => ({ data: null, isLoading: false, error: null }),
+      },
+    },
     servicesEngine: {
       directorySearch: {
         useQuery: () => ({ data: mockProviders, isLoading: false, error: null }),
@@ -75,7 +91,7 @@ describe('ServicesHomePage', () => {
       /trusted local service providers/i,
     );
     expect(screen.getByRole('combobox', { name: /service category/i })).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/e\.g\. Sandton, Gauteng/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/Choose an approved Place/i)).toBeInTheDocument();
   });
 
   it('renders real provider records and the platform verification signal', () => {

@@ -51,6 +51,7 @@ import {
 } from '@/components/property/DeveloperBrandSection';
 import { MetaControl } from '@/components/seo/MetaControl';
 import { buildBreadcrumbStructuredData, buildPlaceStructuredData } from '@/lib/seo/structuredData';
+import { isCanonicalPlaceId } from '@shared/placeAuthority';
 import type {
   PublicPropertyDetailFact,
   PublicPropertyDetailIcon,
@@ -91,10 +92,9 @@ interface PropertyPayload {
   description?: string;
   listingType?: SearchFilters['listingType'] | string;
   transactionType?: string;
-  province?: string;
-  city?: string;
-  suburb?: string;
+  canonicalPlaceId?: string | null;
   address?: string;
+  publicAddress?: string | null;
   zipCode?: string;
   price?: number | string;
   propertyType?: string;
@@ -266,6 +266,13 @@ export default function PropertyDetailPage({ propertyId: propPropertyId }: Prope
     { propertyId },
     { enabled: propertyId > 0 && Boolean(data?.property) },
   );
+  const detailPlaceId = isCanonicalPlaceId(data?.property?.canonicalPlaceId)
+    ? data.property.canonicalPlaceId
+    : '';
+  const canonicalPlaceQuery = trpc.placeAuthority.resolveSearchPlace.useQuery(
+    { placeId: detailPlaceId },
+    { enabled: Boolean(detailPlaceId) },
+  );
 
   const utils = trpc.useUtils();
   const setFavoriteMutation = trpc.properties.setFavorite.useMutation({
@@ -428,13 +435,22 @@ export default function PropertyDetailPage({ propertyId: propPropertyId }: Prope
   const canonicalPath = buildPropertyUrl(propertyId, property.title);
   const canonicalUrl =
     typeof window !== 'undefined' ? `${window.location.origin}${canonicalPath}` : canonicalPath;
-  const breadcrumbItems = generateBreadcrumbs({
-    listingType: property.listingType as SearchFilters['listingType'],
-    province: property.province,
-    city: property.city,
-    suburb: property.suburb,
-  });
-  const displayLocationLabel = presentation.location.label;
+  const canonicalPlace = canonicalPlaceQuery.data;
+  const canonicalPlaceLabel = canonicalPlace?.label;
+  const displayAddress =
+    presentation.location.precision === 'exact' && typeof property.publicAddress === 'string'
+      ? property.publicAddress.trim()
+      : '';
+  const displayLocationLabel =
+    displayAddress || canonicalPlaceLabel || 'Location available on enquiry';
+  const displayLocation = { ...presentation.location, label: displayLocationLabel };
+  const breadcrumbItems = generateBreadcrumbs(
+    {
+      listingType: property.listingType as SearchFilters['listingType'],
+      canonicalPlaceId: property.canonicalPlaceId || undefined,
+    },
+    canonicalPlaceLabel,
+  );
   const propertyImages = images.filter((image): image is PropertyImageLike =>
     Boolean(
       (!image.mediaType || image.mediaType === 'image') &&
@@ -501,15 +517,13 @@ export default function PropertyDetailPage({ propertyId: propPropertyId }: Prope
           : null
       : null;
 
-  const similarListingsQuery = new URLSearchParams();
-  if (property.city) similarListingsQuery.set('city', String(property.city));
-  if (property.suburb) similarListingsQuery.set('suburb', String(property.suburb));
-  if (property.propertyType)
-    similarListingsQuery.set('propertyType', String(property.propertyType));
-  if (property.listingType) similarListingsQuery.set('listingType', String(property.listingType));
-  const similarListingsHref = buildCanonicalSearchUrl(
-    Object.fromEntries(similarListingsQuery.entries()),
-  );
+  const similarListingsHref = isCanonicalPlaceId(property.canonicalPlaceId)
+    ? buildCanonicalSearchUrl({
+        canonicalPlaceId: property.canonicalPlaceId,
+        ...(property.propertyType ? { propertyType: String(property.propertyType) } : {}),
+        ...(property.listingType ? { listingType: String(property.listingType) } : {}),
+      })
+    : null;
   const similarProperties = similarPropertiesData ?? [];
 
   const handleToggleComparison = () => {
@@ -620,8 +634,7 @@ export default function PropertyDetailPage({ propertyId: propPropertyId }: Prope
     buildPlaceStructuredData({
       name: property.title || 'Property',
       description:
-        description.trim() ||
-        [property.suburb, property.city, property.province].filter(Boolean).join(', '),
+        description.trim() || canonicalPlaceLabel || undefined,
       url: canonicalUrl,
       images: propertyImageUrls,
       address: {
@@ -629,10 +642,9 @@ export default function PropertyDetailPage({ propertyId: propPropertyId }: Prope
         // treats a Place geo value as an exact assertion. Do not publish it as
         // the home's geolocation unless the listing explicitly permits exact
         // public location.
-        streetAddress:
-          presentation.location.precision === 'exact' ? presentation.location.label : undefined,
-        addressLocality: property.city,
-        addressRegion: property.province,
+        streetAddress: displayAddress || undefined,
+        addressLocality: canonicalPlaceLabel,
+        addressRegion: canonicalPlace?.provinceName,
         postalCode: presentation.location.precision === 'exact' ? property.zipCode : undefined,
         addressCountry: 'ZA',
       },
@@ -1053,7 +1065,7 @@ export default function PropertyDetailPage({ propertyId: propPropertyId }: Prope
 
               <section id="location">
                 <PropertyLocationOverview
-                  location={presentation.location}
+                  location={displayLocation}
                   propertyTitle={property.title}
                 />
               </section>
@@ -1186,21 +1198,27 @@ export default function PropertyDetailPage({ propertyId: propPropertyId }: Prope
                 <div>
                   <h2 id="related-heading" className="text-lg font-bold text-slate-950">
                     {isRentalListing
-                      ? `Explore more rentals in ${property.suburb || property.city}`
-                      : `Still comparing? Explore more in ${property.suburb || property.city}`}
+                      ? canonicalPlaceLabel
+                        ? `Explore more rentals in ${canonicalPlaceLabel}`
+                        : 'Explore more rentals'
+                      : canonicalPlaceLabel
+                        ? `Still comparing? Explore more in ${canonicalPlaceLabel}`
+                        : 'Still comparing?'}
                   </h2>
                   <p className="mt-1 text-sm text-slate-500">
                     Relevant public alternatives keep the next discovery decision in the
                     marketplace.
                   </p>
                 </div>
-                <Button
-                  asChild
-                  variant="outline"
-                  className="border-blue-200 text-blue-700 hover:bg-blue-50"
-                >
-                  <Link href={similarListingsHref}>View all matching listings</Link>
-                </Button>
+                {similarListingsHref && (
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="border-blue-200 text-blue-700 hover:bg-blue-50"
+                  >
+                    <Link href={similarListingsHref}>View all matching listings</Link>
+                  </Button>
+                )}
               </div>
               <div className="flex snap-x gap-4 overflow-x-auto pb-2">
                 {similarProperties.map(prop => {

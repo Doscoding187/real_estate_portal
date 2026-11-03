@@ -565,10 +565,6 @@ guardedDescribe('agency listing performance MVP persisted integration', () => {
     expect(draft).toMatchObject({
       revisionOfListingId: canonical.id,
       canonicalPlaceId: CANONICAL_PLACE_FIXTURE_ID,
-      locationId: null,
-      provinceId: null,
-      cityId: null,
-      suburbId: null,
       askingPrice: '1850000.00',
       status: 'draft',
     });
@@ -637,10 +633,6 @@ guardedDescribe('agency listing performance MVP persisted integration', () => {
       id: canonical.propertyId,
       sourceListingId: canonical.id,
       canonicalPlaceId: CANONICAL_PLACE_FIXTURE_ID,
-      locationId: null,
-      provinceId: null,
-      cityId: null,
-      suburbId: null,
       price: 1_800_000,
       status: 'available',
     });

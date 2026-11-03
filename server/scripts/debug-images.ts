@@ -21,7 +21,7 @@ async function debugImages() {
   }
 
   // Find ANY development with images using a loose check
-  // Note: TiDB/MySQL specific syntax for JSON check
+  // MySQL JSON predicate used by the canonical provider.
   const [devWithImages] = await db
     .select()
     .from(developments)

@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { agentProcedure, protectedProcedure, router } from './_core/trpc';
 import { TRPCError } from '@trpc/server';
+import { agentProcedure, protectedProcedure, router } from './_core/trpc';
 import {
   captureDemandLeadFromCampaign,
   createDemandCampaign,
@@ -8,6 +8,7 @@ import {
   listDemandCampaignsForOwner,
 } from './services/demandEngineService';
 import { requireUser } from './_core/requireUser';
+import { isCanonicalPlaceId } from '../shared/placeAuthority';
 import { getRuntimeSchemaCapabilities, warnSchemaCapabilityOnce } from './services/runtimeSchemaCapabilities';
 
 const propertyTypeSchema = z.enum([
@@ -24,15 +25,12 @@ const propertyTypeSchema = z.enum([
 
 const criteriaSchema = z
   .object({
-    city: z.string().trim().min(1).max(100).optional(),
-    suburb: z.string().trim().min(1).max(100).optional(),
-    province: z.string().trim().min(1).max(100).optional(),
     propertyType: propertyTypeSchema.optional(),
     minBedrooms: z.number().int().min(0).max(20).optional(),
     maxPrice: z.number().int().min(0).max(5_000_000_000).optional(),
     minPrice: z.number().int().min(0).max(5_000_000_000).optional(),
   })
-  .partial();
+  .strict();
 
 function getCampaignOwnerContext(user: { id: number; role?: string | null; agencyId?: number | null }) {
   if (user.role === 'agency_admin' && user.agencyId) {
@@ -60,13 +58,14 @@ export const demandRouter = router({
     .input(
       z.object({
         name: z.string().trim().min(2).max(255),
+        canonicalPlaceId: z.string().refine(isCanonicalPlaceId),
         sourceChannel: z.enum(['google', 'meta', 'tiktok', 'internal', 'manual']).optional(),
         status: z.enum(['draft', 'active', 'paused', 'archived']).optional(),
         distributionMode: z.enum(['shared', 'exclusive', 'mixed']).optional(),
         sharedRecipientCount: z.number().int().min(1).max(3).optional(),
         criteria: criteriaSchema.optional(),
         metadata: z.record(z.string(), z.unknown()).optional(),
-      }),
+      }).strict(),
     )
     .mutation(async ({ ctx, input }) => {
       const capabilities = await getRuntimeSchemaCapabilities();
@@ -89,6 +88,7 @@ export const demandRouter = router({
         ownerId: owner.ownerId,
         createdBy: user.id,
         name: input.name,
+        canonicalPlaceId: input.canonicalPlaceId,
         sourceChannel: input.sourceChannel,
         status: input.status,
         distributionMode: input.distributionMode,
@@ -131,7 +131,7 @@ export const demandRouter = router({
         utmSource: z.string().trim().max(100).optional(),
         utmMedium: z.string().trim().max(100).optional(),
         utmCampaign: z.string().trim().max(100).optional(),
-      }),
+      }).strict(),
     )
     .mutation(async ({ input }) => {
       const capabilities = await getRuntimeSchemaCapabilities();

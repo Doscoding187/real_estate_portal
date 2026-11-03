@@ -24,9 +24,8 @@ export type ProviderDirectoryItem = {
     maxPrice?: number | null;
   }>;
   locations?: Array<{
-    province?: string | null;
-    city?: string | null;
-    suburb?: string | null;
+    canonicalPlaceId: string;
+    label: string;
   }>;
 };
 
@@ -54,9 +53,7 @@ export function ProviderCard({
     provider.services?.[0];
   const topLocation = provider.locations?.[0];
   const providerSlug = toProviderSlug(provider.companyName, provider.providerId);
-  const locationLine =
-    [topLocation?.suburb, topLocation?.city, topLocation?.province].filter(Boolean).join(', ') ||
-    'Coverage not listed';
+  const locationLine = topLocation?.label || 'Coverage not listed';
   const serviceLine = topService?.displayName || 'Service details on profile';
   const borderClass = isFallback
     ? 'border-slate-200 bg-white opacity-80'

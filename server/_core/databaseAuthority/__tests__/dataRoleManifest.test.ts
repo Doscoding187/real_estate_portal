@@ -14,7 +14,6 @@ describe('Database Authority data-role manifest', () => {
     expect(() => assertDataRoleManifest()).not.toThrow();
     expect(DATA_ROLE_MANIFEST.manifestVersion).toBe(DATA_ROLE_MANIFEST_VERSION);
     expect(DATA_ROLE_MANIFEST.roles.map(role => role.key)).toEqual([
-      'reference.geography',
       'reference.places',
       'reference.places-release-preview',
       'reference.platform-settings',
@@ -41,6 +40,14 @@ describe('Database Authority data-role manifest', () => {
         /(?:mysql2\/promise|createConnection|createPool|CREATE\s+TABLE|ALTER\s+TABLE|DROP\s+TABLE|TRUNCATE\s+TABLE)/i,
       );
     }
+
+    const places = DATA_ROLE_MANIFEST.roles.find(role => role.key === 'reference.places');
+    expect(places).toMatchObject({
+      adapter: 'canonical-places',
+      version: 'canonical-places-national-v1',
+      prepareCommand: 'db:places:prepare-national',
+      verifyCommand: 'db:places:verify-national',
+    });
   });
 
   it('rejects duplicate or malformed role declarations', () => {

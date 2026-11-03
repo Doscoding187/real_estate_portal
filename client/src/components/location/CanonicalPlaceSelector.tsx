@@ -12,6 +12,8 @@ export interface CanonicalPlaceSelection {
   placeType: string;
   scope: PlaceSearchScope;
   administrativeContext: string | null;
+  canonicalPath?: string | null;
+  parentPlaceId?: string | null;
 }
 
 export interface CanonicalPlaceOption {
@@ -20,9 +22,14 @@ export interface CanonicalPlaceOption {
   placeType: string;
   searchEligible: boolean;
   searchScope: PlaceSearchScope | null;
-  context: { administrativeContext: string | null };
+  context: {
+    administrativeContext: string | null;
+    cityPlaceId?: string | null;
+    provincePlaceId?: string | null;
+  };
   matchedName: string;
   isAliasMatch: boolean;
+  canonicalPath?: string | null;
 }
 
 export interface CanonicalPlaceDiscovery {
@@ -92,6 +99,8 @@ export function CanonicalPlaceSelectorView({
       placeType: option.placeType,
       scope: option.searchScope!,
       administrativeContext: option.context.administrativeContext,
+      canonicalPath: option.canonicalPath,
+      parentPlaceId: option.context.cityPlaceId || option.context.provincePlaceId || null,
     };
     onChange(selection);
     onQueryChange(selection.label);
@@ -236,6 +245,7 @@ export function CanonicalPlaceSelector({
   inputId,
   placeholder,
   hint,
+  initialQuery,
 }: {
   value: CanonicalPlaceSelection | null;
   onChange: (value: CanonicalPlaceSelection | null) => void;
@@ -244,8 +254,9 @@ export function CanonicalPlaceSelector({
   inputId?: string;
   placeholder?: string;
   hint?: string;
+  initialQuery?: string;
 }) {
-  const [query, setQuery] = useState(value?.label ?? '');
+  const [query, setQuery] = useState(value?.label ?? initialQuery ?? '');
   const [debounced, setDebounced] = useState(query);
   useEffect(() => {
     const timer = setTimeout(() => setDebounced(query), 250);
@@ -254,6 +265,9 @@ export function CanonicalPlaceSelector({
   useEffect(() => {
     if (value) setQuery(value.label);
   }, [value]);
+  useEffect(() => {
+    if (!value) setQuery(initialQuery ?? '');
+  }, [initialQuery]);
   const lookup = trpc.placeAuthority.discover.useQuery(
     { query: debounced.trim() },
     {

@@ -10,7 +10,6 @@ import { trpc } from '@/lib/trpc';
 import {
   formatCategoryLabel,
   getCategoryMeta,
-  SA_PROVINCES,
   serviceCategoryFromSlug,
   serviceJourneyContextFromSearch,
   buildServiceCategoryPath,
@@ -20,6 +19,8 @@ import {
 } from '@/features/services/catalog';
 import { applySeo } from '@/lib/seo';
 import { useServicesLocation } from '@/features/services/useServicesLocation';
+import { isCanonicalPlaceId } from '@shared/placeAuthority';
+import { canonicalPlaceSelectionFromResolved } from '@/lib/canonicalPlaceSelection';
 
 const INTENT_STAGES: IntentStage[] = [
   'seller_valuation',
@@ -104,17 +105,8 @@ export default function ServicesRequestPage() {
   const categoryMeta = getCategoryMeta(category);
 
   const query = useMemo(() => new URLSearchParams(search), [search]);
-  const rawProvince = query.get('province')?.trim() || '';
-  const initialLocation = {
-    suburb: query.get('suburb')?.trim() || '',
-    city: query.get('city')?.trim() || '',
-    province:
-      SA_PROVINCES.find(province => province.toLowerCase() === rawProvince.toLowerCase()) ||
-      rawProvince,
-  };
-  const defaultLocation = [initialLocation.suburb, initialLocation.city, initialLocation.province]
-    .filter(Boolean)
-    .join(', ');
+  const candidatePlaceId = query.get('canonicalPlaceId') || '';
+  const initialCanonicalPlaceId = isCanonicalPlaceId(candidatePlaceId) ? candidatePlaceId : '';
   const providerId = parsePositiveInteger(query.get('providerId'));
   const serviceCode = query.get('serviceCode')?.trim() || '';
   const propertyId = parsePositiveInteger(query.get('propertyId'));
@@ -128,13 +120,19 @@ export default function ServicesRequestPage() {
   const propertyLinked =
     propertyLinkedValue === 'true' ? true : propertyLinkedValue === 'false' ? false : undefined;
   const journeyContext = serviceJourneyContextFromSearch(search);
+  const selectedPlaceQuery = trpc.placeAuthority.resolveSearchPlace.useQuery(
+    { placeId: initialCanonicalPlaceId },
+    { enabled: Boolean(initialCanonicalPlaceId), refetchOnWindowFocus: false },
+  );
+  const defaultPlace = useMemo(
+    () => canonicalPlaceSelectionFromResolved(selectedPlaceQuery.data),
+    [selectedPlaceQuery.data],
+  );
   const latestSubmissionRef = useRef<{
     category: ServiceCategory;
     intentStage: string;
     sourceSurface: string;
-    suburb?: string;
-    city?: string;
-    province?: string;
+    canonicalPlaceId: string;
     notes?: string;
     propertyId?: number;
     listingId?: number;
@@ -144,22 +142,6 @@ export default function ServicesRequestPage() {
     propertyLinked?: boolean;
     reasonKey?: string;
   } | null>(null);
-  const requestKeyRef = useRef<string | null>(null);
-  const requestTargetRef = useRef('');
-  const requestTarget = [providerId, serviceCode, category].join(':');
-  const requestStorageKey = `services-request-key:${requestTarget}`;
-  if (!requestKeyRef.current || requestTargetRef.current !== requestTarget) {
-    const storage = getRequestStorage();
-    let storedKey: string | null = null;
-    try {
-      storedKey = storage?.getItem(requestStorageKey) || null;
-    } catch {
-      storedKey = null;
-    }
-    requestKeyRef.current = storedKey || createRequestKey();
-    storeRequestKey(requestStorageKey, requestKeyRef.current);
-    requestTargetRef.current = requestTarget;
-  }
 
   useEffect(() => {
     const categoryLabel = formatCategoryLabel(category);
@@ -179,12 +161,17 @@ export default function ServicesRequestPage() {
 
   const createLead = trpc.servicesEngine.createLeadFromJourney.useMutation({
     onSuccess: data => {
-      removeStoredRequestKey(requestStorageKey);
       const latestSubmission = latestSubmissionRef.current;
+      if (latestSubmission) {
+        const requestTarget = [
+          providerId,
+          serviceCode,
+          latestSubmission.category,
+          latestSubmission.canonicalPlaceId,
+        ].join(':');
+        removeStoredRequestKey(`services-request-key:${requestTarget}`);
+      }
       const nextCategory = latestSubmission?.category || category;
-      const nextCity = latestSubmission?.city || '';
-      const nextProvince = latestSubmission?.province || '';
-      const nextSuburb = latestSubmission?.suburb || '';
       const leadId = Number(data.leadId || data.leadIds?.[0] || 0);
 
       if (!leadId) {
@@ -203,9 +190,9 @@ export default function ServicesRequestPage() {
             ? { sourceDetail: latestSubmission.sourceDetail }
             : {}),
           ...(latestSubmission?.reasonKey ? { reasonKey: latestSubmission.reasonKey } : {}),
-          city: nextCity,
-          province: nextProvince,
-          suburb: nextSuburb,
+          ...(latestSubmission?.canonicalPlaceId
+            ? { canonicalPlaceId: latestSubmission.canonicalPlaceId }
+            : {}),
         };
         const fallbackPath = buildServiceCategoryPath(nextCategory, fallbackContext);
         setLocation(`${fallbackPath}${fallbackPath.includes('?') ? '&' : '?'}request=unmatched`);
@@ -378,7 +365,7 @@ export default function ServicesRequestPage() {
                     Preferred area
                   </p>
                   <p className="mt-2 text-base font-semibold text-slate-950">
-                    {defaultLocation || 'Add your location'}
+                    {defaultPlace?.label || 'Select an approved Place'}
                   </p>
                 </div>
               </div>
@@ -441,18 +428,10 @@ export default function ServicesRequestPage() {
                 sourceDetail || '',
                 propertyLinked === undefined ? '' : String(propertyLinked),
                 reasonKey || '',
-                initialLocation.suburb,
-
-                initialLocation.city,
-                initialLocation.province,
+                initialCanonicalPlaceId,
               ].join(':')}
               defaultCategory={category}
-              defaultLocation={defaultLocation}
-              defaultLocationParts={{
-                suburb: initialLocation.suburb || undefined,
-                city: initialLocation.city || undefined,
-                province: initialLocation.province || undefined,
-              }}
+              defaultPlace={defaultPlace}
               defaultIntentStage={intentStage}
               defaultSourceSurface={sourceSurface}
               propertyId={propertyId}
@@ -468,9 +447,7 @@ export default function ServicesRequestPage() {
                   category: payload.category,
                   sourceSurface: payload.sourceSurface,
                   intentStage: payload.intentStage,
-                  province: payload.province,
-                  city: payload.city,
-                  suburb: payload.suburb,
+                  canonicalPlaceId: payload.canonicalPlaceId,
                   notes: payload.notes,
                   propertyId: payload.propertyId,
                   listingId: payload.listingId,
@@ -488,8 +465,25 @@ export default function ServicesRequestPage() {
                     : {}),
                   ...(serviceCode ? { serviceCode } : {}),
                 };
+                const requestTarget = [
+                  providerId,
+                  serviceCode,
+                  payload.category,
+                  payload.canonicalPlaceId,
+                ].join(':');
+                const requestStorageKey = `services-request-key:${requestTarget}`;
+                let requestKey = '';
+                try {
+                  requestKey = getRequestStorage()?.getItem(requestStorageKey) || '';
+                } catch {
+                  requestKey = '';
+                }
+                if (!requestKey) {
+                  requestKey = createRequestKey();
+                  storeRequestKey(requestStorageKey, requestKey);
+                }
                 createLead.mutate({
-                  requestKey: requestKeyRef.current || createRequestKey(),
+                  requestKey,
                   providerId,
                   category: payload.category,
 
@@ -498,9 +492,7 @@ export default function ServicesRequestPage() {
                   propertyId: payload.propertyId,
                   listingId: payload.listingId,
                   developmentId: payload.developmentId,
-                  province: payload.province,
-                  city: payload.city,
-                  suburb: payload.suburb,
+                  canonicalPlaceId: payload.canonicalPlaceId,
                   notes: payload.notes,
                   serviceCode,
                   context: Object.keys(requestContext).length > 0 ? requestContext : undefined,

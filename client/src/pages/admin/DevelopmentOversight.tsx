@@ -45,6 +45,10 @@ import {
   Clock,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  CanonicalPlaceSelector,
+  type CanonicalPlaceSelection,
+} from '@/components/location/CanonicalPlaceSelector';
 
 export default function DevelopmentOversight() {
   const [, setLocation] = useLocation();
@@ -281,7 +285,7 @@ export default function DevelopmentOversight() {
                       <div className="font-medium text-slate-900">{dev.name}</div>
                       <div className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
                         <MapPin className="w-3 h-3" />
-                        {dev.city}, {dev.province}
+                        {dev.locationLabels?.join(', ') || 'No reviewed Place assignment'}
                       </div>
                     </TableCell>
                     <TableCell>{dev.developerName}</TableCell>
@@ -378,6 +382,52 @@ function DevelopmentReviewContent({
     location: false,
   });
   const [showHistory, setShowHistory] = useState(false);
+  const [assignmentPlace, setAssignmentPlace] = useState<CanonicalPlaceSelection | null>(null);
+  const [assignmentPhaseId, setAssignmentPhaseId] = useState('');
+  const [assignmentEvidenceReference, setAssignmentEvidenceReference] = useState('');
+  const [assignmentWithdrawalNotes, setAssignmentWithdrawalNotes] = useState<Record<number, string>>({});
+
+  const placeAssignmentContextQuery =
+    trpc.admin.adminGetDevelopmentPlaceAssignmentContext.useQuery(
+      { developmentId: development.id },
+      { enabled: Number.isFinite(development.id) },
+    );
+  const reviewPlaceAssignmentMutation =
+    trpc.admin.adminReviewDevelopmentPlaceAssignment.useMutation({
+      onSuccess: async () => {
+        toast.success('Reviewed Place assignment recorded');
+        setAssignmentPlace(null);
+        setAssignmentPhaseId('');
+        setAssignmentEvidenceReference('');
+        await placeAssignmentContextQuery.refetch();
+      },
+      onError: error => toast.error(error.message || 'Place assignment could not be recorded'),
+    });
+  const withdrawPlaceAssignmentMutation =
+    trpc.admin.adminWithdrawDevelopmentPlaceAssignment.useMutation({
+      onSuccess: async () => {
+        toast.success('Place assignment withdrawn');
+        await placeAssignmentContextQuery.refetch();
+      },
+      onError: error => toast.error(error.message || 'Place assignment could not be withdrawn'),
+    });
+
+  const recordPlaceAssignment = () => {
+    if (!assignmentPlace) {
+      toast.error('Select a canonical Place');
+      return;
+    }
+    if (!assignmentEvidenceReference.trim()) {
+      toast.error('Add the evidence reference used for this review');
+      return;
+    }
+    reviewPlaceAssignmentMutation.mutate({
+      developmentId: development.id,
+      phaseId: assignmentPhaseId ? Number(assignmentPhaseId) : null,
+      placeId: assignmentPlace.canonicalPlaceId,
+      evidenceReference: assignmentEvidenceReference.trim(),
+    });
+  };
 
   // Review-time unit inventory: the sellable stock under approval.
   const { data: reviewUnitTypes } = trpc.admin.adminGetReviewUnitTypes.useQuery(
@@ -525,6 +575,119 @@ function DevelopmentReviewContent({
         </h4>
         <div className="p-3 bg-white border border-slate-200 rounded-md text-sm text-slate-600 max-h-40 overflow-y-auto">
           {development.description || 'No description provided.'}
+        </div>
+      </div>
+
+      {/* Canonical geography is an explicit, evidence-backed review decision. */}
+      <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
+        <div>
+          <h4 className="font-semibold text-sm text-slate-700">Geographic site assignments</h4>
+          <p className="mt-1 text-xs text-slate-500">
+            Only accepted site assignments to searchable Places drive exact area matching.
+            Multiple Places do not widen the Development's browse scope.
+          </p>
+        </div>
+        <div className="space-y-2">
+          {(placeAssignmentContextQuery.data?.assignments ?? []).map(assignment => (
+            <div key={assignment.id} className="rounded-md bg-slate-50 px-3 py-2 text-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span>
+                  {assignment.phaseName
+                    ? `${assignment.phaseName}: `
+                    : 'Entire Development: '}
+                  {assignment.placeName || assignment.placeId}
+                </span>
+                <Badge variant={assignment.reviewState === 'accepted' ? 'default' : 'outline'}>
+                  {assignment.reviewState.replace('_', ' ')}
+                </Badge>
+              </div>
+              {assignment.reviewState === 'accepted' ? (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Input
+                    value={assignmentWithdrawalNotes[assignment.id] ?? ''}
+                    maxLength={2000}
+                    placeholder="Reason to withdraw this assignment"
+                    onChange={event =>
+                      setAssignmentWithdrawalNotes(current => ({
+                        ...current,
+                        [assignment.id]: event.target.value,
+                      }))
+                    }
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="destructive"
+                    disabled={withdrawPlaceAssignmentMutation.isPending}
+                    onClick={() => {
+                      const reviewNote = assignmentWithdrawalNotes[assignment.id]?.trim();
+                      if (!reviewNote) {
+                        toast.error('Add a reason before withdrawing the assignment');
+                        return;
+                      }
+                      withdrawPlaceAssignmentMutation.mutate({
+                        assignmentId: assignment.id,
+                        reviewNote,
+                      });
+                    }}
+                  >
+                    Withdraw
+                  </Button>
+                </div>
+              ) : null}
+            </div>
+          ))}
+          {!placeAssignmentContextQuery.data?.assignments?.length ? (
+            <p className="text-sm text-slate-500">No reviewed Place assignments yet.</p>
+          ) : null}
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="space-y-1 text-sm">
+            <span className="font-medium text-slate-700">Assignment target</span>
+            <select
+              className="h-10 w-full rounded-md border border-slate-300 bg-white px-3"
+              value={assignmentPhaseId}
+              onChange={event => setAssignmentPhaseId(event.target.value)}
+            >
+              <option value="">Entire Development</option>
+              {(placeAssignmentContextQuery.data?.phases ?? []).map(phase => (
+                <option key={phase.id} value={phase.id}>
+                  {phase.name} (phase {phase.phaseNumber})
+                </option>
+              ))}
+            </select>
+          </label>
+          <div>
+            <CanonicalPlaceSelector
+              value={assignmentPlace}
+              onChange={setAssignmentPlace}
+              purpose="search"
+              label="Canonical Place"
+              placeholder="Choose a searchable Place"
+              hint="The selected Place ID is stored; its label is display-only."
+            />
+          </div>
+        </div>
+        <label className="block space-y-1 text-sm">
+          <span className="font-medium text-slate-700">Review evidence reference</span>
+          <Input
+            value={assignmentEvidenceReference}
+            maxLength={1000}
+            onChange={event => setAssignmentEvidenceReference(event.target.value)}
+            placeholder="Document, source record, or internal evidence reference"
+          />
+        </label>
+        <div className="flex justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={reviewPlaceAssignmentMutation.isPending}
+            onClick={recordPlaceAssignment}
+          >
+            {reviewPlaceAssignmentMutation.isPending
+              ? 'Recording review…'
+              : 'Record reviewed Place assignment'}
+          </Button>
         </div>
       </div>
 

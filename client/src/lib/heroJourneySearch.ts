@@ -1,4 +1,3 @@
-import { normalizeLocationKey } from './locationUtils';
 import { type SearchFilters } from './urlUtils';
 import type { LocationNode } from '@/types/location';
 import {
@@ -9,6 +8,7 @@ import {
 } from './searchIntent';
 import { isBuyPropertyType, sanitizeBuySearchFilters } from '../../../shared/buySearchContract';
 import { isRentPropertyType, sanitizeRentSearchFilters } from '../../../shared/rentSearchContract';
+import { isCanonicalPlaceId } from '../../../shared/placeAuthority';
 import {
   HOMES_BUY_SELECTABLE_PROPERTY_TYPES,
   HOMES_RENT_SELECTABLE_PROPERTY_TYPES,
@@ -18,13 +18,8 @@ import {
   createCanonicalSearchLocation,
   journeyForTransactionType,
   type CanonicalSearchLocation,
-  type GeographySearchContext,
 } from './geographySearchHandoff';
-import {
-  createMultiLocationSearchScope,
-  type SearchAreaSummary,
-  type SearchScope,
-} from '../../../shared/searchScope';
+import type { SearchScope } from '../../../shared/searchScope';
 
 const BUY_PROPERTY_TYPE_LABELS: Record<
   (typeof HOMES_BUY_SELECTABLE_PROPERTY_TYPES)[number],
@@ -51,9 +46,6 @@ export interface PropertySearchInput {
   searchQuery?: string;
   selectedLocations?: readonly LocationNode[];
   searchScope?: SearchScope;
-  searchAreaAvailability?: SearchAreaSummary['availability'];
-  localityRefinementId?: string;
-  searchScopeContext?: GeographySearchContext;
   propertyType?: string;
   listingSource?: string;
   minPrice?: string | number;
@@ -67,7 +59,7 @@ export interface PropertySearchInput {
 }
 
 export interface DevelopmentsSearchInput {
-  selectedLocations?: readonly LocationNode[];
+  canonicalPlaceId?: string;
   developmentType?: string;
   developmentStatus?: string;
   minPrice?: string | number;
@@ -93,24 +85,11 @@ function haveCompatibleCanonicalParents(
 ): boolean {
   if (scopeKind === 'province') return true;
 
-  if (current.parentCanonicalLocationId && candidate.parentCanonicalLocationId) {
-    return current.parentCanonicalLocationId === candidate.parentCanonicalLocationId;
-  }
-
-  if (scopeKind === 'metro_city') {
-    const currentProvince = normalizeLocationKey(current.provinceSlug || '');
-    const candidateProvince = normalizeLocationKey(candidate.provinceSlug || '');
-    return !currentProvince || !candidateProvince || currentProvince === candidateProvince;
-  }
-
-  const currentCity = normalizeLocationKey(current.citySlug || '');
-  const candidateCity = normalizeLocationKey(candidate.citySlug || '');
-  const currentProvince = normalizeLocationKey(current.provinceSlug || '');
-  const candidateProvince = normalizeLocationKey(candidate.provinceSlug || '');
-  const citiesMatch = !currentCity || !candidateCity || currentCity === candidateCity;
-  const provincesMatch =
-    !currentProvince || !candidateProvince || currentProvince === candidateProvince;
-  return citiesMatch && provincesMatch;
+  return Boolean(
+    current.parentCanonicalPlaceId &&
+      candidate.parentCanonicalPlaceId &&
+      current.parentCanonicalPlaceId === candidate.parentCanonicalPlaceId,
+  );
 }
 
 /**
@@ -123,21 +102,15 @@ export function resolveCanonicalLocationSelection(
   candidate: LocationNode,
   maxLocations = 5,
 ): LocationSelectionResolution {
-  const currentLocations = selectedLocations.filter(location => location.type !== 'area');
+  const currentLocations = [...selectedLocations];
   const candidateSelection = addStructuredLocation(candidate);
 
   if (!candidateSelection) {
-    return {
-      locations: currentLocations.length > 0 ? [...currentLocations] : [candidate],
-      outcome: 'invalid',
-    };
+    return { locations: currentLocations, outcome: 'invalid' };
   }
 
   const candidateScope = candidateSelection.scope;
-  const candidateIdentity =
-    candidateScope.kind === 'search_area'
-      ? `search_area:${candidateScope.searchAreaId}`
-      : candidateScope.canonicalLocationId;
+  const candidateIdentity = candidateScope.canonicalPlaceId;
   const existingSelections = currentLocations.map(location => ({
     location,
     selection: addStructuredLocation(location),
@@ -146,12 +119,7 @@ export function resolveCanonicalLocationSelection(
   if (
     existingSelections.some(({ selection }) => {
       if (!selection) return false;
-      const scope = selection.scope;
-      const identity =
-        scope.kind === 'search_area'
-          ? `search_area:${scope.searchAreaId}`
-          : scope.canonicalLocationId;
-      return identity === candidateIdentity;
+      return selection.scope.canonicalPlaceId === candidateIdentity;
     })
   ) {
     return { locations: [...currentLocations], outcome: 'duplicate' };
@@ -243,10 +211,7 @@ function addSupportedRentFilters(input: PropertySearchInput, filters: SearchFilt
 }
 
 function addStructuredLocation(location: LocationNode): CanonicalSearchLocation | undefined {
-  const slug = normalizeLocationKey(location.slug || location.name);
-  if (!slug) return undefined;
-
-  return createCanonicalSearchLocation({ ...location, slug });
+  return createCanonicalSearchLocation(location);
 }
 
 function buildInvalidSearchUrl(transactionType: unknown, code: SearchIntentValidationCode): string {
@@ -266,9 +231,6 @@ export function buildPropertySearchUrl({
   searchQuery = '',
   selectedLocations = [],
   searchScope,
-  searchAreaAvailability,
-  localityRefinementId,
-  searchScopeContext,
   propertyType,
   listingSource,
   minPrice,
@@ -283,7 +245,7 @@ export function buildPropertySearchUrl({
   const journey = journeyForTransactionType(transactionType);
   if (!journey) return '/';
 
-  const locations = selectedLocations.filter(location => Boolean(location.slug || location.name));
+  const locations = selectedLocations;
   const filters: SearchFilters = {};
 
   const filterInput = {
@@ -305,45 +267,27 @@ export function buildPropertySearchUrl({
   }
 
   let canonicalSelection: CanonicalSearchLocation | undefined;
-  let multiLocationScope: SearchScope | undefined;
   if (locations.length > 0 && searchScope) {
-    return buildInvalidSearchUrl(transactionType, 'multiple-locations-unsupported');
+    return buildInvalidSearchUrl(transactionType, 'invalid-place-authority');
   } else if (locations.length > 1) {
-    const canonicalSelections = locations.map(addStructuredLocation);
-    const validSelections = canonicalSelections.filter(
-      (selection): selection is CanonicalSearchLocation => Boolean(selection),
-    );
-    if (validSelections.length !== canonicalSelections.length) {
-      return buildInvalidSearchUrl(transactionType, 'canonical-location-required');
-    }
-
-    multiLocationScope = createMultiLocationSearchScope(
-      validSelections.map(selection => selection.scope),
-    );
-    if (!multiLocationScope) {
-      return buildInvalidSearchUrl(transactionType, 'multiple-locations-unsupported');
-    }
+    return buildInvalidSearchUrl(transactionType, 'invalid-place-authority');
   } else if (locations.length > 0) {
     canonicalSelection = addStructuredLocation(locations[0]) || undefined;
     if (!canonicalSelection)
-      return buildInvalidSearchUrl(transactionType, 'canonical-location-required');
-  } else if (transactionType === 'for-sale' && searchQuery.trim()) {
-    return buildInvalidSearchUrl(transactionType, 'canonical-location-required');
+      return buildInvalidSearchUrl(transactionType, 'invalid-place-authority');
+  } else if (searchScope?.kind === 'multi_location') {
+    return buildInvalidSearchUrl(transactionType, 'invalid-place-authority');
   } else if (searchQuery.trim() && !searchScope) {
-    return buildInvalidSearchUrl(transactionType, 'canonical-location-required');
+    return buildInvalidSearchUrl(transactionType, 'invalid-place-authority');
   }
 
   return (
     buildTransactionalGeographyHref({
       journey,
-      scope: searchScope || multiLocationScope || canonicalSelection?.scope,
-      searchAreaAvailability,
-      localityRefinementId,
-      context: searchScopeContext || canonicalSelection?.context,
-      factualLocationId: canonicalSelection?.factualLocationId,
+      scope: searchScope || canonicalSelection?.scope,
       filters,
       resultState: { sort: 'relevance', page: 0 },
-    }) || '/'
+    }) || buildInvalidSearchUrl(transactionType, 'invalid-place-authority')
   );
 }
 
@@ -415,52 +359,19 @@ export function extractActiveSearchRefinementFilters(
  * and URL-owned refinement state consumed by /new-developments.
  */
 export function buildDevelopmentsSearchUrl({
-  selectedLocations = [],
+  canonicalPlaceId,
   developmentType,
   developmentStatus,
   minPrice,
   maxPrice,
 }: DevelopmentsSearchInput): string {
-  const locations = selectedLocations.filter(location => Boolean(location.slug || location.name));
-  const selections = locations.map(addStructuredLocation);
-  const validSelections = selections.filter((selection): selection is CanonicalSearchLocation =>
-    Boolean(selection),
-  );
-
-  if (validSelections.length !== locations.length || validSelections.length === 0) {
-    return '/new-developments?searchError=canonical-location-required';
+  if (!canonicalPlaceId || !isCanonicalPlaceId(canonicalPlaceId)) {
+    return '/new-developments?searchError=canonical-place-required';
   }
-
-  const geography: SearchIntent['geography'] = { level: 'country' };
-  if (validSelections.length === 1) {
-    const [selection] = validSelections;
-    if (selection.scope.kind === 'province') {
-      geography.level = 'province';
-    } else if (selection.scope.kind === 'metro_city') {
-      geography.level = 'city';
-    } else if (selection.scope.kind === 'locality') {
-      geography.level = 'suburb';
-    } else {
-      return '/new-developments?searchError=canonical-location-required';
-    }
-    geography.locationId = selection.scope.canonicalLocationId;
-    Object.assign(geography, selection.context);
-  } else {
-    const multiLocationScope = createMultiLocationSearchScope(
-      validSelections.map(selection => selection.scope),
-    );
-    if (!multiLocationScope || multiLocationScope.kind !== 'multi_location') {
-      return '/new-developments?searchError=canonical-location-required';
-    }
-    const canonicalIds = multiLocationScope.members
-      .filter(member => member.kind !== 'search_area')
-      .map(member => member.canonicalLocationId);
-    if (canonicalIds.length !== validSelections.length) {
-      return '/new-developments?searchError=canonical-location-required';
-    }
-    geography.level = 'multi_location';
-    geography.locationIds = canonicalIds;
-  }
+  const geography: SearchIntent['geography'] = {
+    level: 'canonical_place',
+    canonicalPlaceId,
+  };
 
   const filters: Record<string, unknown> = {};
   const normalizedType = String(developmentType || '')

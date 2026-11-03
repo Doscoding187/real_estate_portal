@@ -116,8 +116,8 @@ describe('activation-to-renewal continuity wiring', () => {
   it('aligns land and commercial-office custody with the canonical rule', () => {
     const capture = readRepoFile('server/services/publicLeadCaptureService.ts');
     expect(capture).toContain('isRecipientCommerciallyDeliverable');
-    expect(capture).toMatch(/landEligibility\.eligible/);
-    expect(capture).toMatch(/commercialEligibility\.eligible/);
+    expect(capture).toContain('LAND_CANONICAL_ASSIGNMENT_BLOCKER');
+    expect(capture).toContain('COMMERCIAL_CANONICAL_ASSIGNMENT_BLOCKER');
   });
 
   it('surfaces the already-computed proof metrics', () => {

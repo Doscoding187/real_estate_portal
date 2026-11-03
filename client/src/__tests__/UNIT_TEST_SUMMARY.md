@@ -34,7 +34,7 @@ This document summarizes the unit tests created for Task 34 of the Explore Front
 - ✅ Price range filtering
 - ✅ Bedroom/bathroom filtering
 - ✅ Category filtering
-- ✅ Location filtering
+- ✅ No free-text geography in filter state
 - ✅ Clear all filters
 - ✅ Filter count calculation
 - ✅ Null value handling
@@ -88,22 +88,7 @@ This document summarizes the unit tests created for Task 34 of the Explore Front
 
 ---
 
-## Additional Test Coverage
-
-### ✅ 5. URL Filter Sync (`useFilterUrlSync.test.ts`)
-**Location:** `client/src/hooks/__tests__/useFilterUrlSync.test.ts`
-
-**Coverage:**
-- ✅ Filter to URL synchronization
-- ✅ URL to filter synchronization
-- ✅ Query parameter encoding
-- ✅ History API integration
-
-**Requirements Validated:** 4.2, 11.7
-
----
-
-### ✅ 6. Common State Hook (`useExploreCommonState.test.ts`)
+### ✅ 5. Common State Hook (`useExploreCommonState.test.ts`)
 **Location:** `client/src/hooks/__tests__/useExploreCommonState.test.ts`
 
 **Coverage:**
@@ -116,7 +101,7 @@ This document summarizes the unit tests created for Task 34 of the Explore Front
 
 ---
 
-### ✅ 7. Image Preloading (`useImagePreload.test.ts`)
+### ✅ 6. Image Preloading (`useImagePreload.test.ts`)
 **Location:** `client/src/hooks/__tests__/useImagePreload.test.ts`
 
 **Coverage:**
@@ -128,7 +113,7 @@ This document summarizes the unit tests created for Task 34 of the Explore Front
 
 ---
 
-### ✅ 8. Video Preloading (`useVideoPreload.test.ts`)
+### ✅ 7. Video Preloading (`useVideoPreload.test.ts`)
 **Location:** `client/src/hooks/__tests__/useVideoPreload.test.ts`
 
 **Coverage:**
@@ -140,7 +125,7 @@ This document summarizes the unit tests created for Task 34 of the Explore Front
 
 ---
 
-### ✅ 9. Online Status (`useOnlineStatus.test.ts`)
+### ✅ 8. Online Status (`useOnlineStatus.test.ts`)
 **Location:** `client/src/hooks/__tests__/useOnlineStatus.test.ts`
 
 **Coverage:**
@@ -152,7 +137,7 @@ This document summarizes the unit tests created for Task 34 of the Explore Front
 
 ---
 
-### ✅ 10. Keyboard Navigation (`useKeyboardNavigation.test.ts`)
+### ✅ 9. Keyboard Navigation (`useKeyboardNavigation.test.ts`)
 **Location:** `client/src/hooks/__tests__/useKeyboardNavigation.test.ts`
 
 **Coverage:**
@@ -166,7 +151,7 @@ This document summarizes the unit tests created for Task 34 of the Explore Front
 
 ## Component Tests
 
-### ✅ 11. Error Boundary (`ErrorBoundary.test.tsx`)
+### ✅ 10. Error Boundary (`ErrorBoundary.test.tsx`)
 **Location:** `client/src/components/explore-discovery/__tests__/ErrorBoundary.test.tsx`
 
 **Coverage:**
@@ -178,7 +163,7 @@ This document summarizes the unit tests created for Task 34 of the Explore Front
 
 ---
 
-### ✅ 12. Empty State (`EmptyState.test.tsx`)
+### ✅ 11. Empty State (`EmptyState.test.tsx`)
 **Location:** `client/src/components/explore-discovery/__tests__/EmptyState.test.tsx`
 
 **Coverage:**
@@ -190,7 +175,7 @@ This document summarizes the unit tests created for Task 34 of the Explore Front
 
 ---
 
-### ✅ 13. Offline Indicator (`OfflineIndicator.test.tsx`)
+### ✅ 12. Offline Indicator (`OfflineIndicator.test.tsx`)
 **Location:** `client/src/components/explore-discovery/__tests__/OfflineIndicator.test.tsx`
 
 **Coverage:**
@@ -202,7 +187,7 @@ This document summarizes the unit tests created for Task 34 of the Explore Front
 
 ---
 
-### ✅ 14. Mobile Filter Bottom Sheet (`MobileFilterBottomSheet.test.tsx`)
+### ✅ 13. Mobile Filter Bottom Sheet (`MobileFilterBottomSheet.test.tsx`)
 **Location:** `client/src/components/explore-discovery/__tests__/MobileFilterBottomSheet.test.tsx`
 
 **Coverage:**
@@ -215,7 +200,7 @@ This document summarizes the unit tests created for Task 34 of the Explore Front
 
 ---
 
-### ✅ 15. Virtualized Feed (`VirtualizedFeed.test.tsx`)
+### ✅ 14. Virtualized Feed (`VirtualizedFeed.test.tsx`)
 **Location:** `client/src/components/explore-discovery/__tests__/VirtualizedFeed.test.tsx`
 
 **Coverage:**
@@ -227,7 +212,7 @@ This document summarizes the unit tests created for Task 34 of the Explore Front
 
 ---
 
-### ✅ 16. ARIA Compliance (`AriaCompliance.test.tsx`)
+### ✅ 15. ARIA Compliance (`AriaCompliance.test.tsx`)
 **Location:** `client/src/components/explore-discovery/__tests__/AriaCompliance.test.tsx`
 
 **Coverage:**
@@ -275,7 +260,6 @@ npm run test -- --run client/src/hooks/__tests__/useVideoPlayback.test.ts
 | useMapFeedSync | 90%+ | ✅ |
 | useThrottle | 100% | ✅ |
 | useDebounce | 100% | ✅ |
-| useFilterUrlSync | 85%+ | ✅ |
 | useExploreCommonState | 90%+ | ✅ |
 | useImagePreload | 85%+ | ✅ |
 | useVideoPreload | 85%+ | ✅ |

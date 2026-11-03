@@ -5,14 +5,11 @@ interface DiscoveryCacheContext {
   userId?: number;
 }
 
-type DiscoveryLocationFilter = NonNullable<DiscoveryQuery['location']>;
-
 interface DiscoveryFeedCacheKeyParts {
   userId: number | 'guest';
   mode: DiscoveryQuery['mode'];
   intent: DiscoveryQuery['intent'] | 'any';
-  locationType: DiscoveryLocationFilter['type'] | 'any';
-  locationId: number | 'any';
+  canonicalPlaceId: string | 'any';
   category: DiscoveryQuery['category'] | 'any';
   creatorActorId: number | 'any';
   contentType: DiscoveryQuery['contentType'] | 'any';
@@ -28,8 +25,7 @@ export function buildDiscoveryFeedCacheKey(
     userId: context.userId ?? 'guest',
     mode: query.mode,
     intent: query.intent ?? 'any',
-    locationType: query.location?.type ?? 'any',
-    locationId: query.location?.id ?? 'any',
+    canonicalPlaceId: query.canonicalPlaceId ?? 'any',
     category: query.category ?? 'any',
     creatorActorId: query.creatorActorId ?? 'any',
     contentType: query.contentType ?? 'any',

@@ -21,7 +21,6 @@ import {
 import { sql } from 'drizzle-orm';
 import { users } from './core';
 import { agents, agencies } from './agencies';
-import { locations, cities, provinces, suburbs } from './locations';
 import { developments, developerBrandProfiles } from './developments';
 import { cataloguePublishers } from './developerIdentity';
 import { place } from './placeAuthority';
@@ -102,12 +101,8 @@ export const listings = mysqlTable(
     updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
     publishedAt: timestamp({ mode: 'string' }),
     archivedAt: timestamp({ mode: 'string' }),
-    locationId: int('location_id'),
     /** A private canonical draft which revises a published listing. */
     revisionOfListingId: int('revision_of_listing_id'),
-    provinceId: int('province_id').references(() => provinces.id, { onDelete: 'set null' }),
-    cityId: int('city_id').references(() => cities.id, { onDelete: 'set null' }),
-    suburbId: int('suburb_id').references(() => suburbs.id, { onDelete: 'set null' }),
     privateAddress: json('private_address'),
     coordinateSource: mysqlEnum('coordinate_source', [
       'autocomplete',
@@ -131,11 +126,7 @@ export const listings = mysqlTable(
   },
   table => [
     index('idx_listings_place_id').on(table.placeId),
-    index('idx_listings_location_id').on(table.locationId),
     index('idx_listings_revision_of').on(table.revisionOfListingId),
-    index('idx_listings_province_id').on(table.provinceId),
-    index('idx_listings_city_id').on(table.cityId),
-    index('idx_listings_suburb_id').on(table.suburbId),
     index('idx_listings_canonical_place_id').on(table.canonicalPlaceId),
   ],
 );
@@ -326,9 +317,6 @@ export const properties = mysqlTable(
     zipCode: varchar({ length: 20 }),
     latitude: varchar({ length: 50 }),
     longitude: varchar({ length: 50 }),
-    provinceId: int().references(() => provinces.id, { onDelete: 'set null' }),
-    cityId: int().references(() => cities.id, { onDelete: 'set null' }),
-    suburbId: int().references(() => suburbs.id, { onDelete: 'set null' }),
     locationText: text(),
     placeId: varchar({ length: 255 }),
     amenities: text(),
@@ -353,7 +341,6 @@ export const properties = mysqlTable(
     mainImage: varchar({ length: 1024 }),
     createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
-    locationId: int('location_id').references(() => locations.id, { onDelete: 'set null' }),
     developerBrandProfileId: int('developer_brand_profile_id').references(
       () => developerBrandProfiles.id,
       { onDelete: 'set null' },
@@ -389,14 +376,9 @@ export const properties = mysqlTable(
     index('listing_type_idx').on(table.listingType),
     index('bedrooms_idx').on(table.bedrooms),
     index('bathrooms_idx').on(table.bathrooms),
-    index('idx_properties_cityId').on(table.cityId),
-    index('idx_properties_suburbId').on(table.suburbId),
-    index('idx_properties_cityId_status').on(table.cityId, table.status),
-    index('idx_properties_cityId_area').on(table.cityId, table.area),
     index('idx_properties_internal_area_m2').on(table.internalAreaM2),
     index('idx_properties_erf_size_m2').on(table.erfSizeM2),
     index('idx_properties_land_area_m2').on(table.landAreaM2),
-    index('idx_properties_location_id').on(table.locationId),
     index('idx_properties_sourceListingId').on(table.sourceListingId),
     index('idx_properties_canonical_place_id').on(table.canonicalPlaceId),
   ],

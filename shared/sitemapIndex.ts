@@ -8,7 +8,7 @@ export const SITEMAP_INDEX_CHILDREN = [
   '/sitemap-developments.xml',
   '/sitemap-agents.xml',
   '/sitemap-static.xml',
-  '/sitemap-guides.xml',
+  '/sitemap-places.xml',
 ] as const;
 
 export type SitemapIndexChild = (typeof SITEMAP_INDEX_CHILDREN)[number];

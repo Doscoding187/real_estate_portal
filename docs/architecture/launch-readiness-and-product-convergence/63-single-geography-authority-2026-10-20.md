@@ -6,6 +6,19 @@
 **Type:** Architecture decision, retirement inventory and the first consumer switch. No schema,
 migration, seed, fixture or protected database operation in this packet.
 
+## Superseding pre-launch direction — 2026-10-27
+
+Edward confirmed that the application is still pre-launch and should have one executable
+geography path: the canonical Place Authority. Retire the legacy geography routes, consumers,
+runtime projections, tables and code as part of the cutover; do not preserve compatibility
+aliases, redirects, fallback matching or parallel geography reads. This supersedes the staged
+retirement recommendation below. The canonical Place ID is the only geography match key;
+display labels remain presentation data. Development geography is available only through a
+reviewed assignment and may be null until assigned.
+
+The 2026-10-27 application cutover authors the required canonical schema and retirement
+migrations but does not apply them. Database release remains a separately governed operation.
+
 ## Founder directive
 
 Edward's instruction of 2026-10-20:

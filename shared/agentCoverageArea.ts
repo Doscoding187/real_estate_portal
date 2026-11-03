@@ -1,55 +1,30 @@
-import {
-  encodeCanonicalLocationId,
-  parseCanonicalLocationId,
-  type CanonicalLocationLevel,
-} from './locationAuthority';
+import { isCanonicalPlaceId } from './placeAuthority';
 
 /** Agent onboarding and settings must mirror the product's bounded coverage selector. */
 export const AGENT_COVERAGE_AREA_MAX = 20;
 
 /**
- * New writes use the colon form only. The location authority still accepts a
- * hyphenated alias for legacy URL reads, but an agent coverage claim is not a
- * URL and must never persist that alias as a second spelling of one place.
+ * Agent coverage stores admitted Place identities. Historical numeric location
+ * handles are no longer parsed or resolved.
  */
-export const CANONICAL_AGENT_COVERAGE_LOCATION_ID_PATTERN = /^(province|city|suburb):[1-9]\d*$/;
+export const CANONICAL_AGENT_COVERAGE_PLACE_ID_PATTERN = /^pl-place-01-[a-f0-9]{24}$/;
 
 export type AgentCoverageArea = Readonly<{
-  canonicalLocationId: string;
+  canonicalPlaceId: string;
   /** Display-only text generated from the canonical hierarchy by the server. */
   label: string;
 }>;
 
-function normalizeCoverageLocationId(value: unknown): string | null {
-  if (typeof value !== 'string') return null;
-  const trimmed = value.trim();
-  if (!CANONICAL_AGENT_COVERAGE_LOCATION_ID_PATTERN.test(trimmed)) return null;
-
-  const parsed = parseCanonicalLocationId(trimmed);
-  if (!parsed) return null;
-
-  const canonical = encodeCanonicalLocationId(parsed.level, parsed.id);
-  return trimmed === canonical ? canonical : null;
-}
-
-export function parseCanonicalAgentCoverageLocationId(value: unknown): {
-  canonicalLocationId: string;
-  level: CanonicalLocationLevel;
-  id: number;
+export function parseCanonicalAgentCoveragePlaceId(value: unknown): {
+  canonicalPlaceId: string;
 } | null {
-  const canonicalLocationId = normalizeCoverageLocationId(value);
-  if (!canonicalLocationId) return null;
-
-  const parsed = parseCanonicalLocationId(canonicalLocationId);
-  if (!parsed) return null;
-
-  return { canonicalLocationId, ...parsed };
+  return isCanonicalPlaceId(value) ? { canonicalPlaceId: value } : null;
 }
 
 function isCoverageArea(value: unknown): value is AgentCoverageArea {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const record = value as Record<string, unknown>;
-  const canonical = parseCanonicalAgentCoverageLocationId(record.canonicalLocationId);
+  const canonical = parseCanonicalAgentCoveragePlaceId(record.canonicalPlaceId);
   const label = typeof record.label === 'string' ? record.label.trim() : '';
 
   return Boolean(canonical && label && label.length <= 500);
@@ -57,7 +32,7 @@ function isCoverageArea(value: unknown): value is AgentCoverageArea {
 
 /**
  * Read only the current persisted representation. Earlier comma-separated and
- * bare-string JSON values cannot identify one canonical location, so they are
+ * bare-string JSON values cannot identify one canonical Place, so they are
  * deliberately unavailable rather than guessed or silently widened.
  */
 export function parseAgentCoverageAreas(value: unknown): AgentCoverageArea[] {
@@ -76,12 +51,12 @@ export function parseAgentCoverageAreas(value: unknown): AgentCoverageArea[] {
   const seen = new Set<string>();
   for (const item of parsed) {
     if (!isCoverageArea(item)) return [];
-    const canonical = parseCanonicalAgentCoverageLocationId(item.canonicalLocationId);
+    const canonical = parseCanonicalAgentCoveragePlaceId(item.canonicalPlaceId);
     if (!canonical) return [];
-    if (seen.has(canonical.canonicalLocationId)) continue;
-    seen.add(canonical.canonicalLocationId);
+    if (seen.has(canonical.canonicalPlaceId)) continue;
+    seen.add(canonical.canonicalPlaceId);
     areas.push({
-      canonicalLocationId: canonical.canonicalLocationId,
+      canonicalPlaceId: canonical.canonicalPlaceId,
       label: item.label.trim(),
     });
   }
@@ -103,13 +78,13 @@ export function serializeAgentCoverageAreas(areas: readonly AgentCoverageArea[])
   const seen = new Set<string>();
   for (const area of areas) {
     if (!isCoverageArea(area)) {
-      throw new Error('Agent coverage must use canonical locations selected from Property Listify.');
+      throw new Error('Agent coverage must use canonical Places selected from Property Listify.');
     }
-    const canonical = parseCanonicalAgentCoverageLocationId(area.canonicalLocationId);
-    if (!canonical || seen.has(canonical.canonicalLocationId)) continue;
-    seen.add(canonical.canonicalLocationId);
+    const canonical = parseCanonicalAgentCoveragePlaceId(area.canonicalPlaceId);
+    if (!canonical || seen.has(canonical.canonicalPlaceId)) continue;
+    seen.add(canonical.canonicalPlaceId);
     canonicalAreas.push({
-      canonicalLocationId: canonical.canonicalLocationId,
+      canonicalPlaceId: canonical.canonicalPlaceId,
       label: area.label.trim(),
     });
   }

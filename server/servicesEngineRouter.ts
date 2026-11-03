@@ -21,6 +21,7 @@ import {
 import { getDb } from './db';
 import { SERVICE_PROVIDER_REVIEW_REPORT_REASON_VALUES, users } from '../drizzle/schema';
 import { eq } from 'drizzle-orm';
+import { isCanonicalPlaceId } from '../shared/placeAuthority';
 
 const serviceCategorySchema = z.enum([
   'home_improvement',
@@ -332,21 +333,19 @@ export const servicesEngineRouter = router({
 
   replaceProviderLocations: protectedProcedure
     .input(
-      z.object({
-        locations: z.array(
-          z.object({
-            id: z.number().int().positive().optional(),
-            province: z.string().trim().max(120).optional(),
-
-            city: z.string().trim().max(120).optional(),
-            suburb: z.string().trim().max(120).optional(),
-            countryCode: z.string().trim().max(2).optional(),
-            postalCode: z.string().trim().max(20).optional(),
-            radiusKm: z.number().int().min(1).max(250).optional(),
-            isPrimary: z.boolean().optional(),
-          }),
-        ),
-      }),
+      z
+        .object({
+          locations: z.array(
+            z
+              .object({
+                id: z.number().int().positive().optional(),
+                canonicalPlaceId: z.string().trim().max(40).refine(isCanonicalPlaceId),
+                isPrimary: z.boolean().optional(),
+              })
+              .strict(),
+          ),
+        })
+        .strict(),
     )
     .mutation(async ({ ctx, input }) => {
       const user = requireUser(ctx);
@@ -442,19 +441,19 @@ export const servicesEngineRouter = router({
 
   directorySearch: publicProcedure
     .input(
-      z.object({
-        query: z.string().trim().max(160).optional(),
-        category: serviceCategorySchema.optional(),
-        serviceCode: serviceCodeSchema.optional(),
-        province: z.string().trim().max(120).optional(),
-        city: z.string().trim().max(120).optional(),
-        suburb: z.string().trim().max(120).optional(),
-        minPrice: z.number().int().min(0).max(100_000_000).optional(),
-        maxPrice: z.number().int().min(0).max(100_000_000).optional(),
-        availability: z.enum(['accepting', 'any']).optional(),
-        sort: z.enum(['relevance', 'rating', 'name']).optional(),
-        limit: z.number().int().min(1).max(50).optional(),
-      }),
+      z
+        .object({
+          query: z.string().trim().max(160).optional(),
+          category: serviceCategorySchema.optional(),
+          serviceCode: serviceCodeSchema.optional(),
+          canonicalPlaceId: z.string().trim().max(40).refine(isCanonicalPlaceId).optional(),
+          minPrice: z.number().int().min(0).max(100_000_000).optional(),
+          maxPrice: z.number().int().min(0).max(100_000_000).optional(),
+          availability: z.enum(['accepting', 'any']).optional(),
+          sort: z.enum(['relevance', 'rating', 'name']).optional(),
+          limit: z.number().int().min(1).max(50).optional(),
+        })
+        .strict(),
     )
     .query(({ input }) => servicesEngineService.publicDirectorySearch(input)),
 
@@ -700,20 +699,12 @@ export const servicesEngineRouter = router({
           propertyId: z.number().int().positive().optional(),
           listingId: z.number().int().positive().optional(),
           developmentId: z.number().int().positive().optional(),
-          province: z.string().trim().max(120).optional(),
-          city: z.string().trim().max(120).optional(),
-          suburb: z.string().trim().max(120).optional(),
+          canonicalPlaceId: z.string().trim().max(40).refine(isCanonicalPlaceId),
           notes: z.string().trim().min(1).max(3000),
           serviceCode: serviceCodeSchema,
           context: serviceRequestContextSchema.optional(),
         })
-        .refine(
-          data => Boolean(data.suburb?.trim() || data.city?.trim() || data.province?.trim()),
-          {
-            message: 'A request area is required',
-            path: ['city'],
-          },
-        ),
+        .strict(),
     )
 
     .mutation(async ({ ctx, input }) => {
@@ -738,9 +729,7 @@ export const servicesEngineRouter = router({
           propertyId: input.propertyId ?? null,
           listingId: input.listingId ?? null,
           developmentId: input.developmentId ?? null,
-          province: input.province ?? null,
-          city: input.city ?? null,
-          suburb: input.suburb ?? null,
+          canonicalPlaceId: input.canonicalPlaceId,
           notes: input.notes,
           serviceCode: input.serviceCode,
           context: input.context ?? null,

@@ -60,7 +60,6 @@ export class DatabaseTargetMismatchError extends Error {
 const SQL_CONNECTION_OPERATIONS: readonly DatabaseOperation[] = [
   'ci-identity-bootstrap',
   'inspection-identity-provision',
-  'tidb-source-reader-provision',
   'migration-identity-provision',
   'runtime-identities-provision',
   'runtime-ledger-read-grant',
@@ -116,22 +115,10 @@ async function verifySelectedTarget(
 export async function createAuthoritySqlConnection(
   authority: ResolvedDatabaseAuthority,
   decision: AuthorizedDatabaseOperation,
-  options: { preserveTiDbArchiveTypes?: true } = {},
 ): Promise<AuthoritySqlConnection> {
   assertAuthorizedDatabaseOperation(authority, decision, SQL_CONNECTION_OPERATIONS);
-  if (
-    options.preserveTiDbArchiveTypes &&
-    (authority.context.operation !== 'read-only-connect' ||
-      authority.context.credentialClass !== 'read-only' ||
-      authority.context.targetFingerprintHash !==
-        '68f2582a6dc7af8c54cf6f31a396e8abe4c4030696c923b0ea3b1679ba6f5b5e')
-  ) {
-    throw new Error(
-      'Source archive connection refused: exact TiDB source and read-only credential required.',
-    );
-  }
-  if (authority.context.dialect !== 'mysql') {
-    throw new Error('Database connection refused: only the approved MySQL dialect is supported.');
+  if (authority.context.provider !== 'mysql' || authority.context.dialect !== 'mysql') {
+    throw new Error('Database connection refused: only the canonical MySQL provider is supported.');
   }
   const databaseUrl = readDatabaseCredentialUrl(authority.credential);
   try {
@@ -139,9 +126,6 @@ export async function createAuthoritySqlConnection(
     const connection = await mysql.createConnection({
       ...config,
       timezone: 'Z',
-      ...(options.preserveTiDbArchiveTypes
-        ? { dateStrings: true, supportBigNumbers: true, bigNumberStrings: true, jsonStrings: true }
-        : {}),
     });
     const wrapped: AuthoritySqlConnection = {
       // Each readiness sweep owns a fresh connection. Preparing its static reads
@@ -177,8 +161,8 @@ export async function createAuthorityRuntimePool(
   decision: AuthorizedDatabaseOperation,
 ): Promise<AuthorityRuntimePool> {
   assertAuthorizedDatabaseOperation(authority, decision, ['runtime-connect', 'worker-connect']);
-  if (authority.context.dialect !== 'mysql') {
-    throw new Error('Runtime connection refused: only the approved MySQL dialect is supported.');
+  if (authority.context.provider !== 'mysql' || authority.context.dialect !== 'mysql') {
+    throw new Error('Runtime connection refused: only the canonical MySQL provider is supported.');
   }
   const databaseUrl = readDatabaseCredentialUrl(authority.credential);
   let pool: mysql.Pool | undefined;

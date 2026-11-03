@@ -17,6 +17,7 @@ import { developments } from './developments';
 import { exploreContent } from './explore';
 import { partners } from './partners';
 import { listings, properties } from './listings';
+import { place } from './placeAuthority';
 
 export const SERVICE_PROVIDER_MODERATION_TIER_VALUES = ['basic', 'verified', 'pro'] as const;
 export const SERVICE_PROVIDER_SUBSCRIPTION_TIER_VALUES = [
@@ -150,20 +151,16 @@ export const serviceProviderLocations = mysqlTable(
     providerId: int('provider_id')
       .notNull()
       .references(() => partners.id, { onDelete: 'cascade' }),
-    countryCode: varchar('country_code', { length: 2 }).default('ZA').notNull(),
-    province: varchar('province', { length: 120 }),
-    city: varchar('city', { length: 120 }),
-    suburb: varchar('suburb', { length: 120 }),
-    postalCode: varchar('postal_code', { length: 20 }),
-    latitude: decimal('latitude', { precision: 10, scale: 8 }),
-    longitude: decimal('longitude', { precision: 11, scale: 8 }),
-    radiusKm: int('radius_km').default(25).notNull(),
+    canonicalPlaceId: varchar('canonical_place_id', { length: 40 }).references(
+      () => place.placeId,
+      { onDelete: 'restrict', onUpdate: 'restrict' },
+    ),
     isPrimary: tinyint('is_primary').default(0).notNull(),
     createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   },
   table => [
     index('idx_service_provider_locations_provider').on(table.providerId),
-    index('idx_service_provider_locations_geo').on(table.province, table.city, table.suburb),
+    index('idx_service_provider_locations_canonical_place').on(table.canonicalPlaceId),
   ],
 );
 
@@ -301,9 +298,10 @@ export const serviceLeads = mysqlTable(
     developmentId: int('development_id').references(() => developments.id, {
       onDelete: 'set null',
     }),
-    geoProvince: varchar('geo_province', { length: 120 }),
-    geoCity: varchar('geo_city', { length: 120 }),
-    geoSuburb: varchar('geo_suburb', { length: 120 }),
+    canonicalPlaceId: varchar('canonical_place_id', { length: 40 }).references(
+      () => place.placeId,
+      { onDelete: 'restrict', onUpdate: 'restrict' },
+    ),
     notes: text('notes'),
     contextJson: json('context_json'),
     status: mysqlEnum('status', SERVICE_LEAD_STATUS_VALUES as unknown as [string, ...string[]])
@@ -319,6 +317,7 @@ export const serviceLeads = mysqlTable(
   },
   table => [
     unique('ux_service_leads_request_id').on(table.requestId),
+    index('idx_service_leads_canonical_place').on(table.canonicalPlaceId),
     index('idx_service_leads_provider').on(table.providerId),
     index('idx_service_leads_status').on(table.status),
     index('idx_service_leads_source').on(table.sourceSurface),

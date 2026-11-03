@@ -39,6 +39,10 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
+  CanonicalPlaceSelector,
+  type CanonicalPlaceSelection,
+} from '@/components/location/CanonicalPlaceSelector';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -92,9 +96,7 @@ type ProspectForm = {
   email: string;
   phone: string;
   propertyAddress: string;
-  suburb: string;
-  city: string;
-  province: string;
+  place: CanonicalPlaceSelection | null;
   propertyType: string;
   source: string;
   canvassingMethod: (typeof METHODS)[number];
@@ -109,9 +111,7 @@ const emptyProspectForm = (): ProspectForm => ({
   email: '',
   phone: '',
   propertyAddress: '',
-  suburb: '',
-  city: '',
-  province: '',
+  place: null,
   propertyType: '',
   source: '',
   canvassingMethod: 'door_knocking',
@@ -162,7 +162,7 @@ function formatLocalDateTimeInput(value?: string | Date | null) {
 }
 
 function locationLabel(prospect: any) {
-  return [prospect.propertyAddress, prospect.suburb, prospect.city, prospect.province]
+  return [prospect.propertyAddress, prospect.canonicalPlaceLabel]
     .filter(Boolean)
     .join(', ');
 }
@@ -194,8 +194,8 @@ export function CanvassingWorkspace({ mode, onNavigate }: CanvassingWorkspacePro
   const isManager = mode === 'agency';
   const [search, setSearch] = useState('');
   const [stage, setStage] = useState('all');
-  const [city, setCity] = useState('');
-  const [suburb, setSuburb] = useState('');
+  const [draftPlaceFilter, setDraftPlaceFilter] = useState<CanonicalPlaceSelection | null>(null);
+  const [placeFilter, setPlaceFilter] = useState<CanonicalPlaceSelection | null>(null);
   const [followUpStatus, setFollowUpStatus] = useState<'all' | 'scheduled' | 'overdue' | 'none'>(
     'all',
   );
@@ -218,8 +218,7 @@ export function CanvassingWorkspace({ mode, onNavigate }: CanvassingWorkspacePro
       stage: stage as any,
       agentId: isManager && agentFilter !== 'all' ? Number(agentFilter) : undefined,
       search: search || undefined,
-      city: city || undefined,
-      suburb: suburb || undefined,
+      canonicalPlaceId: placeFilter?.canonicalPlaceId,
       followUpStatus,
       limit: 100,
     },
@@ -340,9 +339,7 @@ export function CanvassingWorkspace({ mode, onNavigate }: CanvassingWorkspacePro
       email: form.email || undefined,
       phone: form.phone || undefined,
       propertyAddress: form.propertyAddress || undefined,
-      suburb: form.suburb || undefined,
-      city: form.city || undefined,
-      province: form.province || undefined,
+      canonicalPlaceId: form.place?.canonicalPlaceId ?? null,
       propertyType: form.propertyType ? (form.propertyType as any) : undefined,
       source: form.source || undefined,
       canvassingMethod: form.canvassingMethod,
@@ -439,7 +436,7 @@ export function CanvassingWorkspace({ mode, onNavigate }: CanvassingWorkspacePro
             <Input
               value={search}
               onChange={event => setSearch(event.target.value)}
-              placeholder="Search seller, address, area, or phone"
+              placeholder="Search seller, address, or phone"
               className="pl-9"
             />
           </div>
@@ -468,9 +465,46 @@ export function CanvassingWorkspace({ mode, onNavigate }: CanvassingWorkspacePro
               </SelectContent>
             </Select>
           ) : <div className="hidden lg:block" />}
-          <div className="flex gap-2">
-            <Input value={city} onChange={event => setCity(event.target.value)} placeholder="City" />
-            <Input value={suburb} onChange={event => setSuburb(event.target.value)} placeholder="Area" />
+          <div>
+            <CanonicalPlaceSelector
+              value={draftPlaceFilter}
+              onChange={setDraftPlaceFilter}
+              purpose="search"
+              label="Filter by Place"
+              placeholder="Search and select one Place"
+              hint="Matches this selected Place ID exactly."
+            />
+            <div className="mt-2 flex gap-2">
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setPlaceFilter(draftPlaceFilter)}
+                disabled={
+                  !draftPlaceFilter ||
+                  draftPlaceFilter.canonicalPlaceId === placeFilter?.canonicalPlaceId
+                }
+              >
+                Apply Place filter
+              </Button>
+              {placeFilter && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setDraftPlaceFilter(null);
+                    setPlaceFilter(null);
+                  }}
+                >
+                  Clear filter
+                </Button>
+              )}
+            </div>
+            {placeFilter && (
+              <p className="mt-1 text-xs text-slate-500">
+                Active Place filter: {placeFilter.label}
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -745,10 +779,17 @@ function CreateProspectDialog({
             <Field label="Source"><Input value={form.source} onChange={event => update('source', event.target.value)} placeholder="e.g. Door-to-door, referral" /></Field>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Property address, suburb, or city" className="sm:col-span-2"><Input value={form.propertyAddress} onChange={event => update('propertyAddress', event.target.value)} placeholder="Target property or address" /></Field>
-            <Field label="Suburb"><Input value={form.suburb} onChange={event => update('suburb', event.target.value)} placeholder="e.g. Sandton" /></Field>
-            <Field label="City"><Input value={form.city} onChange={event => update('city', event.target.value)} placeholder="e.g. Johannesburg" /></Field>
-            <Field label="Province"><Input value={form.province} onChange={event => update('province', event.target.value)} placeholder="e.g. Gauteng" /></Field>
+            <Field label="Property address" className="sm:col-span-2"><Input value={form.propertyAddress} onChange={event => update('propertyAddress', event.target.value)} placeholder="Street address or property identifier" /></Field>
+            <div className="sm:col-span-2">
+              <CanonicalPlaceSelector
+                value={form.place}
+                onChange={place => setForm(current => ({ ...current, place }))}
+                purpose="authoring"
+                label="Property Place"
+                placeholder="Search for an approved city, suburb or locality"
+                hint="The selected Place ID is the location identity; its label is display-only."
+              />
+            </div>
             <Field label="Property type">
               <Select value={form.propertyType || 'unknown'} onValueChange={value => update('propertyType', value === 'unknown' ? '' : value)}>
                 <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>

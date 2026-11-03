@@ -1,37 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { getDbMock, publishedCityGuides, publishedProvinceGuides, publishedSuburbGuidePaths } =
-  vi.hoisted(() => ({
-    getDbMock: vi.fn(),
-    publishedCityGuides: [] as Array<{ provinceSlug: string; slug: string }>,
-    publishedProvinceGuides: [] as Array<{ slug: string }>,
-    publishedSuburbGuidePaths: [] as string[],
-  }));
+const { getDbMock } = vi.hoisted(() => ({ getDbMock: vi.fn() }));
 
 vi.mock('../db-connection', () => ({
   getDb: getDbMock,
 }));
 
-vi.mock('../../shared/cityGuideContent', () => ({
-  getPublishedCityGuides: () => publishedCityGuides,
-  getCityGuideContent: () => undefined,
-}));
-
-vi.mock('../../shared/provinceGuideContent', () => ({
-  getPublishedProvinceGuides: () => publishedProvinceGuides,
-}));
-
-vi.mock('../../shared/suburbGuidePolicy', () => ({
-  getPublishedSuburbGuidePaths: () => publishedSuburbGuidePaths,
-}));
-
 import sitemapRouter from '../routes/sitemap';
+import { SITEMAP_INDEX_CHILDREN } from '../../shared/sitemapIndex';
+import { publishedCanonicalPlaceUrls } from '../services/canonicalPlaceUrlService';
 
-beforeEach(() => {
-  publishedCityGuides.length = 0;
-  publishedProvinceGuides.length = 0;
-  publishedSuburbGuidePaths.length = 0;
-});
+beforeEach(() => vi.clearAllMocks());
 
 function makeFakeDb(rows: Array<Record<string, unknown>>) {
   const db = {
@@ -66,7 +45,7 @@ function makeRes(capture: SendCapture) {
   return res;
 }
 
-async function requestAgentsSitemap(
+async function requestSitemap(
   rows: Array<Record<string, unknown>>,
   path = '/sitemap-agents.xml',
 ): Promise<SendCapture> {
@@ -117,7 +96,7 @@ async function requestAgentsSitemap(
 
 describe('agents sitemap contract', () => {
   it('enumerates approved agent presence slugs', async () => {
-    const capture = await requestAgentsSitemap([
+    const capture = await requestSitemap([
       { id: 33, slug: 'amina-nkosi-33', updatedAt: '2026-08-01 10:00:00' },
       { id: 34, slug: null, updatedAt: '2026-08-02 09:00:00' },
     ]);
@@ -130,48 +109,37 @@ describe('agents sitemap contract', () => {
   });
 
   it('emits an empty urlset when no approved agents exist', async () => {
-    const capture = await requestAgentsSitemap([]);
+    const capture = await requestSitemap([]);
     expect(String(capture.body)).toContain('<urlset');
     expect(String(capture.body)).not.toContain('<loc>');
   });
 });
 
-describe('province editorial sitemap readiness', () => {
-  it('registers a guide sitemap without depending on inventory', async () => {
-    const capture = await requestAgentsSitemap([], '/sitemap.xml');
-    expect(capture.body).toContain('/sitemap-guides.xml');
+describe('canonical Place sitemap', () => {
+  it('registers one Place sitemap in the public index', async () => {
+    const capture = await requestSitemap([], '/sitemap.xml');
+    expect(capture.body).toContain('/sitemap-places.xml');
+    expect(capture.body).not.toContain('/sitemap-guides.xml');
     expect(getDbMock).not.toHaveBeenCalled();
   });
-  it('excludes local review drafts instead of publishing every verified place', async () => {
-    const capture = await requestAgentsSitemap([], '/sitemap-guides.xml');
+
+  it('lists only active, verified Places admitted for publication', async () => {
+    const capture = await requestSitemap([], '/sitemap-places.xml');
     expect(capture.body).toContain('<urlset');
-    // The national entry is always published; no place guide is listed while none is published.
     expect(capture.body).toContain('<loc>https://www.propertylistifysa.co.za/south-africa</loc>');
-    expect(capture.body).not.toContain('/gauteng<');
-    expect(capture.body).not.toContain('/johannesburg');
+    for (const entry of publishedCanonicalPlaceUrls()) {
+      expect(capture.body).toContain(
+        `<loc>https://www.propertylistifysa.co.za${entry.path}</loc>`,
+      );
+    }
+    expect(capture.body).not.toContain('/sitemap-guides.xml');
     expect(getDbMock).not.toHaveBeenCalled();
-  });
-  it('lists a published province guide without requiring inventory', async () => {
-    publishedProvinceGuides.push({ slug: 'gauteng' });
-    const capture = await requestAgentsSitemap([], '/sitemap-guides.xml');
-    expect(capture.body).toContain('<loc>https://www.propertylistifysa.co.za/gauteng</loc>');
-    expect(getDbMock).not.toHaveBeenCalled();
-  });
-});
-
-describe('city editorial sitemap readiness', () => {
-  it('no longer advertises the transactional geography sitemap', async () => {
-    const capture = await requestAgentsSitemap([], '/sitemap.xml');
-    expect(capture.body).toContain('/sitemap-guides.xml');
-    expect(capture.body).not.toContain('/sitemap-areas.xml');
   });
 
-  it('lists published city guides without requiring inventory', async () => {
-    publishedCityGuides.push({ provinceSlug: 'gauteng', slug: 'johannesburg' });
-    const capture = await requestAgentsSitemap([], '/sitemap-guides.xml');
-    expect(capture.body).toContain(
-      '<loc>https://www.propertylistifysa.co.za/gauteng/johannesburg</loc>',
-    );
-    expect(getDbMock).not.toHaveBeenCalled();
+  it('keeps the static sitemap index synchronized with the runtime index', async () => {
+    const capture = await requestSitemap([], '/sitemap.xml');
+    const children = [...String(capture.body).matchAll(/<loc>[^<]+\/(sitemap[^<]+\.xml)<\/loc>/g)]
+      .map(match => `/${match[1]}`);
+    expect(children).toEqual([...SITEMAP_INDEX_CHILDREN]);
   });
 });

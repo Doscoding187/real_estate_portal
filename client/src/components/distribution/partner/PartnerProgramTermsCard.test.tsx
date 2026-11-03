@@ -17,8 +17,7 @@ vi.mock('@/lib/trpc', () => ({
 const itemFixture: ProgramTermsItem = {
   developmentId: 41,
   developmentName: 'Sky City',
-  city: 'Johannesburg',
-  province: 'Gauteng',
+  locationLabels: ['Johannesburg'],
   brand: {
     cataloguePublisherId: 17,
     brandName: 'Cosmopolitan Projects',

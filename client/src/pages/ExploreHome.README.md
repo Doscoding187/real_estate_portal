@@ -158,7 +158,6 @@ Content sections are fetched based on user preferences:
 ```typescript
 const { sections, isLoading } = usePersonalizedContent({
   categoryId: selectedCategoryId ?? undefined,
-  location: userLocation,
 });
 ```
 

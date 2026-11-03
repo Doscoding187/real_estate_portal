@@ -12,6 +12,7 @@ import {
   assertDistributionReferrerActivityDemoUnitTypes,
   assertDistributionReferrerActivityDependency,
   assertDistributionReferrerActivityDevelopment,
+  assertDistributionReferrerActivityManagerIdentity,
   assertDistributionReferrerActivityPreviewTarget,
   assertDistributionReferrerActivityViewing,
   classifyDistributionReferrerActivityDeal,
@@ -22,6 +23,7 @@ import {
   classifyDistributionReferrerActivityDemoPartnership,
   classifyDistributionReferrerActivityDemoProgram,
   classifyDistributionReferrerActivityDemoPublisher,
+  classifyDistributionReferrerActivityManagerIdentity,
   classifyDistributionReferrerActivityDevelopment,
   classifyDistributionReferrerActivityManager,
   classifyDistributionReferrerActivityProgram,
@@ -70,7 +72,19 @@ const expectedManager = {
   name: 'Preview Sales Manager',
   firstName: 'Preview',
   lastName: 'Manager',
+  loginMethod: 'email',
+  emailVerified: 1,
   role: 'visitor',
+  onboarding_complete: 1,
+  onboarding_step: 0,
+};
+
+const expectedManagerIdentity = {
+  id: 1601,
+  user_id: 601,
+  identity_type: 'manager',
+  active: 1,
+  display_name: 'Preview Sales Manager',
 };
 
 const expectedDevelopment = {
@@ -368,7 +382,7 @@ const demoIntakePolicy = {
 describe('Distribution referrer activity preview adapter', () => {
   it('declares a versioned dashboard sample-activity plus governed demo fixture without touching grants', () => {
     expect(DISTRIBUTION_REFERRER_ACTIVITY_PREVIEW_VERSION).toBe(
-      'distribution-referrer-activity-preview-v5',
+      'distribution-referrer-activity-preview-v6',
     );
     expect(DISTRIBUTION_REFERRER_ACTIVITY_PREVIEW_DIGEST).toMatch(/^[a-f0-9]{64}$/);
     const source = readFileSync(
@@ -454,6 +468,24 @@ describe('Distribution referrer activity preview adapter', () => {
         email: 'someone-else@listify.local',
       }),
     ).toThrow('manager email');
+  });
+
+  it('creates or reuses only the active manager identity for the sample manager account', () => {
+    expect(classifyDistributionReferrerActivityManagerIdentity(null, 601)).toEqual({
+      state: 'created',
+    });
+    expect(
+      classifyDistributionReferrerActivityManagerIdentity(expectedManagerIdentity, 601),
+    ).toEqual({ state: 'reused' });
+    expect(() =>
+      assertDistributionReferrerActivityManagerIdentity(expectedManagerIdentity, 601),
+    ).not.toThrow();
+    expect(() =>
+      classifyDistributionReferrerActivityManagerIdentity(
+        { ...expectedManagerIdentity, active: 0 },
+        601,
+      ),
+    ).toThrow('manager identity active state');
   });
 
   it('creates or reuses only the exact unpublished sample development', () => {

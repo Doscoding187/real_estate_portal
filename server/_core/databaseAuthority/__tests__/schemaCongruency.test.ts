@@ -451,182 +451,49 @@ describe('normalized schema congruency', () => {
     ]);
   });
 
-  it('uses TiDB CHECK_CONSTRAINTS inventory when the portable view is empty', async () => {
-    const connection: AuthoritySqlConnection = {
-      async execute(statement: string) {
-        if (statement.includes('information_schema.tables')) {
-          return [[{ table_name: 'fixture_parents' }]];
-        }
-        if (statement.includes('information_schema.TIDB_CHECK_CONSTRAINTS')) {
-          return [
-            [
-              {
-                table_name: 'fixture_parents',
-                constraint_name: 'fixture_parents_positive_id',
-                check_clause: '(`id` > 0)',
-              },
-            ],
-          ];
-        }
-        return [[]];
-      },
-      async query(statement: string) {
-        if (statement.startsWith('SHOW GLOBAL VARIABLES')) {
-          return [[{ Variable_name: 'tidb_enable_check_constraint', Value: 'ON' }]];
-        }
-        return connection.execute(statement);
-      },
-      async end() {},
-    };
-
-    const physical = await normalizedPhysicalSchema(connection, 'tidb');
-    expect(physical.tables[0].checks).toEqual([
-      { name: 'fixture_parents_positive_id', expression: '`id` > 0', enforced: true },
-    ]);
-  });
-
-  it('falls back to TiDB CHECK_CONSTRAINTS when the portable view is unsupported', async () => {
+  it('fails closed when the canonical MySQL CHECK inventory cannot be read', async () => {
     const connection: AuthoritySqlConnection = {
       async execute(statement: string) {
         if (statement.includes('information_schema.tables')) {
           return [[{ table_name: 'fixture_parents' }]];
         }
         if (statement.includes('information_schema.TABLE_CONSTRAINTS')) {
-          throw new Error('portable CHECK inventory unsupported');
-        }
-        if (statement.includes('information_schema.TIDB_CHECK_CONSTRAINTS')) {
-          return [
-            [
-              {
-                table_name: 'fixture_parents',
-                constraint_name: 'fixture_parents_positive_id',
-                check_clause: '(`id` > 0)',
-              },
-            ],
-          ];
-        }
-        return [[]];
-      },
-      async query(statement: string) {
-        if (statement.startsWith('SHOW GLOBAL VARIABLES')) {
-          return [[{ Variable_name: 'tidb_enable_check_constraint', Value: 'ON' }]];
-        }
-        return connection.execute(statement);
-      },
-      async end() {},
-    };
-
-    const physical = await normalizedPhysicalSchema(connection, 'tidb');
-    expect(physical.tables[0].checks).toEqual([
-      { name: 'fixture_parents_positive_id', expression: '`id` > 0', enforced: true },
-    ]);
-  });
-
-  it('fails closed when neither CHECK metadata inventory is readable', async () => {
-    const connection: AuthoritySqlConnection = {
-      async execute(statement: string) {
-        if (statement.includes('information_schema.tables')) {
-          return [[{ table_name: 'fixture_parents' }]];
-        }
-        if (
-          statement.includes('information_schema.TABLE_CONSTRAINTS') ||
-          statement.includes('information_schema.TIDB_CHECK_CONSTRAINTS')
-        ) {
           throw new Error('CHECK metadata inventory unavailable');
         }
         return [[]];
       },
       async query(statement: string) {
-        if (statement.startsWith('SHOW GLOBAL VARIABLES')) {
-          return [[{ Variable_name: 'tidb_enable_check_constraint', Value: 'ON' }]];
-        }
         return connection.execute(statement);
       },
       async end() {},
     };
 
-    await expect(normalizedPhysicalSchema(connection)).rejects.toThrow(
-      'Physical CHECK metadata could not be read from either the portable or TiDB inventory',
+    await expect(normalizedPhysicalSchema(connection, 'mysql')).rejects.toThrow(
+      'MySQL CHECK metadata could not be read from the canonical information_schema inventory',
     );
   });
 
-  it('merges the TiDB CHECK inventory when the portable inventory is partial', async () => {
+  it('fails closed when the canonical MySQL CHECK inventory disagrees about a constraint', async () => {
     const connection: AuthoritySqlConnection = {
       async execute(statement: string) {
         if (statement.includes('information_schema.tables')) {
           return [[{ table_name: 'fixture_parents' }]];
         }
         if (statement.includes('information_schema.TABLE_CONSTRAINTS')) {
-          return [
-            [
-              {
-                table_name: 'fixture_parents',
-                constraint_name: 'fixture_parents_positive_id',
-                check_clause: '(`id` > 0)',
-              },
-            ],
-          ];
-        }
-        if (statement.includes('information_schema.TIDB_CHECK_CONSTRAINTS')) {
-          return [
-            [
-              {
-                table_name: 'fixture_parents',
-                constraint_name: 'fixture_parents_nonempty_code',
-                check_clause: '(CHAR_LENGTH(TRIM(`code`)) > 0)',
-              },
-            ],
-          ];
-        }
-        return [[]];
-      },
-      async query(statement: string) {
-        if (statement.startsWith('SHOW GLOBAL VARIABLES')) {
-          return [[{ Variable_name: 'tidb_enable_check_constraint', Value: 'ON' }]];
-        }
-        return connection.execute(statement);
-      },
-      async end() {},
-    };
-
-    const physical = await normalizedPhysicalSchema(connection, 'tidb');
-    expect(physical.tables[0].checks).toEqual([
-      {
-        name: 'fixture_parents_nonempty_code',
-        expression: 'char_length(trim(`code`)) > 0',
-        enforced: true,
-      },
-      { name: 'fixture_parents_positive_id', expression: '`id` > 0', enforced: true },
-    ]);
-  });
-
-  it('fails closed when the portable and TiDB CHECK inventories disagree', async () => {
-    const connection: AuthoritySqlConnection = {
-      async execute(statement: string) {
-        if (statement.includes('information_schema.tables')) {
-          return [[{ table_name: 'fixture_parents' }]];
-        }
-        if (statement.includes('information_schema.TABLE_CONSTRAINTS')) {
-          return [
-            [
-              {
-                table_name: 'fixture_parents',
-                constraint_name: 'fixture_parents_positive_id',
-                check_clause: '(`id` > 0)',
-              },
-            ],
-          ];
-        }
-        if (statement.includes('information_schema.TIDB_CHECK_CONSTRAINTS')) {
-          return [
-            [
-              {
-                table_name: 'fixture_parents',
-                constraint_name: 'fixture_parents_positive_id',
-                check_clause: '(`id` > 1)',
-              },
-            ],
-          ];
+          return [[
+            {
+              table_name: 'fixture_parents',
+              constraint_name: 'fixture_parents_positive_id',
+              check_clause: '(`id` > 0)',
+              enforced: 'YES',
+            },
+            {
+              table_name: 'fixture_parents',
+              constraint_name: 'fixture_parents_positive_id',
+              check_clause: '(`id` > 1)',
+              enforced: 'YES',
+            },
+          ]];
         }
         return [[]];
       },
@@ -636,8 +503,9 @@ describe('normalized schema congruency', () => {
       async end() {},
     };
 
-    await expect(normalizedPhysicalSchema(connection)).rejects.toThrow(
+    await expect(normalizedPhysicalSchema(connection, 'mysql')).rejects.toThrow(
       'CHECK inventory disagrees about fixture_parents.fixture_parents_positive_id',
     );
   });
+
 });

@@ -15,8 +15,13 @@ describe('SubscriptionPlanStep', () => {
       })),
       locations: initialOnboardingState.locations.map(location => ({
         ...location,
-        city: 'Cape Town',
-        province: 'Western Cape' as const,
+        place: {
+          canonicalPlaceId: 'pl-place-01-000000000000000000000000',
+          label: 'Cape Town',
+          placeType: 'metro',
+          scope: 'metro_city' as const,
+          administrativeContext: 'Western Cape',
+        },
       })),
     };
 

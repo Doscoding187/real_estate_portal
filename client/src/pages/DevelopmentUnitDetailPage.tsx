@@ -280,7 +280,7 @@ export default function DevelopmentUnitDetailPage() {
   >('info');
   const [leadDialogLocation, setLeadDialogLocation] = useState('unit_detail_page');
 
-  const { data: dev, isLoading } = trpc.developer.getPublicDevelopmentBySlug.useQuery(
+  const { data: dev, isLoading, error: developmentError } = trpc.developer.getPublicDevelopmentBySlug.useQuery(
     { slugOrId: slug || '' },
     { enabled: !!slug },
   );
@@ -333,8 +333,7 @@ export default function DevelopmentUnitDetailPage() {
       name: publicFacts.name,
       slug: publicFacts.slug || slug,
       transactionType: publicFacts.transactionType,
-      suburb: publicFacts.suburb,
-      city: publicFacts.city,
+      locationLabels: publicFacts.locationLabels,
       heroImage,
       brochureUrl,
       cataloguePublisherId: publicFacts.publisher.id,
@@ -547,9 +546,12 @@ export default function DevelopmentUnitDetailPage() {
         <div className="mx-auto max-w-3xl px-4 py-16">
           <Card className="border-slate-200">
             <CardContent className="p-10 text-center">
-              <h1 className="text-2xl font-bold text-slate-900">Unit not found</h1>
+              <h1 className="text-2xl font-bold text-slate-900">
+                {developmentError ? 'Development details unavailable' : 'Unit not found'}
+              </h1>
               <p className="mt-3 text-sm text-slate-600">
-                The unit you are looking for is unavailable or no longer part of this development.
+                {developmentError?.message ||
+                  'The unit you are looking for is unavailable or no longer part of this development.'}
               </p>
               <Button className="mt-6" onClick={() => setLocation(backToDevelopmentHref)}>
                 Back to development
@@ -656,10 +658,10 @@ export default function DevelopmentUnitDetailPage() {
                     <p className="mt-3 max-w-2xl text-sm text-slate-600">{unitDescription}</p>
                   ) : null}
                   <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-slate-600">
-                    {(development.suburb || development.city) && (
+                    {development.locationLabels.length > 0 && (
                       <span className="inline-flex items-center gap-2">
                         <MapPinned className="h-4 w-4 text-slate-400" />
-                        {[development.suburb, development.city].filter(Boolean).join(', ')}
+                        {development.locationLabels.join(', ')}
                       </span>
                     )}
                     {development.developerName ? (

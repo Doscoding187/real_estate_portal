@@ -7,7 +7,6 @@ import {
   type SetStateAction,
 } from 'react';
 import type { LocationNode } from '@/types/location';
-import type { SearchAreaDiscoveryResult } from '@shared/searchDiscovery';
 
 export type HomeSearchFilters = {
   propertyType: string;
@@ -45,17 +44,14 @@ export const EMPTY_HOME_SEARCH_FILTERS: HomeSearchFilters = {
 };
 export type HomeAreaSelection = {
   locations: LocationNode[];
-  searchArea: SearchAreaDiscoveryResult | null;
 };
 type HomeSearchState = {
   locations: LocationNode[];
   setLocations: Dispatch<SetStateAction<LocationNode[]>>;
-  searchArea: SearchAreaDiscoveryResult | null;
-  setSearchArea: Dispatch<SetStateAction<SearchAreaDiscoveryResult | null>>;
   filters: HomeSearchFilters;
   setFilters: Dispatch<SetStateAction<HomeSearchFilters>>;
-  confirmedBroadId: string | null;
-  setConfirmedBroadId: Dispatch<SetStateAction<string | null>>;
+  confirmedBroadPlaceId: string | null;
+  setConfirmedBroadPlaceId: Dispatch<SetStateAction<string | null>>;
   journey: string;
   onJourneyChange: (journey: string) => void;
 };
@@ -69,21 +65,18 @@ export function HomeSearchProvider({
   journey: string;
   onJourneyChange: (journey: string) => void;
 }) {
-  const [confirmedBroadId, setConfirmedBroadId] = useState<string | null>(null);
+  const [confirmedBroadPlaceId, setConfirmedBroadPlaceId] = useState<string | null>(null);
   const [locations, setLocations] = useState<LocationNode[]>([]);
-  const [searchArea, setSearchArea] = useState<SearchAreaDiscoveryResult | null>(null);
   const [filters, setFilters] = useState<HomeSearchFilters>(EMPTY_HOME_SEARCH_FILTERS);
   return (
     <HomeSearchContext.Provider
       value={{
         locations,
         setLocations,
-        searchArea,
-        setSearchArea,
         filters,
         setFilters,
-        confirmedBroadId,
-        setConfirmedBroadId,
+        confirmedBroadPlaceId,
+        setConfirmedBroadPlaceId,
         journey,
         onJourneyChange,
       }}

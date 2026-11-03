@@ -322,8 +322,9 @@ export interface Development {
   developmentType: DevelopmentType;
   status: DevelopmentStatus;
   address: string | null;
-  city: string;
-  province: string;
+  canonicalPlaceId: string | null;
+  /** Display-only names from accepted Development-to-Place assignments. */
+  locationLabels: string[];
   latitude: string | null;
   longitude: string | null;
   totalUnits: number | null;
@@ -373,14 +374,9 @@ export interface CreateDevelopmentInput {
   developmentType: DevelopmentType;
   description?: string;
   address?: string;
-  city: string;
-  suburb?: string;
-  province: string;
   postalCode?: string;
   latitude?: string;
   longitude?: string;
-  placeId?: string; // Google Places ID
-  locationId?: number; // Link to locations table
   priceFrom?: number;
   priceTo?: number;
   amenities?: string[];
@@ -397,8 +393,6 @@ export interface UpdateDevelopmentInput {
   developmentType?: DevelopmentType;
   status?: DevelopmentStatus;
   address?: string;
-  city?: string;
-  province?: string;
   latitude?: string;
   longitude?: string;
   totalUnits?: number;
@@ -799,17 +793,6 @@ export interface ImageUrls {
 export interface PropertyFilters {
   /** Internal, validated Place membership. Empty membership must return no rows. */
   canonicalPlaceIds?: string[];
-  // Location
-  province?: string;
-  city?: string;
-  suburb?: string[];
-  locations?: string[];
-  /** Canonical public location identity; public search must not widen this to text. */
-  canonicalLocation?: {
-    provinceId: number;
-    cityId?: number;
-    suburbId?: number;
-  };
 
   // Basic filters
   propertyType?: Property['propertyType'][];
@@ -907,64 +890,6 @@ export interface SearchResults {
   };
 }
 
-export interface DevelopmentDerivedListing {
-  id: string;
-  unitTypeId: string;
-  developmentId: number;
-  rankingScore?: number;
-  href?: string;
-  title: string;
-  price: number;
-  priceTo?: number;
-  city: string;
-  suburb: string;
-  province: string;
-  propertyType: Property['propertyType'];
-  listingType: Property['listingType'];
-  transactionType: 'for_sale' | 'for_rent' | 'auction';
-  listingSource: 'development';
-  bedrooms?: number;
-  bathrooms?: number;
-  floorSize?: number;
-  erfSize?: number;
-  parkingCount?: number;
-  parkingType?: string;
-  description?: string;
-  highlights?: string[];
-  image?: string | null;
-  images?: ImageUrls[];
-  badges?: string[];
-  availableUnits?: number;
-  totalUnits?: number;
-  completionDate?: string | null;
-  listedDate: Date;
-  latitude?: number;
-  longitude?: number;
-  development: {
-    id: number;
-    name: string;
-    slug?: string | null;
-    status?: string | null;
-  };
-  developerBrand: {
-    id?: number | null;
-    brandName: string;
-    slug?: string | null;
-    logoUrl?: string | null;
-    publicContactEmail?: string | null;
-    publicContactPhone?: string | null;
-  };
-}
-
-export interface DevelopmentDerivedListingSearchResults {
-  items: DevelopmentDerivedListing[];
-  cards?: SearchCardResult[];
-  total: number;
-  page: number;
-  pageSize: number;
-  hasMore: boolean;
-}
-
 export interface SearchCardDevelopmentRef {
   id?: number | string | null;
   name?: string | null;
@@ -1011,6 +936,7 @@ export type SearchCardIdentity =
 
 export interface SearchCardResult {
   canonicalPlaceId?: string;
+  locationLabels?: string[];
   kind: 'property' | 'development';
   id: string;
   href: string;
@@ -1067,6 +993,8 @@ export interface SavedSearch {
   userId: number;
   name: string;
   criteria: Record<string, unknown>;
+  /** Canonical Place Authority foreign key; when set it is the sole search geography. */
+  placeId?: string | null;
   notificationFrequency: 'instant' | 'daily' | 'weekly' | 'never';
   emailEnabled: boolean;
   inAppEnabled: boolean;

@@ -222,10 +222,6 @@ describeWithDb('agency principal listing attribution', () => {
         agencyId: listings.agencyId,
         agentId: listings.agentId,
         canonicalPlaceId: listings.canonicalPlaceId,
-        locationId: listings.locationId,
-        provinceId: listings.provinceId,
-        cityId: listings.cityId,
-        suburbId: listings.suburbId,
       })
       .from(listings)
       .where(eq(listings.id, created.listingId))
@@ -234,10 +230,6 @@ describeWithDb('agency principal listing attribution', () => {
       agencyId: created.agencyId,
       agentId: null,
       canonicalPlaceId: CANONICAL_PLACE_FIXTURE_ID,
-      locationId: null,
-      provinceId: null,
-      cityId: null,
-      suburbId: null,
     });
 
     await submitListingForReview(created.listingId);
@@ -249,10 +241,6 @@ describeWithDb('agency principal listing attribution', () => {
         sourceListingId: properties.sourceListingId,
         agentId: properties.agentId,
         canonicalPlaceId: properties.canonicalPlaceId,
-        locationId: properties.locationId,
-        provinceId: properties.provinceId,
-        cityId: properties.cityId,
-        suburbId: properties.suburbId,
       })
       .from(properties)
       .where(eq(properties.sourceListingId, created.listingId))
@@ -262,10 +250,6 @@ describeWithDb('agency principal listing attribution', () => {
       sourceListingId: created.listingId,
       agentId: null,
       canonicalPlaceId: CANONICAL_PLACE_FIXTURE_ID,
-      locationId: null,
-      provinceId: null,
-      cityId: null,
-      suburbId: null,
     });
 
     const [initialImage] = await db

@@ -5,8 +5,7 @@ import { DevelopmentBrochureDialog } from './DevelopmentBrochureDialog';
 
 const item: BrochureItem = {
   developmentName: 'Preview Ridge Estate',
-  city: 'Cape Town',
-  province: 'Western Cape',
+  locationLabels: ['Cape Town'],
   description: 'A demonstration development.',
   affordability: {
     policyVersion: 'checkfit_v1',

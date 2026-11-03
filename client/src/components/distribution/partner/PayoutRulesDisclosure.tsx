@@ -14,8 +14,10 @@ type ReferralTermsSnapshot = {
     marketMode: 'sale' | 'rent';
     campaign: {
       name: string;
-      city: string;
-      province: string;
+    };
+    placeAssignment: {
+      canonicalPlaceId: string | null;
+      locationLabels: string[];
     };
     inventory: {
       phaseScope: 'phase-released' | 'development-wide';
@@ -238,13 +240,10 @@ export function PayoutRulesDisclosure({
                 <p className="text-xs text-slate-500">
                   {termsSnapshot.developerSalesSnapshot.campaign.name} ·{' '}
                   {termsSnapshot.developerSalesSnapshot.marketMode === 'sale' ? 'For sale' : 'For rent'}
-                  {' · '}
-                  {[
-                    termsSnapshot.developerSalesSnapshot.campaign.city,
-                    termsSnapshot.developerSalesSnapshot.campaign.province,
-                  ]
-                    .filter(Boolean)
-                    .join(', ')}
+                  {termsSnapshot.developerSalesSnapshot.placeAssignment.canonicalPlaceId &&
+                  termsSnapshot.developerSalesSnapshot.placeAssignment.locationLabels.length
+                    ? ` · ${termsSnapshot.developerSalesSnapshot.placeAssignment.locationLabels.join(', ')}`
+                    : ''}
                 </p>
               </div>
               <p>

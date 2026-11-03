@@ -22,4 +22,18 @@ describe('Rent saved-search presentation', () => {
       ),
     ).toContain('rental listings');
   });
+
+  it('does not turn display-text geography into a saved-search location', () => {
+    const description = getSavedSearchNotificationDescription({
+      listingType: 'rent',
+      city: 'legacy city',
+      suburb: 'legacy suburb',
+      province: 'legacy province',
+    });
+
+    expect(description).toContain('rental listings');
+    expect(description).not.toContain('legacy city');
+    expect(description).not.toContain('legacy suburb');
+    expect(description).not.toContain('legacy province');
+  });
 });

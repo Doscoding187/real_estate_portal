@@ -14,8 +14,7 @@ function opportunity(
   return {
     programId: overrides.developmentId + 1000,
     developmentName: `Development ${overrides.developmentId}`,
-    city: 'Johannesburg',
-    province: 'Gauteng',
+    locationLabel: 'Johannesburg',
     entryPrice: 1_000_000,
     currencyCode: 'ZAR',
     ...overrides,
