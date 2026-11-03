@@ -128,7 +128,6 @@ Retire decisions below are deferred until those references are reconciled; this
 PR does not remove these assets from main.
 
 | Asset | Evidence | Disposition |
-
 | --- | --- | --- |
 | `components/services/ServicesSkeletons.tsx` (4 exports) | No page/route references | **Retire** in the first P0 slice |
 | `components/services/TrustBar.tsx`, `TrustStepsRow.tsx` | Only `advertise/PreviewCarousel.README.md` mention + intra-set references | **Retire** |
