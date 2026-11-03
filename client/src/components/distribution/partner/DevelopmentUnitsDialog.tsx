@@ -56,7 +56,7 @@ export function DevelopmentUnitsDialog({
         <DialogHeader>
           <DialogTitle className="text-[#0b1c3f]">{item?.developmentName}</DialogTitle>
           <DialogDescription>
-            {[item?.city, item?.province].filter(Boolean).join(', ') ||
+            {item?.locationLabels?.join(', ') ||
               'Location to be confirmed'}
             {' · '}
             {marketMode === 'sale' ? 'Homes for sale' : 'Rental homes'} available in this

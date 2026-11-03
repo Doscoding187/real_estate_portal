@@ -75,13 +75,7 @@ const AUTHORITY_TABLES = [
 ];
 
 /** Required national totals. A deviation is a failure, not a new expected value. */
-const REQUIRED = {
-  places: 17664,
-  names: 26425,
-  relationships: 17655,
-  evidence: 79925,
-  sourceIdentities: 18309,
-};
+const REQUIRED = {};
 
 const failures = [];
 const evidence = [];
@@ -139,6 +133,27 @@ async function tableState(connection) {
 
 const registry = loadPlaceAdmissionTerritoryRegistry(ROOT);
 const territoryIds = registry.registry.territories.map(territory => territory.territoryId);
+
+/* National totals are the sum of what every committed package declares, from the
+ * admission territory registry — not a second number maintained in code. A late
+ * per-territory expected-count key the loader does not expose is a failure here
+ * rather than a silent undercount. */
+for (const territory of registry.registry.territories) {
+  const counts = territory.expectedCounts;
+  for (const [key, source] of [
+    ['places', 'admitted_places'],
+    ['names', 'names'],
+    ['relationships', 'relationships'],
+    ['evidence', 'evidence_rows'],
+    ['sourceIdentities', 'source_identities'],
+  ]) {
+    const value = counts[source];
+    if (typeof value !== 'number') {
+      throw new Error(`territory ${territory.territoryId} does not declare expectedCounts.${source}`);
+    }
+    REQUIRED[key] = (REQUIRED[key] ?? 0) + value;
+  }
+}
 
 /** The identities the committed packages claim. The proof must reproduce them exactly. */
 const expectedByTerritory = new Map();

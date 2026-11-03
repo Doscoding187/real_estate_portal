@@ -196,7 +196,7 @@ describe('immutable resolved database context and operation authorization', () =
   it('requires a distinct, same-target migration credential for protected applies', () => {
     const identity = fixtureIdentity();
     const runtimeUrl =
-      'mysql://runtime-user:runtime-password@gateway01.ap-northeast-1.prod.aws.tidbcloud.com:4000/listify_property_sa';
+      'mysql://runtime-user:runtime-password@propertylistify-mysql.mysql.database.azure.com:3306/propertylistify_database';
     const input = {
       operation: 'release-apply' as const,
       cwd: identity.worktreePath,
@@ -231,7 +231,7 @@ describe('immutable resolved database context and operation authorization', () =
           NODE_ENV: 'production',
           APP_ENV: 'production',
           DATABASE_MIGRATION_URL:
-            'mysql://runtime-user:another-password@gateway01.ap-northeast-1.prod.aws.tidbcloud.com:4000/listify_property_sa',
+            'mysql://runtime-user:another-password@propertylistify-mysql.mysql.database.azure.com:3306/propertylistify_database',
         },
       }),
     ).toThrow('distinct nonempty database username and password');
@@ -243,7 +243,7 @@ describe('immutable resolved database context and operation authorization', () =
           NODE_ENV: 'production',
           APP_ENV: 'production',
           DATABASE_MIGRATION_URL:
-            'mysql://runtime%2Duser:another-password@gateway01.ap-northeast-1.prod.aws.tidbcloud.com:4000/listify_property_sa',
+            'mysql://runtime%2Duser:another-password@propertylistify-mysql.mysql.database.azure.com:3306/propertylistify_database',
         },
       }),
     ).toThrow('distinct nonempty database username and password');
@@ -254,7 +254,7 @@ describe('immutable resolved database context and operation authorization', () =
         NODE_ENV: 'production',
         APP_ENV: 'production',
         DATABASE_MIGRATION_URL:
-          'mysql://migration-user:migration-password@gateway01.ap-northeast-1.prod.aws.tidbcloud.com:4000/listify_property_sa',
+          'mysql://migration-user:migration-password@propertylistify-mysql.mysql.database.azure.com:3306/propertylistify_database',
       },
     });
 
@@ -279,10 +279,10 @@ describe('immutable resolved database context and operation authorization', () =
   it('does not load a protected migration credential from a repository environment file', () => {
     const identity = fixtureIdentity();
     const runtimeUrl =
-      'mysql://runtime-user:runtime-password@gateway01.ap-northeast-1.prod.aws.tidbcloud.com:4000/listify_property_sa';
+      'mysql://runtime-user:runtime-password@propertylistify-mysql.mysql.database.azure.com:3306/propertylistify_database';
     writeFileSync(
       join(identity.worktreePath, '.env.production'),
-      'DATABASE_MIGRATION_URL=mysql://migration-user:migration-password@gateway01.ap-northeast-1.prod.aws.tidbcloud.com:4000/listify_property_sa\n',
+      'DATABASE_MIGRATION_URL=mysql://migration-user:migration-password@propertylistify-mysql.mysql.database.azure.com:3306/propertylistify_database\n',
     );
 
     expect(() =>
@@ -479,59 +479,27 @@ describe('immutable resolved database context and operation authorization', () =
     })).toThrow('protected target requires an exact operation and fingerprint approval');
     expect(() => authorizeDatabaseOperation(authority, { root: process.cwd(), approval })).not.toThrow();
 
-    const tidb = resolve('mysql://old.tidbcloud.com:3306/listify_property_sa');
-    expect(tidb.context.targetClass).toBe('production');
-    expect(() => authorizeDatabaseOperation(tidb, {
-      root: process.cwd(),
-      approval: { ...approval, targetFingerprintHash: tidb.context.targetFingerprintHash },
-    })).toThrow('exact B08 Azure inspection identity approval');
     const wrongClass = resolve(target, 'runtime');
     expect(() => authorizeDatabaseOperation(wrongClass, { root: process.cwd(), approval })).toThrow(
       'credential class',
     );
   });
 
-  it('confines TiDB source reader provisioning to the exact production source and SELECT-only grant', () => {
+  it('rejects the retired TiDB provider at the operation authorization boundary', () => {
     const identity = fixtureIdentity();
-    const resolve = (databaseUrl: string) => resolveDatabaseAuthority({
-      operation: 'tidb-source-reader-provision',
+    const authority = resolveDatabaseAuthority({
+      operation: 'read-only-connect',
       cwd: identity.worktreePath,
       gitIdentity: identity,
-      explicitDatabaseUrl: databaseUrl,
-      credentialClass: 'bootstrap-admin',
+      explicitDatabaseUrl: 'mysql://reader:secret@old.tidbcloud.com:3306/listify_property_sa',
+      credentialClass: 'read-only',
       processEnv: { NODE_ENV: 'production', APP_ENV: 'production' },
     });
-    const source = resolve('mysql://gateway01.ap-northeast-1.prod.aws.tidbcloud.com:4000/listify_property_sa');
-    const approval = {
-      reference: 'B08-TIDB-TEST',
-      actor: 'test-reviewer',
-      operation: 'tidb-source-reader-provision' as const,
-      targetFingerprintHash: source.context.targetFingerprintHash,
-      credentialClass: 'bootstrap-admin' as const,
-      tidbSourceInstanceId: '10492391619114516879',
-      tidbSourceAdminIdentity: '42MAxcoJrgbJNnU.root',
-      tidbSourceReaderIdentity: '42MAxcoJrgbJNnU.b08_reader',
-      tidbSourceReaderPrivilegeSet: 'listify_property_sa.*:SELECT',
-    };
-    const acknowledgement = expectedDatabaseAcknowledgement(source.context);
-    expect(() => authorizeDatabaseOperation(source, { root: process.cwd(), approval, acknowledgement })).not.toThrow();
-    for (const changed of [
-      { tidbSourceInstanceId: 'different' },
-      { tidbSourceAdminIdentity: '292qWmvn2YGy2jW.root' },
-      { tidbSourceReaderIdentity: 'another_reader' },
-      { tidbSourceReaderPrivilegeSet: 'listify_property_sa.*:ALL PRIVILEGES' },
-    ]) {
-      expect(() => authorizeDatabaseOperation(source, {
-        root: process.cwd(), approval: { ...approval, ...changed }, acknowledgement,
-      })).toThrow('exact B08 TiDB source reader approval');
-    }
-    expect(() => authorizeDatabaseOperation(source, { root: process.cwd(), approval })).toThrow('exact acknowledgement');
-    const azure = resolve('mysql://propertylistify-mysql.mysql.database.azure.com:3306/propertylistify_database');
-    expect(() => authorizeDatabaseOperation(azure, {
-      root: process.cwd(),
-      approval: { ...approval, targetFingerprintHash: azure.context.targetFingerprintHash },
-      acknowledgement: expectedDatabaseAcknowledgement(azure.context),
-    })).toThrow('exact B08 TiDB source reader approval');
+
+    expect(authority.context.provider).toBe('unknown');
+    expect(() => authorizeDatabaseOperation(authority, { root: process.cwd() })).toThrow(
+      'only the canonical MySQL provider is supported',
+    );
   });
 
   it('confines B08 migration identity provisioning to the exact target, account, and privileges', () => {
@@ -565,11 +533,6 @@ describe('immutable resolved database context and operation authorization', () =
         root: process.cwd(), approval: { ...approval, ...changed },
       })).toThrow('exact B08 Azure migration identity approval');
     }
-    const tidb = resolve('mysql://old.tidbcloud.com:3306/listify_property_sa');
-    expect(() => authorizeDatabaseOperation(tidb, {
-      root: process.cwd(),
-      approval: { ...approval, targetFingerprintHash: tidb.context.targetFingerprintHash },
-    })).toThrow('exact B08 Azure migration identity approval');
   });
 
   it('confines B08 transactional behavior proof to the reviewed Azure migration identity', () => {

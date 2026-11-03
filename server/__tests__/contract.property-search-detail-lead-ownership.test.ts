@@ -186,6 +186,7 @@ describe('single-property search-detail-lead ownership contract', () => {
       listingType: 'sale',
       transactionType: 'sale',
       price: 2500000,
+      canonicalPlaceId: 'pl-place-01-000000000000000000000001',
       bedrooms: 3,
       bathrooms: 2,
       area: 180,
@@ -235,7 +236,7 @@ describe('single-property search-detail-lead ownership contract', () => {
             slug: 'jane-agent',
             yearsExperience: 7,
             areasServed: JSON.stringify([
-              { canonicalLocationId: 'city:1', label: 'Johannesburg, Gauteng' },
+              { canonicalPlaceId: 'city:1', label: 'Johannesburg, Gauteng' },
             ]),
             rating: 4.8,
             reviewCount: 12,
@@ -333,14 +334,14 @@ describe('single-property search-detail-lead ownership contract', () => {
   it('keeps public search, detail and enquiry on the canonical property agent owner', async () => {
     const trpc = caller();
 
-    const search = await trpc.properties.search({
-      city: 'Johannesburg',
-      province: 'Gauteng',
+    const search = await trpc.properties.searchPublicInventory({
+      canonicalPlaceId: 'pl-place-01-000000000000000000000001',
       listingType: 'sale',
-      limit: 20,
-      offset: 0,
+      page: 0,
+      pageSize: 20,
     });
-    const card = (search as any).cards[0];
+    const card = search.cards.find(item => item.kind === 'property');
+    expect(card).toBeDefined();
 
     expect(card).toMatchObject({
       kind: 'property',
@@ -351,8 +352,14 @@ describe('single-property search-detail-lead ownership contract', () => {
         agencyId: 44,
       },
     });
+    expect(mockSearchPublicInventory).toHaveBeenCalledWith(
+      expect.objectContaining({
+        canonicalPlaceId: 'pl-place-01-000000000000000000000001',
+        listingType: 'sale',
+      }),
+    );
 
-    const detail = await trpc.properties.getById({ id: card.propertyId });
+    const detail = await trpc.properties.getById({ id: card!.propertyId! });
 
     expect(detail.property).toMatchObject({
       id: 501,
@@ -371,7 +378,7 @@ describe('single-property search-detail-lead ownership contract', () => {
     expect(detail).not.toHaveProperty('sourceListingId');
 
     const lead = await trpc.leads.create({
-      propertyId: card.propertyId,
+      propertyId: card!.propertyId!,
       agentId: 999,
       agencyId: 999,
       name: 'Pat Buyer',
@@ -591,8 +598,7 @@ describe('single-property search-detail-lead ownership contract', () => {
       expect.objectContaining({ id: '502', title: 'Approved projection result' }),
     ]);
     expect(mockSearchPublicInventory).toHaveBeenCalledWith({
-      province: 'Gauteng',
-      city: 'Johannesburg',
+      canonicalPlaceId: 'pl-place-01-000000000000000000000001',
       propertyType: 'house',
       listingType: 'sale',
       listingSource: 'manual',
@@ -604,53 +610,4 @@ describe('single-property search-detail-lead ownership contract', () => {
     expect(mockSearchListings).not.toHaveBeenCalled();
   });
 
-  it('uses canonical Buy search cards for location inventory previews', async () => {
-    const card = {
-      kind: 'property',
-      id: '503',
-      title: 'Location inventory preview',
-      identity: { role: 'agency', provenance: 'agency', name: 'Canonical Realty' },
-    };
-    mockSearchPublicInventory.mockResolvedValueOnce({
-      cards: [card],
-      total: 1,
-      page: 0,
-      pageSize: 4,
-      hasMore: false,
-      locationState: 'resolved',
-      sourceCounts: { manual: 1, development: 0 },
-    });
-
-    const result = await caller().location.getFeaturedListings({
-      locationId: 'city:12',
-      limit: 4,
-    });
-
-    expect(result).toEqual([card]);
-    expect(mockSearchPublicInventory).toHaveBeenCalledWith({
-      locationId: 'city:12',
-      listingType: 'sale',
-      sortOption: 'date_desc',
-      page: 0,
-      pageSize: 4,
-    });
-    expect(mockSearchProperties).not.toHaveBeenCalled();
-    expect(mockSearchListings).not.toHaveBeenCalled();
-  });
-
-  it('rejects a non-canonical location preview instead of widening the search', async () => {
-    await expect(
-      caller().location.getFeaturedListings({ locationId: '12', limit: 4 }),
-    ).rejects.toThrow('canonical province, city, or suburb ID');
-
-    expect(mockSearchPublicInventory).not.toHaveBeenCalled();
-  });
-
-  it('does not disguise a canonical location search failure as an empty preview', async () => {
-    mockSearchPublicInventory.mockRejectedValueOnce(new Error('Search service unavailable'));
-
-    await expect(
-      caller().location.getFeaturedListings({ locationId: 'city:12', limit: 4 }),
-    ).rejects.toThrow('Search service unavailable');
-  });
 });

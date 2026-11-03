@@ -25,6 +25,8 @@ import { agentProcedure, router } from './_core/trpc';
 import { logAudit } from './_core/auditLog';
 import { requireUser } from './_core/requireUser';
 import { getDb } from './db';
+import { isCanonicalPlaceId } from '../shared/placeAuthority';
+import { loadCanonicalPlaceSearchProjection } from './services/canonicalPlaceSearchService';
 import {
   getSellerProspectActorScope,
   prepareSellerProspectListingConversion,
@@ -86,9 +88,12 @@ const createSellerProspectSchema = z
     email: optionalEmail,
     phone: optionalText(50),
     propertyAddress: optionalText(500),
-    suburb: optionalText(120),
-    city: optionalText(120),
-    province: optionalText(120),
+    canonicalPlaceId: z
+      .string()
+      .max(40)
+      .refine(isCanonicalPlaceId, 'Select a valid canonical Place.')
+      .optional()
+      .nullable(),
     propertyType: z.enum(SELLER_PROSPECT_PROPERTY_TYPE_VALUES).optional().nullable(),
     source: optionalText(100),
     canvassingMethod: z.enum(SELLER_PROSPECT_METHOD_VALUES).default('other'),
@@ -98,13 +103,14 @@ const createSellerProspectSchema = z
     nextAction: optionalText(255),
     initialNote: optionalText(2000),
   })
+  .strict()
   .superRefine((input, context) => {
-    if (!input.ownerName && !input.propertyAddress && !input.suburb && !input.city) {
+    if (!input.ownerName && !input.propertyAddress && !input.canonicalPlaceId) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['ownerName'],
         message:
-          'Record an owner/contact or a property address, suburb, or city for this seller prospect.',
+          'Record an owner/contact, a property address, or a selected canonical Place for this seller prospect.',
       });
     }
   });
@@ -116,14 +122,18 @@ const updateSellerProspectSchema = z
     email: optionalEmail,
     phone: optionalText(50),
     propertyAddress: optionalText(500),
-    suburb: optionalText(120),
-    city: optionalText(120),
-    province: optionalText(120),
+    canonicalPlaceId: z
+      .string()
+      .max(40)
+      .refine(isCanonicalPlaceId, 'Select a valid canonical Place.')
+      .optional()
+      .nullable(),
     propertyType: z.enum(SELLER_PROSPECT_PROPERTY_TYPE_VALUES).optional().nullable(),
     source: optionalText(100),
     canvassingMethod: z.enum(SELLER_PROSPECT_METHOD_VALUES).optional(),
     priority: z.enum(SELLER_PROSPECT_PRIORITY_VALUES).optional(),
   })
+  .strict()
   .refine(
     input =>
       Object.entries(input).some(
@@ -235,8 +245,39 @@ function formatAgent(agent: any) {
 function mapProspectRow(row: any) {
   return {
     ...row.prospect,
+    canonicalPlaceLabel: row.canonicalPlaceLabel ?? null,
     assignedAgent: formatAgent(row.agent),
   };
+}
+
+async function mapProspectRows(database: any, rows: any[]) {
+  const placeIds = rows
+    .map(row => row.prospect.canonicalPlaceId)
+    .filter((placeId): placeId is string => isCanonicalPlaceId(placeId));
+  const projection = placeIds.length
+    ? await loadCanonicalPlaceSearchProjection(database, { placeIds })
+    : null;
+  return rows.map(row => ({
+    ...mapProspectRow(row),
+    canonicalPlaceLabel: projection?.labels.get(row.prospect.canonicalPlaceId)?.label ?? null,
+  }));
+}
+
+async function requireSearchableProspectPlace(canonicalPlaceId: string | null | undefined) {
+  if (!canonicalPlaceId) return null;
+  if (!isCanonicalPlaceId(canonicalPlaceId)) {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'Select a valid canonical Place.' });
+  }
+  const projection = await loadCanonicalPlaceSearchProjection(undefined, {
+    placeIds: [canonicalPlaceId],
+  });
+  if (!projection.executions.has(canonicalPlaceId) || !projection.labels.has(canonicalPlaceId)) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Select an active, searchable canonical Place for this prospect.',
+    });
+  }
+  return canonicalPlaceId;
 }
 
 function buildScopeConditions(
@@ -323,12 +364,11 @@ export const canvassingRouter = router({
         stage: z.union([stageSchema, z.literal('all')]).default('all'),
         agentId: z.number().int().positive().optional(),
         search: z.string().trim().max(160).optional(),
-        city: z.string().trim().max(120).optional(),
-        suburb: z.string().trim().max(120).optional(),
+        canonicalPlaceId: z.string().max(40).refine(isCanonicalPlaceId).optional(),
         followUpStatus: z.enum(['all', 'scheduled', 'overdue', 'none']).default('all'),
         limit: z.number().int().min(1).max(100).default(60),
-      }),
-    )
+      }).strict(),
+  )
     .query(async ({ ctx, input }) => {
       const db = await requireDatabase();
       const scope = await getSellerProspectActorScope(db, requireUser(ctx));
@@ -336,16 +376,16 @@ export const canvassingRouter = router({
       const now = nowAsDbTimestamp();
 
       if (input.stage !== 'all') conditions.push(eq(sellerProspects.stage, input.stage));
-      if (input.city) conditions.push(like(sellerProspects.city, `%${input.city}%`));
-      if (input.suburb) conditions.push(like(sellerProspects.suburb, `%${input.suburb}%`));
+      const canonicalPlaceId = await requireSearchableProspectPlace(input.canonicalPlaceId);
+      if (canonicalPlaceId) {
+        conditions.push(eq(sellerProspects.canonicalPlaceId, canonicalPlaceId));
+      }
       if (input.search) {
         const search = `%${input.search}%`;
         conditions.push(
           or(
             like(sellerProspects.ownerName, search),
             like(sellerProspects.propertyAddress, search),
-            like(sellerProspects.city, search),
-            like(sellerProspects.suburb, search),
             like(sellerProspects.phone, search),
           )!,
         );
@@ -385,7 +425,7 @@ export const canvassingRouter = router({
         .orderBy(asc(sellerProspects.nextFollowUp), desc(sellerProspects.updatedAt))
         .limit(input.limit);
 
-      return rows.map(mapProspectRow);
+      return mapProspectRows(db, rows);
     }),
 
   getById: agentProcedure
@@ -435,7 +475,7 @@ export const canvassingRouter = router({
         .orderBy(desc(sellerProspectActivities.createdAt));
 
       return {
-        ...(row ? mapProspectRow(row) : prospect),
+        ...(row ? (await mapProspectRows(db, [row]))[0] : prospect),
         activities: activities.map((entry: any) => ({
           ...entry.activity,
           actorName:
@@ -538,8 +578,8 @@ export const canvassingRouter = router({
         .orderBy(asc(sellerProspects.nextFollowUp))
         .limit(input.limit);
       const now = Date.now();
-      return rows.map((row: any) => {
-        const prospect = mapProspectRow(row);
+      const mappedRows = await mapProspectRows(db, rows);
+      return mappedRows.map((prospect: any) => {
         const dueAt = parseDatabaseTimestamp(prospect.nextFollowUp);
         return { ...prospect, overdue: Boolean(dueAt && dueAt.getTime() < now) };
       });
@@ -587,6 +627,7 @@ export const canvassingRouter = router({
     const db = await requireDatabase();
     const user = requireUser(ctx);
     const scope = await getSellerProspectActorScope(db, user);
+    const canonicalPlaceId = await requireSearchableProspectPlace(input.canonicalPlaceId);
     let assignedAgentId: number | null = input.assignedAgentId || null;
 
     if (scope.isManager) {
@@ -612,9 +653,7 @@ export const canvassingRouter = router({
         email: input.email,
         phone: input.phone,
         propertyAddress: input.propertyAddress,
-        suburb: input.suburb,
-        city: input.city,
-        province: input.province,
+        canonicalPlaceId,
         propertyType: input.propertyType || null,
         source: input.source,
         canvassingMethod: input.canvassingMethod,
@@ -680,6 +719,9 @@ export const canvassingRouter = router({
     const scope = await getSellerProspectActorScope(db, user);
     await requireSellerProspect(db, scope, input.sellerProspectId);
     const { sellerProspectId, ...changes } = input;
+    if (changes.canonicalPlaceId !== undefined) {
+      changes.canonicalPlaceId = await requireSearchableProspectPlace(changes.canonicalPlaceId);
+    }
     const updateValues = Object.fromEntries(
       Object.entries(changes).filter(([, value]) => value !== undefined),
     ) as Record<string, unknown>;
@@ -1490,9 +1532,7 @@ export const canvassingRouter = router({
         .select({
           id: sellerProspects.id,
           propertyAddress: sellerProspects.propertyAddress,
-          suburb: sellerProspects.suburb,
-          city: sellerProspects.city,
-          province: sellerProspects.province,
+          canonicalPlaceId: sellerProspects.canonicalPlaceId,
           propertyType: sellerProspects.propertyType,
         })
         .from(sellerProspects)
@@ -1514,9 +1554,7 @@ export const canvassingRouter = router({
         propertyType: prospect.propertyType,
         propertyLocation: {
           address: prospect.propertyAddress,
-          suburb: prospect.suburb,
-          city: prospect.city,
-          province: prospect.province,
+          canonicalPlaceId: prospect.canonicalPlaceId,
         },
       };
     }),

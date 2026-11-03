@@ -301,7 +301,7 @@ export function writeSyntheticTerritoryFixture(root) {
   const evidenceRows = admittedPlaces + candidates.length + PARENT_EVIDENCE_EDGES.length;
 
   writeJson(root, REGISTRY_PATH, {
-    schema_version: '0.1',
+    schema_version: '0.2',
     registry_id: 'synthetic-place-admission-territories-v0.1',
     default_territory_id: SYNTHETIC_TERRITORY_ID,
     territories: [

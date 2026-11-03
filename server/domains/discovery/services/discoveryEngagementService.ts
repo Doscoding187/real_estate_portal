@@ -41,7 +41,7 @@ function toContentId(itemId: string): number {
 }
 
 function deriveFeedType(input: DiscoveryEngagementEvent): FeedType {
-  if (input.context?.query?.location) return 'area';
+  if (input.context?.query?.canonicalPlaceId) return 'area';
   if (input.context?.query?.category) return 'category';
   return 'recommended';
 }

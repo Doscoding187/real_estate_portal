@@ -186,13 +186,7 @@ export default function DevelopmentHome() {
 
   const { development, demand, funnel, inventory, attention, distribution } = homeQuery.data;
   const selectedRangeLabel = rangeLabels[demand.range];
-  const location = [
-    development.location.suburb,
-    development.location.city,
-    development.location.province,
-  ]
-    .filter(Boolean)
-    .join(', ');
+  const location = development.location.locationLabels.join(', ');
   const lifecycleState = development.lifecycleState;
   const { readiness } = homeQuery.data;
   const editingInventoryUnit = inventory.unitTypes?.find(

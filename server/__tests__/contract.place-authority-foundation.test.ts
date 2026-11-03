@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { getTableName } from 'drizzle-orm';
 import { normalizedDesiredSchema } from '../_core/databaseAuthority/schemaCongruency';
 import * as canonical from '../../drizzle/schema';
@@ -25,7 +25,7 @@ import {
   searchArea,
   searchAreaMember,
 } from '../../drizzle/schema/placeAuthority';
-import { FACTUAL_GEOGRAPHY_TYPES } from '../../shared/factualRuntimeGeographyBridge';
+import { PLACE_FACTUAL_TYPES } from '../../shared/placeAuthority';
 
 /**
  * Slice 1 executable protection for the Place Authority doctrine recorded in
@@ -223,7 +223,7 @@ describe('Place Authority: identity dimensions stay separate', () => {
   it('carries the committed factual Place types forward unchanged and adds only D4 non-statutory types', () => {
     // Every pre-existing factual geography type must remain representable so a
     // Place never has to rewrite its type to fit storage (Section 4).
-    for (const factualType of FACTUAL_GEOGRAPHY_TYPES) {
+    for (const factualType of PLACE_FACTUAL_TYPES) {
       if (factualType === 'estate/residential_development_candidate') {
         // Superseded by D4: the admitted non-statutory types are estate,
         // precinct and development, and a candidate is not a Place type.
@@ -237,7 +237,7 @@ describe('Place Authority: identity dimensions stay separate', () => {
     // D4 admitted exactly these three. `other` was already present in the
     // committed factual vocabulary, so it is not a new D4 type.
     const nonStatutoryTypes = PLACE_TYPES.filter(
-      type => !FACTUAL_GEOGRAPHY_TYPES.includes(type as never),
+      type => !PLACE_FACTUAL_TYPES.includes(type as never),
     );
     expect(nonStatutoryTypes).toEqual(['estate', 'precinct', 'development']);
   });
@@ -626,59 +626,38 @@ describe('Place Authority: containment authority is singular', () => {
   });
 });
 
-describe('Place Authority: Slice 1 changed no existing authority', () => {
-  it('leaves the three-level runtime tables and their lifecycle vocabulary untouched', () => {
-    // Slice 1 must not retire or reshape current runtime geography. Consumers
-    // still resolve province/city/suburb.
-    const locations = canonical as unknown as Record<string, { status?: unknown }>;
-    for (const tableName of ['provinces', 'cities', 'suburbs']) {
-      const table = locations[tableName] as unknown as {
-        status?: { enumValues?: readonly string[] };
-      };
-      expect(table?.status?.enumValues, tableName).toEqual(['verified', 'provisional', 'retired']);
+describe('Place Authority: canonical model cutover', () => {
+  it('removes the former runtime hierarchy tables after consumer cutover', () => {
+    const normalized = normalizedDesiredSchema(canonical);
+    const activeTables = new Set(normalized.tables.map(table => table.name));
+    for (const retiredTable of ['provinces', 'cities', 'suburbs', 'locations']) {
+      expect(activeTables, `${retiredTable} must not remain an active geography authority`).not.toContain(
+        retiredTable,
+      );
     }
+    expect(existsSync('drizzle/schema/locations.ts')).toBe(false);
   });
 
-  it('holds Place references to an explicit allow-list of consumers only', () => {
-    // Asserted as a real foreign
-    // key into `place`, not by column-name matching: consumers legitimately keep
-    // pre-existing provider columns such as `listings.place_id`, which is a
-    // Google place id and must NOT be confused with Place Authority identity.
+  it('stores every Place reference through an opaque Place ID column', () => {
     const normalized = normalizedDesiredSchema(canonical);
-    const consumers = [
-      'saved_searches',
-      'listings',
-      'properties',
-      'developments',
-      'land_parcels',
-      'commercial_assets',
-      'sl_places',
-      'agents',
-      'agencies',
-      'service_provider_locations',
-      'demand_campaigns',
-      'seller_prospects',
-      'agent_coverage_areas',
-    ];
-    // Listing launch convergence adds its authored and derived assignments,
-    // as specified by geography Section 15 and the 2026-10-07 goal review.
-    // Other domain cardinalities still require their own convergence review.
-    const APPROVED_PLACE_CONSUMERS = ['saved_searches', 'listings', 'properties'];
-    for (const consumer of consumers) {
-      const table = normalized.tables.find(candidate => candidate.name === consumer);
-      if (!table) continue;
-      const placeReferences = (table.foreignKeys ?? [])
-        .map(key => key.name)
-        .filter(name => name.includes('->place.'));
-      if (APPROVED_PLACE_CONSUMERS.includes(consumer)) {
-        // Exactly one reference, to the canonical identity, and nothing wider.
-        expect(placeReferences, `${consumer} must hold exactly one Place reference`).toEqual([
-          `${consumer === 'saved_searches' ? 'place_id' : 'canonical_place_id'}->place.place_id`,
-        ]);
-        continue;
+    let placeReferenceCount = 0;
+    for (const table of normalized.tables) {
+      for (const key of table.foreignKeys ?? []) {
+        if (!key.name.includes('->place.')) continue;
+        placeReferenceCount += 1;
+        for (const column of key.columns) {
+          expect(
+            column,
+            `${table.name}.${column} must carry a canonical Place ID, never a numeric hierarchy ID`,
+          ).toMatch(/(?:^|_)place_id$/);
+          const definition = table.columns.find(candidate => candidate.name === column);
+          expect(definition?.type, `${table.name}.${column} must match Place identity width`).toMatch(
+            /varchar\(40\)/,
+          );
+        }
       }
-      expect(placeReferences, `${consumer} must not reference Place`).toEqual([]);
     }
+    expect(placeReferenceCount).toBeGreaterThan(10);
   });
 
   it('registers a digest for every new migration in the canonical manifest', () => {

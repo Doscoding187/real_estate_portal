@@ -18,6 +18,10 @@ export const LAND_PUBLIC_CLASSIFICATIONS = [
 ] as const satisfies readonly LandClassification[];
 export type LandPublicClassification = (typeof LAND_PUBLIC_CLASSIFICATIONS)[number];
 
+/** Land enquiry delivery remains separate from the public listing/search path. */
+export const LAND_CANONICAL_ASSIGNMENT_BLOCKER =
+  'Land enquiries are not available until the public Land lead-assignment flow is complete.';
+
 /**
  * The public Land journey has a deliberately smaller vocabulary than the
  * durable Land model. Keep this runtime guard beside the allow-list so every

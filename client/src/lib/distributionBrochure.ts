@@ -34,8 +34,7 @@ export type BrochureUnit = {
 
 export type BrochureItem = {
   developmentName: string;
-  city?: string | null;
-  province?: string | null;
+  locationLabels?: string[];
   description?: string | null;
   imageUrl?: string | null;
   unitTypes?: BrochureUnit[] | null;
@@ -226,7 +225,7 @@ function affordabilityNote(affordability: BrochureAffordability | null | undefin
 }
 
 export function buildBrochureHtml(item: BrochureItem): string {
-  const location = [item.city, item.province].filter(Boolean).join(' | ');
+  const location = item.locationLabels?.join(' | ') || 'Location to be confirmed';
   const highlights = getBrochureHighlights(item);
   const { visibleRows, hiddenUnitCount } = getBrochureUnitRows(item);
   const brandName = item.brand?.brandName || 'Listify Property';

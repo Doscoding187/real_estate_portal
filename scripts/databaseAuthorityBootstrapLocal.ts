@@ -8,7 +8,7 @@ export function localBootstrapCommandSequence() {
 
 async function main() {
   throw new Error(
-    'The legacy local bootstrap is retired; run the exact Database Authority service, worktree, migration, reference, and scenario commands individually.',
+    'The legacy local bootstrap is retired; run the exact Database Authority service, worktree, migration, Place, foundation, and scenario commands individually.',
   );
 }
 

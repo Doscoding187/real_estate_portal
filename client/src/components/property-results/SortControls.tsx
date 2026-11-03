@@ -2,12 +2,11 @@
  * SortControls Component
  *
  * Provides sort dropdown and view mode toggle for property results page.
- * Integrates with propertyFiltersStore for state management.
+ * Receives current result state and change handlers from its caller.
  *
  * Features:
  * - Sort dropdown with SA-specific options
  * - View mode toggle (List/Grid/Map)
- * - View mode persisted to localStorage via Zustand store
  * - Responsive design with mobile-friendly touch targets
  *
  * Requirements: 2.3, 3.1, 3.4
@@ -32,8 +31,6 @@ export const SORT_OPTIONS: { value: SortOption; label: string }[] = [
   { value: 'price_desc', label: 'Price: High to Low' },
   { value: 'date_desc', label: 'Newest Listed' },
   { value: 'date_asc', label: 'Oldest Listed' },
-  { value: 'suburb_asc', label: 'Suburb A-Z' },
-  { value: 'suburb_desc', label: 'Suburb Z-A' },
 ];
 
 /**
@@ -66,7 +63,7 @@ export interface SortControlsProps {
  * SortControls Component
  *
  * Renders sort dropdown and view mode toggle for property results.
- * View mode preference is persisted to localStorage via the store.
+ * Search state remains owned by the canonical search route.
  *
  * @example
  * ```tsx

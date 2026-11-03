@@ -172,21 +172,18 @@ describe('EnhancedNavbar menu design-system contract', () => {
     expect(navbar).toContain("Logging out…");
   });
 
-  it('keeps Locations as a compact three-zone discovery menu', () => {
+  it('routes location menu selections through the canonical Place URL projection', () => {
     const css = readRepoFile('client/src/styles/enhanced-navbar.css');
     const navbar = readRepoFile('client/src/components/CityDiscoveryMenu.tsx');
-    const locationAdapter = readRepoFile('client/src/lib/locationDataAdapter.ts');
 
-    expect(css).toContain(
-      'grid-template-columns: minmax(0, 0.9fr) minmax(0, 1fr) minmax(17rem, 1.35fr)',
-    );
     expect(navbar).toContain('public-navbar__city-grid');
     expect(navbar).toContain('public-navbar__city-discovery');
-    expect(navbar).toContain('resolveLocationMenuCities');
-    expect(locationAdapter).toContain("heading: 'Find a location'");
-    expect(navbar).toContain('Areas and suburbs');
-    expect(navbar).toContain('No featured cities are available yet.');
-    expect(navbar).not.toContain('FALLBACK_CITY_LINKS');
+    expect(navbar).toContain('buildLocationDiscoveryPath');
+    expect(navbar).toContain("PUBLIC_CITY_ENTRY.href");
+    expect(navbar).not.toContain('getPopularCities');
+    expect(navbar).not.toContain('getCityData');
+    expect(navbar).not.toContain('provinceSlug}/${citySlug}');
+    expect(css).toContain('grid-template-columns: minmax(0, 1fr) minmax(17rem, 0.8fr)');
   });
 
   it('keeps the navbar surface above page-local navigation without an arbitrary global z-index', () => {

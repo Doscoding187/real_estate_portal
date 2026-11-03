@@ -1,7 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import {
+  CanonicalPlaceSelector,
+  type CanonicalPlaceSelection,
+} from '@/components/location/CanonicalPlaceSelector';
 import { CategoryChips } from './CategoryChips';
 import {
   SERVICE_CATEGORIES,
@@ -11,7 +14,7 @@ import {
 
 export type ServiceHeroSearchSubmit = {
   category: ServiceCategory;
-  location: string;
+  canonicalPlaceId: string | null;
   sourceSurface: SourceSurface;
 };
 
@@ -19,7 +22,7 @@ type ServiceHeroSearchProps = {
   title: string;
   subtitle: string;
   defaultCategory?: ServiceCategory;
-  defaultLocation?: string;
+  defaultPlace?: CanonicalPlaceSelection | null;
   submitLabel?: string;
   sourceSurface?: SourceSurface;
   onSubmit: (input: ServiceHeroSearchSubmit) => void;
@@ -29,13 +32,16 @@ export function ServiceHeroSearch({
   title,
   subtitle,
   defaultCategory = 'home_improvement',
-  defaultLocation = '',
+  defaultPlace = null,
   submitLabel = 'Browse providers',
   sourceSurface = 'directory',
   onSubmit,
 }: ServiceHeroSearchProps) {
   const [category, setCategory] = useState<ServiceCategory>(defaultCategory);
-  const [location, setLocation] = useState(defaultLocation);
+  const [place, setPlace] = useState<CanonicalPlaceSelection | null>(defaultPlace);
+  useEffect(() => {
+    if (defaultPlace) setPlace(defaultPlace);
+  }, [defaultPlace]);
 
   const categoryLabel = useMemo(
     () => SERVICE_CATEGORIES.find(item => item.value === category)?.label || 'Service',
@@ -77,21 +83,25 @@ export function ServiceHeroSearch({
                 </select>
               </label>
 
-              <label className="space-y-1">
-                <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                  Location
-                </span>
-                <Input
-                  value={location}
-                  onChange={event => setLocation(event.target.value)}
-                  placeholder="Suburb or city"
-                />
-              </label>
+              <CanonicalPlaceSelector
+                value={place}
+                onChange={setPlace}
+                purpose="search"
+                label="Location"
+                placeholder="Choose one approved place"
+                hint="Provider coverage matches this exact Place."
+              />
 
               <div className="flex items-end">
                 <Button
                   className="w-full md:w-auto"
-                  onClick={() => onSubmit({ category, location: location.trim(), sourceSurface })}
+                  onClick={() =>
+                    onSubmit({
+                      category,
+                      canonicalPlaceId: place?.canonicalPlaceId ?? null,
+                      sourceSurface,
+                    })
+                  }
                 >
                   {submitLabel}
                 </Button>

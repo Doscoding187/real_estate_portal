@@ -12,7 +12,6 @@ import { safeErrorSummary } from '../_core/safeError';
 
 type ExploreContent = InferSelectModel<typeof exploreContent>;
 type ExploreDiscoveryVideo = InferSelectModel<typeof exploreDiscoveryVideos>;
-type Neighbourhood = any;
 type UserPreferences = any;
 
 /**
@@ -64,31 +63,6 @@ export async function getCachedVideoFeed(
   const data = await fetchFn();
 
   await redisCache.set(cacheKey, data, CacheTTL.FEED_RESULTS);
-
-  return data;
-}
-
-/**
- * Cache wrapper for neighbourhood detail
- */
-export async function getCachedNeighbourhoodDetail(
-  neighbourhoodId: number,
-  fetchFn: () => Promise<Neighbourhood | null>,
-): Promise<Neighbourhood | null> {
-  const cacheKey = ExploreCacheKeys.neighbourhoodDetail(neighbourhoodId);
-
-  const cached = await redisCache.get<Neighbourhood>(cacheKey);
-  if (cached) {
-    console.log(`[Cache HIT] Neighbourhood ${neighbourhoodId}`);
-    return cached;
-  }
-
-  console.log(`[Cache MISS] Fetching neighbourhood ${neighbourhoodId}`);
-  const data = await fetchFn();
-
-  if (data) {
-    await redisCache.set(cacheKey, data, CacheTTL.NEIGHBOURHOOD_DATA);
-  }
 
   return data;
 }
@@ -188,15 +162,6 @@ export async function invalidateFeedCaches(): Promise<void> {
 }
 
 /**
- * Invalidate neighbourhood cache
- */
-export async function invalidateNeighbourhoodCache(neighbourhoodId: number): Promise<void> {
-  console.log(`[Cache] Invalidating neighbourhood ${neighbourhoodId}`);
-
-  await redisCache.del(ExploreCacheKeys.neighbourhoodDetail(neighbourhoodId));
-}
-
-/**
  * Invalidate similar properties cache
  */
 export async function invalidateSimilarPropertiesCache(propertyId: number): Promise<void> {
@@ -215,26 +180,13 @@ export async function getCacheStats() {
 /**
  * Warm up cache with frequently accessed data
  */
-export async function warmUpCache(
-  fetchCategories: () => Promise<any[]>,
-  fetchPopularNeighbourhoods: () => Promise<Neighbourhood[]>,
-): Promise<void> {
+export async function warmUpCache(fetchCategories: () => Promise<any[]>): Promise<void> {
   console.log('[Cache] Warming up cache...');
 
   try {
     // Cache categories
     const categories = await fetchCategories();
     await redisCache.set(ExploreCacheKeys.categories(), categories, CacheTTL.CATEGORIES);
-
-    // Cache popular neighbourhoods
-    const neighbourhoods = await fetchPopularNeighbourhoods();
-    for (const neighbourhood of neighbourhoods) {
-      await redisCache.set(
-        ExploreCacheKeys.neighbourhoodDetail(neighbourhood.id),
-        neighbourhood,
-        CacheTTL.NEIGHBOURHOOD_DATA,
-      );
-    }
 
     console.log('[Cache] Warm-up complete');
   } catch (error) {
@@ -245,13 +197,11 @@ export async function warmUpCache(
 export default {
   getCachedPersonalizedFeed,
   getCachedVideoFeed,
-  getCachedNeighbourhoodDetail,
   getCachedUserPreferences,
   getCachedSimilarProperties,
   getCachedCategories,
   invalidateUserCache,
   invalidateFeedCaches,
-  invalidateNeighbourhoodCache,
   invalidateSimilarPropertiesCache,
   getCacheStats,
   warmUpCache,

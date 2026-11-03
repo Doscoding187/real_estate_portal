@@ -2,12 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { isSearchScope, parseSearchScope } from '../../../shared/searchScope';
 
 describe('SearchScope contract', () => {
-  it('accepts the four approved scope kinds', () => {
+  it('accepts canonical Place scopes', () => {
     const scopes = [
-      { kind: 'province', canonicalLocationId: 'province:1' },
-      { kind: 'metro_city', canonicalLocationId: 'city:12' },
-      { kind: 'search_area', searchAreaId: 'johannesburg-sandton' },
-      { kind: 'locality', canonicalLocationId: 'suburb:34' },
+      { kind: 'province', canonicalPlaceId: 'pl-place-01-000000000000000000000001' },
+      { kind: 'metro_city', canonicalPlaceId: 'pl-place-01-000000000000000000000002' },
+      { kind: 'locality', canonicalPlaceId: 'pl-place-01-000000000000000000000003' },
     ] as const;
 
     for (const scope of scopes) {
@@ -20,8 +19,8 @@ describe('SearchScope contract', () => {
     const result = parseSearchScope({
       kind: 'multi_location',
       members: [
-        { kind: 'locality', canonicalLocationId: 'suburb:35' },
-        { kind: 'locality', canonicalLocationId: 'suburb-34' },
+        { kind: 'locality', canonicalPlaceId: 'pl-place-01-000000000000000000000035' },
+        { kind: 'locality', canonicalPlaceId: 'pl-place-01-000000000000000000000034' },
       ],
     });
 
@@ -30,8 +29,8 @@ describe('SearchScope contract', () => {
       scope: {
         kind: 'multi_location',
         members: [
-          { kind: 'locality', canonicalLocationId: 'suburb:34' },
-          { kind: 'locality', canonicalLocationId: 'suburb:35' },
+          { kind: 'locality', canonicalPlaceId: 'pl-place-01-000000000000000000000034' },
+          { kind: 'locality', canonicalPlaceId: 'pl-place-01-000000000000000000000035' },
         ],
       },
     });
@@ -42,15 +41,15 @@ describe('SearchScope contract', () => {
       parseSearchScope({
         kind: 'multi_location',
         members: [
-          { kind: 'locality', canonicalLocationId: 'suburb:34' },
-          { kind: 'locality', canonicalLocationId: 'suburb:34' },
+          { kind: 'locality', canonicalPlaceId: 'pl-place-01-000000000000000000000034' },
+          { kind: 'locality', canonicalPlaceId: 'pl-place-01-000000000000000000000034' },
         ],
       }),
-    ).toEqual({ ok: true, scope: { kind: 'locality', canonicalLocationId: 'suburb:34' } });
+    ).toEqual({ ok: true, scope: { kind: 'locality', canonicalPlaceId: 'pl-place-01-000000000000000000000034' } });
     expect(
       parseSearchScope({
         kind: 'multi_location',
-        members: [{ kind: 'locality', canonicalLocationId: 'suburb:34' }],
+        members: [{ kind: 'locality', canonicalPlaceId: 'pl-place-01-000000000000000000000034' }],
       }),
     ).toMatchObject({ ok: false, error: { code: 'multi_location_invalid' } });
   });
@@ -61,7 +60,7 @@ describe('SearchScope contract', () => {
         kind: 'multi_location',
         members: [
           { kind: 'multi_location', members: [] },
-          { kind: 'locality', canonicalLocationId: 'suburb:34' },
+          { kind: 'locality', canonicalPlaceId: 'pl-place-01-000000000000000000000034' },
         ],
       }),
     ).toMatchObject({ ok: false, error: { code: 'unsupported_scope_kind' } });
@@ -69,8 +68,8 @@ describe('SearchScope contract', () => {
       parseSearchScope({
         kind: 'multi_location',
         members: [
-          { kind: 'locality', canonicalLocationId: 'suburb:34' },
-          { kind: 'metro_city', canonicalLocationId: 'city:12' },
+          { kind: 'locality', canonicalPlaceId: 'pl-place-01-000000000000000000000034' },
+          { kind: 'metro_city', canonicalPlaceId: 'pl-place-01-000000000000000000000012' },
         ],
       }),
     ).toMatchObject({ ok: false, error: { code: 'multi_location_mixed_kinds' } });
@@ -79,35 +78,37 @@ describe('SearchScope contract', () => {
         kind: 'multi_location',
         members: Array.from({ length: 11 }, (_, index) => ({
           kind: 'locality',
-          canonicalLocationId: `suburb:${index + 1}`,
+          canonicalPlaceId: `pl-place-01-${String(index + 1).padStart(24, '0')}`,
         })),
       }),
     ).toMatchObject({ ok: false, error: { code: 'multi_location_too_many' } });
   });
 
-  it('rejects malformed and mismatched canonical scopes', () => {
+  it('rejects malformed identities, legacy scope shapes and extra fields', () => {
     expect(parseSearchScope(null)).toMatchObject({
       ok: false,
       error: { code: 'invalid_shape' },
     });
-    expect(parseSearchScope({ kind: 'province', canonicalLocationId: 'city:12' })).toMatchObject({
-      ok: false,
-      error: { code: 'canonical_level_mismatch' },
-    });
     expect(
-      parseSearchScope({ kind: 'locality', canonicalLocationId: 'google-place-1' }),
+      parseSearchScope({ kind: 'locality', canonicalPlaceId: 'city:12' }),
     ).toMatchObject({
       ok: false,
-      error: { code: 'invalid_canonical_location_id' },
+      error: { code: 'invalid_canonical_place_id' },
     });
     expect(parseSearchScope({ kind: 'search_area', searchAreaId: 'Sandton' })).toMatchObject({
       ok: false,
-      error: { code: 'invalid_search_area_id' },
+      error: { code: 'unsupported_scope_kind' },
     });
     expect(
       parseSearchScope({
+        kind: 'locality',
+        canonicalLocationId: 'pl-place-01-000000000000000000000034',
+      }),
+    ).toMatchObject({ ok: false, error: { code: 'unknown_scope_field' } });
+    expect(
+      parseSearchScope({
         kind: 'province',
-        canonicalLocationId: 'province:1',
+        canonicalPlaceId: 'pl-place-01-000000000000000000000001',
         label: 'Gauteng',
       }),
     ).toMatchObject({

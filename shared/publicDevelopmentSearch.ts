@@ -1,4 +1,5 @@
 import type { SearchResultSortOption } from './transactionalSearchState';
+import { isCanonicalPlaceId } from './placeAuthority';
 
 export const PUBLIC_DEVELOPMENT_SEARCH_AVAILABILITY = ['available', 'sold_out'] as const;
 export type PublicDevelopmentSearchAvailability =
@@ -47,9 +48,9 @@ export interface PublicDevelopmentSearchItem {
   canonicalRoute: string;
   description: string | null;
   images: string[];
-  city: string;
-  suburb: string | null;
-  province: string;
+  canonicalPlaceId: string | null;
+  /** Preferred active Place names for display only; never a search key. */
+  locationLabels: string[];
   developmentType: PublicDevelopmentSearchDevelopmentType;
   transactionType: 'for_sale' | 'for_rent';
   status: PublicDevelopmentSearchStatus;
@@ -91,7 +92,7 @@ export interface PublicDevelopmentDetail extends PublicDevelopmentSearchItem {
   publicFacts: PublicDevelopmentSearchItem;
   address: string | null;
   showHouseAddress: boolean;
-  locationId: number | null;
+  canonicalPlaceId: string | null;
   latitude: string | null;
   longitude: string | null;
   gpsAccuracy: 'accurate' | 'approximate' | null;
@@ -138,9 +139,8 @@ export interface PublicDevelopmentProjectionDevelopment {
   slug: string | null;
   description: string | null;
   images: unknown;
-  city: string;
-  suburb: string | null;
-  province: string;
+  canonicalPlaceId: string | null;
+  locationLabels: string[];
   developmentType: PublicDevelopmentSearchDevelopmentType;
   transactionType: 'for_sale' | 'for_rent' | 'auction';
   status: PublicDevelopmentSearchStatus;
@@ -244,6 +244,9 @@ export function projectPublicDevelopmentFacts(
   if (development.transactionType !== 'for_sale' && development.transactionType !== 'for_rent') {
     return null;
   }
+  if (development.canonicalPlaceId !== null && !isCanonicalPlaceId(development.canonicalPlaceId)) {
+    return null;
+  }
 
   const publisherName = String(development.publisherName || '').trim();
   if (!development.cataloguePublisherId || !publisherName) return null;
@@ -330,9 +333,8 @@ export function projectPublicDevelopmentFacts(
     canonicalRoute: development.canonicalRoute,
     description: development.description,
     images: projectionImages(development.images),
-    city: development.city,
-    suburb: development.suburb,
-    province: development.province,
+    canonicalPlaceId: development.canonicalPlaceId,
+    locationLabels: [...new Set(development.locationLabels.map(label => label.trim()).filter(Boolean))],
     developmentType: development.developmentType,
     transactionType: development.transactionType,
     status: development.status,

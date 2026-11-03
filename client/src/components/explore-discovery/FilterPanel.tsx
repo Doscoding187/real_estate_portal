@@ -32,14 +32,12 @@ export function FilterPanel({ isOpen, onClose, onApply }: FilterPanelProps) {
     bedrooms,
     bathrooms,
     categoryId,
-    location,
     agencyId,
     setPropertyType,
     setPriceRange,
     setBedrooms,
     setBathrooms,
     setCategoryId,
-    setLocation,
     setAgencyId,
     clearFilters,
     getFilterCount,
@@ -279,19 +277,6 @@ export function FilterPanel({ isOpen, onClose, onApply }: FilterPanelProps) {
                     />
                   ))}
                 </div>
-              </div>
-
-              {/* Location */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-3">Location</label>
-                <input
-                  type="text"
-                  value={location || ''}
-                  onChange={e => setLocation(e.target.value || null)}
-                  placeholder="Enter location..."
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                  style={{ boxShadow: designTokens.shadows.sm }}
-                />
               </div>
 
               {/* Agency Filter */}

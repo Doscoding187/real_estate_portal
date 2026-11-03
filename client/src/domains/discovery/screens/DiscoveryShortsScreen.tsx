@@ -15,7 +15,7 @@ const SHORTS_CHANNELS = [
   { label: 'For You', category: undefined },
   { label: 'Listings', category: 'property' as const },
   { label: 'Developments', category: 'development' as const },
-  { label: 'Neighbourhoods', category: 'location' as const },
+  { label: 'Places', category: 'location' as const },
   { label: 'Insights', category: 'insight' as const },
   { label: 'Services', category: 'service' as const },
 ] as const;
@@ -38,7 +38,7 @@ export default function DiscoveryShortsScreen() {
       category: undefined,
       contentType: 'video',
       creatorActorId: undefined,
-      location: undefined,
+      canonicalPlaceId: undefined,
       priceRange: undefined,
     });
   }, [setQuery]);

@@ -8,6 +8,7 @@ import {
 } from '@/features/services/catalog';
 
 const mockLead = vi.fn();
+const PLACE_ID = 'pl-place-01-000000000000000000000000';
 
 vi.mock('@/lib/trpc', () => ({
   trpc: {
@@ -44,7 +45,7 @@ function makeLead(category: ServiceCategory = 'home_improvement') {
     propertyId: null,
     listingId: null,
     developmentId: null,
-    location: { city: 'Cape Town', province: 'Western Cape', suburb: 'Rondebosch' },
+    location: { canonicalPlaceId: PLACE_ID, label: 'Rondebosch, Cape Town, Western Cape' },
     notes: 'Please contact me after 5pm.',
     context: null,
     status: 'new',
@@ -63,18 +64,10 @@ function makeLead(category: ServiceCategory = 'home_improvement') {
       verificationStatus: 'verified',
       logoUrl: null,
       services: [{ category: 'home_improvement', code: 'plumbing', displayName: 'Plumbing' }],
-      locations: [{ suburb: 'Rondebosch', city: 'Cape Town', province: 'Western Cape' }],
+      locations: [{ canonicalPlaceId: PLACE_ID, label: 'Rondebosch, Cape Town, Western Cape' }],
       reviews: [],
     },
   };
-}
-
-function setSearch(search: string) {
-  Object.defineProperty(window, 'location', {
-    value: { ...window.location, search },
-    writable: true,
-    configurable: true,
-  });
 }
 
 describe('ServicesResultsPage', () => {
@@ -82,7 +75,6 @@ describe('ServicesResultsPage', () => {
     mockLead.mockReset();
     mockLead.mockReturnValue(makeLead());
     sessionStorage.clear();
-    setSearch('');
   });
 
   it('renders the server-authoritative provider and request state', () => {
@@ -120,20 +112,19 @@ describe('ServicesResultsPage', () => {
     );
   });
 
-  it('renders the server location and safely falls back when no location exists', () => {
+  it('renders the server Place label and safely handles a missing Place', () => {
     mockLead.mockReturnValue({
       ...makeLead(),
-      location: { city: null, province: null, suburb: null },
+      location: { canonicalPlaceId: null, label: null },
     });
     const { unmount } = render(<ServicesResultsPage />);
-    expect(screen.getByText('your area')).toBeInTheDocument();
+    expect(screen.getByText('Selected Place unavailable')).toBeInTheDocument();
     unmount();
 
     mockLead.mockReturnValue({
       ...makeLead(),
-      location: { city: 'Durban', province: 'KwaZulu-Natal', suburb: null },
+      location: { canonicalPlaceId: PLACE_ID, label: 'Durban, KwaZulu-Natal' },
     });
-    setSearch('?city=Durban&province=KwaZulu-Natal');
     render(<ServicesResultsPage />);
     expect(screen.getByText('Durban, KwaZulu-Natal')).toBeInTheDocument();
   });

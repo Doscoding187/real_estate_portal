@@ -2,52 +2,50 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LAND_CLASSIFICATION_LABELS, LAND_PUBLIC_CLASSIFICATIONS } from '@shared/land-domain';
 
-const { search } = vi.hoisted(() => ({
-  search: vi.fn(() => ({ data: [] })),
-}));
-
-vi.mock('wouter', () => ({
-  Link: ({ children, href }: { children: React.ReactNode; href: string }) => (
-    <a href={href}>{children}</a>
-  ),
+const { resolveOne, resolveMany, searchLand } = vi.hoisted(() => ({
+  resolveOne: vi.fn(),
+  resolveMany: vi.fn(),
+  searchLand: vi.fn(),
 }));
 
 vi.mock('@/lib/trpc', () => ({
   trpc: {
-    landPublic: {
-      search: {
-        useQuery: search,
-      },
+    placeAuthority: {
+      resolveSearchPlace: { useQuery: resolveOne },
+      resolveSearchPlaces: { useQuery: resolveMany },
     },
+    landPublic: { search: { useQuery: searchLand } },
   },
+}));
+
+vi.mock('@/components/location/CanonicalPlaceSelector', () => ({
+  CanonicalPlaceSelector: ({ value, label }: { value: { label: string } | null; label: string }) => (
+    <div aria-label={label}>{value?.label || 'No Place selected'}</div>
+  ),
 }));
 
 import PlotsAndLand from './PlotsAndLand';
 
-const landResult = {
-  listingId: 42,
-  href: '/plots-and-land/north-ridge',
-  title: 'North Ridge',
-  description: 'A confirmed residential land opportunity.',
-  askingPrice: '1000000',
-  city: 'Johannesburg',
-  province: 'Gauteng',
-  classification: 'residential_stand',
-  intendedUse: 'Residential',
-  extentM2: '1200',
-  passport: { trustState: 'reviewed' },
+const place = {
+  placeId: 'pl-place-01-000000000000000000000001',
+  label: 'Johannesburg',
+  placeType: 'metropolitan_municipality',
+  searchScope: 'locality' as const,
+  administrativeContext: 'Gauteng',
+  canonicalPath: '/gauteng/johannesburg',
 };
 
-describe('Plots & Land results handoff', () => {
+describe('Plots & Land canonical geography boundary', () => {
   beforeEach(() => {
     window.history.replaceState({}, '', '/plots-and-land');
-    search.mockReset();
-    search.mockReturnValue({ data: [landResult], error: null, isLoading: false });
+    resolveOne.mockReset().mockReturnValue({ data: null });
+    resolveMany.mockReset().mockReturnValue({ data: { results: [] } });
+    searchLand.mockReset().mockReturnValue({ data: [], error: null, isPending: false });
   });
 
   afterEach(() => cleanup());
 
-  it('restores hero classification and price filters for the Land search', () => {
+  it('drops retired geography while preserving non-geographic filters', () => {
     window.history.replaceState(
       {},
       '',
@@ -60,82 +58,41 @@ describe('Plots & Land results handoff', () => {
       LAND_CLASSIFICATION_LABELS.residential_stand,
     );
     expect(screen.getByLabelText('Maximum price (R)')).toHaveValue(1_000_000);
-    expect(search).toHaveBeenCalledWith(
-      expect.objectContaining({
-        locationId: 'city:12',
-        classification: 'residential_stand',
-        maxPrice: 1_000_000,
-      }),
-      { enabled: true },
-    );
-    expect(screen.getByRole('link', { name: /North Ridge/ })).toHaveAttribute(
-      'href',
-      '/plots-and-land/north-ridge',
-    );
+    expect(screen.getByRole('alert')).toHaveTextContent('retired city, province, or numeric geography');
+    expect(new URLSearchParams(window.location.search).has('locationId')).toBe(false);
   });
 
-  it('passes sibling OR locations to the Land search without collapsing them', () => {
-    window.history.replaceState(
-      {},
-      '',
-      '/plots-and-land?locationIds=city%3A12&locationIds=city%3A21&classification=development_land',
-    );
+  it('resolves a canonical locality handoff and searches by its exact Place ID', () => {
+    resolveOne.mockReturnValue({ data: place });
+    window.history.replaceState({}, '', `/plots-and-land?canonicalPlaceId=${place.placeId}`);
 
     render(<PlotsAndLand />);
 
-    expect(search).toHaveBeenCalledWith(
-      expect.objectContaining({
-        locationId: undefined,
-        locationIds: ['city:12', 'city:21'],
-        searchAreaId: undefined,
-        classification: 'development_land',
-      }),
-      { enabled: true },
+    expect(resolveOne).toHaveBeenCalledWith(
+      { placeId: place.placeId },
+      expect.objectContaining({ enabled: true }),
     );
+    expect(searchLand).toHaveBeenCalledWith(
+      expect.objectContaining({ canonicalPlaceId: place.placeId }),
+      expect.objectContaining({ enabled: true }),
+    );
+    expect(screen.getByRole('status')).toHaveTextContent('No published Land listings match this locality yet.');
   });
 
-  it('passes a governed Search Area as the sole geography authority', () => {
+  it('rejects unknown public classifications from the URL', () => {
     window.history.replaceState(
       {},
       '',
-      '/plots-and-land?searchAreaId=johannesburg-sandton&classification=residential_stand',
-    );
-
-    render(<PlotsAndLand />);
-
-    expect(search).toHaveBeenCalledWith(
-      expect.objectContaining({
-        locationId: undefined,
-        locationIds: undefined,
-        searchAreaId: 'johannesburg-sandton',
-        classification: 'residential_stand',
-      }),
-      { enabled: true },
-    );
-  });
-
-  it('drops an unsupported public classification before querying', () => {
-    window.history.replaceState(
-      {},
-      '',
-      '/plots-and-land?locationId=city%3A12&classification=not-a-land-type&maxPrice=1000000',
+      `/plots-and-land?canonicalPlaceId=${place.placeId}&classification=not-a-land-type`,
     );
 
     render(<PlotsAndLand />);
 
     expect(screen.getByRole('combobox', { name: 'Land type' })).toHaveTextContent('Any land type');
-    expect(search).toHaveBeenCalledWith(
-      expect.objectContaining({
-        locationId: 'city:12',
-        classification: undefined,
-        maxPrice: 1_000_000,
-      }),
-      { enabled: true },
-    );
     expect(new URLSearchParams(window.location.search).get('classification')).toBeNull();
   });
 
-  it('exposes only the governed public classifications in the design-system selector', () => {
+  it('exposes only the governed public classifications in the selector', () => {
     render(<PlotsAndLand />);
 
     fireEvent.click(screen.getByRole('combobox', { name: 'Land type' }));

@@ -113,8 +113,8 @@ export async function getDevelopmentAccessDetails(db: DbHandle, developmentId: n
     development: {
       id: reference.developmentId,
       name: reference.displayName,
-      city: reference.city,
-      province: reference.province,
+      canonicalPlaceId: reference.canonicalPlaceId,
+      locationLabels: reference.locationLabels,
       cataloguePublisherId: reference.publisherId,
       isPublished: reference.isPublished,
       approvalStatus: reference.approvalStatus,
@@ -156,8 +156,8 @@ export async function listDevelopmentAccessDetails(
         development: {
           id: developmentId,
           name: row.developmentName,
-          city: row.city || null,
-          province: row.province || null,
+        canonicalPlaceId: row.canonicalPlaceId,
+        locationLabels: row.locationLabels,
           cataloguePublisherId: row.cataloguePublisherId,
           publisherName: row.publisherName,
           isPublished: row.isPublished,

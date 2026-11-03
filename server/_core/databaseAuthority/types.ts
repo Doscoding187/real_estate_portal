@@ -4,7 +4,6 @@ export const DATABASE_OPERATIONS = [
   'read-only-connect',
   'ci-identity-bootstrap',
   'inspection-identity-provision',
-  'tidb-source-reader-provision',
   'migration-identity-provision',
   'runtime-identities-provision',
   'runtime-ledger-read-grant',
@@ -120,7 +119,7 @@ export type ResolvedDatabaseContext = {
   databaseName: string;
   host: string;
   port: string;
-  provider: 'mysql' | 'tidb' | 'unknown';
+  provider: 'mysql' | 'unknown';
   dialect: 'mysql' | 'unknown';
   local: boolean;
   tls: {

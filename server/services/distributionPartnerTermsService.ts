@@ -25,6 +25,8 @@ import {
   resolveCheckfitV1Rate,
 } from './checkfitV1Service';
 import type { DistributionUnitMedia } from '../../shared/distributionUnitMedia';
+import type { DistributionOpportunityPlaceAssignment } from '../../shared/distributionOpportunityMatching';
+import { listDevelopmentPlaceGeography } from './developmentPlaceAssignmentService';
 
 type ProgramPromotion = {
   headline?: string | null;
@@ -154,19 +156,16 @@ async function getPublisherScopedDevelopmentIds(
   return allowed;
 }
 
-export type PartnerProgramTermsItem = {
+export type PartnerProgramTermsItem = DistributionOpportunityPlaceAssignment & {
   developmentId: number;
   developmentName: string;
   developmentFactsAvailable: true;
-  city: string;
-  province: string;
-  suburb: null;
-  address: null;
+  locationLabels: string[];
   description: string | null;
   amenities: null;
   features: null;
   imageUrl: string | null;
-  campaign: DevelopmentSalesProjection['campaign'];
+  campaign: Omit<DevelopmentSalesProjection['campaign'], 'city' | 'province'>;
   inventory: {
     phaseScope: DevelopmentSalesProjection['inventory']['phaseScope'];
     modes: Partial<Record<PartnerMode, PartnerModeProjection>>;
@@ -275,6 +274,7 @@ export async function listPartnerProgramTerms(
   });
   const uniqueIds = [...new Set<number>(accessibleIds)].slice(0, 200);
   if (!uniqueIds.length) return { items: [] };
+  const geographyByDevelopmentId = await listDevelopmentPlaceGeography(uniqueIds);
 
   const publisherScopedIds: Set<number> = input.cataloguePublisherId
     ? await getPublisherScopedDevelopmentIds(uniqueIds, input.cataloguePublisherId)
@@ -331,6 +331,7 @@ export async function listPartnerProgramTerms(
       const source = await projectionAndReference(developmentId);
       if (!source) return null;
       const { projection } = source;
+      const campaign = projection.campaign;
       const evaluation = await evaluateDevelopmentDistributionAccess({
         db,
         developmentId,
@@ -371,20 +372,22 @@ export async function listPartnerProgramTerms(
         ? 'This campaign is visible, but no priced sale or rental inventory is currently available.'
         : evaluation.opportunity.friendlyMessage;
       const promotion = parsePromotion(access.promotion);
+      const geography = geographyByDevelopmentId.get(developmentId) ?? {
+        canonicalPlaceId: null,
+        locationLabels: [],
+      };
 
       return {
         developmentId,
         developmentName: projection.campaign.name,
+        canonicalPlaceId: geography.canonicalPlaceId,
         developmentFactsAvailable: true as const,
-        city: projection.campaign.city,
-        province: projection.campaign.province,
-        suburb: null,
-        address: null,
+        locationLabels: geography.locationLabels,
         description: projection.campaign.description || projection.campaign.tagline,
         amenities: null,
         features: null,
         imageUrl: projection.campaign.images[0] || null,
-        campaign: projection.campaign,
+        campaign,
         inventory: {
           phaseScope: projection.inventory.phaseScope,
           modes,

@@ -2,6 +2,7 @@ import { decimal, index, int, json, mysqlEnum, mysqlTable, text, timestamp, uniq
 import { agencies, agents } from './agencies';
 import { users } from './core';
 import { listings } from './listings';
+import { place } from './placeAuthority';
 
 export const SELLER_PROSPECT_STAGE_VALUES = [
   'new',
@@ -113,9 +114,10 @@ export const sellerProspects = mysqlTable(
     email: varchar('email', { length: 320 }),
     phone: varchar('phone', { length: 50 }),
     propertyAddress: varchar('property_address', { length: 500 }),
-    suburb: varchar('suburb', { length: 120 }),
-    city: varchar('city', { length: 120 }),
-    province: varchar('province', { length: 120 }),
+    canonicalPlaceId: varchar('canonical_place_id', { length: 40 }).references(
+      () => place.placeId,
+      { onDelete: 'restrict', onUpdate: 'restrict' },
+    ),
     propertyType: mysqlEnum(
       'property_type',
       SELLER_PROSPECT_PROPERTY_TYPE_VALUES as unknown as [string, ...string[]],
@@ -163,7 +165,7 @@ export const sellerProspects = mysqlTable(
     index('idx_seller_prospects_agency_stage').on(table.agencyId, table.stage),
     index('idx_seller_prospects_agency_follow_up').on(table.agencyId, table.nextFollowUp),
     index('idx_seller_prospects_agent_follow_up').on(table.assignedAgentId, table.nextFollowUp),
-    index('idx_seller_prospects_agency_area').on(table.agencyId, table.city, table.suburb),
+    index('idx_seller_prospects_agency_place').on(table.agencyId, table.canonicalPlaceId),
     index('idx_seller_prospects_converted_listing').on(table.convertedListingId),
   ],
 );

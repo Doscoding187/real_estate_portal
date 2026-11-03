@@ -12,7 +12,7 @@ Created a Zustand store with localStorage persistence for managing filter state 
 
 1. **`client/src/store/exploreFiltersStore.ts`**
    - Zustand store with persist middleware
-   - Filter state management (propertyType, price, beds, baths, category, location)
+   - Filter state management (propertyType, price, beds, baths, category)
    - Actions for setting individual filters
    - Clear filters action
    - Filter count calculation
@@ -30,7 +30,7 @@ Created a Zustand store with localStorage persistence for managing filter state 
 ### ✅ Task Requirements Met
 
 - [x] Created `client/src/store/exploreFiltersStore.ts`
-- [x] Implemented filter state (propertyType, price, beds, baths, category, location)
+- [x] Implemented filter state (propertyType, price, beds, baths, category)
 - [x] Added filter actions (set, clear, getCount)
 - [x] Added persistence with localStorage
 - [x] Validates Requirements 4.1, 4.3
@@ -54,7 +54,6 @@ interface FilterState {
   bedrooms: number | null;
   bathrooms: number | null;
   categoryId: number | null;
-  location: string | null;
 }
 ```
 
@@ -64,7 +63,6 @@ interface FilterState {
 - `setBedrooms(count)` - Set bedroom count filter
 - `setBathrooms(count)` - Set bathroom count filter
 - `setCategoryId(id)` - Set lifestyle category filter
-- `setLocation(location)` - Set location filter
 - `clearFilters()` - Reset all filters to null
 - `getFilterCount()` - Calculate number of active filters
 
@@ -133,12 +131,8 @@ Created comprehensive test suite covering:
 
 ## Integration Points
 
-This store will be used in upcoming tasks:
-
-- **Task 12:** URL sync hook will read/write to this store
-- **Task 13:** FilterPanel component will use this store
-- **Task 14:** Mobile bottom sheet will use this store
-- **Task 24-27:** All Explore pages will consume this store
+- Property filter panels use this store for non-geographic filters.
+- Geography comes from canonical Place selection and the relevant search intent.
 
 ## Requirements Validation
 

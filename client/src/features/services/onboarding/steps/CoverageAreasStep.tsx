@@ -5,10 +5,8 @@
 
 import { Trash2, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { trpc } from '@/lib/trpc';
-import { SA_PROVINCES } from '@/features/services/catalog';
+import { CanonicalPlaceSelector } from '@/components/location/CanonicalPlaceSelector';
 import { type OnboardingState, type OnboardingAction } from '../useOnboardingReducer';
 
 const MAX_LOCATIONS = 5;
@@ -40,25 +38,22 @@ export function CoverageAreasStep({ state, dispatch, onNext, onBack }: CoverageA
     },
   });
 
-  const hasValidRow = state.locations.some(
-    l => l.suburb.trim().length > 0 || l.city.trim().length > 0 || l.province.length > 0,
-  );
+  const hasValidRow = state.locations.some(location => location.place !== null);
 
   function handleContinue() {
     if (isPending || !hasValidRow) return;
     dispatch({ type: 'SET_PENDING', step: 4 });
     dispatch({ type: 'CLEAR_ERROR', step: 4 });
 
-    const locations = state.locations.map(loc => ({
-      id: loc.recordId,
-      suburb: loc.suburb.trim() || undefined,
-      city: loc.city.trim() || undefined,
-      province: loc.province || undefined,
-      countryCode: loc.countryCode || 'ZA',
-      postalCode: loc.postalCode.trim() || undefined,
-      radiusKm: loc.radiusKm ? Number(loc.radiusKm) : 25,
-      isPrimary: loc.isPrimary,
-    }));
+    const locations = state.locations.flatMap(location =>
+      location.place
+        ? [{
+            id: location.recordId,
+            canonicalPlaceId: location.place.canonicalPlaceId,
+            isPrimary: location.isPrimary,
+          }]
+        : [],
+    );
 
     replaceLocations.mutate({ locations });
   }
@@ -68,7 +63,7 @@ export function CoverageAreasStep({ state, dispatch, onNext, onBack }: CoverageA
       <div className="space-y-1">
         <h2 className="text-xl font-semibold text-slate-900">Where do you operate?</h2>
         <p className="text-sm text-slate-500">
-          List the areas you serve so consumers can check your coverage
+          Select the exact approved Places you serve. Requests match only the selected Place.
         </p>
       </div>
 
@@ -90,88 +85,16 @@ export function CoverageAreasStep({ state, dispatch, onNext, onBack }: CoverageA
               </button>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor={`loc-suburb-${loc.id}`}>Suburb</Label>
-                <Input
-                  id={`loc-suburb-${loc.id}`}
-                  value={loc.suburb}
-                  onChange={e =>
-                    dispatch({
-                      type: 'UPDATE_LOCATION',
-                      id: loc.id,
-                      field: 'suburb',
-                      value: e.target.value,
-                    })
-                  }
-                  placeholder="e.g. Sandton"
-                  disabled={isPending}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor={`loc-city-${loc.id}`}>City</Label>
-                <Input
-                  id={`loc-city-${loc.id}`}
-                  value={loc.city}
-                  onChange={e =>
-                    dispatch({
-                      type: 'UPDATE_LOCATION',
-                      id: loc.id,
-                      field: 'city',
-                      value: e.target.value,
-                    })
-                  }
-                  placeholder="e.g. Johannesburg"
-                  disabled={isPending}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor={`loc-province-${loc.id}`}>SA Province</Label>
-                <select
-                  id={`loc-province-${loc.id}`}
-                  value={loc.province}
-                  onChange={e =>
-                    dispatch({
-                      type: 'UPDATE_LOCATION',
-                      id: loc.id,
-                      field: 'province',
-                      value: e.target.value,
-                    })
-                  }
-                  disabled={isPending}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                >
-                  <option value="">Select province</option>
-                  {SA_PROVINCES.map(p => (
-                    <option key={p} value={p}>
-                      {p}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor={`loc-radius-${loc.id}`}>Radius (km)</Label>
-                <Input
-                  id={`loc-radius-${loc.id}`}
-                  type="number"
-                  min={1}
-                  max={250}
-                  value={loc.radiusKm}
-                  onChange={e =>
-                    dispatch({
-                      type: 'UPDATE_LOCATION',
-                      id: loc.id,
-                      field: 'radiusKm',
-                      value: e.target.value,
-                    })
-                  }
-                  disabled={isPending}
-                />
-              </div>
-            </div>
+            <CanonicalPlaceSelector
+              value={loc.place}
+              onChange={place =>
+                dispatch({ type: 'UPDATE_LOCATION', id: loc.id, field: 'place', value: place })
+              }
+              purpose="authoring"
+              label={`Coverage Place ${index + 1}`}
+              placeholder="Search for an approved city, suburb or locality"
+              hint="Display names never define or widen coverage."
+            />
           </div>
         ))}
 

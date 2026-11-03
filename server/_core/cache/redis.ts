@@ -10,11 +10,9 @@ import { safeErrorSummary } from '../safeError';
 
 // Cache prefixes for key naming
 export enum CachePrefixes {
-  PRICE_ANALYTICS = 'pa:',
   PROPERTY_DATA = 'prop:',
   USER_PREFERENCES = 'up:',
   SEARCH_RESULTS = 'search:',
-  LOCATION_DATA = 'loc:',
   STATISTICS = 'stats:',
   SESSION_DATA = 'session:',
   TEMPORARY = 'temp:',
@@ -80,12 +78,6 @@ export class RedisCacheManager {
 
   // Cache configuration
   private cacheConfigs: CacheConfig[] = [
-    // Price Analytics (Low frequency updates)
-    { key: 'pa:*:avg_price', ttl: 24 * 3600, description: 'Average prices - 24 hours' },
-    { key: 'pa:*:price_trend', ttl: 12 * 3600, description: 'Price trends - 12 hours' },
-    { key: 'pa:*:market_stats', ttl: 6 * 3600, description: 'Market statistics - 6 hours' },
-    { key: 'pa:*:growth_metrics', ttl: 6 * 3600, description: 'Growth metrics - 6 hours' },
-
     // Property Data (Medium frequency updates)
     { key: 'prop:featured_listings', ttl: 2 * 3600, description: 'Featured properties - 2 hours' },
     { key: 'prop:*:full_data', ttl: 1 * 3600, description: 'Property details - 1 hour' },
@@ -94,10 +86,6 @@ export class RedisCacheManager {
     // User Preferences (High importance, lower TTL)
     { key: 'up:user:*:preferences', ttl: 7 * 24 * 3600, description: 'User preferences - 7 days' },
     { key: 'up:user:*:recommendations', ttl: 1 * 3600, description: 'Recommendations - 1 hour' },
-
-    // Location Data (Relatively static)
-    { key: 'loc:*:suburbs', ttl: 24 * 7 * 24 * 3600, description: 'Suburb data - 1 week' },
-    { key: 'loc:*:cities', ttl: 24 * 7 * 24 * 3600, description: 'City data - 1 week' },
 
     // Session Data (Short-lived)
     { key: 'session:*', ttl: 30 * 60, description: 'User sessions - 30 minutes' },
@@ -487,118 +475,6 @@ export class RedisCacheManager {
 }
 
 /**
- * Price Analytics Cache Service
- * Specialized cache for price analytics data
- */
-export class PriceAnalyticsCache {
-  private cacheManager: RedisCacheManager;
-
-  constructor(cacheManager: RedisCacheManager) {
-    this.cacheManager = cacheManager;
-  }
-
-  /**
-   * Get suburb price analytics from cache
-   */
-  async getSuburbAnalytics(suburbId: number): Promise<any> {
-    const cacheKey = `${CachePrefixes.PRICE_ANALYTICS}suburb:${suburbId}:analytics`;
-
-    return await this.cacheManager.get(
-      cacheKey,
-      async () => {
-        // Simulated database fetch - replace with actual database query
-        console.log(`Fetching suburb analytics for ID: ${suburbId} from database`);
-        return {
-          suburbId,
-          currentAvgPrice: Math.floor(Math.random() * 2000000) + 500000,
-          currentMedianPrice: Math.floor(Math.random() * 1800000) + 400000,
-          priceGrowthPercent: Math.floor(Math.random() * 20) - 5,
-          totalProperties: Math.floor(Math.random() * 500) + 100,
-          lastUpdated: new Date().toISOString(),
-        };
-      },
-      {
-        strategy: 'database',
-        timeout: 5000,
-        maxRetries: 3,
-        logLevel: 'warn',
-      },
-    );
-  }
-
-  /**
-   * Get city price analytics from cache
-   */
-  async getCityAnalytics(cityId: number): Promise<any> {
-    const cacheKey = `${CachePrefixes.PRICE_ANALYTICS}city:${cityId}:analytics`;
-
-    return await this.cacheManager.get(
-      cacheKey,
-      async () => {
-        console.log(`Fetching city analytics for ID: ${cityId} from database`);
-        return {
-          cityId,
-          currentAvgPrice: Math.floor(Math.random() * 2500000) + 800000,
-          currentMedianPrice: Math.floor(Math.random() * 2200000) + 600000,
-          priceGrowthPercent: Math.floor(Math.random() * 25) - 8,
-          totalProperties: Math.floor(Math.random() * 2000) + 500,
-          lastUpdated: new Date().toISOString(),
-        };
-      },
-      {
-        strategy: 'database',
-        timeout: 5000,
-        maxRetries: 3,
-        logLevel: 'warn',
-      },
-    );
-  }
-
-  /**
-   * Get province price analytics from cache
-   */
-  async getProvinceAnalytics(provinceId: number): Promise<any> {
-    const cacheKey = `${CachePrefixes.PRICE_ANALYTICS}province:${provinceId}:analytics`;
-
-    return await this.cacheManager.get(
-      cacheKey,
-      async () => {
-        console.log(`Fetching province analytics for ID: ${provinceId} from database`);
-        return {
-          provinceId,
-          currentAvgPrice: Math.floor(Math.random() * 3000000) + 1000000,
-          currentMedianPrice: Math.floor(Math.random() * 2800000) + 800000,
-          priceGrowthPercent: Math.floor(Math.random() * 30) - 10,
-          totalProperties: Math.floor(Math.random() * 5000) + 1000,
-          lastUpdated: new Date().toISOString(),
-        };
-      },
-      {
-        strategy: 'database',
-        timeout: 5000,
-        maxRetries: 3,
-        logLevel: 'warn',
-      },
-    );
-  }
-
-  /**
-   * Invalidate price analytics cache for location
-   */
-  async invalidateLocationAnalytics(locationId: number, locationType: string): Promise<void> {
-    const pattern = `${CachePrefixes.PRICE_ANALYTICS}${locationType}:${locationId}:*`;
-    await this.cacheManager.delPattern(pattern);
-  }
-
-  /**
-   * Invalidate all price analytics cache
-   */
-  async invalidateAllPriceAnalytics(): Promise<void> {
-    await this.cacheManager.delPattern(`${CachePrefixes.PRICE_ANALYTICS}*`);
-  }
-}
-
-/**
  * Cache Invalidator Service
  * Handles automatic cache invalidation based on data changes
  */
@@ -614,23 +490,6 @@ export class CacheInvalidator {
    */
   async invalidate(trigger: string, context: any): Promise<void> {
     const rules: InvalidationRule[] = [
-      // Price Analytics Invalidation
-      {
-        trigger: 'property_price_update',
-        pattern: `${CachePrefixes.PRICE_ANALYTICS}*:avg_price`,
-        strategy: 'pattern',
-      },
-      {
-        trigger: 'property_created',
-        pattern: `${CachePrefixes.PRICE_ANALYTICS}*:market_stats`,
-        strategy: 'pattern',
-      },
-      {
-        trigger: 'property_sold',
-        pattern: `${CachePrefixes.PRICE_ANALYTICS}*:active_listings`,
-        strategy: 'pattern',
-      },
-
       // Property Data Invalidation
       {
         trigger: 'property_updated',
@@ -685,7 +544,6 @@ export class CacheInvalidator {
  * Global cache instances
  */
 let redisCacheManager: RedisCacheManager | null = null;
-let priceAnalyticsCache: PriceAnalyticsCache | null = null;
 let cacheInvalidator: CacheInvalidator | null = null;
 
 /**
@@ -693,7 +551,6 @@ let cacheInvalidator: CacheInvalidator | null = null;
  */
 export async function initializeCache(): Promise<void> {
   redisCacheManager = new RedisCacheManager();
-  priceAnalyticsCache = new PriceAnalyticsCache(redisCacheManager);
   cacheInvalidator = new CacheInvalidator(redisCacheManager);
 
   console.log('Redis cache services initialized');
@@ -707,13 +564,6 @@ export function getRedisCacheManager(): RedisCacheManager {
     throw new Error('Cache not initialized. Call initializeCache() first.');
   }
   return redisCacheManager;
-}
-
-export function getPriceAnalyticsCache(): PriceAnalyticsCache {
-  if (!priceAnalyticsCache) {
-    throw new Error('Cache not initialized. Call initializeCache() first.');
-  }
-  return priceAnalyticsCache;
 }
 
 export function getCacheInvalidator(): CacheInvalidator {

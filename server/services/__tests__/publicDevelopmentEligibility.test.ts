@@ -12,6 +12,7 @@ function catalogue(
     activeUnitTypeCount?: number;
     activeOperatorCount?: number;
     activeSupersessionSource?: boolean;
+    canonicalPlaceId?: string | null;
   } = {},
 ): CanonicalDevelopmentCatalogue {
   const defaultDevelopment: CanonicalDevelopmentCatalogue['development'] = {
@@ -32,6 +33,10 @@ function catalogue(
 
   return {
     development: { ...defaultDevelopment, ...overrides.development },
+    canonicalPlaceId:
+      overrides.canonicalPlaceId === undefined
+        ? 'pl-place-01-000000000000000000000001'
+        : overrides.canonicalPlaceId,
     publisher:
       overrides.publisher === null ? null : { ...defaultPublisher, ...overrides.publisher },
     organisation: overrides.organisation ?? null,

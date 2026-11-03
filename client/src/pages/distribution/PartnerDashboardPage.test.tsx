@@ -9,6 +9,9 @@ const {
   mockPipelineQuery,
   mockViewingsQuery,
   mockCommissionEntriesQuery,
+  mockSearchAssessmentsQuery,
+  mockClaimSearchAssessments,
+  mockInvalidateSearchAssessments,
 } = vi.hoisted(() => ({
   mockUseAuth: vi.fn(),
   mockSetLocation: vi.fn(),
@@ -16,6 +19,9 @@ const {
   mockPipelineQuery: vi.fn(),
   mockViewingsQuery: vi.fn(),
   mockCommissionEntriesQuery: vi.fn(),
+  mockSearchAssessmentsQuery: vi.fn(),
+  mockClaimSearchAssessments: vi.fn(),
+  mockInvalidateSearchAssessments: vi.fn(),
 }));
 
 vi.mock('@/_core/hooks/useAuth', () => ({
@@ -36,7 +42,18 @@ vi.mock('@/components/referral/ReferralAppShell', () => ({
 
 vi.mock('@/lib/trpc', () => ({
   trpc: {
+    useUtils: () => ({
+      distribution: {
+        listMySearchAssessments: { invalidate: mockInvalidateSearchAssessments },
+      },
+    }),
     distribution: {
+      listMySearchAssessments: {
+        useQuery: (...args: unknown[]) => mockSearchAssessmentsQuery(...args),
+      },
+      claimMyPublicSearchAssessments: {
+        useMutation: () => ({ isPending: false, mutate: mockClaimSearchAssessments }),
+      },
       referrer: {
         status: { useQuery: (...args: unknown[]) => mockStatusQuery(...args) },
         myPipeline: { useQuery: (...args: unknown[]) => mockPipelineQuery(...args) },
@@ -69,6 +86,9 @@ describe('PartnerDashboardPage', () => {
     });
     mockViewingsQuery.mockReturnValue({ data: [], isLoading: false, isError: false });
     mockCommissionEntriesQuery.mockReturnValue({ data: [], isLoading: false, isError: false });
+    mockSearchAssessmentsQuery.mockReturnValue({ data: [], isLoading: false, isError: false });
+    mockClaimSearchAssessments.mockReset();
+    mockInvalidateSearchAssessments.mockResolvedValue(undefined);
   });
 
   it('renders the journey framing with honest empty states', () => {
@@ -167,6 +187,34 @@ describe('PartnerDashboardPage', () => {
     render(<PartnerDashboardPage />);
 
     expect(screen.getByText(/1 saved on this device/)).toBeInTheDocument();
+  });
+
+  it('counts selected opportunities in saved account assessments', () => {
+    mockSearchAssessmentsQuery.mockReturnValue({
+      data: [
+        {
+          id: 'assessment-1',
+          marketMode: 'sale',
+          searchFilters: { areaText: 'Midrand' },
+          selectedOpportunities: [
+            {
+              developmentId: 12,
+              projectionRevision: 'revision-1',
+              observedAt: '2026-10-26T00:00:00.000Z',
+              campaign: { name: 'Waterfall Estate' },
+            },
+          ],
+        },
+      ],
+      isLoading: false,
+      isError: false,
+    });
+
+    render(<PartnerDashboardPage />);
+
+    expect(screen.getByText(/1 selected option saved to your account/)).toBeInTheDocument();
+    expect(screen.getByText('Buying shortlist · Midrand')).toBeInTheDocument();
+    expect(screen.getByText('Waterfall Estate')).toBeInTheDocument();
   });
 
   it('links journey actions to their destinations', () => {

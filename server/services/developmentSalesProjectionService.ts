@@ -13,6 +13,7 @@ import {
 import { getDb } from '../db-connection';
 import { evaluatePublicDevelopmentEligibility } from './publicDevelopmentEligibility';
 import { getDeveloperPublicationAccess } from './developerPublicationAccess';
+import { getDevelopmentPlaceGeography } from './developmentPlaceAssignmentService';
 import {
   resolveDistributionPreviewDemoInventory,
   type DistributionPreviewDemoUnitType,
@@ -47,8 +48,6 @@ export interface DevelopmentSalesProjection {
     tagline: string | null;
     description: string | null;
     developmentType: string;
-    city: string;
-    province: string;
     images: string[];
   };
   inventory: {
@@ -284,8 +283,6 @@ export async function getDevelopmentSalesProjection(
         description: developments.description,
         developmentType: developments.developmentType,
         transactionType: developments.transactionType,
-        city: developments.city,
-        province: developments.province,
         images: developments.images,
         status: developments.status,
         approvalStatus: developments.approvalStatus,
@@ -367,6 +364,7 @@ export async function getDevelopmentSalesProjection(
     row.publisher.developerOrganisationId !== null
       ? await getDeveloperPublicationAccess(row.publisher.developerOrganisationId, { db })
       : null;
+  const geography = await getDevelopmentPlaceGeography(developmentId);
   const publication = evaluatePublicDevelopmentEligibility({
     development: {
       id: row.development.id,
@@ -377,6 +375,7 @@ export async function getDevelopmentSalesProjection(
       approvalStatus: row.development.approvalStatus,
     },
     publisher: row.publisher,
+    canonicalPlaceId: geography.canonicalPlaceId,
     organisation: row.organisation,
     unitTypes: unitTypeRows,
     activeUnitTypeCount: unitTypeRows.filter(unitType => Number(unitType.isActive) === 1).length,
@@ -482,8 +481,6 @@ export async function getDevelopmentSalesProjection(
       tagline: publicationVisible ? row.development.tagline || null : null,
       description: publicationVisible ? row.development.description || null : null,
       developmentType: publicationVisible ? String(row.development.developmentType) : '',
-      city: publicationVisible ? String(row.development.city) : '',
-      province: publicationVisible ? String(row.development.province) : '',
       images: publicationVisible ? publicImageUrls(row.development.images) : [],
     },
     inventory:

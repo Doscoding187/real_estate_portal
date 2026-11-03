@@ -119,7 +119,7 @@ describe('North Riding private house authoring', () => {
       publicLocationPrecision: 'approximate',
       providerObservation: null,
     });
-    for (const key of ['city', 'province', 'suburb', 'cityId', 'suburbId'])
+    for (const key of ['city', 'province', 'suburb', 'provinceId', 'cityId', 'suburbId'])
       expect(payload.location).not.toHaveProperty(key);
   });
   it('keeps house confirmation unavailable without street evidence', () => {
@@ -141,7 +141,9 @@ it('provider enrichment preserves North Riding identity and resets confirmation'
   expect(state.location?.canonicalPlace?.label).toBe('North Riding');
   expect(state.location?.locationConfirmationState).toBe('needs_confirmation');
   expect(state.location?.privateAddress).toEqual({ streetNumber: '5', streetName: 'Congo Street' });
-  expect(state.location?.cityId).toBeNull();
+  for (const key of ['city', 'province', 'suburb'])
+    expect(state.location).not.toHaveProperty(key);
+  expect(state.location).not.toHaveProperty('cityId');
   fireEvent.click(screen.getByRole('button', { name: 'Confirm location' }));
   const payload = buildListingWizardSubmitPayload({
     ...useListingWizardStore.getState(),

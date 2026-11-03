@@ -87,7 +87,7 @@ describe('exact disposable Azure rehearsal authority', () => {
   });
   it.each([
     'mysql://fixture:fixture@propertylistify-mysql.mysql.database.azure.com/propertylistify_database',
-    'mysql://fixture:fixture@gateway01.ap-northeast-1.prod.aws.tidbcloud.com/listify_property_sa',
+    'mysql://fixture:fixture@remote.mysql.example.com/listify_property_sa',
     'mysql://fixture:fixture@another.mysql.database.azure.com/propertylistify_database',
     `mysql://fixture:fixture@${REHEARSAL.hostname}/another_database`,
     'mysql://fixture:fixture@unregistered.example.test/remote',

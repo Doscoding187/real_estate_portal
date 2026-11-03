@@ -309,6 +309,13 @@ export default function AgentListings() {
             Commercial inventory
           </Button>
           <Button
+            variant="outline"
+            onClick={() => setLocation('/agent/land/create')}
+            className={agentPageStyles.ghostButton}
+          >
+            Land listing
+          </Button>
+          <Button
             onClick={startListing}
             disabled={statusLoading || journeyAction.waiting}
             className={agentPageStyles.primaryButton}
@@ -595,9 +602,7 @@ export default function AgentListings() {
                               <AgentServicesReferral
                                 listingId={listing.listingId}
                                 propertyId={publicPropertyId}
-                                suburb={listing.suburb}
-                                city={listing.city}
-                                province={listing.province}
+                                canonicalPlaceId={listing.canonicalPlaceId}
                               />
                             ) : null
                           }

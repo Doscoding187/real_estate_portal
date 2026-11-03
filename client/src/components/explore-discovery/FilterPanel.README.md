@@ -93,13 +93,11 @@ const {
   bedrooms,          // number | null
   bathrooms,         // number | null
   categoryId,        // number | null
-  location,          // string | null
   setPropertyType,   // (type: string | null) => void
   setPriceRange,     // (min: number | null, max: number | null) => void
   setBedrooms,       // (count: number | null) => void
   setBathrooms,      // (count: number | null) => void
   setCategoryId,     // (id: number | null) => void
-  setLocation,       // (location: string | null) => void
   clearFilters,      // () => void
   getFilterCount,    // () => number
 } = useExploreFiltersStore();
@@ -167,8 +165,5 @@ All filter state is now managed by Zustand! 🎉
 - `MicroPill` - Chip-style filter buttons
 - `IconButton` - Modern icon buttons
 - `useExploreFiltersStore` - Zustand filter store
-- `useFilterUrlSync` - URL synchronization hook
 
-## Example
-
-See `FilterPanel.example.tsx` for a complete working example.
+Geography is selected through the canonical Place search flow, outside this property filter panel.

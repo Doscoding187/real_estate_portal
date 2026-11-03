@@ -3,8 +3,8 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const source = readFileSync(resolve(process.cwd(), 'server/db.ts'), 'utf8');
-const commercialSource = readFileSync(
-  resolve(process.cwd(), 'server/services/commercialOfficeService.ts'),
+const commercialRouter = readFileSync(
+  resolve(process.cwd(), 'server/commercialOfficeRouter.ts'),
   'utf8',
 );
 
@@ -25,15 +25,10 @@ describe('Commercial listing publication boundary', () => {
     expect(source).not.toContain('validateCommercialOfficeListingPricing');
   });
 
-  it('requires the Listing Engine published state for public Commercial reads', () => {
-    const resolverStart = commercialSource.indexOf('async function publicCommercialRows(');
-    const resolverEnd = commercialSource.indexOf(
-      '/**\n * Converts completed, governed Listing media',
-      resolverStart,
-    );
-    const resolver = commercialSource.slice(resolverStart, resolverEnd);
-
-    expect(resolver).toContain("eq(listings.status, 'published')");
-    expect(resolver).not.toContain("inArray(listings.status, ['approved', 'published'])");
+  it('keeps Commercial search closed until canonical assignments are available', () => {
+    expect(commercialRouter).toContain('canonicalPlaceId');
+    expect(commercialRouter).toContain('requireCanonicalCommercialAssignments');
+    expect(commercialRouter).toContain('PRECONDITION_FAILED');
+    expect(commercialRouter).not.toContain('commercialOfficeService');
   });
 });

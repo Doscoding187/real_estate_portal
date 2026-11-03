@@ -48,10 +48,6 @@
 │                                     │
 │ Bathrooms                           │
 │ (1+) (2+) (3+) (4+)                │
-│                                     │
-│ Location                            │
-│ [Enter location...]                 │
-│                                     │
 ├─────────────────────────────────────┤
 │ [✓  Apply Filters  ]  ← Gradient   │
 │ [  Reset All Filters  ]  ← Shown   │

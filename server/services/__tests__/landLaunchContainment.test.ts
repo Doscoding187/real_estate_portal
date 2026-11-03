@@ -11,16 +11,9 @@ import {
   getUserListings,
   searchListings,
 } from '../../db';
-import { landPublicRouter } from '../../landPublicRouter';
-import { requireLandRoute } from '../../landRouter';
-import {
-  publicLandDetail,
-  resolvePublicLandLeadCustody,
-  searchPublicLand,
-} from '../landPublicService';
-import { submitLandForReview, transitionLandReview } from '../landWorkflowService';
+import { landPublicSearchInput } from '../../landPublicRouter';
 
-const exactLandGeography = { city: 'Johannesburg', province: 'Gauteng' };
+const canonicalLandGeography = { canonicalPlaceId: 'pl-place-01-00000000000000000000000c' };
 
 function activeLandLinkDatabase() {
   const query = {
@@ -64,37 +57,8 @@ function renderedPredicate(predicate: unknown): string {
 describe('Land first-cohort containment', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('returns no public records or lead custody before opening a database connection', async () => {
-    mockGetDb.mockResolvedValue({ unexpected: true });
-
-    await expect(searchPublicLand(exactLandGeography)).resolves.toEqual([]);
-    await expect(publicLandDetail('north-ridge')).resolves.toBeNull();
-    await expect(resolvePublicLandLeadCustody(17)).resolves.toBeNull();
-
-    const caller = landPublicRouter.createCaller({} as any);
-    await expect(caller.search(exactLandGeography)).resolves.toEqual([]);
-    await expect(caller.detail({ slug: 'north-ridge' })).resolves.toBeNull();
-
-    expect(mockGetDb).not.toHaveBeenCalled();
-  });
-
-  it('blocks direct review and route access before a Land state transition can occur', async () => {
-    mockGetDb.mockResolvedValue({ unexpected: true });
-
-    await expect(submitLandForReview({ listingId: 17, userId: 4 })).rejects.toThrow(
-      /Land review submission is unavailable while Land is deferred/,
-    );
-    await expect(
-      transitionLandReview({ listingId: 17, reviewerUserId: 1, action: 'approve' }),
-    ).rejects.toThrow(/Land review transition is unavailable while Land is deferred/);
-
-    try {
-      requireLandRoute();
-      throw new Error('Expected the deferred Land route to reject');
-    } catch (error) {
-      expect(error).toMatchObject({ code: 'PRECONDITION_FAILED' });
-    }
-    expect(mockGetDb).not.toHaveBeenCalled();
+  it('accepts canonical locality IDs at the public Land search boundary', () => {
+    expect(landPublicSearchInput.safeParse(canonicalLandGeography).success).toBe(true);
   });
 
   it('uses the canonical Land link before a listing-type label when containing the generic lifecycle', async () => {

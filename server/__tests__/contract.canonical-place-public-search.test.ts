@@ -46,14 +46,20 @@ describe('prepared canonical Place inventory authority', () => {
     expect(canonicalPlaceSearchMembers(soweto, projection)).toEqual([soweto.placeId]);
   });
 
-  it('reports unsupported Place-scoped development inventory without querying broader geography', async () => {
-    expect(
-      await publicSearchService.searchInventory({
-        canonicalPlaceId: 'pl-place-01-6a145c6d642ba208a2c12de7',
-        listingType: 'sale',
-        listingSource: 'development',
-      }),
-    ).toMatchObject({ locationState: 'unavailable', cards: [], total: 0 });
+  it('keeps Place-scoped Development inventory on the exact selected Place', async () => {
+    const canonicalPlaceId = 'pl-place-01-6a145c6d642ba208a2c12de7';
+    const result = await publicSearchService.searchInventory({
+      canonicalPlaceId,
+      listingType: 'sale',
+      listingSource: 'development',
+    });
+
+    expect(result).toMatchObject({
+      locationState: 'resolved',
+      canonicalPlaceContext: expect.objectContaining({ canonicalPlaceId }),
+      cards: [],
+      total: 0,
+    });
   });
 
   it('refuses an unknown exact identity without returning country inventory', async () => {

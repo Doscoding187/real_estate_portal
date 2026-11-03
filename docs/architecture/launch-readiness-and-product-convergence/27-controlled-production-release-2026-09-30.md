@@ -196,3 +196,33 @@ Restore production Railway autodeploy only after stable acceptance, using [prepa
 Final-archive focused contract checks pass: **19 cases**, original preliminary/type/encryption cases plus frozen metadata, wrong/stale/future/open/duplicate/empty writer evidence, expiry during capture and approval actor/reference mismatch. No protected database was contacted by these tests. Full authority gate passes **47 files / 442 tests**, typecheck/build pass, full lint passes with **zero errors / 13,419 existing warnings**, and touched-code lint has zero errors. [Verification hashes and limits](evidence/controlled-production-release-2026-09-30/verification.json) record the tested release-code commit `84e9229a428d8432f2ed0f7f9aa80fa8972f5cfc` / tree `813f246d370d17d78a102bc0ff8477139dd26a1b`; subsequent continuation edits are documentation/evidence only. Importing `vercel.ts` confirms main=false; authenticated provider readback remains pending. Exact new-head CI is tracked separately. That earlier verification changed no schema, migration SQL/checksum, canonical catalog, or customer money/access policy. The later owner-admission change is separately verified in packet 28; it restricts new invoices/activations without changing products or entitlement terms.
 
 Prepared mutations and proposals are **not execution evidence**. The preceding verification paragraph describes September 30 preparation; October 1–2 execution is recorded in the current checkpoint and storage packet 29. Signing-secret application, reviewed bindings and successful worker deployment are complete. API correction review/deployment, joined frontend, real hosted journeys and paid opening remain pending. Continue from that remaining phase; do not replay completed geography, writer stop, final capture or storage provisioning.
+
+## Current checkpoint — 2026-10-28
+
+This checkpoint updates software-provider authority and records the latest
+public read-only probes. It does not amend the historical deployment evidence
+above or authorize a database operation.
+
+- The active repository database path is being reduced to MySQL only. The
+  intended hosted engine is Azure Database for MySQL; Azure SQL Database is a
+  separate SQL Server product. TiDB-specific application/recovery code and
+  commands are retired from active authority. Archived exports, audit records,
+  and historical migration evidence remain unchanged.
+- `www.propertylistifysa.co.za` returned the Vercel frontend HTML for `/api/health`
+  and `/api/readiness` rather than backend JSON. The published JavaScript bundle
+  names `api.propertylistifysa.co.za` as its API host. Read-only GET requests to
+  that host for `/api/health`, `/api/readiness`, and `/api/version` returned
+  HTTP 403 HTML, not application health/readiness JSON.
+- These public responses do not prove the backend deployment identity, Azure
+  MySQL target, schema head, or application readiness. The controlled
+  application cutover remains **unverified**; do not infer completion from the
+  provider retirement in code.
+- The task worktree's required `pnpm db:authority:status` classified its
+  disposable local database as unreachable. No Azure database or provider
+  management endpoint was accessed, and no database mutation occurred.
+
+Before calling the production cutover complete, obtain current authenticated
+readback for the deployed API artifact, its Azure Database for MySQL target,
+manifest head/schema congruency, and joined readiness. Keep the production
+release state pending until those checks and the remaining hosted acceptance
+obligations pass.

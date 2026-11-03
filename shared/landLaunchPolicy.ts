@@ -6,10 +6,10 @@
  * has its own commercial policy and acceptance slice. This is an explicit
  * product decision, not a signal inferred from provider or billing state.
  *
- * Public search entry is a separate decision below. Keep publication policy
- * environment-independent. Releasing Land publication
- * requires a reviewed product change and the protected acceptance evidence
- * recorded in the launch register.
+ * Public discovery, authoring, review, lead custody, and publication remain
+ * behind the same first-cohort decision. Releasing Land requires a reviewed
+ * product change and the protected acceptance evidence recorded in the launch
+ * register.
  */
 export const LAND_VERTICAL_LAUNCH_STATE = {
   mode: 'deferred_first_cohort',
@@ -20,12 +20,9 @@ export const LAND_VERTICAL_LAUNCH_STATE = {
 
 export type LandVerticalLaunchMode = typeof LAND_VERTICAL_LAUNCH_STATE.mode;
 
-/** Edward authorised public Land search entry on 14 October 2026.
- * This opens the specialist consumer UI; it does not release Land authoring,
- * review, lead custody or public inventory through the commercial boundary.
- */
+/** Public Land discovery follows the same first-cohort disposition. */
 export function isLandPublicDiscoveryAvailable(): boolean {
-  return true;
+  return isLandVerticalAvailable();
 }
 
 export function isLandVerticalAvailable(): boolean {

@@ -37,8 +37,8 @@ const landingPages: Record<string, LandingPageConfig> = {
       {
         title: 'Local market pages',
         body: 'Location pages remain the canonical property SEO layer. Insights pages explain the market around those searches.',
-        href: '/gauteng/johannesburg',
-        linkLabel: 'View a location page',
+        href: '/south-africa',
+        linkLabel: 'Browse canonical places',
       },
     ],
   },
@@ -276,20 +276,20 @@ const landingPages: Record<string, LandingPageConfig> = {
     description:
       'A navigation hub for researching cities, suburbs, local demand, amenities, and property opportunities across South Africa.',
     canonicalPath: '/tools/area-guides',
-    primaryCta: { label: 'Explore Johannesburg', href: '/gauteng/johannesburg' },
+    primaryCta: { label: 'Browse canonical places', href: '/south-africa' },
     secondaryCta: { label: 'Browse all property', href: '/property-for-sale' },
     sections: [
       {
         title: 'City pages',
-        body: 'City pages remain the canonical location SEO pages for broad local demand.',
+        body: 'Canonical Place pages are generated from the admitted national Place Authority.',
       },
       {
         title: 'Suburb pages',
-        body: 'Suburb pages should capture deeper local search intent and nearby-area discovery.',
+        body: 'Every locality uses its exact admitted Place identity and projected route.',
       },
       {
         title: 'Editorial support',
-        body: 'Area guide content can explain lifestyle and market context around those canonical pages.',
+        body: 'Use the national Place catalogue to find an admitted city, town, suburb, or locality.',
       },
     ],
   },
