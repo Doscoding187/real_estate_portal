@@ -1,13 +1,20 @@
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { type Request, type Response, Router } from 'express';
 
-import { agents, cataloguePublishers, properties } from '../../drizzle/schema';
+import {
+  agents,
+  cataloguePublishers,
+  properties,
+  SERVICE_CATEGORY_VALUES,
+} from '../../drizzle/schema';
 import { ENV } from '../_core/env';
 import { getDb } from '../db-connection';
 import { APPROVED_AGENT, buildAgentPublicSlug } from '../services/agentPublicProfileService';
 import { resolvePublicPropertyEligibilityIds } from '../services/publicPropertyEligibilityService';
+import { servicesEngineService } from '../services/servicesEngineService';
 
 import { COUNTRY_DISCOVERY_PATH } from '../../shared/countryDiscovery';
+import { toProviderSlug, toServiceCategorySlug } from '../../shared/serviceDirectorySlugs';
 import { SITEMAP_INDEX_CHILDREN } from '../../shared/sitemapIndex';
 import { publishedCanonicalPlaceUrls } from '../services/canonicalPlaceUrlService';
 
@@ -210,6 +217,36 @@ router.get('/sitemap-agents.xml', async (_req, res, next) => {
     );
 
     sendXml(res, xml);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/sitemap-services.xml', async (_req, res, next) => {
+  try {
+    const baseUrl = resolveBaseUrl(_req);
+    const db = await getDb();
+    if (!db) {
+      throw new Error('Database not available');
+    }
+
+    const entries = await servicesEngineService.listServiceSitemapEntries();
+    const categoryEntries = SERVICE_CATEGORY_VALUES.map(category => ({
+      loc: toAbsoluteUrl(`/services/${toServiceCategorySlug(category)}`, baseUrl),
+      changefreq: 'weekly',
+      priority: 0.6,
+    }));
+    const providerEntries = entries.providers.map(provider => ({
+      loc: toAbsoluteUrl(
+        `/services/provider/${toProviderSlug(provider.companyName, provider.providerId)}`,
+        baseUrl,
+      ),
+      lastmod: provider.updatedAt,
+      changefreq: 'weekly',
+      priority: 0.6,
+    }));
+
+    sendXml(res, buildUrlSet([...categoryEntries, ...providerEntries]));
   } catch (error) {
     next(error);
   }

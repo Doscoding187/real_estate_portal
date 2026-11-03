@@ -3439,6 +3439,84 @@ export class ServicesEngineService {
     }));
   }
 
+  async listServiceSitemapEntries(): Promise<{
+    providers: ServiceSitemapProviderEntry[];
+  }> {
+    const db = await getDb();
+    if (!db) {
+      return { providers: [] };
+    }
+
+    const eligibility = and(
+      eq(partners.isActive, 1),
+      eq(partners.verificationStatus, 'verified'),
+      eq(serviceProviderProfiles.directoryActive, 1),
+      inArray(serviceProviderSubscriptions.status, ['trial', 'active']),
+    );
+
+    const rows = await db
+      .selectDistinct({
+        providerId: partners.id,
+        companyName: partners.companyName,
+        updatedAt: serviceProviderProfiles.updatedAt,
+        canonicalPlaceId: serviceProviderLocations.canonicalPlaceId,
+      })
+      .from(partners)
+      .innerJoin(serviceProviderProfiles, eq(serviceProviderProfiles.providerId, partners.id))
+      .leftJoin(
+        serviceProviderSubscriptions,
+        eq(serviceProviderSubscriptions.providerId, partners.id),
+      )
+      .innerJoin(
+        serviceProviderServices,
+        eq(serviceProviderServices.providerId, partners.id),
+      )
+      .innerJoin(
+        serviceProviderLocations,
+        eq(serviceProviderLocations.providerId, partners.id),
+      )
+      .where(
+        and(
+          eligibility,
+          eq(serviceProviderServices.isActive, 1),
+          sql`${serviceProviderLocations.canonicalPlaceId} IS NOT NULL`,
+        ),
+      );
+
+    const placeIds: string[] = [];
+    const seenPlaceIds = new Set<string>();
+    for (const row of rows) {
+      const candidate: unknown = row.canonicalPlaceId;
+      if (!isCanonicalPlaceId(candidate) || seenPlaceIds.has(candidate)) continue;
+      seenPlaceIds.add(candidate);
+      placeIds.push(candidate);
+    }
+    const placeProjection = await loadCanonicalPlaceSearchProjection(db as never, { placeIds });
+    const eligibleProviders = new Map<number, ServiceSitemapProviderEntry>();
+    for (const row of rows) {
+      const placeId = row.canonicalPlaceId;
+      if (
+        !placeId ||
+        !placeProjection.executions.has(placeId) ||
+        !placeProjection.labels.has(placeId)
+      ) {
+        continue;
+      }
+      const providerId = Number(row.providerId);
+      if (!eligibleProviders.has(providerId)) {
+        eligibleProviders.set(providerId, {
+          providerId,
+          companyName: String(row.companyName || '').trim(),
+          updatedAt: row.updatedAt ? String(row.updatedAt) : null,
+        });
+      }
+    }
+
+    return {
+      providers: Array.from(eligibleProviders.values()),
+    };
+  }
+
   async getProviderDashboard(providerId: number, days = 30) {
     const db = await getDb();
     if (!db) throw new Error('Database not available');
@@ -3488,5 +3566,11 @@ export class ServicesEngineService {
     };
   }
 }
+
+type ServiceSitemapProviderEntry = {
+  providerId: number;
+  companyName: string;
+  updatedAt: string | null;
+};
 
 export const servicesEngineService = new ServicesEngineService();
