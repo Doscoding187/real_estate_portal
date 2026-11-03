@@ -73,6 +73,7 @@ function makeQuery(rows: unknown[] = []) {
     limit: vi.fn(),
     offset: vi.fn(),
     for: vi.fn(),
+    groupBy: vi.fn(),
   };
   for (const key of Object.keys(query)) {
     query[key]!.mockReturnValue(query);
@@ -1260,6 +1261,7 @@ describe('Services V1 reviewed publication authority', () => {
             },
           ]),
         )
+        .mockReturnValueOnce(makeQuery([]))
         .mockReturnValueOnce(makeQuery([])),
     };
     mockGetDb.mockResolvedValue(publicProfileDb);
@@ -1272,6 +1274,12 @@ describe('Services V1 reviewed publication authority', () => {
       publicationStatus: 'published',
       services: [{ code: 'plumbing' }],
       locations: [{ canonicalPlaceId: PLACE_SANDTON, label: 'Sandton' }],
+      responsePerformance: {
+        windowDays: 90,
+        measuredLeads: 0,
+        medianResponseSeconds: 0,
+        sampleReady: false,
+      },
     });
 
     const directoryDb = {
