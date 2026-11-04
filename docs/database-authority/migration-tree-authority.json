@@ -1532,6 +1532,21 @@
       "purpose": "SQL query example, not a migration file."
     },
     {
+      "path": "docs/operations/place-source-geography-eligibility-0115-read-only-check.sql",
+      "classification": "documentation/example",
+      "purpose": "SELECT-only verification of the bounded 0115 Place eligibility correction; not a data writer."
+    },
+    {
+      "path": "docs/operations/gauteng-place-azure-read-only-checks.sql",
+      "classification": "documentation/example",
+      "purpose": "SELECT-only founder checks for the production listing Place, migration state, and reviewed Gauteng values."
+    },
+    {
+      "path": "docs/operations/place-reference-bucket-digests.sql",
+      "classification": "documentation/example",
+      "purpose": "Session-scoped digest settings and SELECT-only Place-reference checks; not an executable migration."
+    },
+    {
       "path": "server/migrations/0133_distribution_application_requirement_document_fk_drop.sql",
       "classification": "canonical active",
       "purpose": "Drops the obsolete foreign key from Distribution application requirements to Developer-owned sales collateral.",
