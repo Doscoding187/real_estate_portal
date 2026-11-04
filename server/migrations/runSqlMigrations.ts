@@ -14,6 +14,7 @@ import {
   type AuthoritySqlConnection,
 } from '../_core/databaseAuthority/connectionAuthority';
 import { resolveDatabaseAuthority } from '../_core/databaseAuthority/context';
+import { REHEARSAL } from '../_core/databaseAuthority/rehearsalAuthority';
 import type { ResolvedDatabaseAuthority } from '../_core/databaseAuthority/types';
 import { buildMysqlConnectionSecurityConfig } from '../_core/databaseTls';
 import {
@@ -280,6 +281,60 @@ export async function assertRunnerConnectionTarget(
   if (selected !== authority.context.databaseName) {
     throw new Error('Migration runner refused: supplied connection target is not the authorized target.');
   }
+}
+
+export function assertRehearsalReleaseScope(input: {
+  targetClass: string;
+  operation: string;
+  acceptedOldHead: string | null | undefined;
+  expectedNewHead: string | undefined;
+  manifestDigest: string;
+}): void {
+  if (input.targetClass !== 'disposable-rehearsal') return;
+  if (
+    !['release-plan', 'release-apply'].includes(input.operation) ||
+    input.acceptedOldHead !== REHEARSAL.acceptedOldHead ||
+    input.expectedNewHead !== REHEARSAL.expectedHead ||
+    input.manifestDigest !== REHEARSAL.manifestDigest
+  ) {
+    throw new Error(
+      'Rehearsal release refused: only the registered 0111-to-0197 migration scope is allowed.',
+    );
+  }
+}
+
+export function assertReadOnlyDatabaseGrants(rows: Array<Record<string, unknown>>): void {
+  const statements = rows.flatMap(row =>
+    Object.values(row).filter((value): value is string => typeof value === 'string'),
+  );
+  if (statements.length === 0) {
+    throw new Error('Migration runner refused: read-only account grants could not be verified.');
+  }
+  for (const statement of statements) {
+    const grant = statement.match(/^GRANT\s+(.+?)\s+ON\s+.+?\s+TO\s+/i);
+    const privileges = grant?.[1].split(/\s*,\s*/).map(privilege => privilege.trim().toUpperCase());
+    if (
+      !privileges?.length ||
+      privileges.some(privilege => !['USAGE', 'SELECT', 'SHOW VIEW'].includes(privilege)) ||
+      /\bWITH\s+(?:GRANT|ADMIN)\s+OPTION\b|\bGRANTED\s+BY\b/i.test(statement)
+    ) {
+      throw new Error(
+        'Migration runner refused: read-only credential has write-capable or unrecognized database grants.',
+      );
+    }
+  }
+}
+
+async function verifyReadOnlyDatabaseGrants(
+  connection: AuthoritySqlConnection,
+): Promise<void> {
+  let rows: Array<Record<string, unknown>>;
+  try {
+    rows = rowsFromResult(await connection.query('SHOW GRANTS FOR CURRENT_USER'));
+  } catch {
+    throw new Error('Migration runner refused: read-only account grants could not be verified.');
+  }
+  assertReadOnlyDatabaseGrants(rows);
 }
 
 export function canonicalBaselineCutoverError(
@@ -785,6 +840,13 @@ export async function runSqlMigrations(options: SqlMigrationOptions = {}) {
     throw new Error('Migration apply refused: expected new manifest head must be explicit.');
   }
   assertExpectedReleasePlanDigest(operation, options.expectedPlanDigest);
+  assertRehearsalReleaseScope({
+    targetClass: authority.context.targetClass,
+    operation,
+    acceptedOldHead: options.acceptedOldHead,
+    expectedNewHead: options.expectedNewHead,
+    manifestDigest: manifest.manifestDigest,
+  });
   const connection = await (options.connectionFactory ?? createAuthoritySqlConnection)(
     authority,
     authorization,
@@ -793,6 +855,10 @@ export async function runSqlMigrations(options: SqlMigrationOptions = {}) {
   let lockEvidence: MigrationLockEvidence | null = null;
   let freshSessionEvidence: FreshEstablishmentSessionEvidence | null = null;
   try {
+    if (authority.context.credentialClass === 'read-only') {
+      // This is the first runner query; refuse before reading migration state or building a plan.
+      await verifyReadOnlyDatabaseGrants(connection);
+    }
     await assertRunnerConnectionTarget(connection, authority);
     const initialState = await readDatabaseMigrationState(connection, manifest);
     const initialControlState = assertMigrationControlState({

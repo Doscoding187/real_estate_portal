@@ -1,5 +1,5 @@
 import { RECOVERY_VALIDATION_FINGERPRINT } from './recoveryValidationTarget';
-import { isRegisteredRehearsal } from './rehearsalAuthority';
+import { assertRehearsalSourceBinding, isRegisteredRehearsal } from './rehearsalAuthority';
 import { createHash, randomUUID } from 'node:crypto';
 import { buildMysqlConnectionSecurityConfig } from '../databaseTls';
 import { storeDatabaseCredentialUrl, readDatabaseCredentialUrl } from './credentialVault';
@@ -90,12 +90,36 @@ function requiresProtectedMigrationCredential(
   credentialClass: DatabaseCredentialClass,
 ): boolean {
   return (
-    credentialClass === 'migration' && (targetClass === 'staging' || targetClass === 'production')
+    credentialClass === 'migration' &&
+    (targetClass === 'disposable-rehearsal' ||
+      targetClass === 'staging' ||
+      targetClass === 'production')
   );
 }
 
+function requireVerifiedRemoteTls(databaseUrl: string): string {
+  let security: ReturnType<typeof buildMysqlConnectionSecurityConfig>;
+  try {
+    // Target class, rather than APP_ENV/NODE_ENV, decides remote TLS policy.
+    security = buildMysqlConnectionSecurityConfig(databaseUrl, 'production');
+  } catch {
+    throw new Error(
+      'Protected database target refused: verified TLS is mandatory regardless of runtime mode.',
+    );
+  }
+  if (!security.ssl?.rejectUnauthorized || security.ssl.verifyIdentity !== true) {
+    throw new Error(
+      'Protected database target refused: verified TLS is mandatory regardless of runtime mode.',
+    );
+  }
+  const secured = new URL(security.uri);
+  // mysql2 receives this canonical option through every authority connection
+  // path, including development-mode invocations.
+  secured.searchParams.set('sslaccept', 'strict');
+  return secured.toString();
+}
+
 function selectProtectedMigrationCredential(input: {
-  runtimeMode: string;
   processEnv: NodeJS.ProcessEnv;
   runtimeTarget: URL;
   runtimeTargetIdentity: DatabaseTargetIdentity;
@@ -144,14 +168,12 @@ function selectProtectedMigrationCredential(input: {
   }
 
   try {
-    buildMysqlConnectionSecurityConfig(migrationTarget.toString(), input.runtimeMode);
+    return requireVerifiedRemoteTls(migrationTarget.toString());
   } catch {
     throw new Error(
-      'Protected migration credential refused: migration credential does not satisfy the current TLS policy.',
+      'Protected migration credential refused: verified TLS is mandatory regardless of runtime mode.',
     );
   }
-
-  return migrationTarget.toString();
 }
 
 function classifyCredential(
@@ -288,6 +310,9 @@ export function resolveDatabaseAuthority(input: {
   } else if (!resolvedLocal) {
     const registeredClass = REGISTERED_PROTECTED_REMOTE_TARGETS[resolvedTargetFingerprint];
     if (isRegisteredRehearsal(resolvedTargetFingerprint, input.rehearsal)) {
+      // This guard runs during target resolution, before a connection can be
+      // created. Registration cannot authorize code whose bound source drifted.
+      assertRehearsalSourceBinding();
       targetClass = 'disposable-rehearsal';
     } else if (registeredClass) {
       targetClass = registeredClass;
@@ -298,6 +323,11 @@ export function resolveDatabaseAuthority(input: {
     } else {
       targetClass = 'shared-remote';
     }
+  }
+
+  const targetDatabaseUrl = parsed.toString();
+  if (!resolvedLocal) {
+    parsed = new URL(requireVerifiedRemoteTls(parsed.toString()));
   }
 
   // A MySQL URI does not make a retired MySQL-compatible service a supported
@@ -360,7 +390,6 @@ export function resolveDatabaseAuthority(input: {
     ? selectedIsolatedCiCredential.credentialUrl
     : requiresMigrationCredential
       ? selectProtectedMigrationCredential({
-          runtimeMode: environment.runtimeMode,
           processEnv,
           runtimeTarget: parsed,
           runtimeTargetIdentity: resolvedTargetIdentity,
@@ -415,7 +444,10 @@ export function resolveDatabaseAuthority(input: {
 
   return Object.freeze({
     context,
-    targetCredential: storeDatabaseCredentialUrl(parsed.toString()),
+    // Keep the canonical target URL stable for child context resolution. The
+    // selected connection credential below carries the mandatory strict TLS
+    // marker, and each child resolution enforces it again by target class.
+    targetCredential: storeDatabaseCredentialUrl(targetDatabaseUrl),
     credential: storeDatabaseCredentialUrl(credentialUrl),
   });
 }

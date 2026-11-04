@@ -1,5 +1,10 @@
 import { RECOVERY_VALIDATION_FINGERPRINT } from './recoveryValidationTarget';
-import { assertRehearsalAuthorization } from './rehearsalAuthority';
+import {
+  assertRehearsalAuthorization,
+  REHEARSAL,
+  REHEARSAL_RESOURCE_ID,
+  REHEARSAL_SOURCE_DIGEST,
+} from './rehearsalAuthority';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
@@ -16,6 +21,18 @@ import {
 export type OwnershipRequirement = 'none' | 'registered-local-worktree' | 'exact-local-owner';
 export type ApprovalRequirement = 'none' | 'protected-target';
 export type AcknowledgementRequirement = 'none' | 'exact-target';
+
+export type RehearsalApprovalBinding = {
+  resourceId: string;
+  purpose: string;
+  serverCreatedAt: string;
+  sourceDigest: string;
+  scope?: {
+    acceptedOldHead: string;
+    expectedNewHead: string;
+    manifestDigest: string;
+  };
+};
 
 export type OperationPolicy = {
   allowedTargetClasses: DatabaseTargetClass[];
@@ -47,6 +64,7 @@ export type ProtectedDatabaseApproval = {
   runtimeGrantDigest?: string;
   runtimePreviousGrantDigest?: string;
   workerGrantDigest?: string;
+  rehearsalBinding?: RehearsalApprovalBinding;
 };
 
 export const B08_AZURE_TARGET_FINGERPRINT_HASH =
@@ -72,6 +90,15 @@ export function protectedDatabaseApprovalFromEnvironment(
   const actor = env.DATABASE_AUTHORITY_APPROVAL_ACTOR;
   const fingerprint = env.DATABASE_AUTHORITY_APPROVED_FINGERPRINT;
   if (!reference && !actor && !fingerprint) return undefined;
+  let rehearsalBinding: RehearsalApprovalBinding | undefined;
+  const rawRehearsalBinding = env.DATABASE_AUTHORITY_REHEARSAL_APPROVAL;
+  if (rawRehearsalBinding) {
+    try {
+      rehearsalBinding = JSON.parse(rawRehearsalBinding) as RehearsalApprovalBinding;
+    } catch {
+      throw new Error('Database operation refused: structured rehearsal approval is invalid JSON.');
+    }
+  }
   return {
     reference: reference ?? '',
     actor: actor ?? '',
@@ -86,6 +113,7 @@ export function protectedDatabaseApprovalFromEnvironment(
     runtimeGrantDigest: env.DATABASE_AUTHORITY_APPROVED_RUNTIME_GRANT_DIGEST,
     runtimePreviousGrantDigest: env.DATABASE_AUTHORITY_APPROVED_RUNTIME_PREVIOUS_GRANT_DIGEST,
     workerGrantDigest: env.DATABASE_AUTHORITY_APPROVED_WORKER_GRANT_DIGEST,
+    rehearsalBinding,
   };
 }
 
@@ -201,6 +229,33 @@ function assertProtectedApproval(
   ) {
     throw new Error(
       'Database operation refused: protected target requires an exact operation and fingerprint approval.',
+    );
+  }
+}
+
+export function assertStructuredRehearsalApproval(
+  context: ResolvedDatabaseContext,
+  approval: ProtectedDatabaseApproval | undefined,
+): void {
+  const binding = approval?.rehearsalBinding;
+  const releaseOperation =
+    context.operation === 'release-plan' || context.operation === 'release-apply';
+  const exactIdentity =
+    binding?.resourceId === REHEARSAL_RESOURCE_ID &&
+    binding.purpose === REHEARSAL.purpose &&
+    binding.serverCreatedAt === REHEARSAL.serverCreatedAt &&
+    binding.sourceDigest === REHEARSAL_SOURCE_DIGEST;
+  const exactScope =
+    binding?.scope?.acceptedOldHead === REHEARSAL.acceptedOldHead &&
+    binding?.scope?.expectedNewHead === REHEARSAL.expectedHead &&
+    binding?.scope?.manifestDigest === REHEARSAL.manifestDigest;
+  if (
+    context.targetClass !== 'disposable-rehearsal' ||
+    !exactIdentity ||
+    (releaseOperation ? !exactScope : binding?.scope !== undefined)
+  ) {
+    throw new Error(
+      'Database operation refused: exact structured rehearsal identity, source and migration scope approval are required.',
     );
   }
 }
@@ -343,6 +398,9 @@ export function authorizeDatabaseOperation(
     policy.protectedTargetClasses.includes(context.targetClass)
   ) {
     assertProtectedApproval(context, input.approval);
+  }
+  if (context.targetClass === 'disposable-rehearsal') {
+    assertStructuredRehearsalApproval(context, input.approval);
   }
   if (
     rule.acknowledgement === 'exact-target' &&

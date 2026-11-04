@@ -12,6 +12,8 @@ import type { AuthoritySqlConnection } from '../../_core/databaseAuthority/conne
 import { deriveGitWorktreeIdentity } from '../../_core/databaseAuthority/worktreeIdentity';
 import type { MigrationManifestDocument, MigrationManifestEntry } from '../migrationManifest';
 import {
+  assertReadOnlyDatabaseGrants,
+  assertRehearsalReleaseScope,
   buildMigrationPlan,
   buildMysqlMigrationConnectionConfig,
   canonicalBaselineCutoverError,
@@ -21,6 +23,7 @@ import {
   runSqlMigrations,
   sortMigrationFiles,
 } from '../runSqlMigrations';
+import { REHEARSAL } from '../../_core/databaseAuthority/rehearsalAuthority';
 
 const temporaryRoots: string[] = [];
 const sha256 = (value: string) => createHash('sha256').update(value).digest('hex');
@@ -162,6 +165,7 @@ class FakeMigrationConnection implements AuthoritySqlConnection {
   ignoreGeneratedKeySetting = false;
   switchConnectionAfterSetting = false;
   primaryKeyConflict: 'null' | 'duplicate' | null = null;
+  grants = ["GRANT SELECT, SHOW VIEW ON *.* TO 'release-reader'@'%'"];
 
   constructor(selectedDatabase: string) {
     this.selectedDatabase = selectedDatabase;
@@ -169,6 +173,9 @@ class FakeMigrationConnection implements AuthoritySqlConnection {
 
   async execute(statement: string, values: readonly unknown[] = []): Promise<unknown> {
     this.calls.push({ statement, values });
+    if (statement === 'SHOW GRANTS FOR CURRENT_USER') {
+      return [this.grants.map(grant => ({ 'Grants for release-reader': grant }))];
+    }
     if (
       this.rejectPreparedControlStatements &&
       /^(START TRANSACTION|COMMIT|ROLLBACK)$/i.test(statement.trim())
@@ -368,7 +375,65 @@ describe('migration connection security', () => {
   });
 });
 
+describe('disposable rehearsal release authority', () => {
+  it('accepts only the registered 0111-to-0197 release scope and current manifest digest', () => {
+    const exact = {
+      targetClass: 'disposable-rehearsal',
+      operation: 'release-plan',
+      acceptedOldHead: REHEARSAL.acceptedOldHead,
+      expectedNewHead: REHEARSAL.expectedHead,
+      manifestDigest: REHEARSAL.manifestDigest,
+    };
+    expect(() => assertRehearsalReleaseScope(exact)).not.toThrow();
+    for (const changed of [
+      { ...exact, acceptedOldHead: '0110_wrong.sql' },
+      { ...exact, expectedNewHead: '0198_wrong.sql' },
+      { ...exact, manifestDigest: '0'.repeat(64) },
+      { ...exact, operation: 'migration-apply' },
+    ]) {
+      expect(() => assertRehearsalReleaseScope(changed)).toThrow('0111-to-0197');
+    }
+  });
+
+  it('accepts only read privileges and fails closed on write or unknown grant forms', () => {
+    expect(() => assertReadOnlyDatabaseGrants([
+      { grant: "GRANT USAGE ON *.* TO 'reader'@'%'" },
+      { grant: "GRANT SELECT, SHOW VIEW ON `propertylistify_database`.* TO 'reader'@'%'" },
+    ])).not.toThrow();
+    for (const grant of [
+      "GRANT SELECT, INSERT ON *.* TO 'reader'@'%'",
+      "GRANT SELECT ON *.* TO 'reader'@'%' WITH GRANT OPTION",
+      "GRANT 'writer_role' TO 'reader'@'%'",
+    ]) {
+      expect(() => assertReadOnlyDatabaseGrants([{ grant }])).toThrow(
+        'write-capable or unrecognized',
+      );
+    }
+    expect(() => assertReadOnlyDatabaseGrants([])).toThrow('could not be verified');
+  });
+});
+
 describe('manifest migration planning and durable attempts', () => {
+  it('checks actual read-only account grants before reading migration state or planning', async () => {
+    const fixture = migrationFixture(false);
+    const { authority, authorization } = protectedAuthorityFor('plan');
+    const connection = new FakeMigrationConnection(authority.context.databaseName);
+    connection.grants = ["GRANT SELECT, INSERT ON *.* TO 'release-reader'@'%'"];
+
+    await expect(runSqlMigrations({
+      mode: 'plan',
+      operation: 'release-plan',
+      migrationsDir: fixture.root,
+      manifestPath: fixture.manifestPath,
+      authority,
+      authorization,
+      acceptedOldHead: null,
+      expectedNewHead: fixture.entries[0].filename,
+      connectionFactory: async () => connection,
+    })).rejects.toThrow('write-capable or unrecognized');
+    expect(connection.calls.map(call => call.statement)).toEqual(['SHOW GRANTS FOR CURRENT_USER']);
+  });
+
   it('refuses an unsupported provider before opening a connection', async () => {
     const { authority, authorization } = authorityFor('plan');
     const unsupportedAuthority = {

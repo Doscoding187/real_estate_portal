@@ -1,10 +1,10 @@
 {
   "status": "revoked",
+  "authorizationLive": false,
   "approvedBy": "Edward",
   "createdAt": "2026-09-28T00:00:00Z",
   "expiresAt": "2026-10-05T00:00:00Z",
   "purpose": "AZURE MYSQL 8.4 RESTORED-COPY REHEARSAL",
-  "sourceCommit": "a5fa6256f3579b16223586fa579f4ecd28c59ad6",
   "subscriptionId": "384dc69e-9e22-419f-9e3d-83fbac4f58d0",
   "resourceGroup": "rg-property-listify",
   "serverName": "pl-azure84-rehearsal-20260928",
@@ -13,27 +13,46 @@
   "provider": "Microsoft.DBforMySQL/flexibleServers",
   "engineFamily": "MySQL",
   "serverCreatedAt": "2026-09-28T11:24:56.687Z",
-  "expectedHead": "0094_content_topics_primary_key.sql",
-  "manifestDigest": "93d871e6f8760477f460b8821685d71d212374eb86ddd53bc6e2ccfc30608efc",
+  "acceptedOldHead": "0111_properties_canonical_place_reference_fk.sql",
+  "expectedHead": "0197_drop_seller_prospects_province.sql",
+  "manifestDigest": "4995e36715e60856bb87d925dd0eff03bcdccfcc50e1180648684c3bd2787e41",
   "modelDigest": "a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9",
   "allowed": [
-    "rehearsal-regression:catalogued-synthetic-DML",
-    "transactions-rollback-savepoints",
-    "row-locking",
-    "constraint-rejection",
-    "concurrency",
-    "catalogued-read-probes"
+    "read-only-connect:read-only",
+    "verification:read-only",
+    "readiness:read-only",
+    "diagnostics:read-only",
+    "release-plan:read-only:0111-to-0197",
+    "release-apply:migration:0111-to-0197"
   ],
   "denied": [
-    "generic-test-fixture",
+    "rehearsal-regression",
     "runtime-connect",
+    "worker-connect",
     "migration",
-    "DDL",
-    "DROP",
-    "TRUNCATE",
+    "DDL-outside-approved-release-apply",
     "reference-seed",
     "ledger-edit",
     "server-settings"
   ],
-  "reviewTrigger": "Expire at expiresAt; revoke on rehearsal completion or resource recreation; renew only by reviewed principal decision."
+  "sourceBinding": {
+    "algorithm": "sha256",
+    "files": [
+      "docs/database-authority/disposable-rehearsal-authorization.json",
+      "docs/database-authority/operation-policy.json",
+      "server/_core/databaseAuthority/authorization.ts",
+      "server/_core/databaseAuthority/connectionAuthority.ts",
+      "server/_core/databaseAuthority/context.ts",
+      "server/_core/databaseAuthority/credentialVault.ts",
+      "server/_core/databaseAuthority/environment.ts",
+      "server/_core/databaseAuthority/rehearsalAuthority.ts",
+      "server/_core/databaseAuthority/types.ts",
+      "server/_core/databaseTls.ts",
+      "server/migrations/manifest.json",
+      "server/migrations/migrationManifest.ts",
+      "server/migrations/runSqlMigrations.ts"
+    ],
+    "sha256": "6e0541df80cd72b59b4782a6628cd5872c11593974626fff4dfa299cbc5faaf8"
+  },
+  "reviewTrigger": "This record is revoked and expired. Any future live authorization requires separate written approval after operator preflight verifies the exact ARM resource identity, including creation time, and the guarded source digest."
 }
