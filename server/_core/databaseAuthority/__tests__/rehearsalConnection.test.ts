@@ -1,16 +1,31 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   createConnection: vi.fn(),
+  testActive: false,
   verifyAzure: vi.fn(),
   sourceBinding: vi.fn(),
 }));
-vi.mock('mysql2/promise', () => ({ default: { createConnection: mocks.createConnection } }));
+vi.mock('mysql2/promise', async importOriginal => {
+  const actual = await importOriginal<typeof import('mysql2/promise')>();
+  mocks.createConnection.mockImplementation((config: any) => {
+    if (mocks.testActive) throw new Error('Rehearsal test attempted a MySQL connection.');
+    return actual.default.createConnection(config);
+  });
+  return { default: { ...actual.default, createConnection: mocks.createConnection } };
+});
 vi.mock('../rehearsalAuthority', async importOriginal => ({
   ...(await importOriginal<any>()),
   assertRehearsalSourceBinding: mocks.sourceBinding,
   verifyRehearsalResource: mocks.verifyAzure,
 }));
+
+// Vitest's global setup runs before tests and must use its real disposable DB.
+// During tests, turn the mock into a hard stop so no rehearsal socket can open.
+beforeEach(() => {
+  mocks.testActive = true;
+  mocks.createConnection.mockClear();
+});
 
 import {
   createAuthorityRehearsalSession,
