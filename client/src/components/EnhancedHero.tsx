@@ -39,7 +39,7 @@ import {
   type HomeSearchFilters,
   type HomeAreaSelection,
 } from '@/contexts/HomeSearchContext';
-import { needsHomeAreaClarification } from '@/lib/homeAreaSelection';
+import { isBroadHomeLocation, needsHomeAreaClarification } from '@/lib/homeAreaSelection';
 import { LocationAutosuggest } from './LocationAutosuggest';
 import {
   getHomepageHeroJourneys,
@@ -531,9 +531,7 @@ export function EnhancedHero({
   const priceRangeError = getPriceRangeError(filters.priceMin, filters.priceMax) || null;
   const hasCanonicalLocations =
     selectedLocations.length > 0 &&
-    selectedLocations.every(
-      location => hasCanonicalPlaceIdentity(location),
-    );
+    selectedLocations.every(location => hasCanonicalPlaceIdentity(location));
   const canSubmitSearch =
     journey === 'developments'
       ? Boolean(developmentPlace?.canonicalPlaceId)
@@ -626,6 +624,22 @@ export function EnhancedHero({
       return;
     }
     if (!locations.length || priceRangeError) return;
+    if (
+      (journey === 'buy' || journey === 'rent') &&
+      locations.length === 1 &&
+      isBroadHomeLocation(locations[0])
+    ) {
+      const path = locations[0].canonicalPath;
+      if (!path) {
+        setLocationSelectionNotice(
+          'This broad Place has no canonical destination page yet. Choose an exact suburb or locality.',
+        );
+        return;
+      }
+      const mode = journey === 'buy' ? 'sale' : 'rent';
+      setLocation(`${path}?${new URLSearchParams({ mode }).toString()}`);
+      return;
+    }
     if (!journey) {
       const path = locations.length === 1 ? buildLocationDiscoveryPath(locations[0]) : undefined;
       if (path) {
@@ -861,22 +875,22 @@ export function EnhancedHero({
                   <>
                     <MapPin className="pointer-events-none absolute left-4 top-1/2 z-10 h-5 w-5 -translate-y-1/2 text-blue-700" />
                     <LocationAutosuggest
-                  placeholder={presentation.placeholder}
-                  className="w-full"
-                  inputClassName="h-14 w-full rounded-xl border-slate-200 bg-white pl-11 pr-4 text-base text-slate-800 shadow-[0_2px_5px_rgba(15,23,42,0.06)] transition-all placeholder:text-slate-500 hover:border-blue-200 focus-visible:border-blue-600 focus-visible:ring-2 focus-visible:ring-blue-600/25"
-                  showIcon={false}
-                  inputRef={inputRef}
-                  inputAriaDescribedBy="homepage-journey-selection-prompt"
-                  selectedLocations={selectedLocations}
-                  onRemove={index => {
-                    setConfirmedBroadPlaceId(null);
-                    setSelectedLocations(items =>
-                      items.filter((_, itemIndex) => itemIndex !== index),
-                    );
-                  }}
-                  onSelect={selectCanonicalLocation}
-                  onSubmit={submitSearch}
-                  maxLocations={journey === 'plot_land' || !journey ? 5 : 1}
+                      placeholder={presentation.placeholder}
+                      className="w-full"
+                      inputClassName="h-14 w-full rounded-xl border-slate-200 bg-white pl-11 pr-4 text-base text-slate-800 shadow-[0_2px_5px_rgba(15,23,42,0.06)] transition-all placeholder:text-slate-500 hover:border-blue-200 focus-visible:border-blue-600 focus-visible:ring-2 focus-visible:ring-blue-600/25"
+                      showIcon={false}
+                      inputRef={inputRef}
+                      inputAriaDescribedBy="homepage-journey-selection-prompt"
+                      selectedLocations={selectedLocations}
+                      onRemove={index => {
+                        setConfirmedBroadPlaceId(null);
+                        setSelectedLocations(items =>
+                          items.filter((_, itemIndex) => itemIndex !== index),
+                        );
+                      }}
+                      onSelect={selectCanonicalLocation}
+                      onSubmit={submitSearch}
+                      maxLocations={journey === 'plot_land' || !journey ? 5 : 1}
                     />
                   </>
                 )}
