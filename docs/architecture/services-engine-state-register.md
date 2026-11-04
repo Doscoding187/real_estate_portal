@@ -42,7 +42,7 @@ task-owned worktree with evidence recorded in the register line itself.
 
 ## §1 Engine stage statement
 
-**As of `main` @ `dd5e11114` (2026-11-03):** the Services engine is a
+**As of `main` @ `b2dd9a18` (2026-11-03):** the Services engine is a
 *contract-governed pilot directory with a complete autonomous enquiry loop* —
 the six-category directory (`/services` and `/services/:category`), provider
 profiles, and five topic pages are indexable with canonicals; the localized
@@ -53,14 +53,16 @@ provider lead custody with a six-state lifecycle and notes, verified-request
 reviews with moderation/report triage and transactionally recomputed aggregates,
 a super-admin review workspace, and a gated provider workspace. DELTA-4's
 services sitemap child, structured data, and category alias canonicalization
-landed in #700; localized URLs are omitted. Response measurement remains in
-open PR #701 and is not yet on main. The engine has no campaign landing
-capability, provider-attributed demand capture, export/handover, or provider
-media library.
+landed in #700; localized URLs are omitted. Response measurement is on main
+through #701: the public profile shows a 90-day median from response-event
+truth only, with a minimum of three measured leads. The engine has no campaign
+landing capability, provider-attributed demand capture, export/handover, or
+provider media library.
 
-**2026-11-03 update:** DELTA-4 is Done on main through #700. The Services V3
-contract is approved and recorded in `services-v3-product-contract.md`; the
-next code slice is governed by that contract and the open queue below.
+**2026-11-03 update:** DELTA-3 and DELTA-4 are on main through #701 and #700,
+respectively; DELTA-7 is in flight in #702. The Services V3 contract is
+approved and recorded in `services-v3-product-contract.md`; remaining work is
+governed by that contract and the open queue below.
 
 ## §2 Supersession ledger
 
@@ -82,19 +84,20 @@ Statuses: `Proposed` (awaiting founder/V3 approval) · `Approved, not started` �
 | --- | --- | --- | --- | --- |
 | DELTA-1 Provider web presence (profile → homepage; per-service detail pages) | Code | Proposed — first slice after V3 contract | V2 §6.4 sequencing; no schema |
 | DELTA-2 Campaign landing pages + provider-attributed demand capture | Code + contract | Proposed | New context vocabulary; idempotency semantics preserved; `noindex`-by-default policy is a contract clause |
-| DELTA-3 Measured response performance from `service_lead_events` | Code | In flight (#701; not on main) | Honest second rung of the trust ladder; computed truth only |
+| DELTA-3 Measured response performance from `service_lead_events` | Code | **Done on main 2026-11-03 through #701** | 90-day median from response-event truth; SQL includes leads created at the inclusive cutoff; public display requires three measured leads |
 | DELTA-4 Services SEO infrastructure (sitemap child, JSON-LD, slug canonicalization) | Code | Done (#700) | Category and published-provider sitemap entries; localized URLs omitted; category aliases redirect to canonical slugs |
 | DELTA-5 Provider media library | Schema (DB authority) | Proposed, evidence-gated | V2 MINI-1 |
 | DELTA-6 Provider content model (case studies/projects) | Schema (DB authority) | Proposed, evidence-gated | V2 MINI-2 |
-| DELTA-7 Lead workspace upgrades (filters/totals/event analytics) + client hygiene sweep | Code | Proposed (hygiene items enumerable today) | Hygiene items in §4.6 |
+| DELTA-7 Lead workspace upgrades (filters/totals/event analytics) + client hygiene sweep | Code | **In flight in #702** | Fail-closed status filtering, request-mix and response-performance panels, honest below-sample states, and dead `ProProfilePage` lazy-import cleanup; read-only queries, no schema change |
 | DELTA-8 Fresh notification/delivery domain (alerts, reminders) | Contract + ops authority | Proposed | Fresh design only; S-4 stays retired |
 | DELTA-9 Export/handover with POPIA consent semantics | Contract (+ legal review) | Proposed | Platform stays attribution system of record |
 | DELTA-10 Coverage geography convergence (typed canonical Places) | Place Authority consumer slice | Proposed | Pre-existing recorded slice; prerequisite for `service × place` discovery pages |
 | DELTA-11 Commercial model (tiers/placement/lead fees) | Founder decision | Proposed | V2 §3.1 gate: research then approval |
 
 **Current direction:** The V3 contract basis was approved on 2026-10-28 and is
-recorded in `services-v3-product-contract.md`. DELTA-4 is complete; remaining
-work stays governed by the statuses and evidence gates in this queue.
+recorded in `services-v3-product-contract.md`. DELTA-3 and DELTA-4 are complete;
+DELTA-7 is in flight. Remaining work stays governed by the statuses and
+evidence gates in this queue.
 
 ## §4 Asset reconciliation
 
@@ -120,8 +123,9 @@ superseded S-3 spec; never wired into routed code.
 four orphan property tests (`StarRating`, `TrustBar`, `CategoryCard`,
 `MatchQualityBadge`), and the `POPULAR_PROJECTS`/`COST_GUIDES` catalog constants.
 Verification: `pnpm check` clean; targeted services vitest — 15 files / 114 tests
-pass. The `ProProfilePage` lazy-import row is **not** retired; it advances to
-DELTA-7 unchanged.
+pass. The dead `App.tsx` `ProProfilePage` lazy binding is closed in DELTA-7;
+the page remains mounted inside `ProviderOnboardingWizard` via its own lazy
+import.
 
 **Reconciliation as of 2026-11-03.** The #698 reference sweep found references
 for every candidate asset on current main. Main commit `cbff3e7b` (#693) changed
@@ -142,7 +146,7 @@ remain deferred until each reference is reconciled.
 | `components/services/MatchQualityBadge.tsx` | No page references; concept absent from V1 contract (no automated matching) | **Retire**; do not reintroduce match scores (invented trust signal) without a V3 contract clause |
 | `components/services/StarRating.tsx` (standalone) + `__tests__/StarRating.property.test.ts` | Pages consume the `StarRating` export from `ProviderShowcaseCard.tsx`, not the standalone component | **Retire** (merge tests for the surviving export) |
 | `catalog.ts` constants `POPULAR_PROJECTS`, `COST_GUIDES` | No rendering surface | **Retire** with the components |
-| `pages/pro/ProProfilePage.tsx` lazy import in `App.tsx:88` with no route | Mounted only inside `ProviderOnboardingWizard`; default export unroutable | **Advance** into DELTA-7 hygiene: either give it an explicit route or drop the lazy import |
+| `pages/pro/ProProfilePage.tsx` lazy import in `App.tsx:88` with no route | Mounted only inside `ProviderOnboardingWizard`; default export unroutable | **Closed in DELTA-7 (#702)** — the dead lazy binding was dropped; the page remains mounted inside `ProviderOnboardingWizard` via its own lazy import |
 
 ### §4.3 Unwired-but-intentional engine surfaces (Hold)
 

@@ -36,7 +36,7 @@ describe('canonical Service Partner server runtime authority', () => {
       /getProviderById\(providerId:\s*number\)/,
       /replaceProviderServices\(providerId:\s*number,/,
       /replaceProviderLocations\(providerId:\s*number,/,
-      /listProviderLeads\(providerId:\s*number,/,
+      /listProviderLeads\(\s*providerId:\s*number,/,
       /getProviderDashboard\(providerId:\s*number,/,
     ];
 
