@@ -41,7 +41,28 @@ describe('runtime worktree identity', () => {
     });
   });
 
-  it('continues to fail closed outside Railway when Git metadata is unavailable', () => {
+  it('derives a non-local identity for an Azure Container Apps artifact without Git metadata', () => {
+    const artifact = temporaryArtifact();
+    const identity = readRuntimeWorktreeIdentity(artifact, {
+      env: {
+        CONTAINER_APP_NAME: 'ca-property-listify-prod',
+        CONTAINER_APP_REVISION: 'ca-property-listify-prod--abc1234',
+        BUILD_SHA: 'c'.repeat(40),
+      },
+    });
+
+    expect(identity).toMatchObject({
+      repositoryRoot: resolve(artifact),
+      gitCommonDirectory: resolve(artifact),
+      worktreePath: resolve(artifact),
+      branch: 'azure-container-apps/ca-property-listify-prod',
+      head: 'c'.repeat(40),
+      registered: false,
+      clean: false,
+    });
+  });
+
+  it('continues to fail closed outside hosted deployment identity when Git metadata is unavailable', () => {
     const artifact = temporaryArtifact();
 
     expect(() => readRuntimeWorktreeIdentity(artifact, { env: {} })).toThrow();
