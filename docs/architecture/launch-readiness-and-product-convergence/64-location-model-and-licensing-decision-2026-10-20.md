@@ -1,13 +1,15 @@
 # 64 — Location Model Decision: One Ladder, Searchable Areas, and the Founder-Lifted ODbL Hold
 
-**Date:** 2026-10-20 (D3 decision; reconfirmed by Edward on 2026-11-04)
+**Date:** 2026-10-20 (decision); reconfirmed by Edward on 2026-11-04
 **Worktree:** `.worktrees/property-listify-guide-pilot-seo-20261020` (branch
 `feat/guide-pilot-seo-publication-20261020`, base `origin/main` = `cd62988fb`)
 **Type:** Product and architecture decision, informed by competitive and licence research.
 
 ## Founder decision record — D3 OSM/ODbL hold lifted
 
-**Decision date:** 2026-10-20 (reconfirmed by Edward on 2026-11-04)
+**Decision date:** 2026-10-20
+
+**Reconfirmed by Edward:** 2026-11-04
 
 **Decision-maker:** Edward, founder
 
