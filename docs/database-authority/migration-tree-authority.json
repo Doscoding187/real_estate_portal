@@ -2060,6 +2060,16 @@
       "approvedFiles": [
         "server/migrations/0197_drop_seller_prospects_province.sql"
       ]
+    },
+    {
+      "path": "docs/operations/place-reference-bucket-digests.sql",
+      "classification": "governed read-only verification evidence",
+      "purpose": "Exact-path Place reference digest verification evidence. It changes only the current session's group_concat_max_len and runs SELECT queries; it is not migration input."
+    },
+    {
+      "path": "docs/operations/place-reference-bucket-row-drilldown.sql",
+      "classification": "governed read-only verification evidence",
+      "purpose": "Exact-path Place reference row-hash drilldown evidence. It runs SELECT queries only and is not migration input."
     }
   ],
   "prohibitedPaths": [
