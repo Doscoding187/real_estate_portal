@@ -1,0 +1,56 @@
+{
+  "review_id": "pl-geography-fordsburg-identity-hold-2026-10-28",
+  "reviewed_at": "2026-10-28T00:00:00Z",
+  "decision": "candidate_only",
+  "decision_scope": "Hold the outlying Fordsburg locality candidate out of factual geography and runtime admission until independent identity support resolves its referent.",
+  "prior_source_authority": {
+    "authority_version": "gauteng-source-authority-v0.3",
+    "manifest_path": "data/gauteng-source-authority-v0.3/gauteng_source_manifest_v0.3.json",
+    "manifest_sha256": "9e8facf52f8ca1a67940b2efd354c910dad4eb19efc51093d8d05871fe707a22",
+    "source_snapshot_id": "14666e91befd11e1aea6b220c520678fbafbfc2c12383392e29c9e727fa0a06e"
+  },
+  "prior_admission_package": {
+    "admission_version": "gauteng-place-admission-v0.2",
+    "manifest_path": "data/gauteng-place-admission-v0.2/gauteng_place_admission_manifest.v0.2.json",
+    "manifest_sha256": "c4b73e1e61eabb62904089ba51d15d8f19405c3b0faf59f3900349ddd227b701",
+    "place_id_registry_path": "data/gauteng-place-admission-v0.2/gauteng_place_id_registry.v0.2.json",
+    "place_id_registry_sha256": "59122e4825a03ece397d95f08cbc1a0537e40bc5101103f0ffe1f659ce01d40e"
+  },
+  "held_candidate": {
+    "canonical_location_id": "pl-geo-v01-za-gp-cdaee93a6835fd8f1544",
+    "prior_place_id": "pl-place-01-99dcb8ba9d808741e35b258e",
+    "preferred_name": "Fordsburg",
+    "candidate_type": "locality",
+    "promotion_class": "candidate_only",
+    "factual_identity_status": "candidate"
+  },
+  "retained_identity": {
+    "canonical_location_id": "pl-geo-v01-za-gp-936e54828376d972dcf8",
+    "place_id": "pl-place-01-435b493de124264b676f708f",
+    "preferred_name": "Fordsburg",
+    "settlement_membership": {
+      "parent_canonical_location_id": "pl-geo-v01-za-gp-8e70dc910ee8a62ab596",
+      "parent_name": "Johannesburg",
+      "relationship_type": "settlement_within",
+      "evidence_source": "statsa2016-subplace",
+      "membership_confidence": "high"
+    }
+  },
+  "policy": {
+    "merge_identities": false,
+    "retire_identity": false,
+    "preserve_prior_place_id_allocation": true,
+    "candidate_gets_public_place": false,
+    "candidate_gets_searchable_name": false,
+    "candidate_gets_parent_edge": false,
+    "candidate_gets_external_mapping": false,
+    "preserve_source_link_provenance": true
+  },
+  "rationale": [
+    "The two Fordsburg identities are about 19.3 km apart, beyond the governed 15 km same-name settlement merge bound.",
+    "The outlying locality has moderate identity confidence, no direct cross-identifier, three withheld fuzzy proposals, two ambiguous source matches, and a source-disputed candidate type.",
+    "The available evidence does not establish that the outlying records are the supported Fordsburg suburb or an independently supported locality; keep the identity unresolved without merging or retiring it.",
+    "The supported suburb has its own OSM and NGA source records and an exact reviewed Stats SA settlement_within edge to Johannesburg; retain that identity and edge unchanged."
+  ],
+  "reconsider_when": "Independent cross-identifier or authoritative locality evidence resolves the outlying records' identity; any merge or retirement requires a separate data-quality decision."
+}

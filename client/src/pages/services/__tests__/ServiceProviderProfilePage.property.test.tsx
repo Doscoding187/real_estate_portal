@@ -220,4 +220,37 @@ describe('ServiceProviderProfilePage', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /browse services/i })).toBeInTheDocument();
   });
+
+  it('presents measured response performance only when the sample gate passes', () => {
+    mockProfileData.mockReturnValue(
+      makeProfile({
+        responsePerformance: {
+          windowDays: 90,
+          measuredLeads: 2,
+          medianResponseSeconds: 3600,
+          sampleReady: false,
+        },
+      }),
+    );
+    render(<ServiceProviderProfilePage />);
+    expect(screen.queryByText(/typical first response/i)).not.toBeInTheDocument();
+  });
+
+  it('labels the computed first-response median with its measured basis', () => {
+    mockProfileData.mockReturnValue(
+      makeProfile({
+        responsePerformance: {
+          windowDays: 90,
+          measuredLeads: 5,
+          medianResponseSeconds: 7200,
+          sampleReady: true,
+        },
+      }),
+    );
+    render(<ServiceProviderProfilePage />);
+    expect(screen.getByText(/typical first response: within 2 hours/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/median measured across 5 requests in the last 90 days/i),
+    ).toBeInTheDocument();
+  });
 });

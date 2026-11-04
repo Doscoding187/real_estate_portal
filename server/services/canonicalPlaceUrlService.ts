@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import type {
   CanonicalPlaceUrlEntry,
   CanonicalPlaceUrlProjection,
+  CanonicalPlaceUrlRedirect,
 } from '../../shared/canonicalPlaceUrlProjection';
 
 const PROJECTION_PATH = 'data/place-url-projection-national-v0.1.json';
@@ -11,6 +12,7 @@ const PROJECTION_ID = 'property-listify-national-canonical-place-url-projection-
 let projection: CanonicalPlaceUrlProjection | undefined;
 let byPath: Map<string, CanonicalPlaceUrlEntry> | undefined;
 let byPlaceId: Map<string, CanonicalPlaceUrlEntry> | undefined;
+let redirectsByPath: Map<string, CanonicalPlaceUrlRedirect> | undefined;
 
 function loadProjection(): CanonicalPlaceUrlProjection {
   if (projection) return projection;
@@ -19,13 +21,15 @@ function loadProjection(): CanonicalPlaceUrlProjection {
   if (
     parsed.schema_version !== '0.1' ||
     parsed.projection_id !== PROJECTION_ID ||
-    !Array.isArray(parsed.entries)
+    !Array.isArray(parsed.entries) ||
+    !Array.isArray(parsed.redirects)
   ) {
     throw new Error('Canonical Place URL projection has an unsupported shape.');
   }
 
   const paths = new Map<string, CanonicalPlaceUrlEntry>();
   const places = new Map<string, CanonicalPlaceUrlEntry>();
+  const redirects = new Map<string, CanonicalPlaceUrlRedirect>();
   for (const entry of parsed.entries) {
     if (
       !entry.place_id ||
@@ -41,9 +45,28 @@ function loadProjection(): CanonicalPlaceUrlProjection {
     places.set(entry.place_id, entry);
   }
 
+  for (const redirect of parsed.redirects) {
+    const target = places.get(redirect.target_place_id);
+    if (
+      !redirect.source_path?.startsWith('/') ||
+      !redirect.target_path?.startsWith('/') ||
+      redirect.status_code !== 308 ||
+      !redirect.decision_id ||
+      redirects.has(redirect.source_path) ||
+      paths.has(redirect.source_path) ||
+      !target ||
+      !target.publication_eligible ||
+      target.path !== redirect.target_path
+    ) {
+      throw new Error('Canonical Place URL projection contains an invalid permanent redirect.');
+    }
+    redirects.set(redirect.source_path, redirect);
+  }
+
   projection = parsed;
   byPath = paths;
   byPlaceId = places;
+  redirectsByPath = redirects;
   return parsed;
 }
 
@@ -57,12 +80,16 @@ export function canonicalPlaceUrlByPlaceId(placeId: string): CanonicalPlaceUrlEn
   return byPlaceId!.get(placeId) ?? null;
 }
 
+export function canonicalPlaceUrlRedirectByPath(path: string): CanonicalPlaceUrlRedirect | null {
+  loadProjection();
+  return redirectsByPath!.get(path) ?? null;
+}
+
 /** Public sitemap entries must pass the authority's separate publication gate. */
 export function publishedCanonicalPlaceUrls(): CanonicalPlaceUrlEntry[] {
   return loadProjection().entries.filter(
     entry =>
       entry.publication_eligible &&
-      entry.verification_status === 'verified' &&
       entry.lifecycle_status === 'active',
   );
 }

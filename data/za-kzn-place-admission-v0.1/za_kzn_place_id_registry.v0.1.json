@@ -2097,7 +2097,7 @@
   "provenance": {
     "admission_version": "za-kzn-place-admission-v0.1",
     "territory_id": "za-kzn",
-    "source_snapshot_id": "8700a40784ae3cb208e8f9320c93b241f715c80d20eae56a78fe67545cad99ff",
+    "source_snapshot_id": "8c75e66228e5d383b2bb59bc9b2ed95b80ff93832991aebe54d80523d402721c",
     "note": "Assigned canonical Place identities. Reused verbatim on every regeneration. Never remap an id."
   }
 }

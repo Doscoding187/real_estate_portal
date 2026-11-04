@@ -128,7 +128,7 @@ describe('Place admission: source baseline', () => {
 
 describe('Place admission: source identity is not Place identity', () => {
   it('admits fewer Places than source identities, and accounts for every difference', () => {
-    const identityCount = 1487;
+    const identityCount = 1488;
     const absorbed = places.reduce((sum, place) => sum + (place.source_identity_ids.length - 1), 0);
     expect(places.length + absorbed).toBe(identityCount);
     expect(places.length).toBeLessThan(identityCount);
@@ -252,7 +252,7 @@ describe('Place admission: source identity is not Place identity', () => {
     for (const row of ledger)
       byDisposition.set(row.disposition, (byDisposition.get(row.disposition) ?? 0) + 1);
     expect(byDisposition.get('admitted_as_place_primary')).toBe(places.length);
-    expect(byDisposition.get('quarantined_candidate')).toBe(2755);
+    expect(byDisposition.get('quarantined_candidate')).toBe(2754);
     expect(byDisposition.get('rejected_non_independent')).toBe(108);
     for (const row of ledger) {
       expect(row.disposition).toBeTruthy();
@@ -264,9 +264,8 @@ describe('Place admission: source identity is not Place identity', () => {
     expect(quarantined.every(row => row.place_id === null)).toBe(true);
   });
 
-  it('never creates a Place from a licence-blocked or evidence-blocked candidate', () => {
+  it('never creates a Place from a remaining licence-blocked or evidence-blocked candidate', () => {
     for (const name of [
-      'Kyalami',
       'Khayalami',
       'Sky City',
       'Eden Park',
@@ -500,7 +499,7 @@ describe('Place admission: reviewed type corrections are applied, not re-decided
   const primaryAnchors = new Set(places.map(p => p.primary_source_identity_id));
 
   it('applies every reviewed correction to a real admitted Place', () => {
-    expect(corrections.length).toBe(48);
+    expect(corrections.length).toBe(49);
     for (const [anchor, correction] of correctionByAnchor) {
       const place = places.find(p => p.primary_source_identity_id === anchor);
       expect(place).toBeTruthy();

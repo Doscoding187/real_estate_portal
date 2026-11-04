@@ -1,192 +1,349 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-// Positive unit cases model the previously approved window; the live registration is revoked.
-vi.mock(
-  '../../../../docs/database-authority/disposable-rehearsal-authorization.json',
-  async importOriginal => ({
-    default: { ...(await importOriginal<any>()).default, status: 'approved' },
-  }),
-);
-beforeEach(() => {
-  vi.useFakeTimers();
-  vi.setSystemTime(new Date('2026-09-28T12:00:00Z'));
-});
-const recordState = vi.hoisted(() => ({ revoked: false }));
-vi.mock('node:fs', async importOriginal => {
-  const actual = await importOriginal<typeof import('node:fs')>();
-  return {
-    ...actual,
-    readFileSync: (...args: any[]) => {
-      const result = (actual.readFileSync as any)(...args);
-      if (String(args[0]).endsWith('/disposable-rehearsal-authorization.json')) {
-        return JSON.stringify({
-          ...JSON.parse(String(result)),
-          status: recordState.revoked ? 'revoked' : 'approved',
-        });
-      }
-      return result;
-    },
-  };
-});
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
+import { afterEach, describe, expect, it } from 'vitest';
+import {
+  assertStructuredRehearsalApproval,
+  authorizeDatabaseOperation,
+  loadDatabaseOperationPolicy,
+  protectedDatabaseApprovalFromEnvironment,
+  type RehearsalApprovalBinding,
+} from '../authorization';
 import { resolveDatabaseAuthority } from '../context';
-import { authorizeDatabaseOperation, expectedDatabaseAcknowledgement } from '../authorization';
-import { REHEARSAL, REHEARSAL_RESOURCE_ID, assertRehearsalResource } from '../rehearsalAuthority';
-import { compileRehearsalProbe } from '../rehearsalProbes';
-import { createAuthoritySqlConnection, createAuthorityRuntimePool } from '../connectionAuthority';
+import {
+  assertRehearsalResource,
+  assertRehearsalSourceBinding,
+  REHEARSAL,
+  REHEARSAL_FINGERPRINT,
+  REHEARSAL_RESOURCE_ID,
+  REHEARSAL_SOURCE_FILES,
+  REHEARSAL_SOURCE_DIGEST,
+  isRegisteredRehearsal,
+} from '../rehearsalAuthority';
+import { readDatabaseCredentialUrl } from '../credentialVault';
+import { buildMysqlConnectionSecurityConfig } from '../../databaseTls';
 import type { DatabaseOperation } from '../types';
 
+const roots: string[] = [];
 const url = `mysql://fixture:fixture@${REHEARSAL.hostname}/${REHEARSAL.database}`;
-const binding = { resourceId: REHEARSAL_RESOURCE_ID, purpose: REHEARSAL.purpose };
+const rehearsal = { resourceId: REHEARSAL_RESOURCE_ID, purpose: REHEARSAL.purpose };
+
 function resolve(
-  overrides: Parameters<typeof resolveDatabaseAuthority>[0] = { operation: 'rehearsal-regression' },
+  operation: DatabaseOperation,
+  input: {
+    credentialClass?: 'read-only' | 'migration' | 'runtime';
+    explicitDatabaseUrl?: string;
+    processEnv?: NodeJS.ProcessEnv;
+  } = {},
 ) {
+  const credentialClass = input.credentialClass ?? 'read-only';
   return resolveDatabaseAuthority({
-    explicitDatabaseUrl: url,
-    rehearsal: binding,
-    credentialClass: 'runtime',
-    processEnv: { NODE_ENV: 'test', APP_ENV: 'test' },
-    ...overrides,
+    operation,
+    explicitDatabaseUrl: input.explicitDatabaseUrl ?? url,
+    rehearsal,
+    credentialClass,
+    processEnv: input.processEnv ?? { NODE_ENV: 'development', APP_ENV: 'development' },
   });
 }
-function approve(a: ReturnType<typeof resolve>) {
-  return authorizeDatabaseOperation(a, {
-    approval: {
-      actor: 'Edward',
-      reference: REHEARSAL.purpose,
-      operation: a.context.operation,
-      targetFingerprintHash: a.context.targetFingerprintHash,
+
+function structuredApproval(scope = true): RehearsalApprovalBinding {
+  return {
+    resourceId: REHEARSAL_RESOURCE_ID,
+    purpose: REHEARSAL.purpose,
+    serverCreatedAt: REHEARSAL.serverCreatedAt,
+    sourceDigest: REHEARSAL_SOURCE_DIGEST,
+    ...(scope
+      ? {
+          scope: {
+            acceptedOldHead: REHEARSAL.acceptedOldHead,
+            expectedNewHead: REHEARSAL.expectedHead,
+            manifestDigest: REHEARSAL.manifestDigest,
+          },
+        }
+      : {}),
+  };
+}
+
+function resource() {
+  return {
+    id: REHEARSAL_RESOURCE_ID,
+    name: REHEARSAL.serverName,
+    type: REHEARSAL.provider,
+    location: 'southafricanorth',
+    systemData: { createdAt: REHEARSAL.serverCreatedAt },
+    properties: {
+      fullyQualifiedDomainName: REHEARSAL.hostname,
+      state: 'Ready',
+      fullVersion: '8.4.8',
     },
-    acknowledgement: expectedDatabaseAcknowledgement(a.context),
-  });
+  };
 }
-const resource = () => ({
-  id: REHEARSAL_RESOURCE_ID,
-  name: REHEARSAL.serverName,
-  type: REHEARSAL.provider,
-  location: 'southafricanorth',
-  systemData: { createdAt: REHEARSAL.serverCreatedAt },
-  properties: {
-    fullyQualifiedDomainName: REHEARSAL.hostname,
-    state: 'Ready',
-    fullVersion: '8.4.8',
-  },
-});
+
 afterEach(() => {
-  vi.useRealTimers();
-  recordState.revoked = false;
+  for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
-describe('exact disposable Azure rehearsal authority', () => {
-  it('permits only the explicit bound rehearsal regression operation', () => {
-    const a = resolve();
-    expect(a.context.targetClass).toBe('disposable-rehearsal');
-    expect(approve(a).operation).toBe('rehearsal-regression');
-    expect(() => assertRehearsalResource(resource())).not.toThrow();
+describe('disposable rehearsal schema release authority', () => {
+  it('binds the exact remote target and forces verified TLS in development mode', () => {
+    const authority = resolve('release-plan');
+    expect(authority.context.targetClass).toBe('disposable-rehearsal');
+    expect(authority.context.tls).toEqual({
+      required: true,
+      certificateVerificationRequired: true,
+    });
+    expect(authority.context.runtimeMode).toBe('development');
     expect(
-      compileRehearsalProbe('user.insert', [0], '12345678-1234-1234-1234-123456789abc').values[0],
-    ).toBe(1900000000);
+      buildMysqlConnectionSecurityConfig(
+        readDatabaseCredentialUrl(authority.credential),
+        'development',
+      ).ssl,
+    ).toMatchObject({ rejectUnauthorized: true, verifyIdentity: true });
+    expect(() => assertRehearsalSourceBinding()).not.toThrow();
   });
-  it.each([
-    'mysql://fixture:fixture@propertylistify-mysql.mysql.database.azure.com/propertylistify_database',
-    'mysql://fixture:fixture@remote.mysql.example.com/listify_property_sa',
-    'mysql://fixture:fixture@another.mysql.database.azure.com/propertylistify_database',
-    `mysql://fixture:fixture@${REHEARSAL.hostname}/another_database`,
-    'mysql://fixture:fixture@unregistered.example.test/remote',
-  ])('refuses other/protected identities: %s', explicitDatabaseUrl => {
-    expect(() =>
-      approve(resolve({ operation: 'rehearsal-regression', explicitDatabaseUrl })),
-    ).toThrow();
-  });
-  it.each(['subscription', 'resource-group', 'purpose'])('refuses wrong %s binding', kind => {
-    const rehearsal = { ...binding };
-    if (kind === 'purpose') rehearsal.purpose = 'generic remote tests';
-    else
-      rehearsal.resourceId = rehearsal.resourceId.replace(
-        kind === 'subscription' ? REHEARSAL.subscriptionId : REHEARSAL.resourceGroup,
-        'wrong',
-      );
-    expect(() => approve(resolve({ operation: 'rehearsal-regression', rehearsal }))).toThrow();
-  });
-  it('requires an explicit URL, test mode, approval and acknowledgement', () => {
-    const a = resolve();
-    expect(() => authorizeDatabaseOperation(a)).toThrow();
-    expect(() =>
-      approve(
-        resolve({
-          operation: 'rehearsal-regression',
-          processEnv: { NODE_ENV: 'production', APP_ENV: 'production' },
-        }),
-      ),
-    ).toThrow();
-    expect(() =>
-      approve(
-        resolve({
-          operation: 'rehearsal-regression',
-          explicitDatabaseUrl: undefined,
-          processEnv: { NODE_ENV: 'test', APP_ENV: 'test', DATABASE_URL: url },
-        }),
-      ),
-    ).toThrow();
-  });
+
   it.each(['?ssl=false', '?sslaccept=insecure', '?rejectUnauthorized=false'])(
-    'refuses unverified TLS %s',
+    'rejects insecure rehearsal TLS settings in development mode (%s)',
     suffix => {
-      expect(() =>
-        approve(resolve({ operation: 'rehearsal-regression', explicitDatabaseUrl: url + suffix })),
-      ).toThrow();
+      expect(() => resolve('release-plan', { explicitDatabaseUrl: `${url}${suffix}` })).toThrow(
+        'verified TLS is mandatory',
+      );
     },
   );
-  it.each([
-    'test-fixture',
-    'runtime-connect',
-    'migration-apply',
-    'release-apply',
-    'reference-seed',
-    'reset',
-    'database-dispose',
-    'lifecycle-admin',
-  ] as DatabaseOperation[])('refuses %s even for rehearsal', operation => {
-    expect(() => approve(resolve({ operation }))).toThrow();
+
+  it('forces verified TLS on the ordinary protected apply path in development mode', () => {
+    const runtimeTarget =
+      'mysql://release-user:secret@propertylistify-mysql.mysql.database.azure.com:3306/propertylistify_database';
+    const migrationTarget =
+      'mysql://release-migrator:secret@propertylistify-mysql.mysql.database.azure.com:3306/propertylistify_database';
+    const authority = resolveDatabaseAuthority({
+      operation: 'release-apply',
+      explicitDatabaseUrl: runtimeTarget,
+      credentialClass: 'migration',
+      processEnv: {
+        NODE_ENV: 'development',
+        APP_ENV: 'development',
+        DATABASE_MIGRATION_URL: migrationTarget,
+      },
+    });
+    expect(authority.context.targetClass).toBe('production');
+    expect(authority.context.tls).toEqual({
+      required: true,
+      certificateVerificationRequired: true,
+    });
+    const migrationUrl = readDatabaseCredentialUrl(authority.credential);
+    expect(new URL(migrationUrl).searchParams.get('sslaccept')).toBe('strict');
+    expect(buildMysqlConnectionSecurityConfig(migrationUrl, 'development').ssl).toMatchObject({
+      rejectUnauthorized: true,
+      verifyIdentity: true,
+    });
   });
-  it('does not expose generic SQL or runtime factories with a rehearsal decision', async () => {
-    const a = resolve(),
-      decision = approve(a);
-    await expect(createAuthoritySqlConnection(a, decision)).rejects.toThrow('authorization');
-    await expect(createAuthorityRuntimePool(a, decision)).rejects.toThrow('authorization');
+
+  it('enforces verified TLS for staging and rehearsal migration credentials in development mode', () => {
+    const staging = resolveDatabaseAuthority({
+      operation: 'release-plan',
+      explicitDatabaseUrl: 'mysql://reader:secret@staging.mysql.example.com/listify_staging',
+      credentialClass: 'read-only',
+      processEnv: { NODE_ENV: 'development', APP_ENV: 'development' },
+    });
+    expect(staging.context.targetClass).toBe('staging');
+    expect(
+      new URL(readDatabaseCredentialUrl(staging.credential)).searchParams.get('sslaccept'),
+    ).toBe('strict');
+
+    const rehearsalApply = resolve('release-apply', {
+      credentialClass: 'migration',
+      processEnv: {
+        NODE_ENV: 'development',
+        APP_ENV: 'development',
+        DATABASE_MIGRATION_URL: `mysql://rehearsal-migrator:secret@${REHEARSAL.hostname}/${REHEARSAL.database}`,
+      },
+    });
+    expect(rehearsalApply.context.credentialSource).toBe('protected-migration-url');
+    expect(
+      new URL(readDatabaseCredentialUrl(rehearsalApply.credential)).searchParams.get('sslaccept'),
+    ).toBe('strict');
   });
-  it('refuses a revoked registration without connecting', () => {
-    recordState.revoked = true;
-    expect(() => approve(resolve())).toThrow('expired, revoked or changed');
+
+  it('rejects an insecure protected migration credential in development mode', () => {
+    expect(() =>
+      resolveDatabaseAuthority({
+        operation: 'release-apply',
+        explicitDatabaseUrl:
+          'mysql://release-user:secret@propertylistify-mysql.mysql.database.azure.com:3306/propertylistify_database',
+        credentialClass: 'migration',
+        processEnv: {
+          NODE_ENV: 'development',
+          APP_ENV: 'development',
+          DATABASE_MIGRATION_URL:
+            'mysql://release-migrator:secret@propertylistify-mysql.mysql.database.azure.com:3306/propertylistify_database?ssl=false',
+        },
+      }),
+    ).toThrow('verified TLS is mandatory regardless of runtime mode');
   });
-  it('refuses expired authorization', () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-10-05T00:00:00Z'));
-    expect(() => approve(resolve())).toThrow('expired, revoked or changed');
-  });
-  it.each(['id', 'fqdn', 'createdAt', 'version', 'state'])('refuses unverifiable ARM %s', field => {
-    const r = resource();
-    if (field === 'id') r.id = r.id.replace(REHEARSAL.subscriptionId, 'wrong');
-    if (field === 'fqdn')
-      r.properties.fullyQualifiedDomainName = 'propertylistify-mysql.mysql.database.azure.com';
-    if (field === 'createdAt') r.systemData.createdAt = '2026-09-29T00:00:00Z';
-    if (field === 'version') r.properties.fullVersion = '5.7';
-    if (field === 'state') r.properties.state = 'Updating';
-    expect(() => assertRehearsalResource(r)).toThrow();
-  });
-  it('never compiles arbitrary DDL, SQL, identifiers or unbounded IDs', () => {
-    for (const probe of [
-      'DROP DATABASE propertylistify_database',
-      'TRUNCATE users',
-      'migration-apply',
-      'SET GLOBAL sql_mode',
-      'reference-seed',
+
+  it('requires exact structured target, creation time, source digest and 0111-to-0197 scope', () => {
+    const plan = resolve('release-plan');
+    expect(() =>
+      assertStructuredRehearsalApproval(plan.context, {
+        reference: 'REHEARSAL-RELEASE-APPROVAL',
+        actor: 'reviewer',
+        operation: 'release-plan',
+        targetFingerprintHash: plan.context.targetFingerprintHash,
+        rehearsalBinding: structuredApproval(),
+      }),
+    ).not.toThrow();
+
+    const base = structuredApproval();
+    for (const changed of [
+      { ...base, resourceId: `${base.resourceId}/other` },
+      { ...base, serverCreatedAt: '2026-09-29T00:00:00Z' },
+      { ...base, sourceDigest: '0'.repeat(64) },
+      { ...base, scope: { ...base.scope!, acceptedOldHead: '0110_wrong.sql' } },
+      { ...base, scope: { ...base.scope!, expectedNewHead: '0198_wrong.sql' } },
+      { ...base, scope: { ...base.scope!, manifestDigest: '0'.repeat(64) } },
     ]) {
       expect(() =>
-        compileRehearsalProbe(probe as any, [], '12345678-1234-1234-1234-123456789abc'),
-      ).toThrow();
+        assertStructuredRehearsalApproval(plan.context, {
+          reference: 'REHEARSAL-RELEASE-APPROVAL',
+          actor: 'reviewer',
+          operation: 'release-plan',
+          targetFingerprintHash: plan.context.targetFingerprintHash,
+          rehearsalBinding: changed,
+        }),
+      ).toThrow('structured rehearsal identity');
     }
-    for (const slot of [-1, 32, NaN, 1.5])
-      expect(() =>
-        compileRehearsalProbe('user.delete', [slot], '12345678-1234-1234-1234-123456789abc'),
-      ).toThrow();
+  });
+
+  it('reads structured rehearsal approval fields from the environment and narrows target policy', () => {
+    const plan = resolve('release-plan');
+    const approved = protectedDatabaseApprovalFromEnvironment(plan, {
+      DATABASE_AUTHORITY_APPROVAL_REFERENCE: 'REHEARSAL-RELEASE-APPROVAL',
+      DATABASE_AUTHORITY_APPROVAL_ACTOR: 'reviewer',
+      DATABASE_AUTHORITY_APPROVED_FINGERPRINT: plan.context.targetFingerprintHash,
+      DATABASE_AUTHORITY_REHEARSAL_APPROVAL: JSON.stringify(structuredApproval()),
+    });
+    expect(approved?.rehearsalBinding).toEqual(structuredApproval());
+    expect(() =>
+      protectedDatabaseApprovalFromEnvironment(plan, {
+        DATABASE_AUTHORITY_APPROVAL_REFERENCE: 'REHEARSAL-RELEASE-APPROVAL',
+        DATABASE_AUTHORITY_APPROVAL_ACTOR: 'reviewer',
+        DATABASE_AUTHORITY_APPROVED_FINGERPRINT: plan.context.targetFingerprintHash,
+        DATABASE_AUTHORITY_REHEARSAL_APPROVAL: '{invalid',
+      }),
+    ).toThrow('structured rehearsal approval is invalid JSON');
+
+    const policy = loadDatabaseOperationPolicy(process.cwd());
+    const rehearsalOperations = Object.entries(policy.operations)
+      .filter(([, rule]) => rule.allowedTargetClasses.includes('disposable-rehearsal'))
+      .map(([operation]) => operation)
+      .sort();
+    expect(rehearsalOperations).toEqual(
+      [
+        'diagnostics',
+        'read-only-connect',
+        'readiness',
+        'release-apply',
+        'release-plan',
+        'verification',
+      ].sort(),
+    );
+    expect(policy.operations['rehearsal-regression'].allowedTargetClasses).toEqual([]);
+    expect(policy.operations['release-reference-apply'].allowedTargetClasses).not.toContain(
+      'disposable-rehearsal',
+    );
+  });
+
+  it('binds only the exact registered host, database, Azure resource and purpose', () => {
+    expect(isRegisteredRehearsal(REHEARSAL_FINGERPRINT, rehearsal)).toBe(true);
+    expect(
+      isRegisteredRehearsal('mysql://other.example.test/propertylistify_database', rehearsal),
+    ).toBe(false);
+    expect(
+      isRegisteredRehearsal(REHEARSAL_FINGERPRINT, {
+        resourceId: REHEARSAL_RESOURCE_ID,
+        purpose: 'different purpose',
+      }),
+    ).toBe(false);
+  });
+
+  it('does not grant any live authorization while the registration is revoked and expired', () => {
+    expect(REHEARSAL.status).toBe('revoked');
+    expect(REHEARSAL.authorizationLive).toBe(false);
+    expect(Date.parse(REHEARSAL.expiresAt)).toBeLessThan(Date.now());
+    const plan = resolve('release-plan');
+    expect(() =>
+      authorizeDatabaseOperation(plan, {
+        root: process.cwd(),
+        approval: {
+          reference: 'REHEARSAL-RELEASE-APPROVAL',
+          actor: 'reviewer',
+          operation: 'release-plan',
+          targetFingerprintHash: plan.context.targetFingerprintHash,
+          rehearsalBinding: structuredApproval(),
+        },
+      }),
+    ).toThrow('expired, revoked or changed');
+
+    const legacy = resolve('rehearsal-regression', { credentialClass: 'runtime' });
+    expect(() => authorizeDatabaseOperation(legacy)).toThrow('expired, revoked or changed');
+  });
+
+  it('refuses a source digest mismatch when any guarded file changes', () => {
+    const root = mkdtempSync(join(tmpdir(), 'listify-rehearsal-source-'));
+    roots.push(root);
+    const repositoryRoot = process.cwd();
+    for (const relativePath of REHEARSAL_SOURCE_FILES) {
+      const destination = join(root, relativePath);
+      mkdirSync(dirname(destination), { recursive: true });
+      cpSync(join(repositoryRoot, relativePath), destination);
+    }
+    const guardedFile = join(root, 'server/_core/databaseAuthority/context.ts');
+    writeFileSync(guardedFile, `${readFileSync(guardedFile, 'utf8')}\n// changed\n`);
+    expect(() => assertRehearsalSourceBinding(root)).toThrow('guarded source digest');
+  });
+
+  it('keeps the Azure lookup out of the schema release runner', () => {
+    const runner = readFileSync(
+      join(process.cwd(), 'server/migrations/runSqlMigrations.ts'),
+      'utf8',
+    );
+    expect(runner).not.toContain('verifyRehearsalResource');
+    expect(runner).not.toMatch(/execFile\(\s*['"]az['"]/);
+  });
+
+  it.each(['id', 'hostname', 'createdAt', 'version', 'state'])(
+    'requires the operator preflight to match live Azure %s evidence',
+    field => {
+      const liveResource = resource();
+      if (field === 'id') liveResource.id += '/wrong';
+      if (field === 'hostname')
+        liveResource.properties.fullyQualifiedDomainName = 'wrong.mysql.azure.com';
+      if (field === 'createdAt') liveResource.systemData.createdAt = '2026-09-29T00:00:00Z';
+      if (field === 'version') liveResource.properties.fullVersion = '5.7';
+      if (field === 'state') liveResource.properties.state = 'Updating';
+      expect(() => assertRehearsalResource(liveResource)).toThrow('live Azure resource identity');
+    },
+  );
+
+  it('binds read-only diagnostic approvals without release scope', () => {
+    const diagnostics = resolve('diagnostics');
+    expect(() =>
+      assertStructuredRehearsalApproval(diagnostics.context, {
+        reference: 'REHEARSAL-DIAGNOSTICS-APPROVAL',
+        actor: 'reviewer',
+        operation: 'diagnostics',
+        targetFingerprintHash: diagnostics.context.targetFingerprintHash,
+        rehearsalBinding: structuredApproval(false),
+      }),
+    ).not.toThrow();
+    expect(() =>
+      assertStructuredRehearsalApproval(diagnostics.context, {
+        reference: 'REHEARSAL-DIAGNOSTICS-APPROVAL',
+        actor: 'reviewer',
+        operation: 'diagnostics',
+        targetFingerprintHash: diagnostics.context.targetFingerprintHash,
+        rehearsalBinding: structuredApproval(),
+      }),
+    ).toThrow('structured rehearsal identity');
   });
 });

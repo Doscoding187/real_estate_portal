@@ -21,6 +21,28 @@ export interface CanonicalPlaceUrlContext {
   path_segment: string;
 }
 
+export interface CanonicalPlaceAttribution {
+  provider: 'geoboundaries' | 'geonames' | 'nga_gns' | 'osm';
+  label: string;
+  url: string | null;
+}
+
+export interface CanonicalPlaceUrlRedirectDecision {
+  source_path: string;
+  target_place_id: string;
+  status_code: 308;
+  decision_id: string;
+  approved_on: string;
+}
+
+export interface CanonicalPlaceUrlRedirect {
+  source_path: string;
+  target_path: string;
+  target_place_id: string;
+  status_code: 308;
+  decision_id: string;
+}
+
 export interface CanonicalPlaceUrlEntry {
   place_id: string;
   territory_id: string;
@@ -37,6 +59,7 @@ export interface CanonicalPlaceUrlEntry {
   province_name: string;
   province_slug: string;
   path_context: CanonicalPlaceUrlContext | null;
+  source_attributions: CanonicalPlaceAttribution[];
 }
 
 export interface CanonicalPlaceUrlTerritoryInput {
@@ -49,12 +72,14 @@ export interface CanonicalPlaceUrlTerritoryInput {
   places: Array<Record<string, any>>;
   names: Array<Record<string, any>>;
   relationships: Array<Record<string, any>>;
+  evidence: Array<Record<string, any>>;
 }
 
 export interface CanonicalPlaceUrlProjection {
   schema_version: '0.1';
   projection_id: 'property-listify-national-canonical-place-url-projection-v0.1';
   source_registry: { path: string; sha256: string };
+  redirect_decisions: { path: string; sha256: string };
   path_policy: {
     version: 'canonical-place-url-policy-v0.1';
     city_scopes: 'province/place';
@@ -64,7 +89,7 @@ export interface CanonicalPlaceUrlProjection {
       'province_localities_namespace',
     ];
     collision_rule: 'append-stable-place-id-suffix-to-every-colliding-terminal-segment';
-    legacy_aliases: 'none';
+    legacy_aliases: 'founder_approved_permanent_redirects';
   };
   source_packages: Array<{
     territory_id: string;
@@ -81,6 +106,7 @@ export interface CanonicalPlaceUrlProjection {
     namespace_localities: number;
     collision_disambiguations: number;
   };
+  redirects: CanonicalPlaceUrlRedirect[];
   entries: CanonicalPlaceUrlEntry[];
 }
 
@@ -113,6 +139,51 @@ function requireValue<T>(value: T | undefined | null, description: string): T {
     throw new Error('canonical-place-url projection refused: ' + description + ' is missing');
   }
   return value;
+}
+
+const SOURCE_ATTRIBUTIONS: Record<CanonicalPlaceAttribution['provider'], CanonicalPlaceAttribution> = {
+  geoboundaries: {
+    provider: 'geoboundaries',
+    label: 'geoBoundaries',
+    url: 'https://www.geoboundaries.org/',
+  },
+  geonames: {
+    provider: 'geonames',
+    label: 'GeoNames geographic database',
+    url: 'https://www.geonames.org/',
+  },
+  nga_gns: {
+    provider: 'nga_gns',
+    label: 'NGA GEOnet Names Server',
+    url: null,
+  },
+  osm: {
+    provider: 'osm',
+    label: '© OpenStreetMap contributors',
+    url: 'https://www.openstreetmap.org/copyright',
+  },
+};
+
+function sourceAttributionsForPlace(
+  placeId: string,
+  evidence: Array<Record<string, any>>,
+): CanonicalPlaceAttribution[] {
+  const providers = new Set<CanonicalPlaceAttribution['provider']>();
+  for (const row of evidence) {
+    if (row.evidence_kind !== 'source_record' || String(row.place_id ?? '') !== placeId) continue;
+    for (const rawProvider of String(row.provider ?? '').split('+').filter(Boolean)) {
+      if (rawProvider.toLowerCase().includes('google')) {
+        throw new Error('canonical-place-url projection refused: Google source evidence cannot be public attribution');
+      }
+      if (!(rawProvider in SOURCE_ATTRIBUTIONS)) {
+        throw new Error(
+          'canonical-place-url projection refused: source attribution is not registered for ' + rawProvider,
+        );
+      }
+      providers.add(rawProvider as CanonicalPlaceAttribution['provider']);
+    }
+  }
+  return [...providers].sort(compareText).map(provider => SOURCE_ATTRIBUTIONS[provider]);
 }
 
 function appendIdentitySuffix(path: string, placeId: string): string {
@@ -156,6 +227,8 @@ function resolveCollidingPaths<T extends { place_id: string; path: string }>(
 export function buildCanonicalPlaceUrlProjection(input: {
   registryPath: string;
   registrySha256: string;
+  redirectDecisionSource: { path: string; sha256: string };
+  redirectDecisions: CanonicalPlaceUrlRedirectDecision[];
   territories: CanonicalPlaceUrlTerritoryInput[];
 }): CanonicalPlaceUrlProjection {
   const entries: CanonicalPlaceUrlEntry[] = [];
@@ -430,6 +503,7 @@ export function buildCanonicalPlaceUrlProjection(input: {
         province_name: provinceName,
         province_slug: provinceSlug,
         path_context: context,
+        source_attributions: sourceAttributionsForPlace(placeId, territory.evidence),
       });
     }
 
@@ -454,10 +528,43 @@ export function buildCanonicalPlaceUrlProjection(input: {
     allPaths.add(entry.path);
   }
 
+  const entriesByPlaceId = new Map(entries.map(entry => [entry.place_id, entry]));
+  const redirects: CanonicalPlaceUrlRedirect[] = [];
+  const redirectSources = new Set<string>();
+  for (const decision of [...input.redirectDecisions].sort((a, b) => compareText(a.source_path, b.source_path))) {
+    if (
+      !decision.source_path.startsWith('/') ||
+      decision.source_path.includes('?') ||
+      decision.source_path.includes('#') ||
+      decision.source_path.endsWith('/') ||
+      !decision.decision_id ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(decision.approved_on) ||
+      decision.status_code !== 308
+    ) {
+      throw new Error('canonical-place-url projection refused: malformed permanent redirect decision');
+    }
+    if (redirectSources.has(decision.source_path) || allPaths.has(decision.source_path)) {
+      throw new Error('canonical-place-url projection refused: redirect source collides with an existing path');
+    }
+    const target = entriesByPlaceId.get(decision.target_place_id);
+    if (!target || !target.publication_eligible || target.path === decision.source_path) {
+      throw new Error('canonical-place-url projection refused: redirect target is missing or not public');
+    }
+    redirectSources.add(decision.source_path);
+    redirects.push({
+      source_path: decision.source_path,
+      target_path: target.path,
+      target_place_id: target.place_id,
+      status_code: 308,
+      decision_id: decision.decision_id,
+    });
+  }
+
   return {
     schema_version: '0.1',
     projection_id: 'property-listify-national-canonical-place-url-projection-v0.1',
     source_registry: { path: input.registryPath, sha256: input.registrySha256 },
+    redirect_decisions: input.redirectDecisionSource,
     path_policy: {
       version: 'canonical-place-url-policy-v0.1',
       city_scopes: 'province/place',
@@ -467,7 +574,7 @@ export function buildCanonicalPlaceUrlProjection(input: {
         'province_localities_namespace',
       ],
       collision_rule: 'append-stable-place-id-suffix-to-every-colliding-terminal-segment',
-      legacy_aliases: 'none',
+      legacy_aliases: 'founder_approved_permanent_redirects',
     },
     source_packages: sourcePackages,
     summary: {
@@ -478,6 +585,7 @@ export function buildCanonicalPlaceUrlProjection(input: {
       namespace_localities: namespaceLocalities,
       collision_disambiguations: collisionDisambiguations,
     },
+    redirects,
     entries,
   };
 }

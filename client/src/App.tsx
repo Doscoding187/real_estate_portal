@@ -76,13 +76,13 @@ const ServicesResultsPage = lazy(() => import('./pages/services/ServicesResultsP
 const ServiceProviderProfilePage = lazy(
   () => import('./pages/services/ServiceProviderProfilePage'),
 );
+const ProviderServiceDetailPage = lazy(() => import('./pages/services/ProviderServiceDetailPage'));
 const ServiceProviderReviewsPage = lazy(
   () => import('./pages/services/ServiceProviderReviewsPage'),
 );
 const NavLandingPage = lazy(() => import('./pages/NavLandingPage'));
 const AssistedOnboardingRequestPage = lazy(() => import('./pages/AssistedOnboardingRequestPage'));
 const ProDashboardPage = lazy(() => import('./pages/pro/ProDashboardPage'));
-const ProProfilePage = lazy(() => import('./pages/pro/ProProfilePage'));
 const ProviderOnboardingWizard = lazy(() =>
   import('./features/services/onboarding/ProviderOnboardingWizard').then(m => ({
     default: m.ProviderOnboardingWizard,
@@ -470,6 +470,10 @@ function Router() {
           <Route path="/services/request/:category" component={ServicesRequestPage} />
           <Route path="/services/results/:leadId" component={ServicesResultsPage} />
           <Route path="/services/provider/:slug" component={ServiceProviderProfilePage} />
+          <Route
+            path="/services/provider/:slug/service/:service"
+            component={ProviderServiceDetailPage}
+          />
           <Route path="/services/reviews/:providerId" component={ServiceProviderReviewsPage} />
           <Route path="/services/:category" component={ServicesCategoryPage} />
           <Route path="/services" component={ServicesHomePage} />
@@ -724,6 +728,12 @@ function Router() {
               be declared before the /:province route so it is not captured
               by it. */}
           <Route path="/south-africa" component={CountryDiscoveryPage} />
+
+          {/* Static-host fallback for the founder-approved Centurion rename.
+              The server route emits the corresponding permanent HTTP redirect. */}
+          <Route path="/gauteng/lyttelton">
+            <Redirect to="/gauteng/centurion" />
+          </Route>
 
           {/* Place pages resolve exact paths from the admitted national projection. */}
           <Route path="/:province/:context/:place" component={CanonicalPlacePage} />

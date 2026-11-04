@@ -79,7 +79,6 @@ export function resolveSeoPageData(requestUrl: string): SeoPageData {
       canonicalUrl: absoluteUrl(placeRoute.path),
       robots:
         placeRoute.publication_eligible &&
-        placeRoute.verification_status === 'verified' &&
         !parsedUrl.search
           ? 'index, follow'
           : 'noindex, follow',

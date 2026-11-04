@@ -7,32 +7,32 @@
   "territory": {
     "territory_id": "za-nc",
     "display_name": "Northern Cape",
-    "admission_registry_path": "data/place-admission-territories.v0.1/territory-registry.v0.1.json",
-    "admission_registry_sha256": "739229dd26bcfd7d74c8f29d83421e1207354a74ecacaa6d8f2964c62c658be5"
+    "admission_registry_path": "data/place-admission-territories.v0.2/territory-registry.v0.2.json",
+    "admission_registry_sha256": "17e923e74668e521552b881dedabd4665dcf399b38f3c4e4bd6a2f4f8f99ee4b"
   },
   "generated_from": {
-    "source_authority_version": "za-nc-source-authority-v0.2",
-    "source_snapshot_id": "df65381a2075ec898db4adf3fca9d341db6bcf7387fcde6afb7215aa9f6a8584",
-    "source_manifest_path": "data/za-nc-source-authority-v0.2/za_nc_source_manifest_v0.2.json",
-    "source_manifest_sha256": "65924b97d82681250dd6756b0efcb7a5ee34574b26a4ad9661879f55e2b71ec7",
+    "source_authority_version": "za-nc-source-authority-v0.3",
+    "source_snapshot_id": "a7508ffee794867a40c80380156e201a2be320635c40564c6e1aa088cc02df21",
+    "source_manifest_path": "data/za-nc-source-authority-v0.3/za_nc_source_manifest_v0.3.json",
+    "source_manifest_sha256": "6982d8b33339914d426cd64813acae083d9e8714091894757f635a1e6e1f3cdd",
     "compact_artifacts": [
       {
-        "path": "data/za-nc-source-authority-v0.2/za_nc_candidate_dispositions_v0.2.jsonl",
+        "path": "data/za-nc-source-authority-v0.3/za_nc_candidate_dispositions_v0.2.jsonl",
         "sha256": "90e688fd3e5cbf1f67c6fc87c60c240bbf5fcd2cc6ea4a2f59b48a17011435cd",
         "size_bytes": 22891188
       },
       {
-        "path": "data/za-nc-source-authority-v0.2/za_nc_factual_canonical_geography_v0.2.jsonl",
+        "path": "data/za-nc-source-authority-v0.3/za_nc_factual_canonical_geography_v0.2.jsonl",
         "sha256": "220e76c21dbc88769a248dba3c193b20ef8116d4c64595b1743a90051f843387",
         "size_bytes": 5120086
       },
       {
-        "path": "data/za-nc-source-authority-v0.2/za_nc_factual_canonical_names_v0.2.jsonl",
-        "sha256": "8d76e2c02f9710c26efa9bac92261ddd0f649f1c505f606eabe4ce746d94d93f",
-        "size_bytes": 2809903
+        "path": "data/za-nc-source-authority-v0.3/za_nc_factual_canonical_names_v0.2.jsonl",
+        "sha256": "bdfdb5675c58ce7ef7250c1d8fea34edcd7d10dc8f9c60f1a15986f81eaa6f51",
+        "size_bytes": 2801985
       },
       {
-        "path": "data/za-nc-source-authority-v0.2/za_nc_factual_canonical_source_links_v0.2.jsonl",
+        "path": "data/za-nc-source-authority-v0.3/za_nc_factual_canonical_source_links_v0.2.jsonl",
         "sha256": "7dbf6080fe9900e9f8a3745261f47cbba2806c463e389229b4ab2ea64f94f4af",
         "size_bytes": 1663777
       }
@@ -64,11 +64,20 @@
     "one_containment_parent_per_place": true,
     "search_scope_authorization_in_slice_2": 0,
     "place_id_allocation": "assigned from a committed registry; never derived from name, slug, coordinates, parent, classification, natural key or source identity",
-    "source_geography_eligibility": "source-geography-eligibility-2026-10-14-v1"
+    "source_geography_eligibility": "source-geography-eligibility-2026-10-14-v1",
+    "reviewed_corrections": {
+      "input": "territory-declared reviewed-correction source artifacts, digest-pinned by the source authority manifest",
+      "type_corrections_declared": 0,
+      "type_corrections_applied": 0,
+      "settlement_membership_declared": 0,
+      "settlement_membership_applied": 0,
+      "settlement_types": "settlement_within",
+      "notes": "no reviewed-correction overlay declared for this territory"
+    }
   },
   "counts": {
     "source_identities": 1576,
-    "source_name_assertions": 2225,
+    "source_name_assertions": 2220,
     "source_links": 1576,
     "source_candidates": 16872,
     "admitted_places": 1552,
@@ -112,10 +121,11 @@
       "province": 1
     },
     "admitted_without_executable_scope": 231,
-    "names": 2192,
+    "names": 2187,
+    "google_maps_url_alias_assertions_excluded": 0,
     "name_roles": {
       "preferred_public": 1552,
-      "common": 636,
+      "common": 631,
       "alternate_spelling": 2,
       "historical": 1,
       "official": 1
@@ -455,7 +465,9 @@
     "no artificial settlement parent is introduced to complete a search hierarchy",
     "no municipality is re-typed or promoted into the metro_city search tier",
     "a Place without a governed executable scope stays admitted but is neither searchable nor publishable",
-    "the disposition ledger covers every source candidate"
+    "the disposition ledger covers every source candidate",
+    "reviewed type corrections reconcile to exactly the admitted Places they anchor, and settle their type within the governed settlement vocabulary",
+    "reviewed settlement membership is recorded with its declared evidence and never search-authorizing"
   ],
   "outputs": {
     "places": "data/za-nc-place-admission-v0.1/za_nc_place_admission_v0.1.jsonl",

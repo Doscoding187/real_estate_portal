@@ -33,8 +33,8 @@ describe('canonical national discovery entry', () => {
   it('resolves geographic paths only when they belong to the canonical Place projection', () => {
     expect(canonicalPlaceUrlByPath('/gauteng')?.place_type).toBe('province');
     expect(canonicalPlaceUrlByPath('/gauteng/johannesburg')?.search_scope).toBe('metro_city');
-    expect(resolveSeoPageData('/gauteng').robots).toBe('noindex, follow');
-    expect(resolveSeoPageData('/gauteng/johannesburg').robots).toBe('noindex, follow');
+    expect(resolveSeoPageData('/gauteng').robots).toBe('index, follow');
+    expect(resolveSeoPageData('/gauteng/johannesburg').robots).toBe('index, follow');
     expect(canonicalPlaceUrlByPath('/south-africa/extra')).toBeNull();
   });
 
