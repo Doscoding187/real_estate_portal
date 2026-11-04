@@ -994,7 +994,11 @@ const READY_PUBLICATION_BASE_ROW = {
   subscriptionStatus: 'trial',
 };
 
-function mockReadinessDb(baseRow: Record<string, unknown>, services: unknown[], locations: unknown[]) {
+function mockReadinessDb(
+  baseRow: Record<string, unknown>,
+  services: unknown[],
+  locations: unknown[],
+) {
   const readinessQueries = [makeQuery([baseRow]), makeQuery(services), makeQuery(locations)];
   const dbSelect = vi.fn(() => readinessQueries.shift() ?? makeQuery([]));
   return { dbSelect };
@@ -1145,7 +1149,9 @@ describe('Services V1 reviewed publication authority', () => {
         .fn()
         .mockReturnValueOnce(makeQuery([{ id: 20 }]))
         .mockReturnValueOnce(
-          makeQuery([{ ...READY_PUBLICATION_BASE_ROW, verificationStatus: 'verified', directoryActive: 1 }]),
+          makeQuery([
+            { ...READY_PUBLICATION_BASE_ROW, verificationStatus: 'verified', directoryActive: 1 },
+          ]),
         )
         .mockReturnValueOnce(makeQuery([{ isActive: 1 }]))
         .mockReturnValueOnce(makeQuery([{ canonicalPlaceId: PLACE_SANDTON }])),
@@ -1180,7 +1186,9 @@ describe('Services V1 reviewed publication authority', () => {
         .fn()
         .mockReturnValueOnce(makeQuery([{ id: 20 }]))
         .mockReturnValueOnce(
-          makeQuery([{ ...READY_PUBLICATION_BASE_ROW, verificationStatus: 'verified', directoryActive: 1 }]),
+          makeQuery([
+            { ...READY_PUBLICATION_BASE_ROW, verificationStatus: 'verified', directoryActive: 1 },
+          ]),
         )
         .mockReturnValueOnce(makeQuery([{ isActive: 1 }]))
         .mockReturnValueOnce(makeQuery([{ canonicalPlaceId: PLACE_SANDTON }])),
@@ -1338,7 +1346,12 @@ describe('Services V1 reviewed publication authority', () => {
     mockGetDb.mockResolvedValue({
       select: vi.fn(() => makeQuery([])),
       transaction: vi.fn(
-        async (callback: (tx: { select: ReturnType<typeof vi.fn>; insert: typeof insert }) => Promise<unknown>) =>
+        async (
+          callback: (tx: {
+            select: ReturnType<typeof vi.fn>;
+            insert: typeof insert;
+          }) => Promise<unknown>,
+        ) =>
           callback({
             select: vi
               .fn()
@@ -1455,7 +1468,12 @@ describe('Services V1 authoritative service replacement', () => {
     const { set, insert, update } = mockServiceReplacementDb(existingServiceRows);
 
     await servicesEngineService.replaceProviderServices(20, [
-      { id: 31, category: 'home_improvement', code: 'emergency-plumbing', displayName: 'Emergency plumbing' },
+      {
+        id: 31,
+        category: 'home_improvement',
+        code: 'emergency-plumbing',
+        displayName: 'Emergency plumbing',
+      },
       { id: 32, category: 'finance_legal', code: 'conveyancing', displayName: 'Conveyancing' },
     ]);
 
@@ -1463,7 +1481,10 @@ describe('Services V1 authoritative service replacement', () => {
     expect(set).toHaveBeenCalledTimes(2);
     expect(set).toHaveBeenNthCalledWith(
       1,
-      expect.objectContaining({ serviceCode: 'emergency-plumbing', displayName: 'Emergency plumbing' }),
+      expect.objectContaining({
+        serviceCode: 'emergency-plumbing',
+        displayName: 'Emergency plumbing',
+      }),
     );
     expect(insert).not.toHaveBeenCalled();
   });
@@ -1603,10 +1624,7 @@ describe('Services V1 bounded and deterministic reads', () => {
 
     await servicesEngineService.listProviderLeads(20, 25, 50);
 
-    expect(query.orderBy).toHaveBeenCalledWith(
-      desc(serviceLeads.createdAt),
-      desc(serviceLeads.id),
-    );
+    expect(query.orderBy).toHaveBeenCalledWith(desc(serviceLeads.createdAt), desc(serviceLeads.id));
   });
 
   it('bounds the eligible-provider candidate scan before in-memory filtering', async () => {
@@ -1631,9 +1649,8 @@ describe('Services V1 bounded and deterministic reads', () => {
           }),
         ]),
       ),
-      transaction: vi.fn(
-        async (callback: (tx: unknown) => Promise<unknown>) =>
-          callback({ select: vi.fn(), insert }),
+      transaction: vi.fn(async (callback: (tx: unknown) => Promise<unknown>) =>
+        callback({ select: vi.fn(), insert }),
       ),
     });
 

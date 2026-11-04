@@ -14,7 +14,11 @@ import { resolvePublicPropertyEligibilityIds } from '../services/publicPropertyE
 import { servicesEngineService } from '../services/servicesEngineService';
 
 import { COUNTRY_DISCOVERY_PATH } from '../../shared/countryDiscovery';
-import { toProviderSlug, toServiceCategorySlug } from '../../shared/serviceDirectorySlugs';
+import {
+  toProviderServiceSlug,
+  toProviderSlug,
+  toServiceCategorySlug,
+} from '../../shared/serviceDirectorySlugs';
 import { SITEMAP_INDEX_CHILDREN } from '../../shared/sitemapIndex';
 import { publishedCanonicalPlaceUrls } from '../services/canonicalPlaceUrlService';
 
@@ -246,7 +250,27 @@ router.get('/sitemap-services.xml', async (_req, res, next) => {
       priority: 0.6,
     }));
 
-    sendXml(res, buildUrlSet([...categoryEntries, ...providerEntries]));
+    const providerServiceEntries = entries.providerServices
+      .filter(row => row.serviceCode)
+      .map(row => {
+        const serviceSlug = toProviderServiceSlug(row.serviceDisplayName, row.serviceCode);
+        if (!serviceSlug) return null;
+        return {
+          loc: toAbsoluteUrl(
+            `/services/provider/${toProviderSlug(row.companyName, row.providerId)}/service/${serviceSlug}`,
+            baseUrl,
+          ),
+          lastmod: row.updatedAt,
+          changefreq: 'weekly',
+          priority: 0.5,
+        };
+      })
+      .filter(entry => entry != null);
+
+    sendXml(
+      res,
+      buildUrlSet([...categoryEntries, ...providerEntries, ...providerServiceEntries]),
+    );
   } catch (error) {
     next(error);
   }

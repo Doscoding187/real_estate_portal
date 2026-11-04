@@ -3449,10 +3449,11 @@ export class ServicesEngineService {
 
   async listServiceSitemapEntries(): Promise<{
     providers: ServiceSitemapProviderEntry[];
+    providerServices: ServiceSitemapProviderServiceEntry[];
   }> {
     const db = await getDb();
     if (!db) {
-      return { providers: [] };
+      return { providers: [], providerServices: [] };
     }
 
     const eligibility = and(
@@ -3520,8 +3521,46 @@ export class ServicesEngineService {
       }
     }
 
+    const eligibleProviderIds = new Set(eligibleProviders.keys());
+
+    const serviceRows = await db
+      .select({
+        providerId: partners.id,
+        companyName: partners.companyName,
+        serviceCode: serviceProviderServices.serviceCode,
+        serviceDisplayName: serviceProviderServices.displayName,
+        updatedAt: serviceProviderProfiles.updatedAt,
+      })
+      .from(serviceProviderServices)
+      .innerJoin(partners, eq(partners.id, serviceProviderServices.providerId))
+      .innerJoin(
+        serviceProviderProfiles,
+        eq(serviceProviderProfiles.providerId, serviceProviderServices.providerId),
+      )
+      .leftJoin(
+        serviceProviderSubscriptions,
+        eq(serviceProviderSubscriptions.providerId, serviceProviderServices.providerId),
+      )
+      .where(and(eligibility, eq(serviceProviderServices.isActive, 1)))
+      .orderBy(
+        serviceProviderServices.providerId,
+        serviceProviderServices.displayName,
+        serviceProviderServices.id,
+      );
+
+    const providerServices = serviceRows
+      .filter(row => eligibleProviderIds.has(Number(row.providerId)))
+      .map(row => ({
+        providerId: Number(row.providerId),
+        companyName: String(row.companyName || '').trim(),
+        serviceCode: String(row.serviceCode || '').trim(),
+        serviceDisplayName: String(row.serviceDisplayName || '').trim(),
+        updatedAt: row.updatedAt ? String(row.updatedAt) : null,
+      }));
+
     return {
       providers: Array.from(eligibleProviders.values()),
+      providerServices,
     };
   }
 
@@ -3578,6 +3617,14 @@ export class ServicesEngineService {
 type ServiceSitemapProviderEntry = {
   providerId: number;
   companyName: string;
+  updatedAt: string | null;
+};
+
+type ServiceSitemapProviderServiceEntry = {
+  providerId: number;
+  companyName: string;
+  serviceCode: string;
+  serviceDisplayName: string;
   updatedAt: string | null;
 };
 

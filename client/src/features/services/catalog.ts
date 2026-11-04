@@ -1,3 +1,17 @@
+import {
+  slugifyLocationSegment,
+  toProviderServiceSlug,
+  toProviderSlug,
+  toServiceCategorySlug,
+} from '../../../../shared/serviceDirectorySlugs';
+
+export {
+  slugifyLocationSegment,
+  toProviderServiceSlug,
+  toProviderSlug,
+  toServiceCategorySlug,
+} from '../../../../shared/serviceDirectorySlugs';
+
 export type ServiceCategory =
   | 'home_improvement'
   | 'finance_legal'
@@ -142,73 +156,12 @@ export const TRUST_STEPS = [
   },
 ];
 
-export const POPULAR_PROJECTS = [
-  {
-    title: 'Interior repaint',
-    typicalFrom: 'R4 500',
-    category: 'home_improvement' as ServiceCategory,
-  },
-  {
-    title: 'Electrical COC',
-    typicalFrom: 'R1 900',
-    category: 'inspection_compliance' as ServiceCategory,
-  },
-  {
-    title: 'Conveyancing support',
-    typicalFrom: 'R8 000',
-    category: 'finance_legal' as ServiceCategory,
-  },
-  { title: 'Move a 2-bedroom home', typicalFrom: 'R3 200', category: 'moving' as ServiceCategory },
-  {
-    title: 'Home insurance quote',
-    typicalFrom: 'Custom',
-    category: 'insurance' as ServiceCategory,
-  },
-  {
-    title: 'Listing photo package',
-    typicalFrom: 'R2 500',
-    category: 'media_marketing' as ServiceCategory,
-  },
-];
-
-export const COST_GUIDES = [
-  {
-    title: 'How much does home staging cost in South Africa?',
-    description: 'Budget ranges, what affects price, and where staging pays off.',
-    href: '/explore/home',
-  },
-  {
-    title: 'Conveyancing checklist before you sign',
-    description: 'Documents, timelines, and legal milestones buyers should expect.',
-    href: '/explore/home',
-  },
-  {
-    title: 'Moving week playbook for families',
-    description: 'A step-by-step relocation timeline from booking to handover.',
-    href: '/explore/home',
-  },
-];
-
 export function getCategoryMeta(value: ServiceCategory): ServiceCategoryMeta {
   return CATEGORY_BY_VALUE[value];
 }
 
 export function isServiceCategory(value: string): value is ServiceCategory {
   return SERVICE_CATEGORIES.some(category => category.value === value);
-}
-
-export function slugifyLocationSegment(value: string) {
-  return String(value || '')
-    .trim()
-    .toLowerCase()
-    .replace(/[_\s]+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/[^a-z0-9-]/g, '')
-    .replace(/^-+|-+$/g, '');
-}
-
-export function toServiceCategorySlug(category: ServiceCategory) {
-  return String(category).replace(/_/g, '-');
 }
 
 function setServiceJourneyContext(params: URLSearchParams, context: ServiceJourneyContext) {
@@ -299,6 +252,26 @@ export function buildProviderProfilePath(
   return `/services/provider/${encodeURIComponent(slug)}${query ? `?${query}` : ''}`;
 }
 
+export function buildProviderServicePath(
+  slug: string,
+  serviceSlug: string,
+  search = '',
+  context: ServiceJourneyContext = {},
+) {
+  const params = new URLSearchParams(search);
+  for (const key of SERVICE_JOURNEY_QUERY_KEYS) {
+    params.delete(key);
+  }
+  setServiceJourneyContext(params, {
+    ...serviceJourneyContextFromSearch(search),
+    ...context,
+  });
+  const query = params.toString();
+  return `/services/provider/${encodeURIComponent(
+    slug,
+  )}/service/${encodeURIComponent(serviceSlug)}${query ? `?${query}` : ''}`;
+}
+
 export function serviceCategoryFromSlug(slug: string): ServiceCategory | null {
   const normalized = slugifyLocationSegment(slug).replace(/-/g, '_');
   return isServiceCategory(normalized) ? (normalized as ServiceCategory) : null;
@@ -308,12 +281,9 @@ export function formatCategoryLabel(value: ServiceCategory) {
   return getCategoryMeta(value).label;
 }
 
-export function toProviderSlug(companyName: string, providerId: number) {
-  const stem = companyName
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '');
-  return `${stem || 'provider'}--${providerId}`;
+export function formatArea(city?: string | null, province?: string | null, suburb?: string | null) {
+  const parts = [suburb, city, province].filter(Boolean);
+  return parts.length ? parts.join(', ') : 'your area';
 }
 
 export function providerIdFromSlug(slug: string): number | null {
