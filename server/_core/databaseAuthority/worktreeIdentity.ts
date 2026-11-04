@@ -62,6 +62,50 @@ export function deriveGitWorktreeIdentity(material: WorktreeIdentityMaterial): G
   });
 }
 
+function hasAzureContainerAppsDeploymentIdentity(env: NodeJS.ProcessEnv): boolean {
+  return [
+    env.CONTAINER_APP_NAME,
+    env.CONTAINER_APP_REVISION,
+    env.CONTAINER_APP_ENV_DNS_SUFFIX,
+  ].some(value => Boolean(String(value ?? '').trim()));
+}
+
+function azureContainerAppsDeploymentLabel(env: NodeJS.ProcessEnv): string {
+  const value = String(
+    env.CONTAINER_APP_NAME ?? env.CONTAINER_APP_ENV_DNS_SUFFIX ?? 'container-app',
+  ).trim();
+  return value || 'container-app';
+}
+
+function azureContainerAppsDeploymentHead(env: NodeJS.ProcessEnv): string {
+  const value = String(
+    env.BUILD_SHA ?? env.GITHUB_SHA ?? env.SOURCE_VERSION ?? 'azure-container-apps-artifact',
+  ).trim();
+  return value || 'azure-container-apps-artifact';
+}
+
+/**
+ * Azure Container Apps is deliberately not a Git checkout. Remote targets do
+ * not use worktree ownership for authorization, but the resolved context still
+ * needs a stable, non-local identity for audit evidence.
+ */
+export function deriveAzureContainerAppsDeploymentIdentity(
+  cwd = process.cwd(),
+  env: NodeJS.ProcessEnv = process.env,
+): GitWorktreeIdentity {
+  const deploymentRoot = realpathSync(cwd);
+
+  return deriveGitWorktreeIdentity({
+    repositoryRoot: deploymentRoot,
+    gitCommonDirectory: deploymentRoot,
+    worktreePath: deploymentRoot,
+    branch: `azure-container-apps/${azureContainerAppsDeploymentLabel(env)}`,
+    head: azureContainerAppsDeploymentHead(env),
+    registered: false,
+    clean: false,
+  });
+}
+
 function hasRailwayDeploymentIdentity(env: NodeJS.ProcessEnv): boolean {
   return [
     env.RAILWAY_GIT_COMMIT_SHA,
@@ -169,6 +213,9 @@ export function readRuntimeWorktreeIdentity(
   options: RuntimeIdentityOptions = {},
 ): GitWorktreeIdentity {
   const env = options.env ?? process.env;
+  if (hasAzureContainerAppsDeploymentIdentity(env)) {
+    return deriveAzureContainerAppsDeploymentIdentity(cwd, env);
+  }
   if (hasRailwayDeploymentIdentity(env)) {
     return deriveRailwayDeploymentIdentity(cwd, env);
   }
