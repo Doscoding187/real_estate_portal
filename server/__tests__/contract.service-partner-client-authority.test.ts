@@ -13,6 +13,8 @@ describe('canonical Service Partner client identity authority', () => {
 
   const catalog = read('client/src/features/services/catalog.ts');
 
+  const slugAuthority = read('shared/serviceDirectorySlugs.ts');
+
   const onboardingStatus = read('client/src/hooks/useServiceProviderOnboardingStatus.ts');
 
   const profilePage = read('client/src/pages/services/ServiceProviderProfilePage.tsx');
@@ -36,7 +38,9 @@ describe('canonical Service Partner client identity authority', () => {
   });
 
   it('builds provider slugs from integer IDs', () => {
-    expect(catalog).toMatch(/toProviderSlug\(companyName:\s*string,\s*providerId:\s*number\)/);
+    expect(catalog).toContain('shared/serviceDirectorySlugs');
+
+    expect(slugAuthority).toMatch(/toProviderSlug\(companyName:\s*string,\s*providerId:\s*number\)/);
 
     expect(catalog).toMatch(/providerIdFromSlug\(slug:\s*string\):\s*number\s*\|\s*null/);
 
