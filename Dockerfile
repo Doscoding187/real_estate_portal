@@ -26,6 +26,7 @@ COPY server ./server
 COPY drizzle ./drizzle
 COPY docs/database-authority ./docs/database-authority
 COPY data/place-url-projection-national-v0.1.json ./data/place-url-projection-national-v0.1.json
+COPY data/place-admission-territories.v0.2/territory-registry.v0.2.json ./data/place-admission-territories.v0.2/territory-registry.v0.2.json
 RUN chown -R app:app /app
 USER app
 EXPOSE 5000
