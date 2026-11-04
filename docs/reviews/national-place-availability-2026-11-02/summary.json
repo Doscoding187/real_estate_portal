@@ -1,0 +1,332 @@
+{
+  "baselineCommit": "0b7ae664e3d0748bfab2b571c9488b4abf174eb2",
+  "source": "The nine Place packages registered by the current GitHub main registry; files read with git show at the pinned commit. No database connection used.",
+  "releasePolicy": "admitted-national-traceable-sources-v2",
+  "migrationManifestHead": "0197_drop_seller_prospects_province.sql",
+  "definitions": {
+    "listingSearchEligible": "search_eligible=1 and lifecycle_status=active",
+    "publicPageEligible": "publication_eligible=1, verification_status=verified, and lifecycle_status=active",
+    "searchableButNotPublicPageEligible": "listingSearchEligible and not publicPageEligible",
+    "blockerCounts": "non-exclusive; one Place may fail multiple checks"
+  },
+  "totals": {
+    "places": 17663,
+    "listingSearchEligible": 14807,
+    "listingSearchIneligible": 2856,
+    "publicPageEligible": 2026,
+    "searchableButNotPublicPageEligible": 12781,
+    "rowLevelCsvRows": 15637
+  },
+  "searchExclusionReasons": {
+    "facilityOrSpotWithoutAreaEvidence": 2556,
+    "municipalityContextWithoutSearchScope": 300,
+    "other": 0
+  },
+  "searchFeatureCodeCounts": {
+    "L.CTRB": 1,
+    "S.": 1,
+    "S.HTL": 986,
+    "S.RSD": 1558,
+    "S.RSTN": 1,
+    "S.TOWR": 10
+  },
+  "searchFeatureCodeCountsAreNonExclusive": true,
+  "publicPageBlockerCounts": {
+    "boundary_conflict_not_clear:True": 607,
+    "identity_confidence_not_high:low": 3,
+    "identity_confidence_not_high:medium": 10816,
+    "identity_confidence_not_high:moderate": 1087,
+    "multiple_source_identities:2": 537,
+    "multiple_source_identities:3": 42,
+    "multiple_source_identities:4": 5,
+    "osm_only_public_page_ineligible": 720,
+    "promotion_not_auto:promotable_with_provisional_attributes": 12159,
+    "spatial_confidence_not_supported:provisional": 36,
+    "spatial_confidence_not_supported:unverified": 571,
+    "type_not_supported:provisional": 11270
+  },
+  "publicPageBlockerCountsAreNonExclusive": true,
+  "osmOnlyPlaces": {
+    "searchEligible": 720,
+    "publicPageEligible": 0
+  },
+  "provinceStats": [
+    {
+      "province": "Eastern Cape",
+      "places": 5084,
+      "search_eligible": 4634,
+      "public_page_eligible": 290,
+      "search_excluded": 450,
+      "searchable_no_public_page": 4344,
+      "facility_or_spot_no_area_evidence": 403,
+      "municipality_context_no_search_scope": 47
+    },
+    {
+      "province": "Free State",
+      "places": 1544,
+      "search_eligible": 1297,
+      "public_page_eligible": 105,
+      "search_excluded": 247,
+      "searchable_no_public_page": 1192,
+      "facility_or_spot_no_area_evidence": 222,
+      "municipality_context_no_search_scope": 25
+    },
+    {
+      "province": "Gauteng",
+      "places": 1465,
+      "search_eligible": 1433,
+      "public_page_eligible": 68,
+      "search_excluded": 32,
+      "searchable_no_public_page": 1365,
+      "municipality_context_no_search_scope": 30,
+      "facility_or_spot_no_area_evidence": 2
+    },
+    {
+      "province": "KwaZulu-Natal",
+      "places": 2090,
+      "search_eligible": 1570,
+      "public_page_eligible": 276,
+      "search_excluded": 520,
+      "searchable_no_public_page": 1294,
+      "facility_or_spot_no_area_evidence": 458,
+      "municipality_context_no_search_scope": 62
+    },
+    {
+      "province": "Limpopo",
+      "places": 1669,
+      "search_eligible": 1493,
+      "public_page_eligible": 71,
+      "search_excluded": 176,
+      "searchable_no_public_page": 1422,
+      "facility_or_spot_no_area_evidence": 146,
+      "municipality_context_no_search_scope": 30
+    },
+    {
+      "province": "Mpumalanga",
+      "places": 1045,
+      "search_eligible": 795,
+      "public_page_eligible": 52,
+      "search_excluded": 250,
+      "searchable_no_public_page": 743,
+      "facility_or_spot_no_area_evidence": 229,
+      "municipality_context_no_search_scope": 21
+    },
+    {
+      "province": "North West",
+      "places": 1352,
+      "search_eligible": 1162,
+      "public_page_eligible": 60,
+      "search_excluded": 190,
+      "searchable_no_public_page": 1102,
+      "facility_or_spot_no_area_evidence": 167,
+      "municipality_context_no_search_scope": 23
+    },
+    {
+      "province": "Northern Cape",
+      "places": 1552,
+      "search_eligible": 1321,
+      "public_page_eligible": 686,
+      "search_excluded": 231,
+      "searchable_no_public_page": 635,
+      "facility_or_spot_no_area_evidence": 199,
+      "municipality_context_no_search_scope": 32
+    },
+    {
+      "province": "Western Cape",
+      "places": 1862,
+      "search_eligible": 1102,
+      "public_page_eligible": 418,
+      "search_excluded": 760,
+      "searchable_no_public_page": 684,
+      "facility_or_spot_no_area_evidence": 730,
+      "municipality_context_no_search_scope": 30
+    }
+  ],
+  "csvSha256": "acf579b0028268863154a0533bf3bb1065db8284660c61c3717494d097add8dc",
+  "sourceArtifactSha256": [
+    {
+      "path": "data/place-admission-territories.v0.2/territory-registry.v0.2.json",
+      "sha256": "4d732e3f595f3f524444f5177a717fac84116a8c55963370e34a7f6f7178d03f"
+    },
+    {
+      "path": "data/gauteng-place-admission-v0.3/gauteng_place_admission_manifest.v0.3.json",
+      "sha256": "cd416f0085a1f9ad80dd9af1328cb2efdce5a7bab05c62b7eae70b67ad020a98"
+    },
+    {
+      "path": "data/gauteng-place-admission-v0.3/gauteng_place_admission_v0.3.jsonl",
+      "sha256": "f6898faf54590c44831f69831d740e154095b0f40038672a52f968628235346c"
+    },
+    {
+      "path": "data/gauteng-place-admission-v0.3/gauteng_place_names_v0.3.jsonl",
+      "sha256": "b7e05cac9cff16619824b874da3f89a5018d383c1c148f068fb508edf7608e30"
+    },
+    {
+      "path": "data/gauteng-source-authority-v0.4/gauteng_source_manifest_v0.4.json",
+      "sha256": "76e06623c7c1d364fe7cf068ec55b476f2006a4041a308043914f584167402ef"
+    },
+    {
+      "path": "data/gauteng-source-authority-v0.4/gauteng_factual_canonical_geography_v0.2.jsonl",
+      "sha256": "f12b2453f70f3a7a3d8bef6167fadb5630caf69e645f65c6db65b40e9dbb2c9a"
+    },
+    {
+      "path": "data/za-wc-place-admission-v0.1/za_wc_place_admission_manifest_v0.1.json",
+      "sha256": "33d75331f007a095eb37be3ba0b2a97c8dd7843dd843467cc1c4747fc1e7bdbf"
+    },
+    {
+      "path": "data/za-wc-place-admission-v0.1/za_wc_place_admission_v0.1.jsonl",
+      "sha256": "cf4a687562029f02284c245bad0463b810bf6f19b06145a038f4284d215b6543"
+    },
+    {
+      "path": "data/za-wc-place-admission-v0.1/za_wc_place_names_v0.1.jsonl",
+      "sha256": "1febe0a36b9e81edf4d785f36284f60c1bff933ec9b3b40d0cc88c2769eecef2"
+    },
+    {
+      "path": "data/za-wc-source-authority-v0.2/za_wc_source_manifest_v0.2.json",
+      "sha256": "4c2de8a535106b9ef48c632a3e8da2d3549446814ec69cd351404db9efd18677"
+    },
+    {
+      "path": "data/za-wc-source-authority-v0.2/za_wc_factual_canonical_geography_v0.2.jsonl",
+      "sha256": "b36aa7e1c3b0efd91028cdb8bdfaec4ba4f146272280d716f3a9f8d0a83e21a2"
+    },
+    {
+      "path": "data/za-kzn-place-admission-v0.1/za_kzn_place_admission_manifest_v0.1.json",
+      "sha256": "12d48df17bc0fa78531324dd2598942f1f3df2454ee28682eda67a15f927e0c1"
+    },
+    {
+      "path": "data/za-kzn-place-admission-v0.1/za_kzn_place_admission_v0.1.jsonl",
+      "sha256": "e8cd0d91763b09a9a76c91cf833764c2299ab8d5c0b687f2177d6b06664a6d6a"
+    },
+    {
+      "path": "data/za-kzn-place-admission-v0.1/za_kzn_place_names_v0.1.jsonl",
+      "sha256": "e875b8eda2866f9f9b04d52f40675fda2eff187d84a1431ce380c6be888e9dfd"
+    },
+    {
+      "path": "data/za-kzn-source-authority-v0.2/za_kzn_source_manifest_v0.2.json",
+      "sha256": "6c8ddb9c74b7d0ced4178e5018f16183b1b171a39b7a93511b06d08f0ab42888"
+    },
+    {
+      "path": "data/za-kzn-source-authority-v0.2/za_kzn_factual_canonical_geography_v0.2.jsonl",
+      "sha256": "4fc3b1e0233d235c55540b27265ffe56b4ee724e70441e4cfc21891182d0e432"
+    },
+    {
+      "path": "data/za-ec-place-admission-v0.1/za_ec_place_admission_manifest_v0.1.json",
+      "sha256": "3dad20935dbc7bf503f45484c13c2238680774420bbc66be09850974975c188f"
+    },
+    {
+      "path": "data/za-ec-place-admission-v0.1/za_ec_place_admission_v0.1.jsonl",
+      "sha256": "51316dc9b8eb09b4310c3abe5a58364ff469937aaee780892f000123f20fa22f"
+    },
+    {
+      "path": "data/za-ec-place-admission-v0.1/za_ec_place_names_v0.1.jsonl",
+      "sha256": "06699e719305a7f6039085068ca7638d29251472d6e08e72405944ebe1f84e63"
+    },
+    {
+      "path": "data/za-ec-source-authority-v0.2/za_ec_source_manifest_v0.2.json",
+      "sha256": "2ee57a0f948b7b955e1b7239cafb665a373968620404cd9800df7a0e9d300af7"
+    },
+    {
+      "path": "data/za-ec-source-authority-v0.2/za_ec_factual_canonical_geography_v0.2.jsonl",
+      "sha256": "bd3caeea048e9a7fc1240cc234304bb558a312c728907fadbc4786ccd33bd505"
+    },
+    {
+      "path": "data/za-fs-place-admission-v0.1/za_fs_place_admission_manifest_v0.1.json",
+      "sha256": "a5204223c2e9d26940006cd69e47f2ac646137d461597946eec5f82cd844f3f5"
+    },
+    {
+      "path": "data/za-fs-place-admission-v0.1/za_fs_place_admission_v0.1.jsonl",
+      "sha256": "175c31b800f842beb30742a58b527664a7790a7697e4af33e622914f08566cb2"
+    },
+    {
+      "path": "data/za-fs-place-admission-v0.1/za_fs_place_names_v0.1.jsonl",
+      "sha256": "922780b0f06641736a42bb4b33d8977e877ecbf0346f1c7dac528c4ac4bc7778"
+    },
+    {
+      "path": "data/za-fs-source-authority-v0.2/za_fs_source_manifest_v0.2.json",
+      "sha256": "cddcdfb8207c7e772f5b7e4cd3cca3b4b2d084d15641c617352423dea59bc0ba"
+    },
+    {
+      "path": "data/za-fs-source-authority-v0.2/za_fs_factual_canonical_geography_v0.2.jsonl",
+      "sha256": "1fd92dbb7232ca07c3322f1cdc0d7b0740429fcb67eaec8ae1a5f1e0c618c8e0"
+    },
+    {
+      "path": "data/za-mp-place-admission-v0.1/za_mp_place_admission_manifest_v0.1.json",
+      "sha256": "fc575540c4ddf1570f7cd67a54bc486d50684d7765f0882753c35b08595d358c"
+    },
+    {
+      "path": "data/za-mp-place-admission-v0.1/za_mp_place_admission_v0.1.jsonl",
+      "sha256": "96bebc6ed61e157dd9d815437bc12144ea6b7682d747a88efdc1efc109ef2e2b"
+    },
+    {
+      "path": "data/za-mp-place-admission-v0.1/za_mp_place_names_v0.1.jsonl",
+      "sha256": "500b4c4f4bb7bcc36c61f2399b0f5e621d08bc89744ebb9bd1cf142257fbe96d"
+    },
+    {
+      "path": "data/za-mp-source-authority-v0.2/za_mp_source_manifest_v0.2.json",
+      "sha256": "e1aceeb667cda374c7912ce0af6b1b6587ed1d7ab2b2ca2e6a78bb9c914d4d63"
+    },
+    {
+      "path": "data/za-mp-source-authority-v0.2/za_mp_factual_canonical_geography_v0.2.jsonl",
+      "sha256": "53878ae06b2da08a31a3c8e13c44392c0c9970fbf4780e319230e24a11d7b203"
+    },
+    {
+      "path": "data/za-li-place-admission-v0.1/za_li_place_admission_manifest_v0.1.json",
+      "sha256": "971ec21cb8e3b048a98e68d2c3bda7a7b91b4f0e73ac76dfd2bcc28cf6af7e15"
+    },
+    {
+      "path": "data/za-li-place-admission-v0.1/za_li_place_admission_v0.1.jsonl",
+      "sha256": "97df5f32091e464b6e184cfcd52c67c6d5d180d5a884d29901deead13cabc259"
+    },
+    {
+      "path": "data/za-li-place-admission-v0.1/za_li_place_names_v0.1.jsonl",
+      "sha256": "ec73318f7b4862e9a51d407e6832196e4a8c83bb71175f95e1b2817be80637f4"
+    },
+    {
+      "path": "data/za-li-source-authority-v0.2/za_li_source_manifest_v0.2.json",
+      "sha256": "25116e27cd114745fd9775113896772456224c0974c4938d0bfb0aee0af4001a"
+    },
+    {
+      "path": "data/za-li-source-authority-v0.2/za_li_factual_canonical_geography_v0.2.jsonl",
+      "sha256": "df7e71da493d9ffe680650403774d3ac3bdb887d45d4bef266939357ca8e5031"
+    },
+    {
+      "path": "data/za-nw-place-admission-v0.1/za_nw_place_admission_manifest_v0.1.json",
+      "sha256": "bab2398737e315b1949b02685fed9635d75f7dd98249703caccd2bb3738d430a"
+    },
+    {
+      "path": "data/za-nw-place-admission-v0.1/za_nw_place_admission_v0.1.jsonl",
+      "sha256": "b0d6b97121d52f292bf3e169bd074dc7e4ede9a9d310a14edbdd96185d49339f"
+    },
+    {
+      "path": "data/za-nw-place-admission-v0.1/za_nw_place_names_v0.1.jsonl",
+      "sha256": "de836472fab9d42063cc6c2e0b43b4c9cf96d080819b7c895058ae492dda1f75"
+    },
+    {
+      "path": "data/za-nw-source-authority-v0.2/za_nw_source_manifest_v0.2.json",
+      "sha256": "ef18895522fa3c25cbc7241d3307c60e3411c9008dbe019230d421f8230abb86"
+    },
+    {
+      "path": "data/za-nw-source-authority-v0.2/za_nw_factual_canonical_geography_v0.2.jsonl",
+      "sha256": "d68280149c64483d415dabffd894aed74ac585c0909562357c6aaa7e2393bfca"
+    },
+    {
+      "path": "data/za-nc-place-admission-v0.1/za_nc_place_admission_manifest_v0.1.json",
+      "sha256": "fd82a4edc62ecda9f45d12778f8cbccf83939cc5f90fd8bc6e14046e7b7d76f0"
+    },
+    {
+      "path": "data/za-nc-place-admission-v0.1/za_nc_place_admission_v0.1.jsonl",
+      "sha256": "abf42c7a8a1ac0e00982a0d8ddc91cf26b6cf4815e238b8b1fed4f1d0c04f995"
+    },
+    {
+      "path": "data/za-nc-place-admission-v0.1/za_nc_place_names_v0.1.jsonl",
+      "sha256": "5f6f1c3d83ace762c09335a4d12b04ea78799b37221bab6029982a92d58df707"
+    },
+    {
+      "path": "data/za-nc-source-authority-v0.2/za_nc_source_manifest_v0.2.json",
+      "sha256": "65924b97d82681250dd6756b0efcb7a5ee34574b26a4ad9661879f55e2b71ec7"
+    },
+    {
+      "path": "data/za-nc-source-authority-v0.2/za_nc_factual_canonical_geography_v0.2.jsonl",
+      "sha256": "220e76c21dbc88769a248dba3c193b20ef8116d4c64595b1743a90051f843387"
+    }
+  ]
+}

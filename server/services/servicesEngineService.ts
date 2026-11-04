@@ -260,7 +260,63 @@ type PublicProviderProfileResult = Omit<
 > & {
   services: Array<Omit<ProviderProfileResult['services'][number], 'isActive'>>;
   locations: ProviderProfileResult['locations'];
+  responsePerformance: LeadResponsePerformance;
 };
+
+export const SERVICE_LEAD_RESPONSE_WINDOW_DAYS = 90;
+export const SERVICE_LEAD_RESPONSE_MIN_SAMPLE = 3;
+
+export type LeadResponsePerformance = {
+  windowDays: number;
+  measuredLeads: number;
+  medianResponseSeconds: number;
+  sampleReady: boolean;
+};
+
+const SERVICE_LEAD_RESPONSE_EVENT_TYPES = [
+  'accepted',
+  'quoted',
+  'won',
+  'lost',
+  'status_changed',
+] as const;
+
+function toEpochMs(value: unknown): number | null {
+  if (value === null || value === undefined) return null;
+  const epoch = value instanceof Date ? value.getTime() : new Date(String(value)).getTime();
+  return Number.isFinite(epoch) ? epoch : null;
+}
+
+export function computeLeadResponsePerformance(
+  rows: Array<{ leadId: unknown; createdAt: unknown; firstResponseAt: unknown }>,
+  windowDays: number = SERVICE_LEAD_RESPONSE_WINDOW_DAYS,
+): LeadResponsePerformance {
+  const durations = rows
+    .map(row => {
+      const createdAt = toEpochMs(row.createdAt);
+      const firstResponseAt = toEpochMs(row.firstResponseAt);
+      if (createdAt === null || firstResponseAt === null) return null;
+      const duration = firstResponseAt - createdAt;
+      return Number.isFinite(duration) && duration >= 0 ? duration : null;
+    })
+    .filter((value): value is number => value !== null)
+    .sort((a, b) => a - b);
+
+  const measuredLeads = durations.length;
+  const medianMs =
+    measuredLeads === 0
+      ? 0
+      : measuredLeads % 2 === 1
+        ? durations[(measuredLeads - 1) / 2]
+        : (durations[measuredLeads / 2 - 1] + durations[measuredLeads / 2]) / 2;
+
+  return {
+    windowDays,
+    measuredLeads,
+    medianResponseSeconds: Math.round(medianMs / 1000),
+    sampleReady: measuredLeads >= SERVICE_LEAD_RESPONSE_MIN_SAMPLE,
+  };
+}
 
 function normalizeText(value: string | null | undefined): string | null {
   if (!value) return null;
@@ -1016,6 +1072,7 @@ export class ServicesEngineService {
   async getProviderPublicProfile(providerId: number): Promise<PublicProviderProfileResult | null> {
     const profile = await this.getProviderProfile(providerId, false);
     if (!profile?.isPublished) return null;
+    const responsePerformance = await this.getProviderLeadResponsePerformance(providerId);
 
     return {
       providerId: profile.providerId,
@@ -1042,7 +1099,48 @@ export class ServicesEngineService {
       })),
 
       reviews: profile.reviews,
+      responsePerformance,
     };
+  }
+
+  async getProviderLeadResponsePerformance(
+    providerId: number,
+    windowDays = SERVICE_LEAD_RESPONSE_WINDOW_DAYS,
+  ): Promise<LeadResponsePerformance> {
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+
+    const safeWindowDays = Math.max(
+      1,
+      Math.min(365, Number(windowDays) || SERVICE_LEAD_RESPONSE_WINDOW_DAYS),
+    );
+    const since = new Date(Date.now() - safeWindowDays * 24 * 60 * 60 * 1000).toISOString();
+
+    const rows = await db
+      .select({
+        leadId: serviceLeads.id,
+        createdAt: serviceLeads.createdAt,
+        firstResponseAt: sql<string | Date | null>`MIN(${serviceLeadEvents.createdAt})`,
+      })
+      .from(serviceLeads)
+      .innerJoin(
+        serviceLeadEvents,
+        and(
+          eq(serviceLeadEvents.leadId, serviceLeads.id),
+          inArray(serviceLeadEvents.eventType, [...SERVICE_LEAD_RESPONSE_EVENT_TYPES]),
+        ),
+      )
+      .where(and(eq(serviceLeads.providerId, providerId), gte(serviceLeads.createdAt, since)))
+      .groupBy(serviceLeads.id, serviceLeads.createdAt);
+
+    return computeLeadResponsePerformance(
+      rows.map(row => ({
+        leadId: row.leadId,
+        createdAt: row.createdAt,
+        firstResponseAt: row.firstResponseAt,
+      })),
+      safeWindowDays,
+    );
   }
 
   async getProviderReviews(providerId: number, limit = 50) {
@@ -3278,9 +3376,18 @@ export class ServicesEngineService {
     };
   }
 
-  async listProviderLeads(providerId: number, limit = 50, offset = 0) {
+  async listProviderLeads(
+    providerId: number,
+    limit = 50,
+    offset = 0,
+    status: (typeof SERVICE_LEAD_STATUS_VALUES)[number] | null = null,
+  ) {
     const db = await getDb();
     if (!db) throw new Error('Database not available');
+
+    if (status && !(SERVICE_LEAD_STATUS_VALUES as readonly string[]).includes(status)) {
+      throw new Error('Invalid lead status filter');
+    }
 
     const leads = await db
       .select({
@@ -3305,7 +3412,11 @@ export class ServicesEngineService {
       })
       .from(serviceLeads)
       .leftJoin(users, eq(users.id, serviceLeads.requesterUserId))
-      .where(eq(serviceLeads.providerId, providerId))
+      .where(
+        status
+          ? and(eq(serviceLeads.providerId, providerId), eq(serviceLeads.status, status))
+          : eq(serviceLeads.providerId, providerId),
+      )
       .orderBy(desc(serviceLeads.createdAt), desc(serviceLeads.id))
       .limit(Math.max(1, Math.min(100, Number(limit || 50))))
       .offset(Math.max(0, Number(offset || 0)));
@@ -3334,6 +3445,123 @@ export class ServicesEngineService {
       createdAt: String(lead.createdAt),
       updatedAt: String(lead.updatedAt),
     }));
+  }
+
+  async listServiceSitemapEntries(): Promise<{
+    providers: ServiceSitemapProviderEntry[];
+    providerServices: ServiceSitemapProviderServiceEntry[];
+  }> {
+    const db = await getDb();
+    if (!db) {
+      return { providers: [], providerServices: [] };
+    }
+
+    const eligibility = and(
+      eq(partners.isActive, 1),
+      eq(partners.verificationStatus, 'verified'),
+      eq(serviceProviderProfiles.directoryActive, 1),
+      inArray(serviceProviderSubscriptions.status, ['trial', 'active']),
+    );
+
+    const rows = await db
+      .selectDistinct({
+        providerId: partners.id,
+        companyName: partners.companyName,
+        updatedAt: serviceProviderProfiles.updatedAt,
+        canonicalPlaceId: serviceProviderLocations.canonicalPlaceId,
+      })
+      .from(partners)
+      .innerJoin(serviceProviderProfiles, eq(serviceProviderProfiles.providerId, partners.id))
+      .leftJoin(
+        serviceProviderSubscriptions,
+        eq(serviceProviderSubscriptions.providerId, partners.id),
+      )
+      .innerJoin(
+        serviceProviderServices,
+        eq(serviceProviderServices.providerId, partners.id),
+      )
+      .innerJoin(
+        serviceProviderLocations,
+        eq(serviceProviderLocations.providerId, partners.id),
+      )
+      .where(
+        and(
+          eligibility,
+          eq(serviceProviderServices.isActive, 1),
+          sql`${serviceProviderLocations.canonicalPlaceId} IS NOT NULL`,
+        ),
+      );
+
+    const placeIds: string[] = [];
+    const seenPlaceIds = new Set<string>();
+    for (const row of rows) {
+      const candidate: unknown = row.canonicalPlaceId;
+      if (!isCanonicalPlaceId(candidate) || seenPlaceIds.has(candidate)) continue;
+      seenPlaceIds.add(candidate);
+      placeIds.push(candidate);
+    }
+    const placeProjection = await loadCanonicalPlaceSearchProjection(db as never, { placeIds });
+    const eligibleProviders = new Map<number, ServiceSitemapProviderEntry>();
+    for (const row of rows) {
+      const placeId = row.canonicalPlaceId;
+      if (
+        !placeId ||
+        !placeProjection.executions.has(placeId) ||
+        !placeProjection.labels.has(placeId)
+      ) {
+        continue;
+      }
+      const providerId = Number(row.providerId);
+      if (!eligibleProviders.has(providerId)) {
+        eligibleProviders.set(providerId, {
+          providerId,
+          companyName: String(row.companyName || '').trim(),
+          updatedAt: row.updatedAt ? String(row.updatedAt) : null,
+        });
+      }
+    }
+
+    const eligibleProviderIds = new Set(eligibleProviders.keys());
+
+    const serviceRows = await db
+      .select({
+        providerId: partners.id,
+        companyName: partners.companyName,
+        serviceCode: serviceProviderServices.serviceCode,
+        serviceDisplayName: serviceProviderServices.displayName,
+        updatedAt: serviceProviderProfiles.updatedAt,
+      })
+      .from(serviceProviderServices)
+      .innerJoin(partners, eq(partners.id, serviceProviderServices.providerId))
+      .innerJoin(
+        serviceProviderProfiles,
+        eq(serviceProviderProfiles.providerId, serviceProviderServices.providerId),
+      )
+      .leftJoin(
+        serviceProviderSubscriptions,
+        eq(serviceProviderSubscriptions.providerId, serviceProviderServices.providerId),
+      )
+      .where(and(eligibility, eq(serviceProviderServices.isActive, 1)))
+      .orderBy(
+        serviceProviderServices.providerId,
+        serviceProviderServices.displayName,
+        serviceProviderServices.id,
+      );
+
+    const providerServices = serviceRows
+      .filter(row => eligibleProviderIds.has(Number(row.providerId)))
+      .map(row => ({
+        providerId: Number(row.providerId),
+        companyName: String(row.companyName || '').trim(),
+        serviceCode: String(row.serviceCode || '').trim(),
+        serviceDisplayName: String(row.serviceDisplayName || '').trim(),
+        updatedAt: row.updatedAt ? String(row.updatedAt) : null,
+      }));
+
+    return {
+      providers: Array.from(eligibleProviders.values()),
+      providerServices,
+    };
   }
 
   async getProviderDashboard(providerId: number, days = 30) {
@@ -3385,5 +3613,19 @@ export class ServicesEngineService {
     };
   }
 }
+
+type ServiceSitemapProviderEntry = {
+  providerId: number;
+  companyName: string;
+  updatedAt: string | null;
+};
+
+type ServiceSitemapProviderServiceEntry = {
+  providerId: number;
+  companyName: string;
+  serviceCode: string;
+  serviceDisplayName: string;
+  updatedAt: string | null;
+};
 
 export const servicesEngineService = new ServicesEngineService();

@@ -142,10 +142,23 @@ surfaces continue to expose its review status.
   or cited as a geography source. A founder map check is recorded only as Y/N
   plus the approval date. Other commercial providers remain enrichment only;
   their IDs never become public Place identity.
+- Google Places and any future commercial provider are **evidence and
+  enrichment only**. Provider place IDs can never become public identity, and a
+  provider observation must never create or promote a public geography row.
 - OSM/Geofabrik data is accepted for search and public Place pages with visible
   `© OpenStreetMap contributors` attribution. `osm_only_odbl_provisional`
   remains an observable provenance classification; it is not a release or
-  publication hold under the founder decision of 2026-11-02.
+  publication hold under the founder decisions of 2026-11-02 and 2026-11-04.
+- Founder decision (2026-10-20; reconfirmed 2026-11-04): the former hold on
+  staging or production release of OSM-only Place rows is lifted so the Place
+  data work can proceed. See the [founder D3 decision record](launch-readiness-and-product-convergence/64-location-model-and-licensing-decision-2026-10-20.md#founder-decision-record--d3-osmodbl-hold-lifted).
+  This is a product/release decision, not a legal conclusion. Conditions:
+  preserve a source and source URL on every Place row; keep the 720 OSM-only
+  rows identifiable for removal or replacement; show OpenStreetMap attribution
+  on public pages that use this data; and obtain legal review of ODbL
+  obligations before any public paid launch. Keep each row's licensing
+  classification observable. This decision does not itself change the
+  registered release implementation or authorize a protected database operation.
 
 **v0.5 correction:** the v0.3 text of this decision is normative but was
 unenforced. Three live runtime paths can currently write provider observations
@@ -379,8 +392,8 @@ listings, statistics or market facts associated with it is not.
 
 | Tier                        | Meaning                                                                                  | Runtime behavior                                             |
 | --------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| A — verified                | Identity, parent chain, scope, licensing all supported                                   | status `verified`; fully searchable/selectable; D7 eligible  |
-| B — provisional             | Searchable identity with a recorded review obligation                                    | status `provisional`; selectable; may publish under D7       |
+| A — verified                | Identity, parent chain, scope, licensing all supported                                   | status `verified`; fully searchable/selectable; SEO eligible |
+| B — provisional             | Identity and parent safe enough to search; evidence remains provisional for its recorded reason | status `provisional`; searchable/selectable; no SEO          |
 | C — candidate/alias pending | Fails identity, parent, ambiguity, or natural-key gates                                  | No runtime row; recorded in disposition + review queue       |
 | D — rejected/retired        | Duplicate, non-independent, retired, licence-blocked                                     | Never public; retained as provenance                         |
 
@@ -1013,10 +1026,11 @@ Section 25; the other similarly named candidates remain distinct.
 **Materializer.** `dataAdapters/canonicalPlaces.ts` is the smallest Database
 Authority mechanism the governed admission source now justifies. It is
 digest-aware, fail-closed, idempotent, transactional, and refuses to remap an
-existing Place identity. Two guards are specific to this authority: OSM-only
-Places may be materialized only on a disposable target until the founder ODbL
-gate clears (D3), and a stored Place whose identity-bearing values differ from
-the package aborts the load rather than being silently updated.
+existing Place identity. The former D3 staging/production hold on OSM-only
+Places was lifted by the founder decision linked above; per-row source and
+source URL, observable licensing classification, and the decision's other
+conditions remain required. A stored Place whose identity-bearing values
+differ from the package aborts the load rather than being silently updated.
 
 **Physical proof** on a newly owned disposable target, disposed afterwards: 98
 migrations applied `0000`→`0097`; physical congruency congruent with matching
@@ -1242,9 +1256,10 @@ new Place, a second geography authority or unrestricted graph expansion:
 - This projection is bounded to province Listing search. It does not set raw
   `search_scope_authorized` flags or authorize another consumer to traverse
   arbitrary relationships. Per-edge default refusal remains binding elsewhere.
-- Tier B selection stays allowed under D2. Protected source activation,
-  licensing/ODbL decisions, physical/provider capability and SEO eligibility
-  remain separate gates. Approval of this policy is not a database release.
+- Tier B selection stays allowed under D2. Preserve the D3 founder-decision
+  conditions, including legal review before any public paid launch; physical /
+  provider capability and SEO eligibility remain separate gates. Approval of
+  this policy is not a database release.
 
 The implementation must publish its projection version, accepted source pins,
 member set and refusal evidence. It must prove the Listing assignment-to-public
@@ -1258,10 +1273,12 @@ this policy revision.
 ## 23. Protected Place reference release candidate (2026-10-08)
 
 **Historical candidate.** Its `admitted-national-non-osm-only-v1` policy and
-16,944-place protected subset were the October 8 release position. Section 25
-records the later founder decision that accepts OSM with attribution and the
-current 17,664-place package. This section remains historical evidence; it is
-not the active source or public-page policy.
+16,944-place protected subset were the October 8 release position. This note
+records the state on 2026-10-08; the later founder decisions accept OSM with
+attribution (2026-11-02) and lift the staging/production hold (D3, reconfirmed
+2026-11-04). This remains historical evidence; it is not the active source or
+public-page policy, and it does not change the historical package, current
+release implementation, or protected release requirements.
 
 The integration candidate registers a Place-specific protected reference adapter
 on the existing Database Authority release-reference operations. It does not

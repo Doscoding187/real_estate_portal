@@ -15,26 +15,31 @@ const approved = {
     '0645a178f556e24fa170d41b07a8ac73cff4e9404beedf1660a2bf54e72b4124',
 };
 
-describe('B08 integration preserves established objects without extending historical approval', () => {
-  it('keeps the historical approval revoked and distinct from the current model', () => {
+describe('B08 integration preserves established objects without granting rehearsal release authority', () => {
+  it('keeps the registration revoked while binding the declared 0111-to-0197 window', () => {
     const registration = JSON.parse(
       readFileSync('docs/database-authority/disposable-rehearsal-authorization.json', 'utf8'),
     );
     const manifest = JSON.parse(readFileSync('server/migrations/manifest.json', 'utf8'));
     expect(registration.status).toBe('revoked');
-    expect(registration.expectedHead).toBe('0094_content_topics_primary_key.sql');
+    expect(registration.authorizationLive).toBe(false);
+    expect(registration.acceptedOldHead).toBe('0111_properties_canonical_place_reference_fk.sql');
+    expect(registration.expectedHead).toBe('0197_drop_seller_prospects_province.sql');
     expect(registration.manifestDigest).toBe(
-      '93d871e6f8760477f460b8821685d71d212374eb86ddd53bc6e2ccfc30608efc',
+      '4995e36715e60856bb87d925dd0eff03bcdccfcc50e1180648684c3bd2787e41',
     );
+    expect(manifest.expectedHead).toBe(registration.expectedHead);
     expect(registration.modelDigest).toBe(
       'a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9',
     );
-    expect(manifest.expectedHead).not.toBe(registration.expectedHead);
-    expect(normalizedDesiredSchema(schema).digest).not.toBe(registration.modelDigest);
   });
   it('preserves the four established migration byte identities and lineage', () => {
     const manifest = JSON.parse(readFileSync('server/migrations/manifest.json', 'utf8'));
-    expect(manifest.migrations.find((entry: { filename: string }) => entry.filename === '0095_user_founder_authority.sql').parent).toBe('0094_content_topics_primary_key.sql');
+    expect(
+      manifest.migrations.find(
+        (entry: { filename: string }) => entry.filename === '0095_user_founder_authority.sql',
+      ).parent,
+    ).toBe('0094_content_topics_primary_key.sql');
     let parent = '0090_retire_disconnected_boost_campaigns.sql';
     for (const [filename, checksum] of Object.entries(approved)) {
       expect(
