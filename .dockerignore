@@ -13,6 +13,7 @@ reports
 .env.*
 data/*
 !data/place-url-projection-national-v0.1.json
+!data/place-admission-territories.v0.2/territory-registry.v0.2.json
 client
 docs/**/evidence
 Dockerfile
