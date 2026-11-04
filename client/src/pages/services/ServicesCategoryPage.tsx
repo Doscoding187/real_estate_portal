@@ -146,6 +146,14 @@ export default function ServicesCategoryPage() {
   }, [categoryParam, parsedCategory, search, setLocation]);
 
   useEffect(() => {
+    if (!parsedCategory) return;
+    const canonicalCategorySlug = toServiceCategorySlug(parsedCategory);
+    if (categoryParam === canonicalCategorySlug) return;
+
+    setLocation(`/services/${canonicalCategorySlug}${search}`, { replace: true });
+  }, [categoryParam, parsedCategory, search, setLocation]);
+
+  useEffect(() => {
     const categoryLabel = formatCategoryLabel(category);
     applySeo({
       title: `${categoryLabel} Services | Property Listify`,

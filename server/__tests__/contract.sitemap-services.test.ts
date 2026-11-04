@@ -4,6 +4,13 @@ const { getDbMock, sitemapEntries } = vi.hoisted(() => ({
   getDbMock: vi.fn(),
   sitemapEntries: {
     providers: [] as Array<{ providerId: number; companyName: string; updatedAt: string | null }>,
+    providerServices: [] as Array<{
+      providerId: number;
+      companyName: string;
+      serviceCode: string;
+      serviceDisplayName: string;
+      updatedAt: string | null;
+    }>,
   },
 }));
 
@@ -79,6 +86,7 @@ async function requestSitemap(path: string): Promise<SendCapture> {
 describe('services sitemap contract', () => {
   beforeEach(() => {
     sitemapEntries.providers = [];
+    sitemapEntries.providerServices = [];
   });
 
   it('lists every canonical service category page and no localized category URLs', async () => {
@@ -110,6 +118,53 @@ describe('services sitemap contract', () => {
     );
     expect(body).toContain('<loc>https://www.propertylistifysa.co.za/services/provider/provider--9</loc>');
     expect(body.match(/<lastmod>/g) || []).toHaveLength(1);
+  });
+
+  it('enumerates per-provider service pages from the shared slug authority', async () => {
+    sitemapEntries.providerServices = [
+      {
+        providerId: 7,
+        companyName: 'Cape Handyman & Services!',
+        serviceCode: 'home_move',
+        serviceDisplayName: 'Home moving service',
+        updatedAt: '2026-10-22 08:00:00',
+      },
+      {
+        providerId: 7,
+        companyName: 'Cape Handyman & Services!',
+        serviceCode: 'plumbing',
+        serviceDisplayName: '  ###  ',
+        updatedAt: null,
+      },
+      {
+        providerId: 9,
+        companyName: '   ###   ',
+        serviceCode: '###',
+        serviceDisplayName: '',
+        updatedAt: null,
+      },
+      {
+        providerId: 11,
+        companyName: 'Blank Row',
+        serviceCode: '',
+        serviceDisplayName: '',
+        updatedAt: null,
+      },
+    ];
+    const capture = await requestSitemap('/sitemap-services.xml');
+    const body = String(capture.body);
+
+    expect(body).toContain(
+      '<loc>https://www.propertylistifysa.co.za/services/provider/cape-handyman-services--7/service/home-moving-service</loc>',
+    );
+    expect(body).toContain(
+      '<loc>https://www.propertylistifysa.co.za/services/provider/cape-handyman-services--7/service/plumbing</loc>',
+    );
+    expect(body).toContain(
+      '<loc>https://www.propertylistifysa.co.za/services/provider/provider--9/service/service</loc>',
+    );
+    expect(body).not.toContain('/service//');
+    expect((body.match(/<lastmod>/g) || []).length).toBe(1);
   });
 
   it('registers the services child in the sitemap index', async () => {

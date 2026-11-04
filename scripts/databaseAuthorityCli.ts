@@ -12,6 +12,8 @@ import {
   releaseCanonicalPlaces,
   previewCanonicalPlaceRelease,
 } from '../server/_core/databaseAuthority/dataAdapters/placeRelease';
+import { retireFordsburgDuplicate } from '../server/_core/databaseAuthority/dataAdapters/fordsburgPlaceRetirement';
+import { reconcileGautengReviewedTypes } from '../server/_core/databaseAuthority/dataAdapters/gautengReviewedTypeReconciliation';
 import { inspectPlaceReleaseTarget } from '../server/_core/databaseAuthority/dataAdapters/placeReleaseInspection';
 import { resolve } from 'node:path';
 import {
@@ -576,7 +578,7 @@ async function run(command: Command): Promise<void> {
     command === 'release-reference:verify'
   ) {
     const adapter = option('adapter') ?? 'commercial';
-    if (!['commercial', 'places'].includes(adapter))
+    if (!['commercial', 'places', 'fordsburg-retirement', 'gauteng-type-reconciliation'].includes(adapter))
       throw new Error('Unknown reference adapter.');
     const isPlan = command.endsWith(':plan');
     const isApply = command.endsWith(':apply');
@@ -594,6 +596,38 @@ async function run(command: Command): Promise<void> {
           open: () => createAuthoritySqlConnection(authority, decision),
           operation: connection =>
             releaseCanonicalPlaces({
+              authority,
+              decision,
+              connection,
+              expectedPlanDigest: isApply ? requiredOption('plan-digest') : undefined,
+            }),
+        }),
+      );
+      return;
+    }
+    if (adapter === 'fordsburg-retirement') {
+      print(
+        await completePlaceReleaseCommand({
+          command,
+          open: () => createAuthoritySqlConnection(authority, decision),
+          operation: connection =>
+            retireFordsburgDuplicate({
+              authority,
+              decision,
+              connection,
+              expectedPlanDigest: isApply ? requiredOption('plan-digest') : undefined,
+            }),
+        }),
+      );
+      return;
+    }
+    if (adapter === 'gauteng-type-reconciliation') {
+      print(
+        await completePlaceReleaseCommand({
+          command,
+          open: () => createAuthoritySqlConnection(authority, decision),
+          operation: connection =>
+            reconcileGautengReviewedTypes({
               authority,
               decision,
               connection,
@@ -949,7 +983,7 @@ export async function runDatabaseAuthorityCommand(command: Command): Promise<voi
     const placeCommand =
       command.startsWith('places:release-preview:') ||
       command === 'release-reference:inspect' ||
-      (command.startsWith('release-reference:') && option('adapter') === 'places');
+      (command.startsWith('release-reference:') && ['places', 'fordsburg-retirement', 'gauteng-type-reconciliation'].includes(option('adapter') ?? ''));
     if (!placeCommand) throw error;
     const failure =
       error instanceof PlaceReleaseCommandFailure

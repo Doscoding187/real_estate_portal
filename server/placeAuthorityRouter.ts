@@ -81,6 +81,7 @@ export const placeAuthorityRouter = router({
         provinceName: entry.province_name,
         provinceSlug: entry.province_slug,
         pathContext: entry.path_context,
+        sourceAttributions: entry.source_attributions,
         publicationEligible: entry.publication_eligible,
         verificationStatus: entry.verification_status,
       };
@@ -127,7 +128,6 @@ export const placeAuthorityRouter = router({
           // explicitly so a consumer cannot confuse it with searchability.
           publicationEligible: isPublishable({
             publicationEligible: candidate.publicationEligible,
-            verificationStatus: candidate.verificationStatus,
             lifecycleStatus: candidate.lifecycleStatus,
           }),
           searchScope: candidate.searchScope,

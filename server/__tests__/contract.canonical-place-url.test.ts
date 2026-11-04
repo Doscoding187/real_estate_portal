@@ -1,7 +1,10 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { canonicalPlaceUrlByPath } from '../services/canonicalPlaceUrlService';
+import {
+  canonicalPlaceUrlByPath,
+  canonicalPlaceUrlRedirectByPath,
+} from '../services/canonicalPlaceUrlService';
 import { slugifyCanonicalPlaceUrl } from '../../shared/canonicalPlaceUrlProjection';
 
 const ROOT = path.resolve(import.meta.dirname, '../..');
@@ -32,13 +35,26 @@ describe('canonical Place URLs', () => {
     expect(current.projection_id).toBe(
       'property-listify-national-canonical-place-url-projection-v0.1',
     );
-    expect(current.path_policy.legacy_aliases).toBe('none');
-    expect(entries).toHaveLength(14_807);
+    expect(current.path_policy.legacy_aliases).toBe('founder_approved_permanent_redirects');
+    expect(entries).toHaveLength(14_808);
     expect(new Set(paths).size).toBe(paths.length);
     expect(new Set(placeIds).size).toBe(placeIds.length);
     expect(
       entries.every(entry => canonicalPlaceUrlByPath(entry.path)?.place_id === entry.place_id),
     ).toBe(true);
+  });
+
+  it('records the founder-approved Centurion path as a permanent redirect', () => {
+    const current = projection();
+    expect(current.redirect_decisions.path).toBe(
+      'data/canonical-place-url-redirect-decisions-national-v0.1.json',
+    );
+    expect(canonicalPlaceUrlRedirectByPath('/gauteng/lyttelton')).toMatchObject({
+      source_path: '/gauteng/lyttelton',
+      target_path: '/gauteng/centurion',
+      target_place_id: 'pl-place-01-1a30ae4d635ef747d6c987df',
+      status_code: 308,
+    });
   });
 
   it('keeps the 13 retained Johannesburg city routes at their canonical paths', () => {

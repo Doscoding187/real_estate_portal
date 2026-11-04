@@ -1676,7 +1676,7 @@
   "provenance": {
     "admission_version": "za-li-place-admission-v0.1",
     "territory_id": "za-li",
-    "source_snapshot_id": "46ca6a7e0973c9550d16adb04ecb5f155d6c8dedd0364cdcf99469303a578120",
+    "source_snapshot_id": "42552bee2d12a4d5ec63f02b06c7dfd26a3822ef191656bfd63687bb7ccab904",
     "note": "Assigned canonical Place identities. Reused verbatim on every regeneration. Never remap an id."
   }
 }

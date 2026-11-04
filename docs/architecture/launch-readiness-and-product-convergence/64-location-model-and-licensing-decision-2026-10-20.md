@@ -1,9 +1,40 @@
-# 64 — Location Model Decision: One Ladder, Searchable Areas, and a Licence Question That Is Already Settled
+# 64 — Location Model Decision: One Ladder, Searchable Areas, and the Founder-Lifted ODbL Hold
 
-**Date:** 2026-10-20
+**Date:** 2026-10-20 (decision); reconfirmed by Edward on 2026-11-04
 **Worktree:** `.worktrees/property-listify-guide-pilot-seo-20261020` (branch
 `feat/guide-pilot-seo-publication-20261020`, base `origin/main` = `cd62988fb`)
 **Type:** Product and architecture decision, informed by competitive and licence research.
+
+## Founder decision record — D3 OSM/ODbL hold lifted
+
+**Decision date:** 2026-10-20
+
+**Reconfirmed by Edward:** 2026-11-04
+
+**Decision-maker:** Edward, founder
+
+**Decision:** Edward deliberately lifted the D3 OSM/ODbL hold that required a
+separate founder gate before staging or production release of OSM-only Place
+rows, so the Place data work could proceed. Edward accepts the associated risk.
+This records a business decision; it does not determine or state legal
+conclusions about ODbL obligations.
+
+**Reasoning stated by the owner:** proceed with the Place data direction. As
+Packet 64 records Edward's direction, a second gazetteer listing is a confidence
+signal, not a prerequisite for using a traceable Place.
+
+**Conditions:**
+
+- Keep a source and source URL on every Place row.
+- Keep the 720 OSM-only rows identifiable so they can be removed or replaced.
+- Show OpenStreetMap attribution on public pages that use OSM-derived data.
+- Obtain a legal review of ODbL obligations before any public paid launch.
+
+**Review by:** `[Owner to fill in]`
+
+This record supersedes prior statements in this packet and D3 that require the
+founder ODbL gate to be cleared before staging or production. The conditions
+above remain in force.
 
 ## Why this packet exists
 
@@ -12,11 +43,13 @@ raised that this packet answers with evidence rather than opinion:
 
 1. How do the platforms that already work scope their locations, and what ladder should
    Property Listify use?
-2. Is the ODbL licensing question a founder decision or an engineering task?
+2. What is the current D3 release-hold status for OSM-only Place rows?
 
-The answer to (2) is that **the repository already settled it**, and the answer to (1) is that
-our own audit and the market's practice agree on the ladder, with one exception where the
-market leader is weak and we should be better.
+The answer to (2) is the founder decision recorded above: the staging/production
+hold was lifted, with traceability, attribution and pre-paid-launch legal-review
+conditions. The answer to (1) is that our own audit and the market's practice
+agree on the ladder, with one exception where the market leader is weak and we
+should be better.
 
 ## What the market does
 
@@ -122,34 +155,30 @@ province and city guides carry the SEO weight.
 under Johannesburg on the city guide, and never a peer of Johannesburg in the hierarchy. The
 data correction lands in the Place Authority input, where the parent edge is evidenced.
 
-## The licence question is an engineering task, not a founder decision
+## Historical licensing analysis — current release status is in the decision record above
 
-This is the most important finding in this packet, and it corrects the framing in packet 63.
+The research below is retained as 2026-10-20 context. It is not the founder's
+decision record or a legal opinion; the 2026-11-04 reconfirmation above governs
+the D3 release-hold status and requires legal review before any public paid
+launch.
 
-**ODbL permits commercial use.** §3.1 grants "commercial use, and do not exclude any field of
-endeavour". There is no commercial-use prohibition and no "production use" clause.
+The repository research in this section is historical context, not a legal
+opinion or a determination of ODbL obligations. The current decision is the
+founder record above; legal review remains required before any public paid
+launch.
 
-**The real constraint is narrower than "ODbL is dangerous".** The ODbL governs the _database as
-a compilation_, not individual facts. OSMF's own board-endorsed geocoding guideline says a
-collection of names and coordinates is **not** a substantial extract, **provided** it is not a
-systematic attempt to aggregate all or substantially all primary features of a type within a
-city-sized-or-larger area — in other words, provided it is not used as a general-purpose
-geodatabase.
+**Questions left for legal review:** how ODbL obligations apply to these Place
+rows and their collection, and what attribution, sharing, or other conditions
+apply to the intended product and distribution. This packet does not answer
+those questions.
 
-**And the repository has already solved it.** The contract requires `permissive_supported`,
-`mixed_odbl_supported` and `osm_only_odbl_provisional` to be distinguishable, and the
-protected release policy `admitted-national-non-osm-only-v1`:
-
-- releases `permissive_supported` and `mixed_odbl_supported` Place assertions unchanged;
-- **holds every `osm_only_odbl_provisional` identity and its dependent rows** out of the
-  protected release;
-- refuses unknown licensing classifications;
-- keeps row licensing classification observable so the gate is enforceable mechanically.
-
-So the OSM-only rows are already out of the production Place set (720 held), and the
-attribution-licensed foundation is already in place: **GeoNames (CC BY 4.0), geoBoundaries
-gbOpen (CC BY 4.0), NGA GNS (no restrictions), Wikidata (CC0)** — all commercially reusable with
-attribution and no share-alike.
+**Historical release implementation at the time of the earlier analysis.** The
+protected release policy `admitted-national-non-osm-only-v1` kept
+`osm_only_odbl_provisional` identities and dependent rows out of its protected
+subset, while retaining their classification for traceability. That snapshot
+reported 720 OSM-only rows withheld. The founder decision above lifts the
+separate staging/production hold; it does not itself change that release
+implementation or the protected database release process.
 
 **What actually went wrong, then.** The legacy runtime projection derived the _place status_
 from the _licensing classification_, and then used that status to suppress places. That is why
@@ -167,25 +196,22 @@ geography row.**
 
 **Consequences:**
 
-1. The ODbL determination does **not** need a founder decision to unblock the platform. The
-   policy is written, enforced and already applied. What remains is engineering: re-source the
-   blocked rows from the attribution-licensed foundation and close the OSM-only gate.
+1. This earlier assessment treated the D3 hold as an engineering issue. The
+   founder decision above now lifts that hold for staging and production, while
+   retaining row traceability, removability, public attribution and legal review
+   before any public paid launch.
 2. The `provisional` status must stop being derived from licensing in the runtime projection.
    Place status must come from the Place Authority's own release status.
 3. The two legacy defects — licensing-derived suppression and provider-written geography —
    disappear with the projection itself. That is the strongest argument for retiring it rather
    than maintaining it.
 
-**What genuinely remains a founder or lawyer question** — small, and explicitly not blocking:
+**What remains for a founder or lawyer:**
 
 - Whether to buy commercial boundary data (Mapbox / HERE / TomTom) instead of maintaining our
   own geometry. This is a budget decision, not a judgement call.
-- One scoped South African lawyer opinion on how a SA court would characterise our specific
-  schema, and whether the Municipal Demarcation Board's and Stats SA's non-resale clauses bind
-  a paid product. Note their terms: the MDB allows use in value-added applications with
-  attribution but forbids selling the data or appropriating it for commercial use; Stats SA
-  forbids selling or reprocessed versions without permission. Both are permission conversations,
-  not dead ends.
+- Obtain a legal review of ODbL obligations before any public paid launch. The
+  review outcome remains open; the founder decision above does not determine it.
 
 ## The ordered plan to launch
 
@@ -194,22 +220,24 @@ geography row.**
 | 1   | Land the guide pilot and the geography boundary                                                                               | The launch is blocked on the guides being published and served. Done in this branch.                                                                                       |
 | 2   | **Correct the place status rule**: take place status from the Place Authority release, not from licensing                     | Removes the reason Rosebank, Soweto, Krugersdorp, Vereeniging, Magaliesburg and 1,100 others are invisible. It is a rule change in the projection loader, not a data hunt. |
 | 3   | **Re-parent the places that are in the wrong tier** (Rosebank first, then a census of the rest) against the municipal records | The market's own leader gets this wrong for Vereeniging. This is where we beat them.                                                                                       |
-| 4   | Re-source the licensing-held rows from GeoNames / geoBoundaries / NGA GNS and close the OSM-only gate                         | Engineering, not a decision.                                                                                                                                               |
+| 4   | Preserve source and source URL on every row; keep the 720 OSM-only rows identifiable; show attribution on pages that use them; obtain legal review before a public paid launch | Conditions of the founder's D3 decision above; the staging/production hold is lifted. |
 | 5   | Build the country funnel page and the province → municipality → city → suburb guide ladder                                    | Edward's SEO vision, and the one Property24 does not have.                                                                                                                 |
 | 6   | Index gating on real demand: a suburb page earns indexation only with listings and unique data; thin pages 301 to the parent  | Google's rules, and the guardrail against the "mass catalogue of thin pages" the audit warned about. Already implemented for the pilot.                                    |
 | 7   | Switch the remaining 19 legacy consumers to the Place Authority, then retire the projection tables                            | The mechanical end of the retirement. Each consumer is one allow-list entry.                                                                                               |
 
-**Approval burden after this packet.** Items 2, 3, 4, 5, 6 and 7 are researchable, buildable
-and testable, and should proceed without founder approval. The founder is needed only for
-spend (item: commercial boundary data, a scoped lawyer opinion) and for accepting a business
-risk that cannot be researched away. That is the correct division of labour for this programme.
+**Approval burden after this packet.** Items 2, 3, 4, 5, 6 and 7 are buildable and testable.
+Under the founder's D3 decision, no licence approval gate is a prerequisite for staging and
+production, but source/URL traceability, removability, public attribution, and legal review of
+ODbL obligations before a public paid launch are conditions of the release. The founder retains
+the final product GO decision recorded in the release runbook.
 
 ## What is not decided here
 
-The platform still has two geography _implementations_. This packet decides the model, the
-ladder, the status rule and the licensing resolution, and it makes the retirement mechanical
-rather than aspirational. The projection tables are still in service until the consumers in
-packet 63 move. That is the remaining execution, and it is recorded there, not here.
+The platform still has two geography _implementations_. This packet decides the model and the
+ladder, records the founder's D3 release-hold decision and its conditions, and makes the
+retirement mechanical rather than aspirational. It does not determine legal obligations. The
+projection tables are still in service until the consumers in packet 63 move. That is the
+remaining execution, and it is recorded there, not here.
 
 ## The second-source gate is removed for search — founder direction 2026-10-20
 
@@ -234,18 +262,30 @@ later correction can find every affected record.
 
 **Coverage effect, measured on the disposable target.**
 
+**Count correction — 2026-10-29.** The current package has 17,663 Places, not
+17,664: the founder has decided to retire the duplicate Fordsburg locality
+`pl-place-01-99dcb8ba9d808741e35b258e`, leaving the supported suburb. This is a
+package count for the next release; Azure's existing 16,944 rows are unchanged
+until a separately approved release. The Fordsburg decision record and
+pre-release retirement step are in
+[`fordsburg-duplicate-identity-review-2026-10-28.md`](../fordsburg-duplicate-identity-review-2026-10-28.md).
+
 |                                    | Before          | After      |
 | ---------------------------------- | --------------- | ---------- |
-| Places released                    | 16,944          | **17,664** |
-| Places searchable                  | 16,224          | **16,944** |
+| Places released                    | 16,944          | **17,663** |
+| Places searchable                  | 16,224          | **16,943** |
 | Places publishable as a guide page | 68 per province | unchanged  |
-| Gauteng places searchable          | 714             | **1,434**  |
+| Gauteng places searchable          | 714             | **1,433**  |
 
-**The licence position that remains open.** The OpenStreetMap tail is a small, non-systematic
-part of a collection that is 16,472 permissively-licensed places. That is the fact the written
-opinion should test, together with whether combining them in one collection is a collective
-database under the ODbL. Until that opinion is held, this is a founder decision on the release
-policy, recorded here and in the release evidence, and not a settled legal position.
+**Historical licence note — superseded for launch.** The OpenStreetMap tail was previously
+treated as a legal review item. The founder's 2026-10-29 direction supersedes that release hold:
+publicly available data is used as-is, source and URL stay in existing fields, and licensing
+review does not block the launch. This is not a legal opinion.
+
+**Founder launch direction — 2026-10-29.** This historical legal-review request and its proposed
+gate are superseded for launch. Use publicly available data as-is, preserve its source and URL in
+the existing fields, and do not block loading or release on licensing review. This records the
+founder's product decision; it makes no legal determination.
 
 The alternative that avoids the question entirely is to not hold a browsable OpenStreetMap
 gazetteer and to resolve a location at the moment an agent lists a property instead. That

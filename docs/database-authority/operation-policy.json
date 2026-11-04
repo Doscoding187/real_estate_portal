@@ -25,7 +25,8 @@
         "disposable-worktree",
         "disposable-test",
         "staging",
-        "production"
+        "production",
+        "disposable-rehearsal"
       ],
       "credentialClasses": ["read-only", "runtime", "local-owner", "test-owner", "migration"],
       "ownership": "registered-local-worktree",
@@ -159,7 +160,8 @@
         "disposable-worktree",
         "disposable-test",
         "staging",
-        "production"
+        "production",
+        "disposable-rehearsal"
       ],
       "credentialClasses": ["read-only", "runtime", "migration", "local-owner", "test-owner"],
       "ownership": "registered-local-worktree",
@@ -181,7 +183,8 @@
         "disposable-worktree",
         "disposable-test",
         "staging",
-        "production"
+        "production",
+        "disposable-rehearsal"
       ],
       "credentialClasses": ["read-only", "runtime", "migration", "local-owner", "test-owner"],
       "ownership": "registered-local-worktree",
@@ -195,7 +198,8 @@
         "disposable-worktree",
         "disposable-test",
         "staging",
-        "production"
+        "production",
+        "disposable-rehearsal"
       ],
       "credentialClasses": ["read-only", "migration", "local-owner", "test-owner"],
       "ownership": "registered-local-worktree",
@@ -244,7 +248,7 @@
       "evidence": "sanitized-context-and-lifecycle-result"
     },
     "release-plan": {
-      "allowedTargetClasses": ["staging", "production"],
+      "allowedTargetClasses": ["staging", "production", "disposable-rehearsal"],
       "credentialClasses": ["read-only", "migration"],
       "ownership": "none",
       "approval": "protected-target",
@@ -252,7 +256,7 @@
       "evidence": "sanitized-release-plan"
     },
     "release-apply": {
-      "allowedTargetClasses": ["staging", "production"],
+      "allowedTargetClasses": ["staging", "production", "disposable-rehearsal"],
       "credentialClasses": ["migration"],
       "ownership": "none",
       "approval": "protected-target",
@@ -284,16 +288,12 @@
       "evidence": "sanitized-release-reference-verification"
     },
     "rehearsal-regression": {
-      "allowedTargetClasses": [
-        "disposable-rehearsal"
-      ],
-      "credentialClasses": [
-        "runtime"
-      ],
+      "allowedTargetClasses": [],
+      "credentialClasses": [],
       "ownership": "none",
       "approval": "protected-target",
       "acknowledgement": "exact-target",
-      "evidence": "exact-Azure-identity-expiring-purpose-bound-synthetic-probes"
+      "evidence": "revoked-and-expired-no-live-authorization"
     },
     "legal-release-plan": {
       "allowedTargetClasses": ["disposable-worktree", "staging", "production"],

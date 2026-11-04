@@ -145,17 +145,12 @@ export function isDiscoverable(candidate: {
   return candidate.searchEligible === true && candidate.lifecycleStatus === 'active';
 }
 
-/** Publication/SEO eligibility is a distinct gate, checked by its callers. */
+/** Public-page eligibility is explicit and independent of the internal review tier. */
 export function isPublishable(candidate: {
   publicationEligible: boolean;
-  verificationStatus: string;
   lifecycleStatus: string;
 }): boolean {
-  return (
-    candidate.publicationEligible === true &&
-    candidate.verificationStatus === 'verified' &&
-    candidate.lifecycleStatus === 'active'
-  );
+  return candidate.publicationEligible === true && candidate.lifecycleStatus === 'active';
 }
 
 export interface PlaceDiscoveryResponse {
