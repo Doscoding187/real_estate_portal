@@ -1,8 +1,7 @@
 import { createHash } from 'node:crypto';
-import { and, desc, eq, inArray, isNull, ne } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 import {
   agents,
-  cities,
   landAssetParcels,
   landAssets,
   landClaims,
@@ -17,8 +16,7 @@ import {
   landVerificationAssertions,
   listingMedia,
   listings,
-  provinces,
-  suburbs,
+  placeName,
 } from '../../drizzle/schema';
 import { getDb } from '../db-connection';
 import {
@@ -26,10 +24,12 @@ import {
   isLandMarketingAuthorityActive,
   isLandPublicClassification,
   isLandTimestampDue,
-  type LandClaimCode,
   type LandPublicClassification,
+  type LandClaimCode,
 } from '../../shared/land-domain';
+import { isCanonicalPlaceId } from '../../shared/placeAuthority';
 import { requireLandVerticalAvailable } from '../../shared/landLaunchPolicy';
+import { executePlace } from './placeDiscoveryService';
 import { buildLocalMediaUploadUrl, getMediaStorageAdapter, inspectLocalMediaObject } from '../_core/mediaStorage';
 import { createLandEvidenceDeliveryToken, createLandEvidenceUploadReservation, createPrivateEvidenceS3DeliveryUrl, createPrivateEvidenceS3UploadUrl, inspectPrivateEvidenceS3Object, verifyLandEvidenceUploadReservation } from './landEvidenceStorage';
 import { verifyListingMediaUploadToken } from './listingMediaAuthority';
@@ -56,9 +56,9 @@ export function isLandReviewerRole(role: string | null | undefined) {
 }
 
 export function calculateLandReadiness(input: {
-  listing: { askingPrice: unknown; city: string | null; province: string | null; title: string | null; description: string | null };
+  listing: { askingPrice: unknown; canonicalPlaceId: string | null; title: string | null; description: string | null };
   asset: { classification: string | null } | null;
-  parcels: readonly { extentM2: unknown; provinceId: unknown; cityId: unknown }[];
+  parcels: readonly { extentM2: unknown; canonicalPlaceId: string | null }[];
   authority: {
     actorType: string;
     supportingEvidenceId: number | null;
@@ -77,7 +77,15 @@ export function calculateLandReadiness(input: {
   if (!input.listing.description?.trim()) draft.push('description');
   if (!input.parcels.length) submission.push('parcel_site');
   if (!input.parcels.some(parcel => Number(parcel.extentM2) > 0)) submission.push('land_extent');
-  if (!input.parcels.every(parcel => parcel.provinceId && parcel.cityId) || !input.listing.city || !input.listing.province) submission.push('canonical_geography');
+  const listingPlaceId = input.listing.canonicalPlaceId;
+  if (
+    !isCanonicalPlaceId(listingPlaceId) ||
+    !input.parcels.every(
+      parcel => isCanonicalPlaceId(parcel.canonicalPlaceId) && parcel.canonicalPlaceId === listingPlaceId,
+    )
+  ) {
+    submission.push('canonical_geography');
+  }
   if (!(Number(input.listing.askingPrice) > 0)) submission.push('asking_price');
   if (!input.marketingImageCount) submission.push('marketing_media');
   if (!input.authority) submission.push('marketing_authority');
@@ -130,16 +138,15 @@ export async function createLandDraft(input: {
   askingPrice: number;
   address?: string | null;
   intendedUse?: string | null;
+  canonicalPlaceId: string;
   parcel: {
     kind: 'erf' | 'portion' | 'farm' | 'remainder' | 'other';
     identifier: string;
     extentM2: number;
-    provinceId: number;
-    cityId: number;
-    suburbId?: number | null;
     geometryConfidence?: 'unknown' | 'approximate' | 'confirmed';
   };
 }) {
+  requireLandVerticalAvailable('Land draft creation');
   if (!isLandPublicClassification(input.classification)) {
     throw new Error('This Land classification is not available for public authoring.');
   }
@@ -149,55 +156,73 @@ export async function createLandDraft(input: {
   if (!Number.isFinite(input.parcel.extentM2) || input.parcel.extentM2 <= 0) {
     throw new Error('A positive Land parcel extent is required.');
   }
+  if (!isCanonicalPlaceId(input.canonicalPlaceId)) {
+    throw new Error('Select an active, searchable canonical locality for this Land parcel.');
+  }
+
   const privateIdentifier = input.parcel.identifier.trim();
   const privateIdentifierHash = hashLandParcelIdentifier(privateIdentifier);
   const db = await database();
   const now = timestamp();
   return db.transaction(async tx => {
-    const [canonicalLocation] = await tx
-      .select({
-        cityId: cities.id,
-        cityName: cities.name,
-        provinceId: provinces.id,
-        provinceName: provinces.name,
-      })
-      .from(cities)
-      .innerJoin(provinces, eq(cities.provinceId, provinces.id))
+    const resolution = await executePlace(input.canonicalPlaceId, tx, { lock: true });
+    if (!resolution.ok || resolution.execution.scope !== 'locality') {
+      throw new Error('Select an active, searchable canonical locality for this Land parcel.');
+    }
+    const names = await tx
+      .select({ placeId: placeName.placeId, name: placeName.name })
+      .from(placeName)
       .where(
         and(
-          eq(cities.id, input.parcel.cityId),
-          eq(provinces.id, input.parcel.provinceId),
-          ne(cities.status, 'retired'),
-          ne(provinces.status, 'retired'),
+          inArray(placeName.placeId, [input.canonicalPlaceId, resolution.execution.provincePlaceId]),
+          eq(placeName.nameRole, 'preferred_public'),
+          eq(placeName.nameState, 'active'),
         ),
-      )
-      .limit(1);
-    if (!canonicalLocation) {
-      throw new Error('The Land city and province must be one active canonical location pair.');
+      );
+    const localityName = names.find(name => name.placeId === input.canonicalPlaceId)?.name;
+    const provinceName = names.find(name => name.placeId === resolution.execution.provincePlaceId)?.name;
+    if (!localityName || !provinceName) {
+      throw new Error('The selected canonical locality is missing its public name or province context.');
     }
-    if (input.parcel.suburbId) {
-      const [suburb] = await tx
-        .select({ id: suburbs.id })
-        .from(suburbs)
-        .where(
-          and(
-            eq(suburbs.id, input.parcel.suburbId),
-            eq(suburbs.cityId, canonicalLocation.cityId),
-            ne(suburbs.status, 'retired'),
-          ),
-        )
-        .limit(1);
-      if (!suburb) {
-        throw new Error('The selected Land suburb is not part of the canonical city.');
-      }
-    }
+
     const [agent] = await tx.select().from(agents).where(eq(agents.userId, input.userId)).limit(1);
     const slug = `land-${input.classification}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const listingResult = await tx.insert(listings).values({ ownerId: input.userId, agentId: agent?.id ?? null, agencyId: agent?.agencyId ?? null, action: 'sell', propertyType: 'plot', title: input.title.trim(), description: input.description.trim(), askingPrice: String(input.askingPrice), address: input.address || null, city: canonicalLocation.cityName, province: canonicalLocation.provinceName, status: 'draft', approvalStatus: 'pending', slug, propertyDetails: { landEngine: true } } as any);
+    const listingResult = await tx.insert(listings).values({
+      ownerId: input.userId,
+      agentId: agent?.id ?? null,
+      agencyId: agent?.agencyId ?? null,
+      action: 'sell',
+      propertyType: 'plot',
+      title: input.title.trim(),
+      description: input.description.trim(),
+      askingPrice: String(input.askingPrice),
+      address: input.address || null,
+      city: localityName,
+      province: provinceName,
+      canonicalPlaceId: input.canonicalPlaceId,
+      status: 'draft',
+      approvalStatus: 'pending',
+      slug,
+      propertyDetails: { landEngine: true },
+    } as any);
     const listingId = Number((listingResult as any)[0]?.insertId ?? (listingResult as any).insertId);
-    const assetResult = await tx.insert(landAssets).values({ classification: input.classification, intendedUse: input.intendedUse || null, createdByUserId: input.userId });
+    const assetResult = await tx.insert(landAssets).values({
+      classification: input.classification,
+      intendedUse: input.intendedUse || null,
+      createdByUserId: input.userId,
+    });
     const landAssetId = Number((assetResult as any)[0]?.insertId ?? (assetResult as any).insertId);
-    const parcelResult = await tx.insert(landParcels).values({ jurisdictionCountryCode: 'ZA', provinceId: canonicalLocation.provinceId, cityId: canonicalLocation.cityId, suburbId: input.parcel.suburbId || null, parcelKind: input.parcel.kind, privateIdentifier, privateIdentifierHash, extentM2: String(input.parcel.extentM2), geometryConfidence: input.parcel.geometryConfidence || 'unknown', identitySource: 'seller', createdByUserId: input.userId });
+    const parcelResult = await tx.insert(landParcels).values({
+      jurisdictionCountryCode: 'ZA',
+      canonicalPlaceId: input.canonicalPlaceId,
+      parcelKind: input.parcel.kind,
+      privateIdentifier,
+      privateIdentifierHash,
+      extentM2: String(input.parcel.extentM2),
+      geometryConfidence: input.parcel.geometryConfidence || 'unknown',
+      identitySource: 'seller',
+      createdByUserId: input.userId,
+    });
     const parcelId = Number((parcelResult as any)[0]?.insertId ?? (parcelResult as any).insertId);
     await tx.insert(landAssetParcels).values({ landAssetId, parcelId, relationshipRole: 'primary' });
     await tx.insert(landListingLinks).values({ landAssetId, listingId });
@@ -341,7 +366,7 @@ export async function landWorkflowSnapshot(listingId: number, userId?: number) {
   const [listing] = await db.select().from(listings).where(eq(listings.id, listingId)).limit(1);
   if (!listing || (userId && listing.ownerId !== userId)) throw new Error('Land listing not found.');
   const [asset] = await db.select().from(landAssets).where(eq(landAssets.id, link.landAssetId)).limit(1);
-  const parcels = await db.select({ id: landParcels.id, extentM2: landParcels.extentM2, provinceId: landParcels.provinceId, cityId: landParcels.cityId }).from(landAssetParcels).innerJoin(landParcels, eq(landAssetParcels.parcelId, landParcels.id)).where(eq(landAssetParcels.landAssetId, link.landAssetId));
+  const parcels = await db.select({ id: landParcels.id, extentM2: landParcels.extentM2, canonicalPlaceId: landParcels.canonicalPlaceId }).from(landAssetParcels).innerJoin(landParcels, eq(landAssetParcels.parcelId, landParcels.id)).where(eq(landAssetParcels.landAssetId, link.landAssetId));
   const claims = await db.select({ id: landClaims.id, claimCode: landClaims.claimCode, valueState: landClaims.valueState, claimedValue: landClaims.claimedValue, parcelId: landClaims.parcelId, declaredAt: landClaims.declaredAt }).from(landClaims).where(and(eq(landClaims.landAssetId, link.landAssetId), isNull(landClaims.withdrawnAt))).orderBy(desc(landClaims.declaredAt), desc(landClaims.id));
   const [authority] = await db.select().from(landMarketingAuthorities).where(eq(landMarketingAuthorities.landAssetId, link.landAssetId)).orderBy(desc(landMarketingAuthorities.createdAt), desc(landMarketingAuthorities.id)).limit(1);
   const evidence = await db.select().from(landEvidenceDocuments).where(eq(landEvidenceDocuments.landAssetId, link.landAssetId)).orderBy(desc(landEvidenceDocuments.createdAt), desc(landEvidenceDocuments.id));

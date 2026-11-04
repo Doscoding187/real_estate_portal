@@ -1,5 +1,8 @@
 # Azure canonical geography reference release
 
+**Status:** Retired historical record. The `--adapter=geography` path and its
+numeric catalog adapter have been removed. Do not use the former examples below.
+
 Status: implementation and read-only planning; no protected apply claimed.
 
 ## Authority and scope

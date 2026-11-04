@@ -8,11 +8,9 @@ import {
 const validDevelopment = {
   id: 42,
   name: 'Harbour Heights',
+  canonicalPlaceId: 'pl-place-01-000000000000000000000001',
   slug: 'harbour-heights',
   address: '1 Harbour Road',
-  suburb: 'Sea Point',
-  city: 'Cape Town',
-  province: 'Western Cape',
   transactionType: 'for_sale',
   approvalStatus: 'approved',
   isPublished: 1,
@@ -100,6 +98,7 @@ describe('developer operating home', () => {
   it('keeps a blank changes-requested review authoritative', () => {
     const summary = buildDevelopmentOperatingSummary({
       development: { ...validDevelopment, approvalStatus: 'draft', isPublished: 0 } as any,
+      geography: { canonicalPlaceId: null, locationLabels: [] },
       persistedUnitTypes: [validUnitType] as any,
       reviewRows: [
         {
@@ -129,6 +128,7 @@ describe('developer operating home', () => {
   it('keeps approved work private and gives Launch Access the deterministic next action', () => {
     const summary = buildDevelopmentOperatingSummary({
       development: validDevelopment as any,
+      geography: { canonicalPlaceId: null, locationLabels: [] },
       persistedUnitTypes: [validUnitType] as any,
       reviewRows: [],
       leadSummary,
@@ -158,6 +158,7 @@ describe('developer operating home', () => {
         approvalStatus: 'draft',
         isPublished: 0,
       } as any,
+      geography: { canonicalPlaceId: null, locationLabels: [] },
       persistedUnitTypes: [validUnitType] as any,
       reviewRows: [],
       leadSummary: portfolioLeadSummary,
@@ -172,6 +173,7 @@ describe('developer operating home', () => {
     });
     const liveSummary = buildDevelopmentOperatingSummary({
       development: validDevelopment as any,
+      geography: { canonicalPlaceId: null, locationLabels: [] },
       persistedUnitTypes: [validUnitType] as any,
       reviewRows: [],
       leadSummary: portfolioLeadSummary,

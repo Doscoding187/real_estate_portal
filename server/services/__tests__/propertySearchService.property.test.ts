@@ -10,7 +10,7 @@
 import { randomUUID } from 'node:crypto';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import fc from 'fast-check';
-import { propertySearchService } from '../propertySearchService';
+import { propertySearchService as propertySearchServiceImplementation } from '../propertySearchService';
 import { getDb } from '../../db';
 import { properties, users } from '../../../drizzle/schema';
 import { inArray } from 'drizzle-orm';
@@ -19,13 +19,13 @@ import { redisCache } from '../../lib/redis';
 import { safeErrorSummary } from '../../_core/safeError';
 
 describe('PropertySearchService - Property-Based Tests', () => {
+  const TEST_CANONICAL_PLACE_ID = 'pl-place-01-131e3e75ad70424e0f9c869a';
   let db: any;
   let skipTests = false;
   let testOwnerId: number | null = null;
-  // This suite shares the owned test database with integration files that
-  // create and archive normal-market properties concurrently. Keep every
-  // property-search assertion inside a per-run text-geography namespace so a
-  // separate fixture cannot make a two-page count change between requests.
+  // Keep fixtures isolated by owner and query them through their canonical
+  // Place identity. This suite covers repository sorting and pagination, so it
+  // deliberately opts out of the separate public eligibility projection.
   const fixtureNamespace = `property-search-fixture-${randomUUID().slice(0, 12)}`;
   const fixtureProvince = `${fixtureNamespace}-province`;
   const fixtureCities = {
@@ -40,6 +40,18 @@ describe('PropertySearchService - Property-Based Tests', () => {
       return Number((candidate as { insertId: number }).insertId);
     }
     throw new Error('Unable to read insertId from insert result');
+  };
+
+  const propertySearchService = {
+    searchProperties: (
+      filters: PropertyFilters,
+      sortOption: SortOption,
+      page: number,
+      pageSize: number,
+    ) =>
+      propertySearchServiceImplementation.searchProperties(filters, sortOption, page, pageSize, {
+        publicOnly: false,
+      }),
   };
 
   // Test data setup
@@ -62,6 +74,7 @@ describe('PropertySearchService - Property-Based Tests', () => {
       views: 0,
       enquiries: 0,
       ownerId: 1,
+      canonicalPlaceId: TEST_CANONICAL_PLACE_ID,
       latitude: '-26.1076',
       longitude: '28.0567',
       createdAt: new Date('2024-01-15'),
@@ -84,6 +97,7 @@ describe('PropertySearchService - Property-Based Tests', () => {
       views: 0,
       enquiries: 0,
       ownerId: 1,
+      canonicalPlaceId: TEST_CANONICAL_PLACE_ID,
       latitude: '-33.9249',
       longitude: '18.4241',
       createdAt: new Date('2024-02-20'),
@@ -106,6 +120,7 @@ describe('PropertySearchService - Property-Based Tests', () => {
       views: 0,
       enquiries: 0,
       ownerId: 1,
+      canonicalPlaceId: TEST_CANONICAL_PLACE_ID,
       latitude: '-29.8587',
       longitude: '31.0218',
       createdAt: new Date('2024-03-10'),
@@ -128,6 +143,7 @@ describe('PropertySearchService - Property-Based Tests', () => {
       views: 0,
       enquiries: 0,
       ownerId: 1,
+      canonicalPlaceId: TEST_CANONICAL_PLACE_ID,
       latitude: '-25.8601',
       longitude: '28.1871',
       createdAt: new Date('2024-01-05'),
@@ -150,6 +166,7 @@ describe('PropertySearchService - Property-Based Tests', () => {
       views: 0,
       enquiries: 0,
       ownerId: 1,
+      canonicalPlaceId: TEST_CANONICAL_PLACE_ID,
       latitude: '-26.1076',
       longitude: '28.0567',
       createdAt: new Date('2024-03-25'),
@@ -231,7 +248,7 @@ describe('PropertySearchService - Property-Based Tests', () => {
       await fc.assert(
         fc.asyncProperty(
           fc.record({
-            province: fc.constant(fixtureProvince),
+            canonicalPlaceIds: fc.constant([TEST_CANONICAL_PLACE_ID]),
             minPrice: fc.option(fc.integer({ min: 0, max: 5000000 }), { nil: undefined }),
             maxPrice: fc.option(fc.integer({ min: 5000000, max: 10000000 }), { nil: undefined }),
           }),
@@ -261,7 +278,7 @@ describe('PropertySearchService - Property-Based Tests', () => {
       await fc.assert(
         fc.asyncProperty(
           fc.record({
-            province: fc.constant(fixtureProvince),
+            canonicalPlaceIds: fc.constant([TEST_CANONICAL_PLACE_ID]),
           }),
           async filters => {
             const results = await propertySearchService.searchProperties(
@@ -289,7 +306,7 @@ describe('PropertySearchService - Property-Based Tests', () => {
       await fc.assert(
         fc.asyncProperty(
           fc.record({
-            city: fc.constantFrom(...Object.values(fixtureCities)),
+            canonicalPlaceIds: fc.constant([TEST_CANONICAL_PLACE_ID]),
           }),
           async filters => {
             const results = await propertySearchService.searchProperties(
@@ -322,7 +339,7 @@ describe('PropertySearchService - Property-Based Tests', () => {
           async filters => {
             const normalizedFilters: PropertyFilters = {
               ...filters,
-              province: fixtureProvince,
+              canonicalPlaceIds: [TEST_CANONICAL_PLACE_ID],
               propertyType: [filters.propertyType],
             };
             const results = await propertySearchService.searchProperties(
@@ -347,33 +364,6 @@ describe('PropertySearchService - Property-Based Tests', () => {
       );
     });
 
-    it('should correctly sort properties by suburb alphabetically', async () => {
-      if (skipTests) return;
-
-      await fc.assert(
-        fc.asyncProperty(
-          fc.record({
-            province: fc.constant(fixtureProvince),
-          }),
-          async filters => {
-            const results = await propertySearchService.searchProperties(
-              filters,
-              'suburb_asc',
-              1,
-              10,
-            );
-
-            // Verify sort order: suburbs should be in alphabetical order
-            for (let i = 1; i < results.properties.length; i++) {
-              const prevSuburb = results.properties[i - 1].suburb.toLowerCase();
-              const currSuburb = results.properties[i].suburb.toLowerCase();
-              expect(currSuburb.localeCompare(prevSuburb)).toBeGreaterThanOrEqual(0);
-            }
-          },
-        ),
-        { numRuns: 20 },
-      );
-    });
   });
 
   /**
@@ -388,10 +378,7 @@ describe('PropertySearchService - Property-Based Tests', () => {
       await fc.assert(
         fc.asyncProperty(
           fc.record({
-            province: fc.constant(fixtureProvince),
-            city: fc.option(fc.constantFrom(...Object.values(fixtureCities)), {
-              nil: undefined,
-            }),
+            canonicalPlaceIds: fc.constant([TEST_CANONICAL_PLACE_ID]),
             minPrice: fc.option(fc.integer({ min: 0, max: 3000000 }), { nil: undefined }),
             maxPrice: fc.option(fc.integer({ min: 3000000, max: 10000000 }), { nil: undefined }),
             minBedrooms: fc.option(fc.integer({ min: 1, max: 3 }), { nil: undefined }),
@@ -439,7 +426,7 @@ describe('PropertySearchService - Property-Based Tests', () => {
       await fc.assert(
         fc.asyncProperty(
           fc.record({
-            province: fc.constant(fixtureProvince),
+            canonicalPlaceIds: fc.constant([TEST_CANONICAL_PLACE_ID]),
             minPrice: fc.integer({ min: 1000000, max: 3000000 }),
           }),
           async filters => {
@@ -472,11 +459,11 @@ describe('PropertySearchService - Property-Based Tests', () => {
           fc.record({
             page: fc.integer({ min: 1, max: 5 }),
             pageSize: fc.integer({ min: 1, max: 10 }),
-            province: fc.constant(fixtureProvince),
+            canonicalPlaceIds: fc.constant([TEST_CANONICAL_PLACE_ID]),
           }),
-          async ({ page, pageSize, province }) => {
+          async ({ page, pageSize, canonicalPlaceIds }) => {
             const results = await propertySearchService.searchProperties(
-              { province },
+              { canonicalPlaceIds },
               'date_desc',
               page,
               pageSize,
@@ -521,7 +508,7 @@ describe('PropertySearchService - Property-Based Tests', () => {
           async ({ pageSize }) => {
             // Request page 1
             const page1 = await propertySearchService.searchProperties(
-              { province: fixtureProvince },
+              { canonicalPlaceIds: [TEST_CANONICAL_PLACE_ID] },
               'price_asc',
               1,
               pageSize,
@@ -538,7 +525,7 @@ describe('PropertySearchService - Property-Based Tests', () => {
 
               // Request last page
               const lastPageResults = await propertySearchService.searchProperties(
-                { province: fixtureProvince },
+                { canonicalPlaceIds: [TEST_CANONICAL_PLACE_ID] },
                 'price_asc',
                 lastPage,
                 pageSize,
@@ -552,7 +539,7 @@ describe('PropertySearchService - Property-Based Tests', () => {
 
               // Request beyond last page
               const beyondLastPage = await propertySearchService.searchProperties(
-                { province: fixtureProvince },
+                { canonicalPlaceIds: [TEST_CANONICAL_PLACE_ID] },
                 'price_asc',
                 lastPage + 1,
                 pageSize,
@@ -575,11 +562,11 @@ describe('PropertySearchService - Property-Based Tests', () => {
         fc.asyncProperty(
           fc.record({
             pageSize: fc.integer({ min: 1, max: 10 }),
-            province: fc.constant(fixtureProvince),
+            canonicalPlaceIds: fc.constant([TEST_CANONICAL_PLACE_ID]),
           }),
-          async ({ pageSize, province }) => {
+          async ({ pageSize, canonicalPlaceIds }) => {
             const results = await propertySearchService.searchProperties(
-              { province },
+              { canonicalPlaceIds },
               'date_desc',
               1,
               pageSize,
@@ -591,7 +578,7 @@ describe('PropertySearchService - Property-Based Tests', () => {
             // Verify by checking if we can access the last page
             if (expectedTotalPages > 0) {
               const lastPage = await propertySearchService.searchProperties(
-                { province },
+                { canonicalPlaceIds },
                 'date_desc',
                 expectedTotalPages,
                 pageSize,
@@ -603,7 +590,7 @@ describe('PropertySearchService - Property-Based Tests', () => {
 
               // One page beyond should be empty
               const beyondLast = await propertySearchService.searchProperties(
-                { province },
+                { canonicalPlaceIds },
                 'date_desc',
                 expectedTotalPages + 1,
                 pageSize,

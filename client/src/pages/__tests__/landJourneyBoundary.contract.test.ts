@@ -7,11 +7,16 @@ const detail = readFileSync(resolve(process.cwd(), 'client/src/pages/LandDetail.
 const review = readFileSync(resolve(process.cwd(), 'client/src/pages/admin/LandReviewWorkspace.tsx'), 'utf8');
 
 describe('Land UI boundary contracts', () => {
-  it('authors Land through canonical province and city selections, not free-text geography alone', () => {
-    expect(authoring).toContain('trpc.location.getLocationHierarchy.useQuery');
-    expect(authoring).toContain('provinceId: Number(form.provinceId)');
-    expect(authoring).toContain('cityId: Number(form.cityId)');
-    expect(authoring).toContain('disabled={create.isPending || !form.provinceId || !form.cityId}');
+  it('selects Land geography through the canonical Place authority', () => {
+    expect(authoring).toContain('<CanonicalPlaceSelector value={canonicalPlace}');
+    expect(authoring).toContain('label="Land locality"');
+    expect(authoring).toContain('create.mutateAsync');
+    expect(authoring).toContain('canonicalPlaceId: canonicalPlace.canonicalPlaceId');
+    expect(authoring).toContain('canonicalPlace?.scope !== \'locality\'');
+    expect(authoring).not.toContain('Land search and authoring are waiting');
+    expect(authoring).not.toContain('trpc.location.getLocationHierarchy.useQuery');
+    expect(authoring).not.toContain('provinceId');
+    expect(authoring).not.toContain('cityId');
     expect(authoring).not.toContain('identifierHash');
   });
 

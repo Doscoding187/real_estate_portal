@@ -183,11 +183,13 @@ describe('actual Place release command boundary', () => {
     expect(mocks.operation).not.toHaveBeenCalled();
     expect(mocks.end).toHaveBeenCalledTimes(1);
   });
-  it('leaves non-Place command error reporting unchanged', async () => {
+  it('refuses the retired numeric geography release adapter', async () => {
     process.argv = ['node', 'cli', 'release-reference:apply', '--adapter=geography'];
-    const primary = secretError('open');
-    mocks.open.mockRejectedValue(primary);
-    await expect(runDatabaseAuthorityCommand('release-reference:apply')).rejects.toBe(primary);
+    await expect(runDatabaseAuthorityCommand('release-reference:apply')).rejects.toThrow(
+      'Unknown reference adapter',
+    );
+    expect(mocks.open).not.toHaveBeenCalled();
+    expect(mocks.operation).not.toHaveBeenCalled();
     expect(stderr).not.toHaveBeenCalled();
   });
 });

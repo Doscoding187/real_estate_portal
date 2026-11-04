@@ -392,9 +392,7 @@ export default function ProDashboardPage() {
                               {lead.requesterPhone ? ` · ${lead.requesterPhone}` : ''}
                             </p>
                             <p className="text-xs text-slate-500">
-                              {[lead.geoSuburb, lead.geoCity, lead.geoProvince]
-                                .filter(Boolean)
-                                .join(', ') || 'No location supplied'}
+                              {lead.location?.label || 'Selected Place unavailable'}
                             </p>
                           </div>
                           <Badge variant="outline">{readableStatus(lead.status)}</Badge>

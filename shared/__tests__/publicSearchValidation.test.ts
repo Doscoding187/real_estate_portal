@@ -1,39 +1,33 @@
 import { describe, expect, it } from 'vitest';
 import { validatePublicSearchInput } from '../publicSearchValidation';
 
-describe('public Search Area request validation', () => {
-  it('accepts a stable Search Area with an optional canonical locality refinement', () => {
+const PLACE_ID = 'pl-place-01-000000000000000000000001';
+
+describe('public Buy/Rent search geography validation', () => {
+  it('accepts one valid canonical Place identity', () => {
     expect(
       validatePublicSearchInput({
-        searchAreaId: 'johannesburg-sandton',
-        locationId: 'suburb:34',
+        canonicalPlaceId: PLACE_ID,
         listingType: 'rent',
       }),
     ).toBeUndefined();
   });
 
-  it('rejects malformed Search Area identities', () => {
-    expect(validatePublicSearchInput({ searchAreaId: 'Sandton/preview' })).toMatchObject({
-      path: 'searchAreaId',
+  it('rejects malformed canonical Place identities', () => {
+    expect(validatePublicSearchInput({ canonicalPlaceId: 'city:12' })).toMatchObject({
+      path: 'canonicalPlaceId',
     });
   });
 
-  it('rejects broad geography fields beside a Search Area', () => {
-    expect(
-      validatePublicSearchInput({
-        searchAreaId: 'johannesburg-sandton',
-        city: 'johannesburg',
-      }),
-    ).toMatchObject({ path: 'searchAreaId' });
-  });
-
-  it('rejects a non-locality canonical refinement', () => {
-    expect(
-      validatePublicSearchInput({
-        searchAreaId: 'johannesburg-sandton',
-        locationId: 'city:12',
-      }),
-    ).toMatchObject({ path: 'locationId' });
+  it.each([
+    ['city', { city: 'Johannesburg' }],
+    ['province', { province: 'Gauteng' }],
+    ['locationId', { locationId: '12' }],
+    ['locationIds', { locationIds: [PLACE_ID, 'pl-place-01-000000000000000000000002'] }],
+    ['canonicalPlaceIds', { canonicalPlaceIds: [PLACE_ID] }],
+    ['searchAreaId', { searchAreaId: 'johannesburg-sandton' }],
+  ])('rejects retired geography input %s', (path, geography) => {
+    expect(validatePublicSearchInput(geography as never)).toMatchObject({ path });
   });
 
   it('rejects unsupported runtime journeys instead of normalizing them to Rent', () => {
@@ -42,21 +36,6 @@ describe('public Search Area request validation', () => {
         path: 'listingType',
       });
     }
-  });
-
-  it('accepts bounded canonical sibling selections for Buy and Rent', () => {
-    expect(
-      validatePublicSearchInput({
-        locationIds: ['suburb:35', 'suburb:34'],
-        listingType: 'sale',
-      }),
-    ).toBeUndefined();
-    expect(
-      validatePublicSearchInput({
-        locationIds: ['city:13', 'city:12'],
-        listingType: 'rent',
-      }),
-    ).toBeUndefined();
   });
 
   it('accepts only canonical residential rental property types', () => {
@@ -75,44 +54,6 @@ describe('public Search Area request validation', () => {
     expect(
       validatePublicSearchInput({ listingType: 'sale', propertyType: 'commercial' }),
     ).toMatchObject({ path: 'propertyType' });
-  });
-
-  it('rejects mixed authority, mixed level, invalid and excessive selections', () => {
-    expect(
-      validatePublicSearchInput({
-        locationIds: ['suburb:34', 'city:12'],
-        listingType: 'sale',
-      }),
-    ).toMatchObject({ path: 'locationIds' });
-    expect(
-      validatePublicSearchInput({
-        locationIds: ['suburb:34', 'not-canonical'],
-        listingType: 'sale',
-      }),
-    ).toMatchObject({ path: 'locationIds' });
-    expect(
-      validatePublicSearchInput({
-        locationIds: ['suburb:34', 'suburb:35'],
-        searchAreaIds: ['johannesburg-sandton'],
-        listingType: 'sale',
-      }),
-    ).toMatchObject({ path: 'locationIds' });
-    expect(
-      validatePublicSearchInput({
-        locationIds: Array.from({ length: 11 }, (_, index) => `suburb:${index + 1}`),
-        listingType: 'sale',
-      }),
-    ).toMatchObject({ path: 'locationIds' });
-  });
-
-  it('rejects mixed geography fields instead of silently widening the OR', () => {
-    expect(
-      validatePublicSearchInput({
-        locationIds: ['suburb:34', 'suburb:35'],
-        city: 'johannesburg',
-        listingType: 'rent',
-      }),
-    ).toMatchObject({ path: 'locationIds' });
   });
 
   it('rejects inverted bedroom and bathroom ranges', () => {

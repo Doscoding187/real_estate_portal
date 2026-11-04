@@ -70,7 +70,7 @@ describe('discoveryEngagementService', () => {
           mode: 'feed',
           query: {
             mode: 'feed',
-            location: { type: 'city', id: 7 },
+            canonicalPlaceId: 'pl-place-01-000000000000000000000007',
           },
         },
       },

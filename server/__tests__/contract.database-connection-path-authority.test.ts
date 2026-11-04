@@ -25,7 +25,7 @@ function directDriverSources(): string[] {
     )
     .filter(path => !path.includes('/__tests__/'))
     .filter(path =>
-      /from ['"](?:mysql2\/promise|@tidbcloud\/serverless)['"]|require\(['"]mysql2\/promise['"]\)/.test(
+      /from ['"]mysql2\/promise['"]|require\(['"]mysql2\/promise['"]\)/.test(
         read(path),
       ),
     )
@@ -51,7 +51,7 @@ describe('bounded connection-path authority', () => {
     for (const path of inventory.activeBoundedConsumers) {
       if (path === inventory.canonicalRawConnectionCreator) continue;
       expect(read(path), `${path} must not create a raw connection`).not.toMatch(
-        /from ['"](?:mysql2\/promise|@tidbcloud\/serverless)['"]|createConnection\(|createPool\(/,
+        /from ['"]mysql2\/promise['"]|createConnection\(|createPool\(/,
       );
     }
   });

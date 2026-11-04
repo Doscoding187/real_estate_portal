@@ -16,6 +16,7 @@ import { getDb } from '../db-connection';
 import {
   cataloguePublishers,
   developmentApprovalQueue,
+  developmentPlaceAssignments,
   developerOrganisations,
   developments,
   leads,
@@ -26,6 +27,7 @@ import {
   users,
 } from '../../drizzle/schema';
 import { developmentService } from '../services/developmentService';
+import { recordReviewedDevelopmentPlaceAssignment } from '../services/developmentPlaceAssignmentService';
 import { commercialTermNoticeScheduler } from '../services/commercialTermNoticeScheduler';
 import {
   activateDeveloperTestLaunchAccess,
@@ -53,6 +55,7 @@ type Fixture = {
 };
 
 const fixtures: Fixture[] = [];
+const CANONICAL_TEST_PLACE_ID = 'pl-place-01-dee61758ef3bda7cd1a258ad';
 
 async function createFixture(
   role: 'property_developer' | 'super_admin' = 'property_developer',
@@ -96,6 +99,7 @@ async function createDevelopmentFor(
     unitTypes?: unknown[];
     ownershipType?: string;
     transactionType?: 'for_sale' | 'auction';
+    reviewerUserId?: number;
   } = {},
 ) {
   const suffix = options.suffix ?? `${Date.now()}-${Math.floor(Math.random() * 1_000_000)}`;
@@ -108,9 +112,6 @@ async function createDevelopmentFor(
     name: `Lifecycle Development ${suffix}`,
     developmentType: 'residential',
     transactionType: options.transactionType ?? 'for_sale',
-    city: 'Johannesburg',
-    province: 'Gauteng',
-    suburb: 'Berea',
     address: '1 Lifecycle Road, Berea',
     status: 'selling',
     ownershipType: options.ownershipType ?? 'sectional-title',
@@ -135,6 +136,16 @@ async function createDevelopmentFor(
   } as any);
 
   fixture.developmentIds.push(Number(development.id));
+  if (options.reviewerUserId) {
+    await recordReviewedDevelopmentPlaceAssignment({
+      developmentId: Number(development.id),
+      phaseId: null,
+      placeId: CANONICAL_TEST_PLACE_ID,
+      assignmentKind: 'site',
+      evidenceReference: `test-fixture:development-lifecycle:${suffix}`,
+      reviewerUserId: options.reviewerUserId,
+    });
+  }
   return development;
 }
 
@@ -154,6 +165,19 @@ describeWithDb('Developer development publication lifecycle integration', () => 
   afterEach(async () => {
     const db = await getDb();
     if (!db) return;
+
+    const fixtureUserIds = fixtures.map(fixture => fixture.userId);
+    if (fixtureUserIds.length > 0) {
+      await db
+        .delete(developmentPlaceAssignments)
+        .where(inArray(developmentPlaceAssignments.reviewedByUserId, fixtureUserIds));
+    }
+    const fixtureDevelopmentIds = fixtures.flatMap(fixture => fixture.developmentIds);
+    if (fixtureDevelopmentIds.length > 0) {
+      await db
+        .delete(developmentPlaceAssignments)
+        .where(inArray(developmentPlaceAssignments.developmentId, fixtureDevelopmentIds));
+    }
 
     while (fixtures.length > 0) {
       const fixture = fixtures.pop()!;
@@ -178,7 +202,7 @@ describeWithDb('Developer development publication lifecycle integration', () => 
   it('submits an owned development for review and exposes it publicly only after admin approval', async () => {
     const owner = await createFixture();
     const reviewer = await createFixture('super_admin');
-    const development = await createDevelopmentFor(owner);
+    const development = await createDevelopmentFor(owner, { reviewerUserId: reviewer.userId });
     const developmentId = Number(development.id);
 
     const ownerCaller = callerFor(owner.userId, 'property_developer');
@@ -238,7 +262,7 @@ describeWithDb('Developer development publication lifecycle integration', () => 
   it('mirrors reviewer feedback, refuses empty feedback, and approves privately when Launch Access lapsed', async () => {
     const owner = await createFixture(undefined, { launchAccess: false });
     const reviewer = await createFixture('super_admin');
-    const development = await createDevelopmentFor(owner);
+    const development = await createDevelopmentFor(owner, { reviewerUserId: reviewer.userId });
     const developmentId = Number(development.id);
 
     const ownerCaller = callerFor(owner.userId, 'property_developer');
@@ -308,6 +332,7 @@ describeWithDb('Developer development publication lifecycle integration', () => 
     const otherDeveloper = await createFixture();
     const reviewer = await createFixture('super_admin');
     const development = await createDevelopmentFor(owner, {
+      reviewerUserId: reviewer.userId,
       unitTypes: [
         {
           name: 'Two Bedroom Apartment',
@@ -395,7 +420,7 @@ describeWithDb('Developer development publication lifecycle integration', () => 
   it('routes a full external catalogue edit back through independent review', async () => {
     const owner = await createFixture();
     const reviewer = await createFixture('super_admin');
-    const development = await createDevelopmentFor(owner);
+    const development = await createDevelopmentFor(owner, { reviewerUserId: reviewer.userId });
     const developmentId = Number(development.id);
     const ownerCaller = callerFor(owner.userId, 'property_developer');
 
@@ -444,7 +469,7 @@ describeWithDb('Developer development publication lifecycle integration', () => 
     const owner = await createFixture();
     const otherDeveloper = await createFixture();
     const reviewer = await createFixture('super_admin');
-    const development = await createDevelopmentFor(owner);
+    const development = await createDevelopmentFor(owner, { reviewerUserId: reviewer.userId });
     const developmentId = Number(development.id);
     const ownerCaller = callerFor(owner.userId, 'property_developer');
 
@@ -574,7 +599,7 @@ describeWithDb('Developer development publication lifecycle integration', () => 
   it('keeps approval private without Launch Access and restores publication after activation', async () => {
     const owner = await createFixture('property_developer', { launchAccess: false });
     const reviewer = await createFixture('super_admin');
-    const development = await createDevelopmentFor(owner);
+    const development = await createDevelopmentFor(owner, { reviewerUserId: reviewer.userId });
     const developmentId = Number(development.id);
     const ownerCaller = callerFor(owner.userId, 'property_developer');
 
@@ -613,7 +638,7 @@ describeWithDb('Developer development publication lifecycle integration', () => 
   it('removes expired public eligibility without destroying the approved development', async () => {
     const owner = await createFixture();
     const reviewer = await createFixture('super_admin');
-    const development = await createDevelopmentFor(owner);
+    const development = await createDevelopmentFor(owner, { reviewerUserId: reviewer.userId });
     const developmentId = Number(development.id);
     const ownerCaller = callerFor(owner.userId, 'property_developer');
 
@@ -760,7 +785,7 @@ describeWithDb('Developer development publication lifecycle integration', () => 
     const owner = await createFixture();
     const otherDeveloper = await createFixture();
     const reviewer = await createFixture('super_admin');
-    const development = await createDevelopmentFor(owner);
+    const development = await createDevelopmentFor(owner, { reviewerUserId: reviewer.userId });
     const developmentId = Number(development.id);
 
     await callerFor(owner.userId, 'property_developer').developer.publishDevelopment({

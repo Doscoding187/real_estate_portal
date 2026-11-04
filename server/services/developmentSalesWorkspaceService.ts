@@ -1,6 +1,7 @@
 import { and, asc, count, eq, inArray, like, or, type SQL } from 'drizzle-orm';
 import { getDb } from '../db-connection';
 import { cataloguePublishers, developments, unitTypes } from '../../drizzle/schema';
+import { listDevelopmentPlaceGeography } from './developmentPlaceAssignmentService';
 
 /**
  * Administrative identity and setup facts for one development.
@@ -16,9 +17,8 @@ export interface DevelopmentSalesWorkspaceReference {
   publisherAuthorityKind: 'platform_reference' | 'developer_first_party' | null;
   name: string;
   displayName: string;
-  city: string;
-  province: string;
-  suburb: string | null;
+  canonicalPlaceId: string | null;
+  locationLabels: string[];
   developmentType: string;
   lifecycle: 'launching-soon' | 'selling' | 'sold-out';
   isPublished: boolean;
@@ -89,9 +89,6 @@ export async function listDevelopmentSalesWorkspaceReferences(
       or(
         like(developments.name, term),
         like(developments.marketingName, term),
-        like(developments.city, term),
-        like(developments.province, term),
-        like(developments.suburb, term),
       )!,
     );
   }
@@ -106,9 +103,6 @@ export async function listDevelopmentSalesWorkspaceReferences(
       publisherAuthorityKind: cataloguePublishers.authorityKind,
       name: developments.name,
       marketingName: developments.marketingName,
-      city: developments.city,
-      province: developments.province,
-      suburb: developments.suburb,
       developmentType: developments.developmentType,
       lifecycle: developments.status,
       isPublished: developments.isPublished,
@@ -127,11 +121,14 @@ export async function listDevelopmentSalesWorkspaceReferences(
   if (rows.length === 0) return [];
 
   const ids = rows.map(row => Number(row.developmentId));
-  const configuredTypeCounts = await db
-    .select({ developmentId: unitTypes.developmentId, configuredCount: count() })
-    .from(unitTypes)
-    .where(and(inArray(unitTypes.developmentId, ids), eq(unitTypes.isActive, 1)))
-    .groupBy(unitTypes.developmentId);
+  const [configuredTypeCounts, geographyByDevelopmentId] = await Promise.all([
+    db
+      .select({ developmentId: unitTypes.developmentId, configuredCount: count() })
+      .from(unitTypes)
+      .where(and(inArray(unitTypes.developmentId, ids), eq(unitTypes.isActive, 1)))
+      .groupBy(unitTypes.developmentId),
+    listDevelopmentPlaceGeography(ids),
+  ]);
   const countByDevelopmentId = new Map(
     configuredTypeCounts.map(row => [Number(row.developmentId), Number(row.configuredCount)]),
   );
@@ -143,9 +140,10 @@ export async function listDevelopmentSalesWorkspaceReferences(
     publisherAuthorityKind: row.publisherAuthorityKind || null,
     name: String(row.name),
     displayName: String(row.marketingName || row.name),
-    city: String(row.city),
-    province: String(row.province),
-    suburb: row.suburb || null,
+    canonicalPlaceId:
+      geographyByDevelopmentId.get(Number(row.developmentId))?.canonicalPlaceId ?? null,
+    locationLabels:
+      geographyByDevelopmentId.get(Number(row.developmentId))?.locationLabels ?? [],
     developmentType: String(row.developmentType),
     lifecycle: row.lifecycle,
     isPublished: Number(row.isPublished) === 1,

@@ -24,18 +24,10 @@ const sortOptionArb = fc.constantFrom<SortOption>(
   'price_desc',
   'date_desc',
   'date_asc',
-  'suburb_asc',
-  'suburb_desc',
 );
 
 // Generate arbitrary filter state
 const propertyFiltersArb = fc.record({
-  province: fc.option(fc.string({ minLength: 1, maxLength: 20 }), { nil: undefined }),
-  city: fc.option(fc.string({ minLength: 1, maxLength: 20 }), { nil: undefined }),
-  suburb: fc.option(
-    fc.array(fc.string({ minLength: 1, maxLength: 20 }), { minLength: 0, maxLength: 3 }),
-    { nil: undefined },
-  ),
   minPrice: fc.option(fc.integer({ min: 0, max: 10000000 }), { nil: undefined }),
   maxPrice: fc.option(fc.integer({ min: 0, max: 50000000 }), { nil: undefined }),
   minBedrooms: fc.option(fc.integer({ min: 1, max: 10 }), { nil: undefined }),
@@ -342,8 +334,6 @@ describe('SortControls - Property-Based Tests', () => {
       'price_desc',
       'date_desc',
       'date_asc',
-      'suburb_asc',
-      'suburb_desc',
     ];
 
     const definedOptions = SORT_OPTIONS.map(opt => opt.value);

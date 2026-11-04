@@ -70,18 +70,18 @@ describe('Explore Feed Service', () => {
     );
   });
 
-  it('should filter content by location in area feed', async () => {
+  it('should filter content by exact canonical Place ID in area feed', async () => {
     if (skipTests) return;
 
     await fc.assert(
       fc.asyncProperty(
         fc.record({
-          location: fc.constantFrom('Cape Town', 'Johannesburg', 'Durban', 'Pretoria'),
+          canonicalPlaceId: fc.constant('pl-place-01-000000000000000000000007'),
           limit: fc.integer({ min: 1, max: 20 }),
         }),
-        async ({ location, limit }) => {
+        async ({ canonicalPlaceId, limit }) => {
           const result = await exploreFeedService.getAreaFeed({
-            location,
+            canonicalPlaceId,
             limit,
             offset: 0,
           });
@@ -89,7 +89,7 @@ describe('Explore Feed Service', () => {
           expect(result).toHaveProperty('shorts');
           expect(result).toHaveProperty('feedType', 'area');
           expect(result).toHaveProperty('metadata');
-          expect(result.metadata).toHaveProperty('location', location);
+          expect(result.metadata).toHaveProperty('canonicalPlaceId', canonicalPlaceId);
           expect(Array.isArray(result.shorts)).toBe(true);
           expect(result.shorts.length).toBeLessThanOrEqual(limit);
         },

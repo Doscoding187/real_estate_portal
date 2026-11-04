@@ -1,10 +1,8 @@
-import { parseCanonicalLocationId, type CanonicalLocationLevel } from './locationAuthority';
 import { isCanonicalPlaceId } from './placeAuthority';
 
 export const SEARCH_SCOPE_KINDS = [
   'province',
   'metro_city',
-  'search_area',
   'locality',
   'multi_location',
 ] as const;
@@ -31,41 +29,18 @@ export const SEARCH_JOURNEY_IDS = [
 
 export type SearchJourneyId = (typeof SEARCH_JOURNEY_IDS)[number];
 
-/**
- * These are the only journeys with an executable Search Area contract in this
- * slice. The broader SearchJourneyId union remains available for explicit
- * unsupported-state handling in later work.
- */
-export const SEARCH_AREA_EXECUTABLE_JOURNEYS = [
-  'buy',
-  'rent',
-  'plot_land',
-] as const satisfies readonly SearchJourneyId[];
-
-export type SearchAreaExecutableJourneyId = (typeof SEARCH_AREA_EXECUTABLE_JOURNEYS)[number];
-
-export const SEARCH_AREA_LIFECYCLES = ['active', 'preview', 'disabled'] as const;
-export type SearchAreaLifecycle = (typeof SEARCH_AREA_LIFECYCLES)[number];
-
-export const SEARCH_AREA_BOUNDARY_KINDS = ['canonical_members'] as const;
-export type SearchAreaBoundaryKind = (typeof SEARCH_AREA_BOUNDARY_KINDS)[number];
-
 export type SearchScopeMember =
   | {
       kind: 'province';
-      canonicalLocationId: string;
+      canonicalPlaceId: string;
     }
   | {
       kind: 'metro_city';
-      canonicalLocationId: string;
-    }
-  | {
-      kind: 'search_area';
-      searchAreaId: string;
+      canonicalPlaceId: string;
     }
   | {
       kind: 'locality';
-      canonicalLocationId: string;
+      canonicalPlaceId: string;
     };
 
 export interface MultiLocationSearchScope {
@@ -79,35 +54,11 @@ export interface MultiLocationSearchScope {
 
 export type SearchScope = SearchScopeMember | MultiLocationSearchScope;
 
-export interface SearchAreaSummary {
-  kind: 'search_area';
-  searchAreaId: string;
-  label: string;
-  description?: string;
-  publicSlug?: string;
-  /** Optional context retained for legacy compatibility; never membership authority. */
-  parentCanonicalLocationId?: string;
-  parentLabel?: string;
-  canonicalContext?: {
-    contextType?: string;
-    contextNames: readonly string[];
-    primaryContextName?: string;
-    isMembershipParent: false;
-  };
-  anchorFactualLocationId?: string;
-  lifecycle: SearchAreaLifecycle;
-  availability: 'available' | 'preview';
-  supportedJourneys: readonly SearchJourneyId[];
-  definitionVersion: number;
-}
-
 export type SearchScopeValidationErrorCode =
   | 'invalid_shape'
   | 'unsupported_scope_kind'
   | 'unknown_scope_field'
-  | 'invalid_canonical_location_id'
-  | 'canonical_level_mismatch'
-  | 'invalid_search_area_id'
+  | 'invalid_canonical_place_id'
   | 'multi_location_invalid'
   | 'multi_location_too_many'
   | 'multi_location_mixed_kinds';
@@ -127,17 +78,6 @@ export type SearchScopeParseResult =
       error: SearchScopeValidationError;
     };
 
-const SEARCH_AREA_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-
-export function isSearchAreaId(value: unknown): value is string {
-  return (
-    typeof value === 'string' &&
-    value.length > 0 &&
-    value.length <= 120 &&
-    SEARCH_AREA_ID_PATTERN.test(value)
-  );
-}
-
 export function isSearchJourneyId(value: unknown): value is SearchJourneyId {
   return typeof value === 'string' && SEARCH_JOURNEY_IDS.includes(value as SearchJourneyId);
 }
@@ -148,25 +88,6 @@ export function isSearchScopeKind(value: unknown): value is SearchScopeKind {
 
 export function isSearchScopeMemberKind(value: unknown): value is SearchScopeMemberKind {
   return typeof value === 'string' && value !== 'multi_location' && isSearchScopeKind(value);
-}
-
-export function isSearchAreaLifecycle(value: unknown): value is SearchAreaLifecycle {
-  return typeof value === 'string' && SEARCH_AREA_LIFECYCLES.includes(value as SearchAreaLifecycle);
-}
-
-export function isSearchAreaBoundaryKind(value: unknown): value is SearchAreaBoundaryKind {
-  return (
-    typeof value === 'string' &&
-    SEARCH_AREA_BOUNDARY_KINDS.includes(value as SearchAreaBoundaryKind)
-  );
-}
-
-export function canonicalLevelForSearchScopeKind(
-  kind: Exclude<SearchScopeKind, 'search_area' | 'multi_location'>,
-): CanonicalLocationLevel {
-  if (kind === 'province') return 'province';
-  if (kind === 'metro_city') return 'city';
-  return 'suburb';
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -194,29 +115,7 @@ function parseSearchScopeMember(
     };
   }
 
-  if (value.kind === 'search_area') {
-    if (!hasOnlyKeys(value, ['kind', 'searchAreaId'])) {
-      return {
-        ok: false,
-        error: {
-          code: 'unknown_scope_field',
-          message: 'Search Area member contains an unsupported field.',
-        },
-      };
-    }
-    if (!isSearchAreaId(value.searchAreaId)) {
-      return {
-        ok: false,
-        error: {
-          code: 'invalid_search_area_id',
-          message: 'Search Area member requires a stable Search Area ID.',
-        },
-      };
-    }
-    return { ok: true, member: { kind: 'search_area', searchAreaId: value.searchAreaId } };
-  }
-
-  if (!hasOnlyKeys(value, ['kind', 'canonicalLocationId'])) {
+  if (!hasOnlyKeys(value, ['kind', 'canonicalPlaceId'])) {
     return {
       ok: false,
       error: {
@@ -226,49 +125,28 @@ function parseSearchScopeMember(
     };
   }
 
-  // A Place Authority identity is a canonical location identity. The member kind is the level
-  // the authority asserted, because the identity does not carry a level itself.
-  if (isCanonicalPlaceId(value.canonicalLocationId)) {
-    return {
-      ok: true,
-      member: { kind: value.kind, canonicalLocationId: value.canonicalLocationId },
-    };
-  }
-
-  const parsedLocationId = parseCanonicalLocationId(value.canonicalLocationId);
-  if (!parsedLocationId) {
+  // Place IDs carry identity; the scope kind is the level asserted by the
+  // canonical Place projection.
+  if (!isCanonicalPlaceId(value.canonicalPlaceId)) {
     return {
       ok: false,
       error: {
-        code: 'invalid_canonical_location_id',
-        message: 'Multi-location members require canonical location identities.',
+        code: 'invalid_canonical_place_id',
+        message: 'Search scope members require canonical Place identities.',
       },
     };
   }
-
-  if (parsedLocationId.level !== canonicalLevelForSearchScopeKind(value.kind)) {
-    return {
-      ok: false,
-      error: {
-        code: 'canonical_level_mismatch',
-        message: `The canonical identity does not match the ${value.kind} member kind.`,
-      },
-    };
-  }
-
   return {
     ok: true,
     member: {
       kind: value.kind,
-      canonicalLocationId: `${parsedLocationId.level}:${parsedLocationId.id}`,
+      canonicalPlaceId: value.canonicalPlaceId,
     },
   };
 }
 
 export function searchScopeMemberIdentity(member: SearchScopeMember): string {
-  return member.kind === 'search_area'
-    ? `search_area:${member.searchAreaId}`
-    : `${member.kind}:${member.canonicalLocationId}`;
+  return `${member.kind}:${member.canonicalPlaceId}`;
 }
 
 export function canonicalizeSearchScopeMembers(
@@ -350,50 +228,21 @@ export function parseSearchScope(value: unknown): SearchScopeParseResult {
     };
   }
 
-  if (kind === 'search_area') {
-    if (!hasOnlyKeys(value, ['kind', 'searchAreaId'])) {
-      return invalid('unknown_scope_field', 'Search Area scope contains an unsupported field.');
-    }
-    if (!isSearchAreaId(value.searchAreaId)) {
-      return invalid(
-        'invalid_search_area_id',
-        'Search Area scope requires a stable Search Area ID.',
-      );
-    }
-    return { ok: true, scope: { kind, searchAreaId: value.searchAreaId } };
-  }
-
-  if (!hasOnlyKeys(value, ['kind', 'canonicalLocationId'])) {
+  if (!hasOnlyKeys(value, ['kind', 'canonicalPlaceId'])) {
     return invalid('unknown_scope_field', 'Canonical scope contains an unsupported field.');
   }
 
-  // A Place Authority identity is a canonical location identity. It does not carry its level in
-  // the identifier, so the scope kind is the level the authority asserted.
-  if (isCanonicalPlaceId(value.canonicalLocationId)) {
-    return {
-      ok: true,
-      scope: { kind, canonicalLocationId: value.canonicalLocationId as string },
-    };
-  }
-
-  const parsedLocationId = parseCanonicalLocationId(value.canonicalLocationId);
-  if (!parsedLocationId) {
+  // A Place Authority identity does not encode scope. The type is a projection
+  // asserted by the Place package; the ID remains the sole request authority.
+  if (!isCanonicalPlaceId(value.canonicalPlaceId)) {
     return invalid(
-      'invalid_canonical_location_id',
-      'Canonical scope requires a valid canonical location identity.',
+      'invalid_canonical_place_id',
+      'Canonical scope requires a valid canonical Place identity.',
     );
   }
-
-  if (parsedLocationId.level !== canonicalLevelForSearchScopeKind(kind)) {
-    return invalid(
-      'canonical_level_mismatch',
-      `The canonical location identity does not match the ${kind} scope kind.`,
-    );
-  }
-
   return {
     ok: true,
-    scope: { kind, canonicalLocationId: value.canonicalLocationId as string },
+    scope: { kind, canonicalPlaceId: value.canonicalPlaceId },
   };
 }
 

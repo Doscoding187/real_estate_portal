@@ -52,6 +52,41 @@ vi.mock('@/components/referral/ReferralAppShell', () => ({
   ReferralAppShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
+vi.mock('@/components/location/CanonicalPlaceSelector', () => ({
+  CanonicalPlaceSelector: ({
+    value,
+    onChange,
+    label,
+  }: {
+    value: { canonicalPlaceId: string; label: string } | null;
+    onChange: (value: unknown) => void;
+    label: string;
+  }) => (
+    <div>
+      <span>{label}</span>
+      <button
+        type="button"
+        aria-label={value ? 'Clear selected Place' : 'Select Johannesburg Place'}
+        onClick={() =>
+          onChange(
+            value
+              ? null
+              : {
+                  canonicalPlaceId: 'pl-place-01-000000000000000000000001',
+                  label: 'Johannesburg',
+                  placeType: 'city',
+                  scope: 'metro_city',
+                  administrativeContext: 'City of Johannesburg',
+                },
+          )
+        }
+      >
+        {value?.label ?? 'Choose canonical Place'}
+      </button>
+    </div>
+  ),
+}));
+
 vi.mock('@/components/distribution/partner/DevelopmentBrochureDialog', async () => {
   const React = await import('react');
   return {
@@ -163,6 +198,8 @@ function eligibleItem(overrides: Record<string, unknown> = {}) {
   return {
     developmentId: 101,
     developmentName: 'Sky City',
+    canonicalPlaceId: 'pl-place-01-000000000000000000000001',
+    locationLabels: ['Johannesburg'],
     campaign: { visible: true },
     inventory: {
       modes: {
@@ -427,6 +464,42 @@ describe('PartnerSubmitReferralPage', () => {
     expect(screen.getByText('Prospect information sheet')).toBeInTheDocument();
     expect(screen.getByText('POPIA consent form')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /Download/ }).length).toBeGreaterThan(0);
+  });
+
+  it('filters the referral catalogue by exact canonical Place ID', () => {
+    mockListEligible.mockReturnValue({
+      isLoading: false,
+      error: null,
+      data: {
+        items: [
+          eligibleItem(),
+          eligibleItem({
+            developmentId: 102,
+            developmentName: 'Pretoria Heights',
+            canonicalPlaceId: 'pl-place-01-000000000000000000000002',
+            locationLabels: ['Pretoria'],
+          }),
+          eligibleItem({
+            developmentId: 103,
+            developmentName: 'Unassigned Development',
+            canonicalPlaceId: null,
+            locationLabels: ['Johannesburg'],
+          }),
+        ],
+      },
+    });
+
+    render(<PartnerSubmitReferralPage />);
+
+    expect(screen.getByRole('checkbox', { name: 'Select Sky City' })).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'Select Pretoria Heights' })).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'Select Unassigned Development' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Select Johannesburg Place' }));
+
+    expect(screen.getByRole('checkbox', { name: 'Select Sky City' })).toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: 'Select Pretoria Heights' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: 'Select Unassigned Development' })).not.toBeInTheDocument();
   });
 
   it('shows the server message when submission is blocked, then follows the deal on success', () => {

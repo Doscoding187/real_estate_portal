@@ -850,8 +850,8 @@ export const distributionProspectCheckFitMatches = mysqlTable(
       .notNull()
       .references(() => developments.id, { onDelete: 'cascade' }),
     developmentName: varchar('development_name', { length: 255 }).notNull(),
-    city: varchar('city', { length: 120 }),
-    province: varchar('province', { length: 120 }),
+    // A point-in-time label only; it is never used as geography authority.
+    locationLabel: varchar('location_label', { length: 500 }),
     entryPrice: int('entry_price').notNull(),
     currencyCode: varchar('currency_code', { length: 10 }).default('ZAR').notNull(),
     qualified: tinyint('qualified').default(0).notNull(),
@@ -864,6 +864,38 @@ export const distributionProspectCheckFitMatches = mysqlTable(
     index('idx_distribution_prospect_check_fit_matches_development').on(table.developmentId),
     index('idx_distribution_prospect_check_fit_matches_program').on(table.programId),
     index('idx_distribution_prospect_check_fit_matches_qualified').on(table.checkFitId, table.qualified),
+  ],
+);
+
+/**
+ * Search-only work saved by a referrer before a referral exists. Financial
+ * check-fit assumptions and prospect identity stay in their separate
+ * distribution_prospect_check_fits authority.
+ */
+export const distributionReferrerSearchAssessments = mysqlTable(
+  'distribution_referrer_search_assessments',
+  {
+    id: varchar({ length: 36 }).primaryKey(),
+    ownerUserId: int('owner_user_id').references(() => users.id, { onDelete: 'cascade' }),
+    continuityTokenHash: varchar('continuity_token_hash', { length: 64 }).notNull(),
+    marketMode: mysqlEnum('market_mode', ['sale', 'rent']).notNull(),
+    searchPolicyVersion: varchar('search_policy_version', { length: 64 }).notNull(),
+    searchFiltersJson: json('search_filters_json')
+      .$type<Record<string, unknown>>()
+      .notNull(),
+    selectedOpportunitiesJson: json('selected_opportunities_json')
+      .$type<Array<Record<string, unknown>>>()
+      .notNull(),
+    claimedAt: timestamp('claimed_at', { mode: 'string' }),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    unique('ux_distribution_referrer_search_assessment_token').on(table.continuityTokenHash),
+    index('idx_distribution_referrer_search_assessment_owner_updated').on(
+      table.ownerUserId,
+      table.updatedAt,
+    ),
   ],
 );
 

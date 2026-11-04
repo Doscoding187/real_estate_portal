@@ -1,26 +1,25 @@
 import { describe, expect, it } from 'vitest';
-import { buildCanonicalListingLocationPayload } from '../../shared/canonicalListingLocation';
 import {
-  listingLocationSchema,
-  locationProviderMappingSchema,
-  normalizeCoordinatePair,
-  privateAddressSchema,
-  validateManualLocationEvidence,
-} from '../../shared/location-contract';
+  buildCanonicalListingLocationPayload,
+  canonicalListingLocationSchema,
+} from '../../shared/canonicalListingLocation';
+import { normalizeCoordinatePair, privateAddressSchema } from '../../shared/location-contract';
+
+const placeId = 'pl-place-01-000000000000000000000001';
 
 const baseLocation = {
-  version: 1 as const,
-  discovery: { provinceId: 1, cityId: 2, suburbId: 3 },
+  version: 2 as const,
+  canonicalPlaceId: placeId,
   privateAddress: { streetNumber: '10', streetName: 'Alice Lane' },
   coordinates: { latitude: -26.1076, longitude: 28.0567 },
   coordinateSource: 'autocomplete' as const,
   locationConfirmationState: 'confirmed' as const,
   publicLocationPrecision: 'approximate' as const,
-  providerPlaceId: 'google-place-id',
+  providerObservation: { provider: 'google' as const, providerPlaceId: 'google-place-id' },
 };
 
-describe('PLE-6B location contract', () => {
-  it('keeps private address fields bounded and rejects arbitrary payload keys', () => {
+describe('canonical listing location contract', () => {
+  it('keeps private address evidence bounded and rejects arbitrary fields', () => {
     expect(privateAddressSchema.safeParse(baseLocation.privateAddress).success).toBe(true);
     expect(
       privateAddressSchema.safeParse({ ...baseLocation.privateAddress, arbitrary: 'value' })
@@ -28,61 +27,29 @@ describe('PLE-6B location contract', () => {
     ).toBe(false);
   });
 
-  it('keeps zero invalid while allowing confirmed manual locations without coordinates', () => {
-    expect(listingLocationSchema.safeParse(baseLocation).success).toBe(true);
+  it('requires an exact Place identity for confirmed locations and rejects zero coordinates', () => {
+    expect(canonicalListingLocationSchema.safeParse(baseLocation).success).toBe(true);
     expect(
-      listingLocationSchema.safeParse({
+      canonicalListingLocationSchema.safeParse({ ...baseLocation, canonicalPlaceId: null }).success,
+    ).toBe(false);
+    expect(
+      canonicalListingLocationSchema.safeParse({
         ...baseLocation,
         coordinates: { latitude: 0, longitude: 0 },
       }).success,
     ).toBe(false);
+  });
+
+  it('allows manual street evidence without coordinates and preserves unconfirmed drafts', () => {
     expect(
-      listingLocationSchema.safeParse({
+      canonicalListingLocationSchema.safeParse({
         ...baseLocation,
         coordinates: null,
         coordinateSource: 'manual_confirmed',
-        privateAddress: { streetName: 'Katherine Street' },
       }).success,
     ).toBe(true);
-  });
-
-  it('requires provider evidence to target exactly one canonical geography level', () => {
     expect(
-      locationProviderMappingSchema.safeParse({
-        provider: 'google',
-        providerPlaceId: 'abc',
-        providerLabel: 'Sandton',
-        normalizedAlias: 'sandton',
-        provinceId: null,
-        cityId: null,
-        suburbId: 3,
-      }).success,
-    ).toBe(true);
-
-    expect(
-      locationProviderMappingSchema.safeParse({
-        provider: 'google',
-        providerPlaceId: 'abc',
-        providerLabel: 'Sandton',
-        normalizedAlias: 'sandton',
-        provinceId: 1,
-        cityId: 2,
-        suburbId: null,
-      }).success,
-    ).toBe(false);
-  });
-
-  it('preserves an unconfirmed draft without turning missing location truth into a fake zero', () => {
-    const draft = listingLocationSchema.safeParse({
-      ...baseLocation,
-      coordinates: { latitude: -26.1, longitude: 28.0 },
-      coordinateSource: null,
-      locationConfirmationState: 'needs_confirmation',
-    });
-    expect(draft.success).toBe(true);
-
-    expect(
-      listingLocationSchema.safeParse({
+      canonicalListingLocationSchema.safeParse({
         ...baseLocation,
         coordinates: null,
         coordinateSource: null,
@@ -91,15 +58,30 @@ describe('PLE-6B location contract', () => {
     ).toBe(true);
   });
 
-  it('allow-lists browser evidence without elevating labels or numeric handles to identity', () => {
-    const payload = buildCanonicalListingLocationPayload({ address: '10 Alice Lane', latitude: null, longitude: null, city: 'Johannesburg', province: 'Gauteng', provinceId: 1, cityId: 2, suburbId: 3, unexpectedUiState: 'must not cross the boundary' } as any);
+  it('allow-lists wizard evidence and never turns labels or numeric handles into identity', () => {
+    const payload = buildCanonicalListingLocationPayload({
+      address: '10 Alice Lane',
+      latitude: null,
+      longitude: null,
+      city: 'Johannesburg',
+      province: 'Gauteng',
+      provinceId: 1,
+      cityId: 2,
+      suburbId: 3,
+      unexpectedUiState: 'must not cross the boundary',
+    } as any);
     expect(payload).toMatchObject({ version: 2, canonicalPlaceId: null, coordinates: null });
-    for (const key of ['unexpectedUiState', 'address', 'city', 'province', 'provinceId', 'cityId', 'suburbId']) expect(payload).not.toHaveProperty(key);
-  });
-
-  it('preserves absent coordinates as null rather than creating a zero pair', () => {
-    const payload = buildCanonicalListingLocationPayload({ address: 'Katherine Street', latitude: null, longitude: null, city: 'Johannesburg', province: 'Gauteng', privateAddress: { streetName: 'Katherine Street' } });
-    expect(payload.coordinates).toBeNull();
+    for (const key of [
+      'unexpectedUiState',
+      'address',
+      'city',
+      'province',
+      'provinceId',
+      'cityId',
+      'suburbId',
+    ]) {
+      expect(payload).not.toHaveProperty(key);
+    }
   });
 
   it('normalizes only complete valid public coordinate pairs', () => {
@@ -112,29 +94,5 @@ describe('PLE-6B location contract', () => {
     expect(normalizeCoordinatePair(0, 0)).toBeNull();
     expect(normalizeCoordinatePair(Number.NaN, 28.0567)).toBeNull();
     expect(normalizeCoordinatePair(-91, 28.0567)).toBeNull();
-  });
-
-  it('requires canonical hierarchy and street evidence for urban manual authoring', () => {
-    expect(
-      validateManualLocationEvidence({
-        propertyType: 'house',
-        discovery: { provinceId: 1, cityId: 2, suburbId: 3 },
-        privateAddress: { streetName: 'Katherine Street' },
-      }),
-    ).toEqual([]);
-    expect(
-      validateManualLocationEvidence({
-        propertyType: 'house',
-        discovery: { provinceId: 1, cityId: 2, suburbId: null },
-        privateAddress: null,
-      }),
-    ).toEqual(['Select a suburb or locality.', 'Enter the street name.']);
-    expect(
-      validateManualLocationEvidence({
-        propertyType: 'farm',
-        discovery: { provinceId: 1, cityId: 2, suburbId: null },
-        privateAddress: { farmOrHoldingName: 'Riverside Smallholding' },
-      }),
-    ).toEqual([]);
   });
 });

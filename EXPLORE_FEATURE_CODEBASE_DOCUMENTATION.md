@@ -6,6 +6,8 @@
 > the [Database Authority entry contract](docs/database-authority/00-database-authority-agent-entry.md),
 > [Database Change Protocol](docs/database-authority/database-change-protocol.md),
 > and [canonical migration README](server/migrations/README.md).
+> Geography descriptions in this historical report are superseded: active consumers use
+> canonical Place identity, and display labels or free text are not geography authority.
 
 ## Executive Summary
 
@@ -402,7 +404,6 @@ interface UseExploreCommonStateOptions {
 | `useVideoPlayback` | Video playback controls |
 | `useVideoPreload` | Video preloading logic |
 | `useImagePreload` | Image preloading |
-| `useFilterUrlSync` | URL-filter synchronization |
 | `useThrottle` / `useDebounce` | Performance utilities |
 
 ---
@@ -421,7 +422,6 @@ interface FilterState {
   bedrooms: number | null;
   bathrooms: number | null;
   categoryId: number | null;
-  location: string | null;
   agencyId: number | null;
   
   // Actions
@@ -430,7 +430,6 @@ interface FilterState {
   setBedrooms: (count) => void;
   setBathrooms: (count) => void;
   setCategoryId: (id) => void;
-  setLocation: (location) => void;
   setAgencyId: (id) => void;
   clearFilters: () => void;
   getFilterCount: () => number;
@@ -951,7 +950,6 @@ client/src/
 │   ├── useVideoPlayback.ts
 │   ├── useVideoPreload.ts
 │   ├── useImagePreload.ts
-│   ├── useFilterUrlSync.ts
 │   ├── useSwipeGestures.ts
 │   ├── useShortsFeed.ts
 │   ├── usePropertyFilters.ts

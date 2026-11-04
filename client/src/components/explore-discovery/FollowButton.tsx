@@ -7,10 +7,9 @@
 import React from 'react';
 import { UserPlus, UserCheck } from 'lucide-react';
 import { useFollowCreator } from '../../hooks/useFollowCreator';
-import { useFollowNeighbourhood } from '../../hooks/useFollowNeighbourhood';
 
 interface FollowButtonProps {
-  type: 'creator' | 'neighbourhood';
+  type: 'creator';
   targetId: number;
   initialFollowing?: boolean;
   variant?: 'default' | 'outline' | 'ghost';
@@ -30,23 +29,12 @@ export function FollowButton({
   onFollowSuccess,
   onUnfollowSuccess,
 }: FollowButtonProps) {
-  // Use appropriate hook based on type
-  const creatorHook = useFollowCreator({
+  const { isFollowing, isAvailable, isLoading, toggleFollow } = useFollowCreator({
     creatorId: targetId,
     initialFollowing,
     onFollowSuccess,
     onUnfollowSuccess,
   });
-
-  const neighbourhoodHook = useFollowNeighbourhood({
-    neighbourhoodId: targetId,
-    initialFollowing,
-    onFollowSuccess,
-    onUnfollowSuccess,
-  });
-
-  const { isFollowing, isAvailable, isLoading, toggleFollow } =
-    type === 'creator' ? creatorHook : neighbourhoodHook;
 
   // Size classes
   const sizeClasses = {

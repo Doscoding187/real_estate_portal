@@ -261,24 +261,17 @@ export default function ProviderServiceDetailPage() {
                   when you search.
                 </p>
                 <ul className="mt-4 grid gap-3 sm:grid-cols-2">
-                  {profile.locations.map(location => {
-                    const primary = location.suburb || location.city || 'Unspecified';
-                    const secondary = [location.city, location.province].filter(Boolean).join(', ');
-                    return (
-                      <li
-                        key={`${location.id}-${location.city}-${location.suburb}`}
-                        className={`${servicesUi.surface} p-4`}
-                      >
-                        <p className="flex items-center gap-2 text-[13px] font-semibold text-[#0B1B2A]">
-                          <MapPin className="h-4 w-4 shrink-0 text-[#168363]" aria-hidden="true" />
-                          {primary}
-                        </p>
-                        {secondary && (
-                          <p className="mt-1 pl-6 text-[12px] text-[#4B5C6B]">{secondary}</p>
-                        )}
-                      </li>
-                    );
-                  })}
+                  {profile.locations.map(location => (
+                    <li
+                      key={location.id}
+                      className={`${servicesUi.surface} flex items-center gap-2 p-4`}
+                    >
+                      <MapPin className="h-4 w-4 shrink-0 text-[#168363]" aria-hidden="true" />
+                      <p className="text-[13px] font-semibold text-[#0B1B2A]">
+                        {location.label || 'Area not specified'}
+                      </p>
+                    </li>
+                  ))}
                   {profile.locations.length === 0 && (
                     <li className="text-sm text-[#4B5C6B]">No coverage areas listed yet.</li>
                   )}

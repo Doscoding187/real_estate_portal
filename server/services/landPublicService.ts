@@ -23,6 +23,8 @@ import {
   landVerificationAssertions,
   listingMedia,
   listings,
+  place,
+  placeRelationship,
 } from '../../drizzle/schema';
 import { getDb } from '../db-connection';
 import {
@@ -34,25 +36,15 @@ import {
   type LandPublicClassification,
 } from '../../shared/land-domain';
 import { validateLandSearchGeography } from '../../shared/landSearchGeography';
-import { isLandVerticalAvailable } from '../../shared/landLaunchPolicy';
 import { getCompletedListingImages, getListingMediaUrl } from '../../shared/listing-media';
 import { resolveMediaDeliveryUrl } from '../_core/mediaStorage';
-import { locationResolver } from './locationResolverService';
-import { searchAreaAuthority } from './searchAreaAuthority';
-import {
-  buildCanonicalLocationQueryBoundary,
-  buildSearchAreaQueryBoundary,
-  getSearchAreaQueryMembers,
-  type PublicSearchQueryBoundary,
-} from './searchAreaQueryBoundary';
+import { loadCanonicalPlaceSearchProjection } from './canonicalPlaceSearchService';
+import { executePlace } from './placeDiscoveryService';
 
 export type LandPublicSearchInput = {
   classification?: LandPublicClassification;
-  city?: string;
-  province?: string;
-  locationId?: string;
-  locationIds?: string[];
-  searchAreaId?: string;
+  canonicalPlaceId?: string;
+  canonicalPlaceIds?: string[];
   minPrice?: number;
   maxPrice?: number;
   minSize?: number;
@@ -66,12 +58,13 @@ type PublicLandRow = {
   title: string;
   description: string | null;
   askingPrice: string | null;
-  city: string | null;
+  locality: string | null;
   province: string | null;
   classification: string;
   intendedUse: string | null;
   precision: 'approximate' | 'exact';
   assetId: number;
+  canonicalPlaceId: string | null;
   assetLifecycleStatus: string;
   agentId: number | null;
   agencyId: number | null;
@@ -93,6 +86,10 @@ async function database(): Promise<Database> {
  * enough: a direct caller must never be able to combine or omit geography.
  */
 export function assertPublicLandSearchInput(input: LandPublicSearchInput): void {
+  const retiredAuthorityFields = ['city', 'province', 'locationId', 'locationIds', 'searchAreaId'];
+  if (retiredAuthorityFields.some(field => field in input)) {
+    throw new Error('Land search accepts canonical Place IDs only.');
+  }
   const geographyIssue = validateLandSearchGeography(input);
   if (geographyIssue) throw new Error(geographyIssue.message);
   if (input.classification && !isLandPublicClassification(input.classification)) {
@@ -142,14 +139,8 @@ export function meetsPublicLandPublicationRequirements(input: {
   );
 }
 
-/**
- * Public Land eligibility includes the explicit first-cohort product
- * disposition. Keep the domain requirements separately testable so a future
- * reviewed release cannot accidentally weaken them while lifting the
- * disposition.
- */
 export function isPublicLandEligible(input: Parameters<typeof meetsPublicLandPublicationRequirements>[0]) {
-  return isLandVerticalAvailable() && meetsPublicLandPublicationRequirements(input);
+  return meetsPublicLandPublicationRequirements(input);
 }
 
 export function publicLocationPrecision(precision: 'approximate' | 'exact') {
@@ -160,74 +151,33 @@ export function publicParcelComposition(parcelCount: number) {
   return parcelCount === 1 ? 'This site comprises 1 parcel.' : `This site comprises ${parcelCount} parcels.`;
 }
 
-async function resolveGeography(input: LandPublicSearchInput): Promise<PublicSearchQueryBoundary> {
-  if (input.searchAreaId) {
-    const resolution = await searchAreaAuthority.resolveSearchArea(input.searchAreaId, {
-      journey: 'plot_land',
-    });
-    if (resolution.status === 'unavailable' || !resolution.definition.supportedJourneys.includes('plot_land')) {
-      throw new Error('This Search Area is not available for Land search.');
-    }
-    const boundary = buildSearchAreaQueryBoundary(resolution);
-    if (!boundary) throw new Error('This Search Area has no safe canonical query boundary.');
-    return boundary;
+async function resolveCanonicalPlaceIds(input: LandPublicSearchInput, db: Database): Promise<string[]> {
+  const placeIds = input.canonicalPlaceId ? [input.canonicalPlaceId] : input.canonicalPlaceIds || [];
+  const resolutions = await Promise.all(placeIds.map(placeId => executePlace(placeId, db)));
+  if (resolutions.some(result => !result.ok || result.execution.scope !== 'locality')) {
+    throw new Error('Land search requires active, searchable canonical localities.');
   }
+  if (placeIds.length < 2) return placeIds;
 
-  if (input.locationId) {
-    const resolution = await locationResolver.resolvePublicLocation({ locationId: input.locationId });
-    if (resolution.status !== 'resolved' || !resolution.location) {
-      throw new Error('That Land location could not be resolved canonically.');
-    }
-    const boundary = buildCanonicalLocationQueryBoundary([resolution.location], [input.locationId]);
-    if (!boundary) throw new Error('That Land location is not an exact canonical query boundary.');
-    return boundary;
-  }
-
-  if (input.locationIds?.length) {
-    const resolutions = await Promise.all(
-      input.locationIds.map(locationId => locationResolver.resolvePublicLocation({ locationId })),
+  const parents = await db
+    .select({ fromPlaceId: placeRelationship.fromPlaceId, toPlaceId: placeRelationship.toPlaceId })
+    .from(placeRelationship)
+    .where(
+      and(
+        inArray(placeRelationship.fromPlaceId, placeIds),
+        eq(placeRelationship.relationshipType, 'administratively_contains'),
+      ),
     );
-    if (resolutions.some(item => item.status !== 'resolved' || !item.location)) {
-      throw new Error('One or more Land locations could not be resolved canonically.');
-    }
-    const boundary = buildCanonicalLocationQueryBoundary(
-      resolutions.map(item => item.location!).filter(Boolean),
-      input.locationIds,
-    );
-    if (!boundary) throw new Error('Land multi-location search requires exact sibling canonical locations.');
-    return boundary;
+  const uniqueParents = new Set(parents.map(parent => parent.toPlaceId));
+  if (parents.length !== placeIds.length || uniqueParents.size !== 1) {
+    throw new Error('Land multi-Place search requires selected sibling localities.');
   }
-
-  const resolution = await locationResolver.resolvePublicLocation({
-    provinceSlug: input.province!.trim().toLowerCase().replace(/\s+/g, '-'),
-    citySlug: input.city!.trim().toLowerCase().replace(/\s+/g, '-'),
-  });
-  if (resolution.status !== 'resolved' || !resolution.location) {
-    throw new Error('That Land location could not be resolved canonically.');
-  }
-  const location = resolution.location;
-  const canonicalId =
-    location.level === 'province'
-      ? `province:${location.province.id}`
-      : location.level === 'city'
-        ? `city:${location.city!.id}`
-        : `suburb:${location.suburb!.id}`;
-  const boundary = buildCanonicalLocationQueryBoundary([location], [canonicalId]);
-  if (!boundary) throw new Error('That typed Land location is not an exact canonical query boundary.');
-  return boundary;
+  return placeIds;
 }
 
-function geographyPredicate(boundary: PublicSearchQueryBoundary): SQL {
-  const members = boundary.kind === 'canonical_locations' ? boundary.members : getSearchAreaQueryMembers(boundary);
-  const predicates = members.map(member =>
-    member.scopeKind === 'province' || ('level' in member && member.level === 'province')
-      ? sql`gp.province_id = ${member.provinceId}`
-      : member.scopeKind === 'metro_city' || ('level' in member && member.level === 'city')
-        ? sql`gp.city_id = ${member.cityId!}`
-        : sql`gp.suburb_id = ${member.suburbId!}`,
-  );
-  if (!predicates.length) throw new Error('Land search has no safe canonical query boundary.');
-  return or(...predicates)!;
+function geographyPredicate(placeIds: readonly string[]): SQL {
+  if (!placeIds.length) throw new Error('Land search requires a canonical locality.');
+  return inArray(sql`gp.canonical_place_id`, [...placeIds]);
 }
 
 /** Keep historical active mandates from multiplying a public listing or changing its recipient. */
@@ -242,8 +192,6 @@ function latestActiveAuthorityCondition(): SQL {
 }
 
 function publicLandEligibilityConditions(now = timestamp()): SQL[] {
-  if (!isLandVerticalAvailable()) return [sql`1 = 0`];
-
   return [
     eq(landListingLinks.linkStatus, 'active'),
     eq(landAssets.lifecycleStatus, 'active'),
@@ -280,12 +228,13 @@ async function selectPublicLandRows(db: Database, conditions: SQL[]) {
       title: listings.title,
       description: listings.description,
       askingPrice: listings.askingPrice,
-      city: listings.city,
+      locality: listings.city,
       province: listings.province,
       classification: landAssets.classification,
       intendedUse: landAssets.intendedUse,
       precision: landAssets.publicLocationPrecision,
       assetId: landAssets.id,
+      canonicalPlaceId: listings.canonicalPlaceId,
       assetLifecycleStatus: landAssets.lifecycleStatus,
       agentId: landMarketingAuthorities.agentId,
       agencyId: landMarketingAuthorities.agencyId,
@@ -418,7 +367,7 @@ export function toPublicLandDto(
     title: row.title,
     description: row.description,
     askingPrice: row.askingPrice,
-    city: row.city,
+    locality: row.locality,
     province: row.province,
     classification: row.classification,
     intendedUse: row.intendedUse,
@@ -474,14 +423,13 @@ async function toPublicRow(db: Database, row: PublicLandRow) {
 
 export async function searchPublicLand(input: LandPublicSearchInput) {
   assertPublicLandSearchInput(input);
-  if (!isLandVerticalAvailable()) return [];
 
   const db = await database();
-  const boundary = await resolveGeography(input);
+  const placeIds = await resolveCanonicalPlaceIds(input, db);
   const conditions = publicLandEligibilityConditions();
   if (input.classification) conditions.push(eq(landAssets.classification, input.classification));
   conditions.push(
-    sql`EXISTS (SELECT 1 FROM land_asset_parcels gap INNER JOIN land_parcels gp ON gap.parcel_id = gp.id WHERE gap.land_asset_id = ${landAssets.id} AND gp.lifecycle_status = 'active' AND ${geographyPredicate(boundary)})`,
+    sql`EXISTS (SELECT 1 FROM land_asset_parcels gap INNER JOIN land_parcels gp ON gap.parcel_id = gp.id WHERE gap.land_asset_id = ${landAssets.id} AND gp.lifecycle_status = 'active' AND ${geographyPredicate(placeIds)})`,
   );
   if (input.minPrice !== undefined) conditions.push(gte(listings.askingPrice, String(input.minPrice)));
   if (input.maxPrice !== undefined) conditions.push(lte(listings.askingPrice, String(input.maxPrice)));
@@ -497,10 +445,111 @@ export async function searchPublicLand(input: LandPublicSearchInput) {
     );
 }
 
+export type LandGuideArea = {
+  placeId: string;
+  label: string;
+  listingCount: number;
+  href: string;
+};
+
+/**
+ * Resolve navigational locality choices for a broad Place. This returns links
+ * to exact locality searches; it never widens the user's listing query to the
+ * selected parent Place.
+ */
+export async function publicLandGuideAreas(canonicalPlaceId: string): Promise<LandGuideArea[]> {
+  const db = await database();
+  const parent = await executePlace(canonicalPlaceId, db);
+  if (!parent.ok || !['province', 'metro_city'].includes(parent.execution.scope)) {
+    throw new Error('Land area guides require an active, searchable province or city Place.');
+  }
+
+  let localityIds: string[];
+  if (parent.execution.scope === 'metro_city') {
+    const childRows = await db
+      .select({ placeId: place.placeId })
+      .from(placeRelationship)
+      .innerJoin(place, eq(placeRelationship.fromPlaceId, place.placeId))
+      .where(
+        and(
+          eq(placeRelationship.toPlaceId, canonicalPlaceId),
+          eq(placeRelationship.relationshipType, 'settlement_within'),
+          eq(place.lifecycleStatus, 'active'),
+          eq(place.searchEligible, 1),
+          eq(place.searchScope, 'locality'),
+        ),
+      );
+    localityIds = [
+      ...new Set<string>((childRows as { placeId: string }[]).map(row => row.placeId)),
+    ];
+  } else {
+    const provinceProjection = await loadCanonicalPlaceSearchProjection(db, {
+      placeIds: [canonicalPlaceId],
+      includeProvinceMembers: true,
+    });
+    localityIds = [...provinceProjection.executions.values()]
+      .filter(
+        execution =>
+          execution.scope === 'locality' && execution.provincePlaceId === canonicalPlaceId,
+      )
+      .map(execution => execution.placeId);
+  }
+  if (!localityIds.length) return [];
+
+  // Re-resolve every navigable identity from current authority before rendering
+  // a link. Display names never supply or alter a Place ID.
+  const localityProjection = await loadCanonicalPlaceSearchProjection(db, {
+    placeIds: localityIds,
+  });
+  const localities = localityIds.flatMap(placeId => {
+    const execution = localityProjection.executions.get(placeId);
+    const label = localityProjection.labels.get(placeId)?.label;
+    return execution?.scope === 'locality' && label?.trim()
+      ? [{ placeId, label: label.trim() }]
+      : [];
+  });
+  if (!localities.length) return [];
+
+  const eligibleRows = (await selectPublicLandRows(db, [
+    ...publicLandEligibilityConditions(),
+    sql`EXISTS (
+      SELECT 1
+      FROM land_asset_parcels AS guide_asset_parcel
+      INNER JOIN land_parcels AS gp ON guide_asset_parcel.parcel_id = gp.id
+      WHERE guide_asset_parcel.land_asset_id = ${landAssets.id}
+        AND gp.lifecycle_status = 'active'
+        AND gp.canonical_place_id = ${listings.canonicalPlaceId}
+        AND ${geographyPredicate(localities.map(locality => locality.placeId))}
+    )`,
+  ])) as PublicLandRow[];
+
+  const visibleRows = await Promise.all(
+    eligibleRows.map(async row => ((await isRowPublic(db, row)) ? row : null)),
+  );
+  const listingIdsByPlace = new Map<string, Set<number>>();
+  for (const row of visibleRows) {
+    if (!row?.canonicalPlaceId) continue;
+    const ids = listingIdsByPlace.get(row.canonicalPlaceId) ?? new Set<number>();
+    ids.add(row.listingId);
+    listingIdsByPlace.set(row.canonicalPlaceId, ids);
+  }
+
+  return localities
+    .flatMap(locality => {
+      const listingCount = listingIdsByPlace.get(locality.placeId)?.size ?? 0;
+      return listingCount > 0
+        ? [{
+            ...locality,
+            listingCount,
+            href: `/plots-and-land?canonicalPlaceId=${encodeURIComponent(locality.placeId)}`,
+          }]
+        : [];
+    })
+    .sort((left, right) => right.listingCount - left.listingCount || left.label.localeCompare(right.label));
+}
+
 /** Server-only custody lookup; Land lead recipients are never accepted from the client. */
 export async function resolvePublicLandLeadCustody(listingId: number) {
-  if (!isLandVerticalAvailable()) return null;
-
   const db = await database();
   const rows = (await selectPublicLandRows(db, [
     ...publicLandEligibilityConditions(),
@@ -513,12 +562,22 @@ export async function resolvePublicLandLeadCustody(listingId: number) {
 
 /** A detail is a direct public-record lookup, not an unscoped public search. */
 export async function publicLandDetail(slug: string) {
-  if (!isLandVerticalAvailable()) return null;
-
   const db = await database();
   const rows = (await selectPublicLandRows(db, [
     ...publicLandEligibilityConditions(),
     eq(listings.slug, slug.trim()),
+    sql`EXISTS (
+      SELECT 1 FROM land_asset_parcels detail_gap
+      INNER JOIN land_parcels detail_parcel ON detail_gap.parcel_id = detail_parcel.id
+      WHERE detail_gap.land_asset_id = ${landAssets.id}
+        AND detail_parcel.lifecycle_status = 'active'
+        AND detail_parcel.canonical_place_id = ${listings.canonicalPlaceId}
+        AND ${listings.canonicalPlaceId} IS NOT NULL
+    )`,
   ])) as PublicLandRow[];
-  return rows[0] ? toPublicRow(db, rows[0]) : null;
+  const row = rows[0];
+  if (!row?.canonicalPlaceId) return null;
+  const place = await executePlace(row.canonicalPlaceId, db);
+  if (!place.ok || place.execution.scope !== 'locality') return null;
+  return toPublicRow(db, row);
 }

@@ -12,6 +12,8 @@ import type { AuthoritySqlConnection } from '../../_core/databaseAuthority/conne
 import { deriveGitWorktreeIdentity } from '../../_core/databaseAuthority/worktreeIdentity';
 import type { MigrationManifestDocument, MigrationManifestEntry } from '../migrationManifest';
 import {
+  assertReadOnlyDatabaseGrants,
+  assertRehearsalReleaseScope,
   buildMigrationPlan,
   buildMysqlMigrationConnectionConfig,
   canonicalBaselineCutoverError,
@@ -21,6 +23,7 @@ import {
   runSqlMigrations,
   sortMigrationFiles,
 } from '../runSqlMigrations';
+import { REHEARSAL } from '../../_core/databaseAuthority/rehearsalAuthority';
 
 const temporaryRoots: string[] = [];
 const sha256 = (value: string) => createHash('sha256').update(value).digest('hex');
@@ -61,7 +64,7 @@ function protectedAuthorityFor(mode: 'plan' | 'apply') {
   const identity = fixtureIdentity();
   const operation = mode === 'plan' ? 'release-plan' : 'release-apply';
   const runtimeTarget =
-    'mysql://release-user:private@gateway01.ap-northeast-1.prod.aws.tidbcloud.com:4000/listify_property_sa';
+    'mysql://release-user:private@propertylistify-mysql.mysql.database.azure.com:3306/propertylistify_database';
   const authority = resolveDatabaseAuthority({
     operation,
     cwd: identity.worktreePath,
@@ -75,13 +78,13 @@ function protectedAuthorityFor(mode: 'plan' | 'apply') {
             NODE_ENV: 'production',
             APP_ENV: 'production',
             DATABASE_MIGRATION_URL:
-              'mysql://release-migration:private@gateway01.ap-northeast-1.prod.aws.tidbcloud.com:4000/listify_property_sa',
+              'mysql://release-migration:private@propertylistify-mysql.mysql.database.azure.com:3306/propertylistify_database',
           },
   });
   const authorization = authorizeDatabaseOperation(authority, {
     root: process.cwd(),
     approval: {
-      reference: 'TEST-TIDB-CHECK-GUARD',
+      reference: 'TEST-MYSQL-RELEASE',
       actor: 'Edward',
       operation,
       targetFingerprintHash: authority.context.targetFingerprintHash,
@@ -152,7 +155,6 @@ class FakeMigrationConnection implements AuthoritySqlConnection {
   failStatement?: RegExp;
   failFailureUpdate = false;
   rejectPreparedControlStatements = false;
-  tidbCheckConstraintsEnabled = false;
   ended = false;
   connectionId = '314';
   lockOwnerConnectionId = '314';
@@ -163,6 +165,7 @@ class FakeMigrationConnection implements AuthoritySqlConnection {
   ignoreGeneratedKeySetting = false;
   switchConnectionAfterSetting = false;
   primaryKeyConflict: 'null' | 'duplicate' | null = null;
+  grants = ["GRANT SELECT, SHOW VIEW ON *.* TO 'release-reader'@'%'"];
 
   constructor(selectedDatabase: string) {
     this.selectedDatabase = selectedDatabase;
@@ -170,6 +173,9 @@ class FakeMigrationConnection implements AuthoritySqlConnection {
 
   async execute(statement: string, values: readonly unknown[] = []): Promise<unknown> {
     this.calls.push({ statement, values });
+    if (statement === 'SHOW GRANTS FOR CURRENT_USER') {
+      return [this.grants.map(grant => ({ 'Grants for release-reader': grant }))];
+    }
     if (
       this.rejectPreparedControlStatements &&
       /^(START TRANSACTION|COMMIT|ROLLBACK)$/i.test(statement.trim())
@@ -200,14 +206,6 @@ class FakeMigrationConnection implements AuthoritySqlConnection {
       if (this.primaryKeyConflict === 'null' && statement.includes(' WHERE ')) return [[{ conflict: 1 }]];
       if (this.primaryKeyConflict === 'duplicate' && statement.includes(' GROUP BY ')) return [[{ conflict: 1 }]];
       return [[]];
-    }
-    if (statement.startsWith('SHOW GLOBAL VARIABLES LIKE')) {
-      return [[
-        {
-          Variable_name: 'tidb_enable_check_constraint',
-          Value: this.tidbCheckConstraintsEnabled ? 'ON' : 'OFF',
-        },
-      ]];
     }
     if (statement.includes('information_schema.tables') && statement.includes('table_name IN')) {
       const rows = [];
@@ -377,30 +375,85 @@ describe('migration connection security', () => {
   });
 });
 
+describe('disposable rehearsal release authority', () => {
+  it('accepts only the registered 0111-to-0197 release scope and current manifest digest', () => {
+    const exact = {
+      targetClass: 'disposable-rehearsal',
+      operation: 'release-plan',
+      acceptedOldHead: REHEARSAL.acceptedOldHead,
+      expectedNewHead: REHEARSAL.expectedHead,
+      manifestDigest: REHEARSAL.manifestDigest,
+    };
+    expect(() => assertRehearsalReleaseScope(exact)).not.toThrow();
+    for (const changed of [
+      { ...exact, acceptedOldHead: '0110_wrong.sql' },
+      { ...exact, expectedNewHead: '0198_wrong.sql' },
+      { ...exact, manifestDigest: '0'.repeat(64) },
+      { ...exact, operation: 'migration-apply' },
+    ]) {
+      expect(() => assertRehearsalReleaseScope(changed)).toThrow('0111-to-0197');
+    }
+  });
+
+  it('accepts only read privileges and fails closed on write or unknown grant forms', () => {
+    expect(() => assertReadOnlyDatabaseGrants([
+      { grant: "GRANT USAGE ON *.* TO 'reader'@'%'" },
+      { grant: "GRANT SELECT, SHOW VIEW ON `propertylistify_database`.* TO 'reader'@'%'" },
+    ])).not.toThrow();
+    for (const grant of [
+      "GRANT SELECT, INSERT ON *.* TO 'reader'@'%'",
+      "GRANT SELECT ON *.* TO 'reader'@'%' WITH GRANT OPTION",
+      "GRANT 'writer_role' TO 'reader'@'%'",
+    ]) {
+      expect(() => assertReadOnlyDatabaseGrants([{ grant }])).toThrow(
+        'write-capable or unrecognized',
+      );
+    }
+    expect(() => assertReadOnlyDatabaseGrants([])).toThrow('could not be verified');
+  });
+});
+
 describe('manifest migration planning and durable attempts', () => {
-  it('blocks ordinary TiDB release apply while CHECK enforcement is disabled', async () => {
+  it('checks actual read-only account grants before reading migration state or planning', async () => {
     const fixture = migrationFixture(false);
-    const reviewed = await reviewedProtectedPlan(fixture);
-    const { authority, authorization } = protectedAuthorityFor('apply');
+    const { authority, authorization } = protectedAuthorityFor('plan');
     const connection = new FakeMigrationConnection(authority.context.databaseName);
+    connection.grants = ["GRANT SELECT, INSERT ON *.* TO 'release-reader'@'%'"];
+
+    await expect(runSqlMigrations({
+      mode: 'plan',
+      operation: 'release-plan',
+      migrationsDir: fixture.root,
+      manifestPath: fixture.manifestPath,
+      authority,
+      authorization,
+      acceptedOldHead: null,
+      expectedNewHead: fixture.entries[0].filename,
+      connectionFactory: async () => connection,
+    })).rejects.toThrow('write-capable or unrecognized');
+    expect(connection.calls.map(call => call.statement)).toEqual(['SHOW GRANTS FOR CURRENT_USER']);
+  });
+
+  it('refuses an unsupported provider before opening a connection', async () => {
+    const { authority, authorization } = authorityFor('plan');
+    const unsupportedAuthority = {
+      ...authority,
+      context: { ...authority.context, provider: 'unknown' as const },
+    };
+    let connected = false;
 
     await expect(
       runSqlMigrations({
-        mode: 'apply',
-        operation: 'release-apply',
-        migrationsDir: fixture.root,
-        manifestPath: fixture.manifestPath,
-        authority,
+        mode: 'plan',
+        authority: unsupportedAuthority,
         authorization,
-        acceptedOldHead: null,
-        expectedNewHead: fixture.entries[0].filename,
-        expectedPlanDigest: reviewed.plan.planDigest,
-        connectionFactory: async () => connection,
+        connectionFactory: async () => {
+          connected = true;
+          return new FakeMigrationConnection(authority.context.databaseName);
+        },
       }),
-    ).rejects.toThrow('TiDB CHECK-constraint enforcement is disabled');
-    expect(connection.calls.some(call => call.statement.includes('GET_LOCK'))).toBe(false);
-    expect(connection.calls.some(call => call.statement.startsWith('CREATE TABLE'))).toBe(false);
-    expect(connection.ended).toBe(true);
+    ).rejects.toThrow('only the canonical MySQL provider is supported');
+    expect(connected).toBe(false);
   });
 
   it('requires the exact reviewed digest before ordinary protected release mutation', async () => {
@@ -428,7 +481,6 @@ describe('manifest migration planning and durable attempts', () => {
     expect(connected).toBe(false);
 
     const wrongDigestConnection = new FakeMigrationConnection(authority.context.databaseName);
-    wrongDigestConnection.tidbCheckConstraintsEnabled = true;
     await expect(
       runSqlMigrations({
         mode: 'apply',
@@ -449,7 +501,6 @@ describe('manifest migration planning and durable attempts', () => {
     );
 
     const appliedConnection = new FakeMigrationConnection(authority.context.databaseName);
-    appliedConnection.tidbCheckConstraintsEnabled = true;
     const applied = await runSqlMigrations({
       mode: 'apply',
       operation: 'release-apply',
@@ -476,7 +527,6 @@ describe('manifest migration planning and durable attempts', () => {
 
     const { authority, authorization } = protectedAuthorityFor('apply');
     const connection = new FakeMigrationConnection(authority.context.databaseName);
-    connection.tidbCheckConstraintsEnabled = true;
     await expect(
       runSqlMigrations({
         mode: 'apply',
@@ -506,7 +556,6 @@ describe('manifest migration planning and durable attempts', () => {
     });
     const { authority, authorization } = protectedAuthorityFor('apply');
     const connection = new FakeMigrationConnection(authority.context.databaseName);
-    connection.tidbCheckConstraintsEnabled = true;
     connection.historyTablePresent = true;
     connection.attemptTablePresent = true;
     connection.history.set(fixture.entries[0].filename, fixture.entries[0].checksum);

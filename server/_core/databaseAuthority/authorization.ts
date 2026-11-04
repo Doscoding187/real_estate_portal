@@ -1,5 +1,10 @@
 import { RECOVERY_VALIDATION_FINGERPRINT } from './recoveryValidationTarget';
-import { assertRehearsalAuthorization } from './rehearsalAuthority';
+import {
+  assertRehearsalAuthorization,
+  REHEARSAL,
+  REHEARSAL_RESOURCE_ID,
+  REHEARSAL_SOURCE_DIGEST,
+} from './rehearsalAuthority';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
@@ -16,6 +21,18 @@ import {
 export type OwnershipRequirement = 'none' | 'registered-local-worktree' | 'exact-local-owner';
 export type ApprovalRequirement = 'none' | 'protected-target';
 export type AcknowledgementRequirement = 'none' | 'exact-target';
+
+export type RehearsalApprovalBinding = {
+  resourceId: string;
+  purpose: string;
+  serverCreatedAt: string;
+  sourceDigest: string;
+  scope?: {
+    acceptedOldHead: string;
+    expectedNewHead: string;
+    manifestDigest: string;
+  };
+};
 
 export type OperationPolicy = {
   allowedTargetClasses: DatabaseTargetClass[];
@@ -40,10 +57,6 @@ export type ProtectedDatabaseApproval = {
   targetFingerprintHash: string;
   credentialClass?: DatabaseCredentialClass;
   inspectionIdentity?: string;
-  tidbSourceInstanceId?: string;
-  tidbSourceAdminIdentity?: string;
-  tidbSourceReaderIdentity?: string;
-  tidbSourceReaderPrivilegeSet?: string;
   migrationIdentity?: string;
   migrationPrivilegeSet?: string;
   runtimeIdentity?: string;
@@ -51,17 +64,12 @@ export type ProtectedDatabaseApproval = {
   runtimeGrantDigest?: string;
   runtimePreviousGrantDigest?: string;
   workerGrantDigest?: string;
+  rehearsalBinding?: RehearsalApprovalBinding;
 };
 
 export const B08_AZURE_TARGET_FINGERPRINT_HASH =
   'b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced';
 export const B08_INSPECTION_IDENTITY = 'propertylistify_b08_inspector';
-export const B08_TIDB_SOURCE_TARGET_FINGERPRINT_HASH =
-  '68f2582a6dc7af8c54cf6f31a396e8abe4c4030696c923b0ea3b1679ba6f5b5e';
-export const B08_TIDB_SOURCE_INSTANCE_ID = '10492391619114516879';
-export const B08_TIDB_SOURCE_ADMIN_IDENTITY = '42MAxcoJrgbJNnU.root';
-export const B08_TIDB_SOURCE_READER_IDENTITY = '42MAxcoJrgbJNnU.b08_reader';
-export const B08_TIDB_SOURCE_READER_PRIVILEGE_SET = 'listify_property_sa.*:SELECT';
 export const B08_MIGRATION_IDENTITY = 'propertylistify_release_migrator';
 export const B08_MIGRATION_PRIVILEGE_SET =
   'propertylistify_database.*:SELECT,INSERT,UPDATE,DELETE,CREATE,ALTER,DROP,INDEX,REFERENCES;*.*:SESSION_VARIABLES_ADMIN';
@@ -82,6 +90,15 @@ export function protectedDatabaseApprovalFromEnvironment(
   const actor = env.DATABASE_AUTHORITY_APPROVAL_ACTOR;
   const fingerprint = env.DATABASE_AUTHORITY_APPROVED_FINGERPRINT;
   if (!reference && !actor && !fingerprint) return undefined;
+  let rehearsalBinding: RehearsalApprovalBinding | undefined;
+  const rawRehearsalBinding = env.DATABASE_AUTHORITY_REHEARSAL_APPROVAL;
+  if (rawRehearsalBinding) {
+    try {
+      rehearsalBinding = JSON.parse(rawRehearsalBinding) as RehearsalApprovalBinding;
+    } catch {
+      throw new Error('Database operation refused: structured rehearsal approval is invalid JSON.');
+    }
+  }
   return {
     reference: reference ?? '',
     actor: actor ?? '',
@@ -89,10 +106,6 @@ export function protectedDatabaseApprovalFromEnvironment(
     targetFingerprintHash: fingerprint ?? '',
     credentialClass: env.DATABASE_AUTHORITY_APPROVED_CREDENTIAL_CLASS as DatabaseCredentialClass | undefined,
     inspectionIdentity: env.DATABASE_AUTHORITY_APPROVED_INSPECTION_IDENTITY,
-    tidbSourceInstanceId: env.DATABASE_AUTHORITY_APPROVED_TIDB_SOURCE_INSTANCE_ID,
-    tidbSourceAdminIdentity: env.DATABASE_AUTHORITY_APPROVED_TIDB_SOURCE_ADMIN_IDENTITY,
-    tidbSourceReaderIdentity: env.DATABASE_AUTHORITY_APPROVED_TIDB_SOURCE_READER_IDENTITY,
-    tidbSourceReaderPrivilegeSet: env.DATABASE_AUTHORITY_APPROVED_TIDB_SOURCE_READER_PRIVILEGE_SET,
     migrationIdentity: env.DATABASE_AUTHORITY_APPROVED_MIGRATION_IDENTITY,
     migrationPrivilegeSet: env.DATABASE_AUTHORITY_APPROVED_MIGRATION_PRIVILEGE_SET,
     runtimeIdentity: env.DATABASE_AUTHORITY_APPROVED_RUNTIME_IDENTITY,
@@ -100,6 +113,7 @@ export function protectedDatabaseApprovalFromEnvironment(
     runtimeGrantDigest: env.DATABASE_AUTHORITY_APPROVED_RUNTIME_GRANT_DIGEST,
     runtimePreviousGrantDigest: env.DATABASE_AUTHORITY_APPROVED_RUNTIME_PREVIOUS_GRANT_DIGEST,
     workerGrantDigest: env.DATABASE_AUTHORITY_APPROVED_WORKER_GRANT_DIGEST,
+    rehearsalBinding,
   };
 }
 
@@ -219,6 +233,33 @@ function assertProtectedApproval(
   }
 }
 
+export function assertStructuredRehearsalApproval(
+  context: ResolvedDatabaseContext,
+  approval: ProtectedDatabaseApproval | undefined,
+): void {
+  const binding = approval?.rehearsalBinding;
+  const releaseOperation =
+    context.operation === 'release-plan' || context.operation === 'release-apply';
+  const exactIdentity =
+    binding?.resourceId === REHEARSAL_RESOURCE_ID &&
+    binding.purpose === REHEARSAL.purpose &&
+    binding.serverCreatedAt === REHEARSAL.serverCreatedAt &&
+    binding.sourceDigest === REHEARSAL_SOURCE_DIGEST;
+  const exactScope =
+    binding?.scope?.acceptedOldHead === REHEARSAL.acceptedOldHead &&
+    binding?.scope?.expectedNewHead === REHEARSAL.expectedHead &&
+    binding?.scope?.manifestDigest === REHEARSAL.manifestDigest;
+  if (
+    context.targetClass !== 'disposable-rehearsal' ||
+    !exactIdentity ||
+    (releaseOperation ? !exactScope : binding?.scope !== undefined)
+  ) {
+    throw new Error(
+      'Database operation refused: exact structured rehearsal identity, source and migration scope approval are required.',
+    );
+  }
+}
+
 export function authorizeDatabaseOperation(
   authority: ResolvedDatabaseAuthority,
   input: {
@@ -229,6 +270,9 @@ export function authorizeDatabaseOperation(
   } = {},
 ): AuthorizedDatabaseOperation {
   const context = authority.context;
+  if (context.provider !== 'mysql' || context.dialect !== 'mysql') {
+    throw new Error('Database operation refused: only the canonical MySQL provider is supported.');
+  }
   if (
     context.targetFingerprint === RECOVERY_VALIDATION_FINGERPRINT &&
     (!['read-only-connect', 'verification'].includes(context.operation) ||
@@ -284,18 +328,6 @@ export function authorizeDatabaseOperation(
       input.approval?.inspectionIdentity !== B08_INSPECTION_IDENTITY)
   ) {
     throw new Error('Database operation refused: exact B08 Azure inspection identity approval is required.');
-  }
-  if (
-    context.operation === 'tidb-source-reader-provision' &&
-    (context.targetFingerprintHash !== B08_TIDB_SOURCE_TARGET_FINGERPRINT_HASH ||
-      context.provider !== 'tidb' ||
-      input.approval?.credentialClass !== 'bootstrap-admin' ||
-      input.approval?.tidbSourceInstanceId !== B08_TIDB_SOURCE_INSTANCE_ID ||
-      input.approval?.tidbSourceAdminIdentity !== B08_TIDB_SOURCE_ADMIN_IDENTITY ||
-      input.approval?.tidbSourceReaderIdentity !== B08_TIDB_SOURCE_READER_IDENTITY ||
-      input.approval?.tidbSourceReaderPrivilegeSet !== B08_TIDB_SOURCE_READER_PRIVILEGE_SET)
-  ) {
-    throw new Error('Database operation refused: exact B08 TiDB source reader approval is required.');
   }
   if (
     context.operation === 'migration-identity-provision' &&
@@ -366,6 +398,9 @@ export function authorizeDatabaseOperation(
     policy.protectedTargetClasses.includes(context.targetClass)
   ) {
     assertProtectedApproval(context, input.approval);
+  }
+  if (context.targetClass === 'disposable-rehearsal') {
+    assertStructuredRehearsalApproval(context, input.approval);
   }
   if (
     rule.acknowledgement === 'exact-target' &&

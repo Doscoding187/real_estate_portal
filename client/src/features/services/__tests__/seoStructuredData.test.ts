@@ -13,7 +13,7 @@ describe('buildProviderBusinessStructuredData', () => {
       ...baseInput,
       headline: 'Certified handyman network',
       logoUrl: 'https://cdn.propertylistifysa.co.za/logo.png',
-      locations: [{ suburb: 'Rondebosch', city: 'Cape Town', province: 'Western Cape' }],
+      locations: [{ label: 'Rondebosch, Cape Town, Western Cape' }],
       averageRating: '4.80',
       reviewCount: 6,
     });

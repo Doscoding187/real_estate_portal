@@ -1,7 +1,10 @@
 # North Riding private house authoring correction
 
-Status: candidate for senior review. No hosted CI, protected data mutation, push,
+Status: historical review packet. No hosted CI, protected data mutation, push,
 merge or deployment is authorized by this packet.
+
+The numeric geography adapter and provider-driven locality resolver described
+below have since been retired. Current authoring uses canonical Place identity.
 
 The reported address is `5 Congo Street, North Riding, Roodepoort, 2169`.
 Street number, street name, postal town text and postal code are supplied evidence;

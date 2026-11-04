@@ -101,8 +101,6 @@ describe('Development Service - Property Tests', { timeout: 30000 }, () => {
       const development = await developmentService.createDevelopment(developer.userId, {
         name: 'Test Development',
         developmentType: 'residential',
-        city: 'Test City',
-        province: 'Test Province',
         amenities,
       });
 
@@ -163,8 +161,6 @@ describe('Development Service - Property Tests', { timeout: 30000 }, () => {
       const development = await developmentService.createDevelopment(developer.userId, {
         name: 'Test Development',
         developmentType: 'residential',
-        city: 'Test City',
-        province: 'Test Province',
       });
 
       // Create phase
@@ -216,8 +212,6 @@ describe('Development Service - Property Tests', { timeout: 30000 }, () => {
         const development = await developmentService.createDevelopment(developer.userId, {
           name: 'Test Development',
           developmentType: 'residential',
-          city: 'Test City',
-          province: 'Test Province',
         });
 
         // Create phase
@@ -254,15 +248,11 @@ describe('Development Service - Property Tests', { timeout: 30000 }, () => {
           // dedicated Land journey is deferred. Its rejection is covered by
           // the explicit Land-containment integration contracts.
           developmentType: fc.constantFrom('residential', 'commercial', 'mixed_use'),
-          city: fc.string({ minLength: 2, maxLength: 50 }),
-          province: fc.string({ minLength: 2, maxLength: 50 }),
           description: fc.option(fc.string({ minLength: 10, maxLength: 500 })),
         })
         .map(data => ({
           ...data,
           name: data.name.trim().length > 0 ? data.name.trim() : 'Test Development',
-          city: data.city.trim().length > 0 ? data.city.trim() : 'Test City',
-          province: data.province.trim().length > 0 ? data.province.trim() : 'Test Province',
           description:
             data.description && data.description.trim().length > 0 ? data.description.trim() : null,
         })),
@@ -287,8 +277,9 @@ describe('Development Service - Property Tests', { timeout: 30000 }, () => {
       // Property: All required fields should be present
       expect(development.name).toBe(developmentData.name);
       expect(development.developmentType).toBe(developmentData.developmentType);
-      expect(development.city).toBe(developmentData.city);
-      expect(development.province).toBe(developmentData.province);
+      expect(development).not.toHaveProperty('city');
+      expect(development).not.toHaveProperty('suburb');
+      expect(development).not.toHaveProperty('province');
 
       // Property: Optional fields should be preserved
       if (developmentData.description) {
@@ -321,8 +312,6 @@ describe('Development Service - Property Tests', { timeout: 30000 }, () => {
         developmentService.createDevelopment(developer.userId, {
           name: 'Rejected phase payload',
           developmentType: 'residential',
-          city: 'Test City',
-          province: 'Test Province',
           phases: [{ name: 'Phase 1', phaseNumber: 1 }],
         }),
       ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
@@ -330,8 +319,6 @@ describe('Development Service - Property Tests', { timeout: 30000 }, () => {
       const development = await developmentService.createDevelopment(developer.userId, {
         name: 'Phase preservation test',
         developmentType: 'residential',
-        city: 'Test City',
-        province: 'Test Province',
       });
       const phase = await developmentService.createPhase(development.id, developer.userId, {
         name: 'Phase 1',

@@ -6,7 +6,6 @@ const {
   mockSelect,
   mockRedisGet,
   mockRedisSet,
-  mockResolveLocation,
   mockResolvePublicPropertyEligibilities,
   mockResolvePublicPropertyEligibilityIds,
 } = vi.hoisted(() => ({
@@ -14,7 +13,6 @@ const {
   mockSelect: vi.fn(),
   mockRedisGet: vi.fn(),
   mockRedisSet: vi.fn(),
-  mockResolveLocation: vi.fn(),
   mockResolvePublicPropertyEligibilities: vi.fn(),
   mockResolvePublicPropertyEligibilityIds: vi.fn(),
 }));
@@ -33,10 +31,6 @@ vi.mock('../../lib/redis', () => ({
   CacheTTL: { FEED_RESULTS: 60 },
 }));
 
-vi.mock('../locationResolverService', () => ({
-  locationResolver: { resolveLocation: mockResolveLocation },
-}));
-
 vi.mock('../publicPropertyEligibilityService', () => ({
   resolvePublicPropertyEligibilities: mockResolvePublicPropertyEligibilities,
   resolvePublicPropertyEligibilityIds: mockResolvePublicPropertyEligibilityIds,
@@ -44,13 +38,7 @@ vi.mock('../publicPropertyEligibilityService', () => ({
 
 import { buildManualPropertySortOrder, PropertySearchService } from '../propertySearchService';
 
-function terminalWhereQuery(rows: unknown[]) {
-  const query: any = {};
-  query.from = vi.fn(() => query);
-  query.leftJoin = vi.fn(() => query);
-  query.where = vi.fn().mockResolvedValue(rows);
-  return query;
-}
+const PLACE_ID = 'pl-place-01-000000000000000000000001';
 
 function pagedQuery(rows: unknown[]) {
   const query: any = {};
@@ -60,14 +48,6 @@ function pagedQuery(rows: unknown[]) {
   query.orderBy = vi.fn(() => query);
   query.limit = vi.fn(() => query);
   query.offset = vi.fn().mockResolvedValue(rows);
-  return query;
-}
-
-function orderedQuery(rows: unknown[]) {
-  const query: any = {};
-  query.from = vi.fn(() => query);
-  query.where = vi.fn(() => query);
-  query.orderBy = vi.fn().mockResolvedValue(rows);
   return query;
 }
 
@@ -83,6 +63,7 @@ function candidateQuery(rows: unknown[]) {
 function publicCoordinateRow(latitude: unknown, longitude: unknown) {
   return {
     id: 701,
+    canonicalPlaceId: PLACE_ID,
     title: 'Public coordinate contract fixture',
     description: 'Approved projection coordinate fixture.',
     price: 1_500_000,
@@ -120,9 +101,8 @@ function publicCoordinateRow(latitude: unknown, longitude: unknown) {
 
 function configureCoordinateSearch(latitude: unknown, longitude: unknown) {
   mockSelect
-    .mockReturnValueOnce(terminalWhereQuery([{ count: 1 }]))
-    .mockReturnValueOnce(pagedQuery([publicCoordinateRow(latitude, longitude)]))
-    .mockReturnValueOnce(orderedQuery([]));
+    .mockReturnValueOnce(candidateQuery([{ id: 701, canonicalPlaceId: PLACE_ID }]))
+    .mockReturnValueOnce(pagedQuery([publicCoordinateRow(latitude, longitude)]));
 }
 
 describe('manual property Search approved projection authority', () => {
@@ -130,9 +110,28 @@ describe('manual property Search approved projection authority', () => {
     vi.clearAllMocks();
     mockRedisGet.mockResolvedValue(null);
     mockRedisSet.mockResolvedValue(undefined);
-    mockResolveLocation.mockResolvedValue(null);
     mockResolvePublicPropertyEligibilities.mockReset();
     mockResolvePublicPropertyEligibilityIds.mockReset();
+    mockLoadPlaceProjection.mockResolvedValue({
+      executions: new Map([[PLACE_ID, { placeId: PLACE_ID, scope: 'locality' }]]),
+      labels: new Map([
+        [
+          PLACE_ID,
+          {
+            canonicalPlaceId: PLACE_ID,
+            label: 'Sandton',
+            locality: 'Sandton',
+            city: 'Johannesburg',
+            province: 'Gauteng',
+            scope: 'locality',
+            placeType: 'suburb',
+          },
+        ],
+      ]),
+    });
+    mockResolvePublicPropertyEligibilities.mockImplementation(async (ids: number[]) =>
+      new Map(ids.map(id => [id, { property: { id }, images: [] }])),
+    );
   });
 
   it.each([
@@ -140,8 +139,6 @@ describe('manual property Search approved projection authority', () => {
     'price_desc',
     'date_desc',
     'date_asc',
-    'suburb_asc',
-    'suburb_desc',
   ] as const)('adds a stable ascending property-ID tie-breaker for %s', sortOption => {
     const dialect = new MySqlDialect();
     const order = buildManualPropertySortOrder(sortOption).map(
@@ -154,11 +151,12 @@ describe('manual property Search approved projection authority', () => {
 
   it('builds a canonical card from properties + propertyImages without reading listing state', async () => {
     mockSelect
-      .mockReturnValueOnce(terminalWhereQuery([{ count: 1 }]))
+      .mockReturnValueOnce(candidateQuery([{ id: 501, canonicalPlaceId: PLACE_ID }]))
       .mockReturnValueOnce(
         pagedQuery([
           {
             id: 501,
+            canonicalPlaceId: PLACE_ID,
             title: 'Approved projection title',
             description: 'Approved projection description.',
             price: 2_500_000,
@@ -195,21 +193,29 @@ describe('manual property Search approved projection authority', () => {
             videoCount: 0,
           },
         ]),
-      )
-      .mockReturnValueOnce(
-        orderedQuery([
-          {
-            propertyId: 501,
-            imageUrl: 'properties/draft-501/approved-card-photo.jpg',
-            isPrimary: 1,
-          },
-        ]),
       );
+    mockResolvePublicPropertyEligibilities.mockResolvedValue(
+      new Map([
+        [
+          501,
+          {
+            property: { id: 501 },
+            images: [
+              {
+                propertyId: 501,
+                imageUrl: 'properties/draft-501/approved-card-photo.jpg',
+                isPrimary: 1,
+              },
+            ],
+          },
+        ],
+      ]),
+    );
 
     const service = new PropertySearchService();
     const result = await service.searchProperties({}, 'date_desc', 1, 12);
 
-    expect(mockSelect).toHaveBeenCalledTimes(3);
+    expect(mockSelect).toHaveBeenCalledTimes(2);
     expect(result.properties[0]).toMatchObject({
       id: '501',
       title: 'Approved projection title',
@@ -229,39 +235,15 @@ describe('manual property Search approved projection authority', () => {
     expect(JSON.stringify(result)).not.toContain('private-candidate-photo');
   });
 
-  it('allows properties.mainImage only on the explicit unlinked legacy path', async () => {
+  it('excludes unlinked legacy inventory from canonical public search', async () => {
     mockSelect
-      .mockReturnValueOnce(terminalWhereQuery([{ count: 1 }]))
-      .mockReturnValueOnce(
-        pagedQuery([
-          {
-            id: 77,
-            title: 'Legacy projection',
-            description: 'Legacy projection-only inventory.',
-            price: 900_000,
-            suburb: 'Centurion',
-            city: 'Pretoria',
-            province: 'Gauteng',
-            propertyType: 'house',
-            listingType: 'sale',
-            bedrooms: 2,
-            bathrooms: 1,
-            area: 90,
-            status: 'available',
-            listedDate: new Date('2026-08-10T10:00:00Z'),
-            mainImage: 'https://cdn.example.test/legacy-main.jpg',
-            sourceListingId: null,
-            propertySettings: '{}',
-            videoCount: 0,
-          },
-        ]),
-      )
-      .mockReturnValueOnce(orderedQuery([]));
+      .mockReturnValueOnce(candidateQuery([{ id: 77, canonicalPlaceId: null }]))
+      .mockReturnValueOnce(pagedQuery([]));
 
     const result = await new PropertySearchService().searchProperties({}, 'date_desc', 1, 12);
 
-    expect(result.properties[0].mainImage).toBe('https://cdn.example.test/legacy-main.jpg');
-    expect(result.cards[0].propertyId).toBe(77);
+    expect(result.properties).toEqual([]);
+    expect(result.total).toBe(0);
   });
 
   it('projects canonical parking and rental terms into a compact public rental card', async () => {
@@ -291,9 +273,8 @@ describe('manual property Search approved projection authority', () => {
       }),
     };
     mockSelect
-      .mockReturnValueOnce(terminalWhereQuery([{ count: 1 }]))
-      .mockReturnValueOnce(pagedQuery([rental]))
-      .mockReturnValueOnce(orderedQuery([]));
+      .mockReturnValueOnce(candidateQuery([{ id: 88, canonicalPlaceId: PLACE_ID }]))
+      .mockReturnValueOnce(pagedQuery([rental]));
 
     const result = await new PropertySearchService().searchProperties({}, 'date_desc', 1, 12);
 
@@ -340,11 +321,12 @@ describe('manual property Search approved projection authority', () => {
     'preserves the approved %s bathroom value for listing-backed Search cards',
     async bathrooms => {
       mockSelect
-        .mockReturnValueOnce(terminalWhereQuery([{ count: 1 }]))
+        .mockReturnValueOnce(candidateQuery([{ id: 601, canonicalPlaceId: PLACE_ID }]))
         .mockReturnValueOnce(
           pagedQuery([
             {
               id: 601,
+              canonicalPlaceId: PLACE_ID,
               title: 'Canonical bathroom fixture',
               description: 'Approved projection fixture.',
               price: 1_000_000,
@@ -382,8 +364,7 @@ describe('manual property Search approved projection authority', () => {
               videoCount: 0,
             },
           ]),
-        )
-        .mockReturnValueOnce(orderedQuery([]));
+        );
 
       const result = await new PropertySearchService().searchProperties({}, 'date_desc', 1, 12);
 
@@ -413,9 +394,8 @@ describe('manual property Search approved projection authority', () => {
       securityEstate: false,
     });
     mockSelect
-      .mockReturnValueOnce(terminalWhereQuery([{ count: 1 }]))
-      .mockReturnValueOnce(pagedQuery([row]))
-      .mockReturnValueOnce(orderedQuery([]));
+      .mockReturnValueOnce(candidateQuery([{ id: 701, canonicalPlaceId: PLACE_ID }]))
+      .mockReturnValueOnce(pagedQuery([row]));
 
     const result = await new PropertySearchService().searchProperties({}, 'date_desc', 1, 12);
 
@@ -424,11 +404,17 @@ describe('manual property Search approved projection authority', () => {
 
   it('filters public search candidates through the canonical authority and retains canonical suburb labels', async () => {
     mockSelect
-      .mockReturnValueOnce(candidateQuery([{ id: 501 }, { id: 502 }]))
+      .mockReturnValueOnce(
+        candidateQuery([
+          { id: 501, canonicalPlaceId: PLACE_ID },
+          { id: 502, canonicalPlaceId: PLACE_ID },
+        ]),
+      )
       .mockReturnValueOnce(
         pagedQuery([
           {
             id: 501,
+            canonicalPlaceId: PLACE_ID,
             title: 'Canonical public result',
             description: 'Approved projection fixture.',
             price: 1_000_000,
@@ -461,8 +447,7 @@ describe('manual property Search approved projection authority', () => {
             videoCount: 0,
           },
         ]),
-      )
-      .mockReturnValueOnce(orderedQuery([]));
+      );
     mockResolvePublicPropertyEligibilities.mockResolvedValue(
       new Map([
         [
@@ -490,7 +475,6 @@ describe('manual property Search approved projection authority', () => {
       'date_desc',
       1,
       12,
-      undefined,
       { publicOnly: true },
     );
 
@@ -517,9 +501,8 @@ describe('manual property Search approved projection authority', () => {
       propertySettings: '{}',
     };
     mockSelect
-      .mockReturnValueOnce(candidateQuery([{ id: 702 }]))
-      .mockReturnValueOnce(pagedQuery([apartment]))
-      .mockReturnValueOnce(orderedQuery([]));
+      .mockReturnValueOnce(candidateQuery([{ id: 702, canonicalPlaceId: PLACE_ID }]))
+      .mockReturnValueOnce(pagedQuery([apartment]));
     mockResolvePublicPropertyEligibilities.mockResolvedValue(
       new Map([
         [
@@ -542,7 +525,6 @@ describe('manual property Search approved projection authority', () => {
       'date_desc',
       1,
       12,
-      undefined,
       { publicOnly: true },
     );
 
@@ -606,7 +588,6 @@ describe('province inventory membership before public eligibility and pagination
       'date_desc',
       2,
       1,
-      undefined,
       {
         publicOnly: true,
         provincePlaceId: 'province',
@@ -635,7 +616,6 @@ describe('province inventory membership before public eligibility and pagination
       'date_desc',
       1,
       12,
-      undefined,
       { publicOnly: true, provincePlaceId: 'province' },
     );
     expect(mockResolvePublicPropertyEligibilities).toHaveBeenCalledWith([]);
@@ -646,7 +626,7 @@ describe('province inventory membership before public eligibility and pagination
     'rejects competing geography before reading inventory: %j',
     async filters => {
       await expect(
-        new PropertySearchService().searchProperties(filters, 'date_desc', 1, 12, undefined, {
+        new PropertySearchService().searchProperties(filters, 'date_desc', 1, 12, {
           publicOnly: true,
           provincePlaceId: 'province',
         }),

@@ -8,6 +8,13 @@ may consume it but may not add another runner, connection authority, target
 guard, ledger, seed executor, repair framework, or lifecycle mechanism.
 Operational migration details are in `server/migrations/README.md`.
 
+**Supported database provider:** MySQL only. The application code uses the
+MySQL dialect and mysql2 driver; its intended hosted database is Azure Database
+for MySQL. Azure SQL Database is a different SQL Server product and is not an
+application target. TiDB support, command paths, capability checks, and
+recovery tooling are retired. Historical TiDB records remain evidence only and
+do not establish current production cutover status.
+
 ## Canonical authorities
 
 | Concern                       | Authority                                              |
@@ -50,22 +57,20 @@ A normal incremental DDL entry must:
 - be the one next contiguous numeric sequence;
 - contain exactly one independently verifiable DDL statement;
 - remain inside the selected database and use the ordinary expansion subset;
-- use supported MySQL/TiDB syntax and explicit provider normalization;
+- use the canonical MySQL dialect and avoid provider fallback or schema guessing;
 - have a manifest checksum and exact parent checksum;
 - include focused precondition, postcondition, and consumer evidence; and
 - preserve forward recovery if application becomes ambiguous.
 
-The active-manifest validator rejects TiDB-unsupported stored-program
-primitives (triggers, procedures, functions, events, and client `DELIMITER`
-directives), and an `ALTER TABLE` that introduces columns alongside indexes,
-keys, or constraints. TiDB must receive those dependent objects in later
-statements. Local MySQL acceptance is not deployment-dialect proof. CHECK
-constraints are defence in depth only unless the target TiDB environment has
-separately proven `tidb_enable_check_constraint` enforcement; launch-critical
-business transitions must also be enforced by their domain command authority.
+The active manifest and runner target MySQL. TiDB-specific syntax guards,
+physical inventory fallbacks, CHECK capability probes, and convergence
+operations have been removed. Do not add a second provider path or use a
+provider console as a schema authority. CHECK constraints are verified through
+MySQL's canonical `information_schema` metadata, and launch-critical business
+transitions must also be enforced by their domain command authority.
 
-Do not claim transactional rollback for MySQL/TiDB DDL. Do not combine several
-DDL transitions in one file to simulate atomicity. Database/schema lifecycle,
+Do not claim transactional rollback for MySQL DDL. Do not combine several DDL
+transitions in one file to simulate atomicity. Database/schema lifecycle,
 cross-schema references, and ordinary destructive/shape-changing DDL fail
 manifest validation; route approved exceptions through the exceptional
 contract.
@@ -91,25 +96,16 @@ control tables when needed, records a running attempt with that lock owner,
 applies each statement, records progress, then records success. A
 failed/running/blocked attempt prevents normal continuation.
 
-### Reviewed zero-statement replacement
+### Failed migration attempts
 
-When a rejected migration has a durable failed attempt with exactly zero
-completed statements, use the bounded recovery commands rather than retrying,
-recreating the database, or editing the ledger:
-
-```text
-pnpm db:migration-recovery:plan -- --attempt-id=<id> --approval-reference=<reference> --approval-actor=<actor>
-pnpm db:migration-recovery:apply -- --attempt-id=<id> --approval-reference=<reference> --approval-actor=<actor> --plan-digest=<exact-plan-digest>
-```
-
-The reviewed SQL must first be removed from active lineage and retained
-unchanged under `server/migrations/_archived/rejected-zero-statement/`. The
-plan proves the archive checksum, exact failed attempt and target fingerprint,
-zero statement progress, accepted successful head, and absence of the rejected
-physical object. Apply takes the canonical migration lock, binds to the exact
-plan digest, changes only the failed attempt's review state, and records a
-separate durable replacement-evidence row. It never creates migration history
-for rejected SQL.
+A failed, running, or blocked attempt stops ordinary continuation. No standing
+generic recovery command is available. Preserve the sanitized attempt ID,
+failure evidence, exact target fingerprint, and accepted migration head; do not
+retry, edit ledgers, replay archived SQL, or recreate a target to clear the
+failure. Any recovery requires a new, separately reviewed MySQL-only incident
+contract and explicit approval before execution. The historical TiDB recovery
+records remain in the exception register, but their code and commands are
+retired.
 
 Generic migration commands accept only local disposable or quarantined
 read-only plan targets. Protected targets use `pnpm db:release:plan` and
@@ -117,81 +113,6 @@ read-only plan targets. Protected targets use `pnpm db:release:plan` and
 target acknowledgement in addition to protected approval evidence. The runner
 compares the digest with a fresh plan before durable mutation and repeats the
 comparison after acquiring the migration lock.
-
-For the reviewed production `0001` failure, the bounded release recovery uses
-the same protected release authorization without widening generic local
-recovery:
-
-```text
-pnpm db:release-migration-recovery:plan -- --attempt-id=<id> --approval-reference=<reference> --approval-actor=<actor>
-pnpm db:release-migration-recovery:apply -- --attempt-id=<id> --approval-reference=<reference> --approval-actor=<actor> --plan-digest=<exact-plan-digest> --ack=<exact-release-ack>
-```
-
-This command is permanently scoped to the archived zero-statement `0001`
-attempt, its TiDB-safe replacement, and a staging/production target. It changes
-only the failed attempt review state and adds replacement evidence; the normal
-`release:plan`/`release:apply` sequence remains responsible for applying the
-replacement migration. Its `--approval-reference` and `--approval-actor` must
-exactly match the protected-target approval used to authorize the command.
-
-For the separately reviewed production `0046` Commercial Office quote-terms
-failure, use its own bounded release recovery. It is permanently scoped to
-attempt `198ffda9d58670ea351d733d-0046`, the archived original, and the
-sequenced replacement; it is not a generic recovery facility:
-
-```text
-pnpm db:release-commercial-quote-terms-recovery:plan -- --approval-reference=<reference> --approval-actor=<actor>
-pnpm db:release-commercial-quote-terms-recovery:apply -- --approval-reference=<reference> --approval-actor=<actor> --plan-digest=<exact-plan-digest> --ack=<exact-release-ack>
-```
-
-The plan proves the exact failed plan digest and `ER_BAD_FIELD_ERROR` evidence,
-the accepted successful prefix through `0045_commercial_space_positive_area_integrity.sql`,
-the archive checksum, and the physical proof that `transaction_type` exists
-while `pricing_mode` and `vat_treatment` do not. Apply changes only the failed
-attempt review state and appends review evidence. It never executes the archived
-SQL or manual DDL. After it succeeds, run a fresh normal `release:plan` and
-`release:apply` with the accepted old head set to
-`0045_commercial_space_positive_area_integrity.sql` so that only the active
-sequenced replacement and later canonical migrations may run.
-
-### Reviewed TiDB CHECK-constraint convergence
-
-Before any provider convergence plan is approved, run the offline structural
-admission audit:
-
-```text
-pnpm db:schema:tidb-audit
-```
-
-This audit derives dependencies from the canonical Drizzle model. It treats a
-CHECK that references a foreign-key column as unresolved until provider proof
-exists. `information_schema.REFERENTIAL_CONSTRAINTS` reports the effective
-action, but cannot prove whether `NO ACTION` was explicitly authored; therefore
-even `RESTRICT`/`NO ACTION` relationships require an explicit-action review.
-`CASCADE`, `SET NULL`, and `SET DEFAULT` relationships require a domain
-lifecycle decision and must not be rewritten automatically. The command is an
-admission report, not a DDL executor.
-
-The 2026-09-04 production cutover found TiDB's
-`tidb_enable_check_constraint` capability disabled after the canonical
-migration head had been reached. That setting can allow CHECK syntax to be
-accepted without retaining the constraints, so this is handled by one named,
-bounded convergence—not by replaying migrations or editing history.
-
-```text
-pnpm db:release-tidb-check-constraint-convergence:plan -- --approval-reference=DBX-TIDB-CHECK-CONSTRAINT-CONVERGENCE-2026-09-04-Edward --approval-actor=<actor>
-pnpm db:release-tidb-check-constraint-convergence:apply -- --approval-reference=DBX-TIDB-CHECK-CONSTRAINT-CONVERGENCE-2026-09-04-Edward --approval-actor=<actor> --plan-digest=<exact-plan-digest> --ack=<exact-release-ack>
-```
-
-The plan is read-only. It requires the exact canonical migration head, proves
-the global TiDB capability, obtains check metadata through
-`information_schema.TIDB_CHECK_CONSTRAINTS`, compares the fixed 22 definitions
-to Drizzle's desired model, and counts violations of every missing predicate.
-Apply uses the ordinary release authorization and named migration lock, enables
-the TiDB capability, adds only a verified missing listed constraint, and records
-durable per-constraint progress. A failed or ambiguous attempt blocks normal
-continuation; it is never retried or repaired manually. Ordinary migration
-apply refuses a TiDB target while this capability is disabled.
 
 Never:
 

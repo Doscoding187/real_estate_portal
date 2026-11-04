@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { ChevronRight, MapPin, Play, Sparkles, TrendingUp } from 'lucide-react';
+import { ChevronRight, Play, Sparkles, TrendingUp } from 'lucide-react';
 import type { DiscoveryItem } from '@/domains/discovery/types';
 
 type CompactAspect = 'portrait' | 'landscape' | 'square';
@@ -47,14 +47,6 @@ function getSectionTone(title: string) {
     };
   }
 
-  if (tone.includes('neighbourhood')) {
-    return {
-      badge: 'Places',
-      badgeClass: 'bg-fuchsia-50 text-fuchsia-700',
-      surface: 'from-fuchsia-500/20 to-violet-500/10',
-    };
-  }
-
   return {
     badge: 'Media shelf',
     badgeClass: 'bg-blue-50 text-blue-700',
@@ -90,7 +82,6 @@ function getItemBadge(item: DiscoveryItem, data: any) {
     return 'Video';
   }
   if (item.type === 'property') return 'Listing';
-  if (item.type === 'neighbourhood') return 'Area';
   if (item.type === 'insight') return 'Insight';
   return 'Channel';
 }
@@ -103,12 +94,6 @@ function getItemStat(item: DiscoveryItem, data: any) {
     const views = formatCompactCount(Number(data?.stats?.views || data?.viewCount || 0));
     return views ? `${views} views` : 'Watch now';
   }
-  if (item.type === 'neighbourhood') {
-    const averagePrice = Number(data?.avgPropertyPrice);
-    return Number.isFinite(averagePrice) && averagePrice > 0
-      ? formatCompactPrice(averagePrice)
-      : 'Explore area';
-  }
   return data?.data?.value || 'Open';
 }
 
@@ -118,7 +103,6 @@ function getItemCta(item: DiscoveryItem, data: any) {
   }
 
   if (item.type === 'property') return 'Open listing';
-  if (item.type === 'neighbourhood') return 'Explore area';
   if (item.type === 'insight') return 'Open insight';
   return 'Open lane';
 }
@@ -142,11 +126,9 @@ export function PersonalizedContentBlock({
     const aspect =
       item.type === 'video'
         ? getVideoAspectFromData(data, videoAspect)
-        : item.type === 'neighbourhood'
-          ? 'landscape'
-          : item.type === 'insight'
-            ? 'square'
-            : 'portrait';
+        : item.type === 'insight'
+          ? 'square'
+          : 'portrait';
 
     const widthClass = isLeadCard
       ? aspect === 'landscape'
@@ -160,21 +142,14 @@ export function PersonalizedContentBlock({
           ? 'w-[17rem]'
           : 'w-[15.5rem]';
 
-    const heading =
-      item.type === 'neighbourhood'
-        ? data?.name || 'Explore area'
-        : data?.title || 'Explore item';
+    const heading = data?.title || 'Explore item';
 
     const supporting =
       item.type === 'video'
         ? data?.actor?.displayName || data?.creatorName || 'Watch now'
         : item.type === 'property'
           ? [data?.city, data?.province].filter(Boolean).join(', ') || data?.location || 'South Africa'
-          : item.type === 'neighbourhood'
-            ? typeof data?.propertyCount === 'number' && Number.isFinite(data.propertyCount)
-              ? `${data.propertyCount} active listings`
-              : 'Local market snapshot'
-            : data?.description || 'Open section';
+          : data?.description || 'Open section';
 
     const statLine = getItemStat(item, data);
     const badge = getItemBadge(item, data);
@@ -183,8 +158,6 @@ export function PersonalizedContentBlock({
     const accentIcon =
       item.type === 'video' ? (
         <Play className="h-4 w-4" />
-      ) : item.type === 'neighbourhood' ? (
-        <MapPin className="h-4 w-4" />
       ) : item.type === 'insight' ? (
         <Sparkles className="h-4 w-4" />
       ) : (

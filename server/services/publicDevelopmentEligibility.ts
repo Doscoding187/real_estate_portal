@@ -4,12 +4,15 @@ import {
   cataloguePublishers,
   billableAccounts,
   developmentSupersessions,
+  developmentPlaceAssignments,
   developments,
   developerOrganisations,
   developerOrganisationMemberships,
   plans,
   subscriptions,
   unitTypes,
+  place,
+  placeName,
 } from '../../drizzle/schema';
 import {
   SUPPORTED_PUBLIC_TRANSACTION_TYPES,
@@ -21,10 +24,12 @@ import {
   isLandVerticalAvailable,
 } from '../../shared/landLaunchPolicy';
 import { isCommercialActivationAvailable } from './commercialActivationPolicy';
+import { isCanonicalPlaceId } from '../../shared/placeAuthority';
 
 export type PublicDevelopmentEligibilityReason =
   | 'not_published'
   | 'not_approved'
+  | 'missing_canonical_place_assignment'
   | 'unsupported_transaction'
   | 'unsupported_development_type'
   | 'land_vertical_deferred'
@@ -61,6 +66,9 @@ export function evaluatePublicDevelopmentEligibility(
   if (catalogue.activeSupersessionSource) reasons.push('active_supersession_source');
   if (!isTinyIntTrue(development.isPublished)) reasons.push('not_published');
   if (development.approvalStatus !== 'approved') reasons.push('not_approved');
+  if (!isCanonicalPlaceId(catalogue.canonicalPlaceId)) {
+    reasons.push('missing_canonical_place_assignment');
+  }
   // Commercial leasing has its own Asset → Space → Availability authority.
   // A legacy Developer catalogue row must not become a second public
   // Commercial inventory merely because its publication flags are live.
@@ -194,9 +202,59 @@ export function publicDevelopmentEligibilityConditions(): SQL {
       AND ${unitTypes.isActive} = 1
   )`;
 
+  const oneExecutableSitePlace = sql`(
+    SELECT COUNT(DISTINCT assignment.place_id)
+    FROM ${developmentPlaceAssignments} assignment
+    INNER JOIN ${place} assigned_place
+      ON assigned_place.place_id = assignment.place_id
+    WHERE assignment.development_id = ${developments.id}
+      AND assignment.assignment_kind = 'site'
+      AND assignment.review_state = 'accepted'
+      AND assignment.reviewed_by_user_id IS NOT NULL
+      AND assignment.reviewed_at IS NOT NULL
+      AND CHAR_LENGTH(TRIM(assignment.evidence_reference)) > 0
+      AND assigned_place.lifecycle_status = 'active'
+      AND assigned_place.search_eligible = 1
+      AND assigned_place.search_scope IS NOT NULL
+      AND EXISTS (
+        SELECT 1
+        FROM ${placeName} accepted_place_name
+        WHERE accepted_place_name.place_id = assigned_place.place_id
+          AND accepted_place_name.name_role = 'preferred_public'
+          AND accepted_place_name.name_state = 'active'
+          AND CHAR_LENGTH(TRIM(accepted_place_name.name)) > 0
+      )
+  ) = 1 AND NOT EXISTS (
+    SELECT 1
+    FROM ${developmentPlaceAssignments} invalid_assignment
+    LEFT JOIN ${place} invalid_place
+      ON invalid_place.place_id = invalid_assignment.place_id
+    WHERE invalid_assignment.development_id = ${developments.id}
+      AND invalid_assignment.assignment_kind = 'site'
+      AND invalid_assignment.review_state = 'accepted'
+      AND (
+        invalid_assignment.reviewed_by_user_id IS NULL
+        OR invalid_assignment.reviewed_at IS NULL
+        OR CHAR_LENGTH(TRIM(invalid_assignment.evidence_reference)) = 0
+        OR invalid_place.place_id IS NULL
+        OR invalid_place.lifecycle_status <> 'active'
+        OR invalid_place.search_eligible <> 1
+        OR invalid_place.search_scope IS NULL
+        OR NOT EXISTS (
+          SELECT 1
+          FROM ${placeName} invalid_place_name
+          WHERE invalid_place_name.place_id = invalid_place.place_id
+            AND invalid_place_name.name_role = 'preferred_public'
+            AND invalid_place_name.name_state = 'active'
+            AND CHAR_LENGTH(TRIM(invalid_place_name.name)) > 0
+        )
+      )
+  )`;
+
   return and(
     eq(developments.isPublished, 1),
     eq(developments.approvalStatus, 'approved'),
+    oneExecutableSitePlace,
     ne(developments.developmentType, 'commercial'),
     isLandVerticalAvailable() ? undefined : ne(developments.developmentType, 'land'),
     sql`(${developments.transactionType} IN ('for_sale', 'for_rent'))`,

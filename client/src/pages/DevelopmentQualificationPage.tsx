@@ -98,7 +98,7 @@ export default function DevelopmentQualificationPage() {
   const [consentAccepted, setConsentAccepted] = useState(false);
   const [captureRequestId] = useState(() => createLeadCaptureRequestId());
 
-  const { data: dev, isLoading } = trpc.developer.getPublicDevelopmentBySlug.useQuery(
+  const { data: dev, isLoading, error: developmentError } = trpc.developer.getPublicDevelopmentBySlug.useQuery(
     { slugOrId: slug || '' },
     { enabled: !!slug },
   );
@@ -308,9 +308,12 @@ export default function DevelopmentQualificationPage() {
         <div className="container mx-auto px-4 pb-16 pt-28">
           <Card className="mx-auto max-w-2xl border-slate-200">
             <CardContent className="p-10 text-center">
-              <h1 className="text-2xl font-bold text-slate-900">Development not found</h1>
+              <h1 className="text-2xl font-bold text-slate-900">
+                {developmentError ? 'Development details unavailable' : 'Development not found'}
+              </h1>
               <p className="mt-2 text-slate-600">
-                The development linked to this qualification flow is unavailable.
+                {developmentError?.message ||
+                  'The development linked to this qualification flow is unavailable.'}
               </p>
               <Button className="mt-6" onClick={() => setLocation('/')}>
                 Go Home

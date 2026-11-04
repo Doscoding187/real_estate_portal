@@ -1017,7 +1017,7 @@ export function AgencyCommercialLandingPage() {
                   Agency listing sits before they open the property detail.
                 </p>
                 <a
-                  href="/gauteng"
+                  href="/south-africa"
                   className="mt-7 inline-flex items-center gap-2 text-sm font-bold text-slate-950"
                 >
                   Explore a province page <ArrowRight className="h-4 w-4" aria-hidden="true" />

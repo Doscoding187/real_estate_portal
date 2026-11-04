@@ -10,6 +10,7 @@ import superjson from 'superjson';
 import { validateEnvironmentConfig } from './lib/env'; // Runtime guard
 import { trpcDebugLink } from './lib/trpcDebugLink';
 import App from './App';
+import { ApiAvailabilityBoundary } from './components/ApiAvailabilityBoundary';
 import { AuthProvider } from './contexts/AuthContext';
 import { getLoginUrl } from './const';
 import { queryClient } from './lib/queryClient';
@@ -49,7 +50,10 @@ function reloadOnceForStaleChunk(reason: unknown) {
 
   if (Number.isFinite(lastReloadAt) && now - lastReloadAt < STALE_CHUNK_RELOAD_WINDOW_MS) {
     sessionStorage.removeItem(STALE_CHUNK_RELOAD_KEY);
-    console.error('[ChunkRecovery] Reload already attempted recently; leaving error visible.', reason);
+    console.error(
+      '[ChunkRecovery] Reload already attempted recently; leaving error visible.',
+      reason,
+    );
     return false;
   }
 
@@ -243,14 +247,16 @@ import { EnvironmentBadge } from './components/EnvironmentBadge';
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <HelmetProvider>
-      <AuthProvider>
-        <trpc.Provider client={trpcClient} queryClient={queryClient}>
-          <QueryClientProvider client={queryClient}>
-            <EnvironmentBadge />
-            <App />
-          </QueryClientProvider>
-        </trpc.Provider>
-      </AuthProvider>
+      <ApiAvailabilityBoundary>
+        <AuthProvider>
+          <trpc.Provider client={trpcClient} queryClient={queryClient}>
+            <QueryClientProvider client={queryClient}>
+              <EnvironmentBadge />
+              <App />
+            </QueryClientProvider>
+          </trpc.Provider>
+        </AuthProvider>
+      </ApiAvailabilityBoundary>
     </HelmetProvider>
   </React.StrictMode>,
 );

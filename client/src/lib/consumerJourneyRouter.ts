@@ -14,7 +14,7 @@ import {
   isLandPublicClassification,
   type LandPublicClassification,
 } from '@shared/land-domain';
-import { parseCanonicalLocationId } from '@shared/locationAuthority';
+import { isCanonicalPlaceId } from '@shared/placeAuthority';
 import {
   COMMERCIAL_SEARCH_QUERY_KEYS,
   sanitizeCommercialSearchFilters,
@@ -121,68 +121,35 @@ export type ConsumerJourneySearchInput = Omit<PropertySearchInput, 'transactionT
   commercialFilters?: Partial<CommercialSearchFilters>;
 };
 
-function landLocationQuery(selectedLocations: readonly LocationNode[], searchScope: ConsumerJourneySearchInput['searchScope']) {
-  if (searchScope?.kind === 'search_area') {
-    if (selectedLocations.length > 0) return undefined;
-    return new URLSearchParams({ searchAreaId: searchScope.searchAreaId });
-  }
-  if (selectedLocations.length === 0 || selectedLocations.some(location => location.type === 'area')) return undefined;
-  const ids = selectedLocations.map(location => location.canonicalLocationId || location.id).filter(Boolean);
-  if (ids.length !== selectedLocations.length) return undefined;
-  const canonicalLocations = ids.map(parseCanonicalLocationId);
-  if (canonicalLocations.some(location => !location) || new Set(ids).size !== ids.length) {
-    return undefined;
-  }
-  if (canonicalLocations.length > 1) {
-    const levels = new Set(canonicalLocations.map(location => location!.level));
-    if (levels.size !== 1) return undefined;
-    const level = canonicalLocations[0]!.level;
-    const parentIdentities = selectedLocations
-      .map(location =>
-        location.parentCanonicalLocationId ||
-        (level === 'city' && location.provinceSlug
-          ? `province-slug:${location.provinceSlug}`
-          : level === 'suburb' && location.citySlug
-            ? `city-slug:${location.citySlug}`
-            : level === 'province'
-              ? 'country:za'
-              : null),
-      )
-      .filter((value): value is string => Boolean(value));
-    if (parentIdentities.length === selectedLocations.length && new Set(parentIdentities).size !== 1) {
-      return undefined;
+function canonicalPlaceQuery(selectedLocations: readonly LocationNode[], max = 5) {
+  if (selectedLocations.length === 0 || selectedLocations.length > max) return undefined;
+  const ids = selectedLocations.map(location => location.canonicalPlaceId);
+  if (
+    ids.length !== selectedLocations.length ||
+    ids.some(id => !isCanonicalPlaceId(id)) ||
+    new Set(ids).size !== ids.length
+  ) return undefined;
+  if (selectedLocations.length > 1) {
+    if (new Set(selectedLocations.map(location => location.type)).size !== 1) return undefined;
+    const selectedType = selectedLocations[0].type;
+    if (selectedType !== 'province') {
+      const parents = selectedLocations.map(location => location.parentCanonicalPlaceId || '');
+      if (parents.some(parent => !parent) || new Set(parents).size !== 1) return undefined;
     }
   }
   const params = new URLSearchParams();
-  if (ids.length === 1) params.set('locationId', ids[0]);
-  else ids.forEach(id => params.append('locationIds', id));
+  if (ids.length === 1) params.set('canonicalPlaceId', ids[0]);
+  else ids.forEach(id => params.append('canonicalPlaceIds', id));
   return params;
 }
 
-function commercialLocationQuery(selectedLocations: readonly LocationNode[], hasSearchArea: boolean) {
-  if (hasSearchArea || selectedLocations.length === 0 || selectedLocations.some(location => location.type === 'area')) {
-    return undefined;
-  }
-  const ids = selectedLocations
-    .map(location => location.canonicalLocationId || location.id)
-    .filter(Boolean);
-  if (ids.length !== selectedLocations.length) return undefined;
-  const params = new URLSearchParams();
-  ids.forEach(id => params.append('locationIds', id));
-  return params;
+function commercialLocationQuery(selectedLocations: readonly LocationNode[]) {
+  if (selectedLocations.length !== 1) return undefined;
+  return canonicalPlaceQuery(selectedLocations, 1);
 }
 
-function farmLocationQuery(selectedLocations: readonly LocationNode[], searchScope: ConsumerJourneySearchInput['searchScope']) {
-  if (searchScope?.kind === 'search_area') {
-    return new URLSearchParams({ searchAreaId: searchScope.searchAreaId });
-  }
-  if (selectedLocations.length === 0 || selectedLocations.some(location => location.type === 'area')) return undefined;
-  const ids = selectedLocations.map(location => location.canonicalLocationId || location.id).filter(Boolean);
-  if (ids.length !== selectedLocations.length) return undefined;
-  const params = new URLSearchParams();
-  if (ids.length === 1) params.set('locationId', ids[0]);
-  else ids.forEach(id => params.append('locationIds', id));
-  return params;
+function farmLocationQuery(selectedLocations: readonly LocationNode[]) {
+  return canonicalPlaceQuery(selectedLocations, 1);
 }
 
 export function buildConsumerJourneyUrl(input: ConsumerJourneySearchInput): string {
@@ -191,18 +158,24 @@ export function buildConsumerJourneyUrl(input: ConsumerJourneySearchInput): stri
   // never silently widen the request into Homes.
   if (!definition) return input.journey === 'land' ? '/plots-and-land' : '/';
 
+  // Consumer routes accept selected Place identities only. A second scope
+  // object is rejected so these journeys cannot combine geography authorities.
+  if (input.searchScope !== undefined) {
+    return `${definition.destination}?searchError=unsupported-location-scope`;
+  }
+
   if (input.journey === 'residential') {
     return input.intent === 'buy' ? buildBuySearchUrl(input) : buildPropertySearchUrl({ ...input, transactionType: 'to-rent' });
   }
 
   if (input.journey === 'shared_living') {
-    const params = farmLocationQuery(input.selectedLocations || [], input.searchScope);
+    const params = canonicalPlaceQuery(input.selectedLocations || []);
     if (!params) return `${definition.destination}?searchError=unsupported-location-scope`;
     return `${definition.destination}?${params.toString()}`;
   }
 
   if (input.journey === 'farm') {
-    const params = farmLocationQuery(input.selectedLocations || [], input.searchScope);
+    const params = farmLocationQuery(input.selectedLocations || []);
     if (!params) return `${definition.destination}?searchError=unsupported-location-scope`;
     params.set('listingType', input.intent === 'rent' ? 'rent' : 'sale');
     if (input.minPrice !== undefined && input.minPrice !== '') params.set('minPrice', String(input.minPrice));
@@ -214,8 +187,8 @@ export function buildConsumerJourneyUrl(input: ConsumerJourneySearchInput): stri
 
   const selectedLocations = input.selectedLocations || [];
   const params = input.journey === 'land'
-    ? landLocationQuery(selectedLocations, input.searchScope)
-    : commercialLocationQuery(selectedLocations, Boolean(input.searchScope));
+    ? canonicalPlaceQuery(selectedLocations)
+    : commercialLocationQuery(selectedLocations);
   if (!params) return `${definition.destination}?searchError=unsupported-location-scope`;
   if (input.journey === 'land') {
     if (isLandPublicClassification(input.landClassification)) params.set('classification', input.landClassification);

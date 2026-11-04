@@ -27,9 +27,7 @@ export function buildProviderBusinessStructuredData(input: {
   bio?: string | null;
   logoUrl?: string | null;
   locations?: Array<{
-    suburb?: string | null;
-    city?: string | null;
-    province?: string | null;
+    label?: string | null;
   }> | null;
   averageRating?: number | string | null;
   reviewCount?: number | null;
@@ -37,7 +35,7 @@ export function buildProviderBusinessStructuredData(input: {
   const profileUrl = `${CANONICAL_PUBLIC_ORIGIN}/services/provider/${input.slug}`;
   const description = String(input.headline || input.bio || '').trim();
   const areaServed = (input.locations || [])
-    .map(location => [location.suburb, location.city, location.province].filter(Boolean).join(', '))
+    .map(location => String(location.label || '').trim())
     .filter(Boolean);
   const rating = Number(input.averageRating);
   const reviewCount = Number(input.reviewCount);
@@ -73,9 +71,7 @@ export function buildProviderServiceStructuredData(input: {
   bio?: string | null;
   logoUrl?: string | null;
   locations?: Array<{
-    suburb?: string | null;
-    city?: string | null;
-    province?: string | null;
+    label?: string | null;
   }> | null;
   averageRating?: number | string | null;
   reviewCount?: number | null;
@@ -118,7 +114,7 @@ export function buildProviderServiceStructuredData(input: {
   if (input.service.categoryLabel) data.serviceType = input.service.categoryLabel;
 
   const areaServed = (input.locations || [])
-    .map(location => [location.suburb, location.city, location.province].filter(Boolean).join(', '))
+    .map(location => String(location.label || '').trim())
     .filter(Boolean);
   if (areaServed.length > 0) data.areaServed = areaServed;
 

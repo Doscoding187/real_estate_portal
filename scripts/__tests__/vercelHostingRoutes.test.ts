@@ -13,32 +13,34 @@ async function loadVercelConfig(env: Record<string, string | undefined>) {
 }
 
 describe('hosting route contract', () => {
-  it('serves an explicit document for every pilot guide route', async () => {
+  it('serves the national entry document and routes canonical Place paths through the app', async () => {
     const config = await loadVercelConfig({
       VERCEL_ENV: 'production',
       VITE_DEPLOY_ENV: 'production',
     });
 
-    for (const path of ['gauteng', 'gauteng/johannesburg', 'gauteng/johannesburg/sandton']) {
-      const route = config.routes.find(candidate => candidate.src === `/${path}/?`);
-      expect(route, `expected an explicit route for /${path}`).toBeDefined();
-      expect(route!.dest).toBe(`/${path}/index.html`);
+    expect(config.routes.find(route => route.src === '/south-africa/?')).toMatchObject({
+      dest: '/south-africa/index.html',
+    });
+    expect(config.routes.at(-1)).toMatchObject({ src: '/(.*)', dest: '/index.html' });
+    for (const path of ['/gauteng', '/gauteng/johannesburg', '/gauteng/johannesburg/sandton']) {
+      expect(config.routes.some(route => route.src === `${path}/?`)).toBe(false);
     }
   });
 
-  it('keeps the generic application shell as the last resort', async () => {
+  it('does not keep static province, city or suburb guide documents', async () => {
     const config = await loadVercelConfig({
       VERCEL_ENV: 'production',
       VITE_DEPLOY_ENV: 'production',
     });
 
-    const shellIndex = config.routes.findIndex(route => route.dest === '/index.html');
-    expect(shellIndex).toBeGreaterThan(-1);
-    for (const path of ['gauteng', 'gauteng/johannesburg', 'gauteng/johannesburg/sandton']) {
-      const guideIndex = config.routes.findIndex(route => route.src === `/${path}/?`);
-      expect(guideIndex).toBeGreaterThan(-1);
-      expect(guideIndex).toBeLessThan(shellIndex);
-    }
+    const explicitGuideDocuments = config.routes.filter(route =>
+      /^\/[^/]+\/index\.html$/.test(route.dest),
+    );
+    expect(explicitGuideDocuments).toEqual([
+      expect.objectContaining({ src: '/south-africa/?', dest: '/south-africa/index.html' }),
+    ]);
+    expect(config.routes.at(-1)).toMatchObject({ src: '/(.*)', dest: '/index.html' });
   });
 
   it('proxies the public sitemap index and the guide sitemap to the production API', async () => {

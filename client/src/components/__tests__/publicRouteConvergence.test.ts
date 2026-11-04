@@ -20,12 +20,12 @@ describe('public route convergence', () => {
     expect(getPublicHeroJourney('developments').destination).toBe('/new-developments');
   });
 
-  it('keeps legacy development links compatible without discarding their query string', () => {
+  it('does not register a public legacy development search route', () => {
     const app = readRepoFile('client/src/App.tsx');
 
-    expect(app).toContain('window.location.replace(`/new-developments${window.location.search}`)');
+    expect(app).not.toContain('<Route path="/developments"');
+    expect(app).toContain('<Route path="/new-developments" component={DevelopmentsDemo} />');
   });
-
   it('hands the stale public activation URL to preparation rather than a false live workspace', () => {
     const app = readRepoFile('client/src/App.tsx');
 
@@ -33,21 +33,18 @@ describe('public route convergence', () => {
     expect(app).not.toContain('<ActivationGate />');
   });
 
-  it('routes legacy development authoring through the protected canonical workspace', () => {
+  it('removes obsolete development URL aliases and keeps authoring in the developer workspace', () => {
     const app = readRepoFile('client/src/App.tsx');
+    const developerRoutes = readRepoFile('client/src/pages/DeveloperRoutes.tsx');
 
-    expect(app).toContain('function LegacyDeveloperAuthoringRedirect() {');
-    expect(app).toContain('return <Redirect to={`/developer/create-development${query}`} />;');
-    expect(app).toContain(
-      '<Route path="/developments/create" component={LegacyDeveloperAuthoringRedirect} />',
+    expect(app).not.toContain('window.location.replace(`/new-developments${window.location.search}`)');
+    expect(app).not.toContain('function LegacyDeveloperAuthoringRedirect() {');
+    expect(app).not.toContain('<Route path="/developments/create"');
+    expect(app).not.toContain('<Route path="/development-wizard"');
+    expect(app).toContain('<Route path="/developer/:rest*" component={DeveloperRouteBoundary} />');
+    expect(developerRoutes).toContain(
+      '<Route path="/developer/create-development" component={CreateDevelopment} />',
     );
-    expect(app).toContain(
-      '<Route path="/development-wizard" component={LegacyDeveloperAuthoringRedirect} />',
-    );
-    expect(app).not.toContain(
-      '<Route path="/developments/create" component={CreateDevelopment} />',
-    );
-    expect(app).not.toContain('<Route path="/development-wizard" component={CreateDevelopment} />');
   });
 
   it('uses the canonical Land route for the Plots and Land journey', () => {
@@ -56,7 +53,6 @@ describe('public route convergence', () => {
 
   it('uses the canonical developments root on corrected public discovery surfaces', () => {
     const files = [
-      'client/src/sections/home/HomeTrendingSection.tsx',
       'client/src/components/Footer.tsx',
     ];
 

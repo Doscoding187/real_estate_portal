@@ -1,6 +1,6 @@
 # Property Listify Services V3 Growth Contract
 
-**Status:** `SERVICES V3 — APPROVED, DELTA-1 IN DELIVERY`
+**Status:** `SERVICES V3 — APPROVED; DELTA-1 APPROVED, NOT YET ON MAIN`
 
 Approved by Edward on 2026-10-28 with five clarifications recorded here as
 founder decisions. Approval activated the §3 decision register; the
@@ -23,8 +23,11 @@ implementation does not return for them.
 **Basis:** `services-v3-growth-journey-gap-assessment-2026-10-28.md` (§3 gaps,
 §4 deltas, §5 priorities, §6 guardrails, §7 open decisions), verified against
 the working tree at `feat/services-lead-workspace-20261028` / `54165677e`.
-Disposition history lives in `services-engine-state-register.md`, which remains
-the standing state authority for the Services vertical.
+The shipped-state claims in this contract were reconciled against `main` at
+`dd5e11114` on 2026-11-03, including the retired localized route (#693) and
+SEO infrastructure now on main (#700). Disposition history lives in
+`services-engine-state-register.md`, which remains the standing state authority
+for the Services vertical.
 
 ## 1. Why V3 exists
 
@@ -63,10 +66,10 @@ register; deltas are the V3 investments.
 
 | Stage                    | What shipped today                                                                                                                | V3 deltas                                             |
 | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| 1 — Get discovered       | Six public surfaces, truthful exact-matching taxonomy, sitemap child + JSON-LD + slug canonicalization (DELTA-4)                  | DELTA-10 at scale; DELTA-11 later                     |
-| 2 — Build a brand        | Profile with brand plate, gallery, services, coverage, biography; verified reviews; measured response trust fact (DELTA-3)        | DELTA-1 web presence; DELTA-5/6 evidence-gated schema |
+| 1 — Get discovered       | Home, category, provider profiles, and five topic pages; #700 shipped sitemap, JSON-LD, and category slug canonicalization; #693 retired localized route | DELTA-10 at scale; DELTA-11 later                     |
+| 2 — Build a brand        | Profile with brand plate, gallery, services, coverage, biography, and verified reviews; DELTA-3 response measurement is pending in #701 | DELTA-1 web presence; DELTA-5/6 evidence-gated schema |
 | 3 — Convert interest     | One attributable enquiry per provider with property/listing/development context; honest filters                                   | DELTA-2 campaign capture                              |
-| 4 — Work the opportunity | Lead lifecycle with mandatory-note status events, CAS custody, filtered workspace, request mix, measured first response (DELTA-7) | DELTA-8 reminders/alerts (fresh domain)               |
+| 4 — Work the opportunity | Lead lifecycle with status events, CAS custody, and a gated provider workspace; DELTA-7 workspace upgrades and DELTA-3 response measurement are not yet on main | DELTA-3 (#701); DELTA-7 workspace upgrades; DELTA-8 reminders/alerts |
 | 5 — Retain or hand over  | Platform custody of the lead record through publication withdrawal                                                                | DELTA-9 export/handover                               |
 
 **The consumer journey is unchanged as a matter of authority.** Discover →
@@ -145,20 +148,21 @@ campaign URLs enable service-specific marketing under these contract clauses:
 
 ### 3.4 Trust ladder and growth measurement
 
-**Decision (clar. — trust).** Trust claims remain "computed truth only", now
-with two live rungs: verified-request ratings (V2 §3.3, in force) and measured
-first response (DELTA-3, shipped — median only from `service_lead_events`,
-sample gated at >= 3 measured requests). Neither rung may be fabricated, and
-the ladder does not gain new rungs — no years in business, insurance badges, or
-match scores — without a new contract clause that states its evidence basis.
+**Decision (clar. — trust).** Trust claims remain "computed truth only".
+Verified-request ratings (V2 §3.3) are live. DELTA-3 first-response measurement
+is approved but is still in open PR #701, not shipped on main; if delivered, it
+must use the median from `service_lead_events` and require at least three
+measured requests. Neither live nor future rung may be fabricated, and the
+ladder does not gain years-in-business claims, insurance badges, or match
+scores without a new contract clause that states the evidence basis.
 
 **Decision (clar. — measurement).** Growth is measured, and the product must
 help the business understand the journey from discovery through enquiry,
 response, and recorded outcome — a practical baseline of page visits, enquiry
 submissions, response times, and recorded outcomes. Page-visit and discovery
 analytics may need their own event vocabulary and slice; until then existing
-attribution (`bySource`, context capture, `service_lead_events`) and the DELTA-3
-response measurement are the baseline. No invented trust scores and no claim
+attribution (`bySource`, context capture) is the baseline. DELTA-3 response
+measurement joins that baseline only after it lands. No invented trust scores and no claim
 that every enquiry is a qualified lead, and no promise of guaranteed leads or
 business results.
 
@@ -185,10 +189,10 @@ owner, channel, and delivery contract.
 
 ### 3.7 Hygiene disposition
 
-**Decision (recorded, executed): the client hygiene sweep folded into
-DELTA-7**, which shipped in `feat/services-lead-workspace-20261028` together
-with the dead `ProProfilePage` loose-end resolution (§4.2 of the register).
-No separate hygiene slice is pending.
+**Decision (recorded): the client hygiene sweep is folded into DELTA-7.** Its
+implementation remains outside current main; the branch
+`feat/services-lead-workspace-20261028` is not an integrated shipped-state
+source. The hygiene work is not a separate shipped slice.
 
 ## 4. Scope of this contract
 
@@ -196,11 +200,13 @@ No separate hygiene slice is pending.
 
 The register `services-engine-state-register.md` is the authoritative shipped
 state, including: the directory surfaces and publication chain (V1), the V2
-MVP surfaces, verified-request reviews, sitemap/JSON-LD/slug infrastructure
-(DELTA-4), measured response performance (DELTA-3), and the filtered lead
-workspace (DELTA-7). This contract adds no authority that contradicts it.
+MVP surfaces, verified-request reviews, sitemap/JSON-LD/category-slug
+infrastructure (DELTA-4), and the gated provider workspace. DELTA-7 workspace
+upgrades and DELTA-3 response measurement are not yet shipped on main; DELTA-3
+is tracked in open PR #701. This contract adds no authority that contradicts
+the register.
 
-### 4.2 Approved next build — DELTA-1 (in delivery)
+### 4.2 Approved next build — DELTA-1 (not yet on main)
 
 | #    | Requirement                                                                                                                     | Notes                                                                          |
 | ---- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
@@ -231,7 +237,7 @@ they are not prerequisites for DELTA-1 and must not hold launch momentum.
 | #   | Decision                                                              | State                                                                                  |
 | --- | --------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
 | A   | Approve this contract as the Services V3 direction (activates §3)     | **Approved** with the five clarifications incorporated (§3.2, §3.3, §3.6, §3.4, §4.2)  |
-| B   | Confirm DELTA-1 as the next build                                     | **Approved** — DELTA-1 in delivery (P1-1..6)                                           |
+| B   | Confirm DELTA-1 as the next build                                     | **Approved** — DELTA-1 is not yet on main (P1-1..6)                                    |
 | C   | DELTA-8 before DELTA-9                                                | **Retained** (§3.6); DELTA-9 requirements must not be deferred indefinitely            |
 | D   | P0 ordering and hygiene-sweep disposition (gap assessment §7.2, §7.4) | **Recorded as complete**, subject to existing implementation evidence and test results |
 
@@ -258,7 +264,7 @@ they are not prerequisites for DELTA-1 and must not hold launch momentum.
 
 ## 6. Provider web presence specification
 
-**Status:** specification for DELTA-1 (approved build, in delivery) plus
+**Status:** specification for DELTA-1 (approved build, not yet on main) plus
 evidence-gated depth. This section restates V2 §6 under the §3.1 vocabulary
 mapping; the capability obligations of V2 §6.1 are preserved verbatim in
 meaning.
@@ -275,13 +281,13 @@ exactly one enquiry action routed to the existing request authority.
 | ----------------- | --------------------------------------------- | -------------------------------------------------------------------- | --------------------------------------------------- |
 | Identity and hero | Profile page                                  | `partners`, `service_provider_profiles`                              | None                                                |
 | Service set       | Profile + **per-service detail pages (P1-1)** | `service_provider_services`                                          | None (canonical routing only)                       |
-| Coverage          | Profile + localized pages                     | `service_provider_locations`                                         | None                                                |
+| Coverage          | Provider profile; no localized directory route | `service_provider_locations.canonical_place_id`; labels from Place Authority | Exact canonical Place ID matching; labels are display-only; no province/city/suburb text matching |
 | Credentials       | Profile                                       | `service_provider_profiles`                                          | None                                                |
-| Trust             | Profile trust facts                           | Recomputed review aggregates (V2 §3.3) + measured response (DELTA-3) | None                                                |
+| Trust             | Profile trust facts                           | Recomputed review aggregates (V2 §3.3); response measurement is pending in #701 | DELTA-3 after it lands                              |
 | Imagery           | Profile gallery                               | Provider-supplied metadata URLs + `partners.logoUrl`                 | DELTA-5 when evidenced                              |
 | Case studies      | Per-service pages, depth content              | None                                                                 | DELTA-6 when evidenced                              |
 | Enquiry           | Profile and per-service pages                 | `createLeadFromJourney`                                              | None                                                |
-| SEO               | All presence pages                            | DELTA-4 infrastructure                                               | Per-service canonical paths + sitemap participation |
+| SEO               | Current category and provider pages; localized route retired | DELTA-4 sitemap, JSON-LD, and slug infrastructure (#700) | Per-service canonical paths + sitemap participation |
 
 ### 6.2 What it must not become
 

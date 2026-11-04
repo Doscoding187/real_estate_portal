@@ -1,23 +1,20 @@
-import { parseCanonicalLocationId, type CanonicalLocationLevel } from './locationAuthority';
+import { isCanonicalPlaceId } from './placeAuthority';
 
 export const SHARED_LIVING_SEARCH_PATH = '/shared-living';
 export const SHARED_LIVING_LOCATION_SELECTION_MAX = 5;
 
 export interface SharedLivingSearchGeographyInput {
-  locationId?: string | null;
-  locationIds?: readonly string[] | null;
-  searchAreaId?: string | null;
+  canonicalPlaceId?: string | null;
+  canonicalPlaceIds?: readonly string[] | null;
 }
 
 export type SharedLivingSearchGeography =
   | { status: 'none' }
   | {
       status: 'canonical';
-      level: CanonicalLocationLevel;
-      locationIds: string[];
+      canonicalPlaceIds: string[];
     }
-  | { status: 'invalid'; message: string }
-  | { status: 'unsupported_search_area'; message: string };
+  | { status: 'invalid'; message: string };
 
 function normalizedValues(values: readonly string[] | null | undefined): string[] {
   return (values || []).map(value => String(value).trim()).filter(Boolean);
@@ -32,25 +29,14 @@ function normalizedValues(values: readonly string[] | null | undefined): string[
 export function resolveSharedLivingSearchGeography(
   input: SharedLivingSearchGeographyInput,
 ): SharedLivingSearchGeography {
-  const single = String(input.locationId || '').trim();
-  const multiple = normalizedValues(input.locationIds);
-  const searchAreaId = String(input.searchAreaId || '').trim();
-
-  const authorityCount =
-    Number(Boolean(single)) + Number(multiple.length > 0) + Number(Boolean(searchAreaId));
+  const single = String(input.canonicalPlaceId || '').trim();
+  const multiple = normalizedValues(input.canonicalPlaceIds);
+  const authorityCount = Number(Boolean(single)) + Number(multiple.length > 0);
   if (authorityCount > 1) {
     return {
       status: 'invalid',
       message:
-        'Choose one Shared Living location authority: one canonical location, sibling locations, or a supported Search Area.',
-    };
-  }
-
-  if (searchAreaId) {
-    return {
-      status: 'unsupported_search_area',
-      message:
-        'Search Areas are not available for Shared Living yet. Choose one canonical city, suburb, or province instead.',
+        'Choose one Shared Living geography authority: one canonical Place or sibling Places.',
     };
   }
 
@@ -61,7 +47,7 @@ export function resolveSharedLivingSearchGeography(
     return {
       status: 'invalid',
       message:
-        'Use locationId for one Shared Living location or select at least two sibling locations.',
+        'Use canonicalPlaceId for one Shared Living Place or select at least two sibling Places.',
     };
   }
   if (rawIds.length > SHARED_LIVING_LOCATION_SELECTION_MAX) {
@@ -71,35 +57,20 @@ export function resolveSharedLivingSearchGeography(
     };
   }
 
-  const parsed = rawIds.map(parseCanonicalLocationId);
-  if (parsed.some(value => value === null)) {
+  if (rawIds.some(value => !isCanonicalPlaceId(value))) {
     return {
       status: 'invalid',
-      message: 'Every Shared Living location must use a canonical Property Listify identity.',
+      message: 'Every Shared Living location must use an admitted canonical Place identity.',
     };
   }
 
-  const canonicalIds = parsed.map(value => `${value!.level}:${value!.id}`);
-  if (new Set(canonicalIds).size !== canonicalIds.length) {
+  if (new Set(rawIds).size !== rawIds.length) {
     return {
       status: 'invalid',
-      message: 'A Shared Living location cannot be selected more than once.',
+      message: 'A Shared Living Place cannot be selected more than once.',
     };
   }
-
-  const levels = new Set(parsed.map(value => value!.level));
-  if (levels.size !== 1) {
-    return {
-      status: 'invalid',
-      message: 'Sibling Shared Living locations must use the same geographic level.',
-    };
-  }
-
-  return {
-    status: 'canonical',
-    level: parsed[0]!.level,
-    locationIds: canonicalIds,
-  };
+  return { status: 'canonical', canonicalPlaceIds: rawIds };
 }
 
 const MAX_RETURN_URL_LENGTH = 2048;

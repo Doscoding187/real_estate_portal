@@ -75,7 +75,7 @@ export const partnerAnalyticsService = {
       const startDate = toISODate(start);
       const endDate = toISODate(end);
 
-      // Grouping key depending on period (MySQL/TiDB)
+      // Grouping key depends on the requested period (MySQL).
       const bucket =
         period === 'monthly'
           ? sql`DATE_FORMAT(ec.created_at, '%Y-%m-01')`

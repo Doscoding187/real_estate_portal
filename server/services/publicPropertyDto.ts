@@ -37,6 +37,7 @@ const PUBLIC_PROPERTY_FIELDS = [
   'publicLatitude',
   'publicLongitude',
   'publicLocationPrecision',
+  'canonicalPlaceId',
   'amenities',
   'features',
   'yearBuilt',
@@ -284,6 +285,7 @@ export interface PublicPropertyDetailDto {
   property: PublicRecord & {
     id: number;
     title: string;
+    canonicalPlaceId?: string | null;
     publicIdentity: PublicPropertySupplyIdentity;
     images: PublicPropertyImageDto[];
     media: PublicPropertyMediaDto[];

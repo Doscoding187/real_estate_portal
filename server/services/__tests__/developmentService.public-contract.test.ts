@@ -14,6 +14,7 @@ vi.mock('../../db-connection', () => ({
 }));
 
 import {
+  developmentService,
   getPublicDevelopment,
   getPublicDevelopmentBySlug,
   searchPublicDevelopments,
@@ -55,6 +56,23 @@ describe('developmentService public development contract', () => {
     mockGetDb.mockResolvedValue({ select: mockSelect });
   });
 
+  it('rejects retired text geography on Development create payloads', async () => {
+    for (const geography of [{ city: 'Cape Town' }, { location: { province: 'Western Cape' } }]) {
+      await expect(
+        developmentService.createDevelopment(5, {
+          name: 'Text-only geography must fail',
+          developmentType: 'residential',
+          ...geography,
+        } as Parameters<typeof developmentService.createDevelopment>[1]),
+      ).rejects.toMatchObject({
+        code: 'BAD_REQUEST',
+        message:
+          'Development geography must be assigned through the reviewed canonical Place workflow.',
+      });
+    }
+    expect(mockGetDb).not.toHaveBeenCalled();
+  });
+
   it('requires slug lookups to be published and approved before public exposure', async () => {
     const result = await getPublicDevelopmentBySlug('demo-development');
 
@@ -91,19 +109,43 @@ describe('developmentService public development contract', () => {
     expect(parts.params).toEqual(expect.arrayContaining([42, 1, 'approved']));
   });
 
-  it('uses the complete public catalogue authority for autocomplete and returns the canonical route', async () => {
-    mockLimit.mockResolvedValue([
-      {
-        id: 42,
-        name: 'Harbour Heights',
-        slug: 'harbour-heights',
-        city: 'Cape Town',
-        province: 'Western Cape',
-        cataloguePublisherId: 7,
-        developmentType: 'residential',
-        status: 'selling',
-      },
-    ]);
+  it('uses the public catalogue and exact Place projection for autocomplete', async () => {
+    const queryResults: unknown[][] = [
+      [
+        {
+          id: 42,
+          name: 'Harbour Heights',
+          slug: 'harbour-heights',
+          cataloguePublisherId: 7,
+          developmentType: 'residential',
+          status: 'selling',
+        },
+      ],
+      [],
+    ];
+    const queryWhereClauses: unknown[][] = [];
+    mockSelect.mockImplementation(() => {
+      const result = queryResults.shift() ?? [];
+      const resultPromise = Promise.resolve(result);
+      type MockQuery = PromiseLike<unknown[]> & {
+        from(...args: unknown[]): MockQuery;
+        leftJoin(...args: unknown[]): MockQuery;
+        where(...args: unknown[]): MockQuery;
+        limit(...args: unknown[]): MockQuery;
+      };
+      let query: MockQuery;
+      query = {
+        from: () => query,
+        leftJoin: () => query,
+        where: (...args: unknown[]) => {
+          queryWhereClauses.push([args[0]]);
+          return query;
+        },
+        limit: () => query,
+        then: resultPromise.then.bind(resultPromise),
+      };
+      return query;
+    });
 
     const result = await searchPublicDevelopments({
       query: 'Harbour',
@@ -116,10 +158,14 @@ describe('developmentService public development contract', () => {
         id: 42,
         slug: 'harbour-heights',
         canonicalRoute: '/development/harbour-heights',
+        canonicalPlaceId: null,
+        locationLabels: [],
       }),
     ]);
+    expect(result[0]).not.toHaveProperty('city');
+    expect(result[0]).not.toHaveProperty('province');
 
-    const whereClause = mockWhere.mock.calls[0]?.[0];
+    const whereClause = queryWhereClauses[0]?.[0];
     const parts = collectSqlParts(whereClause);
     expect(parts.columns).toEqual(
       expect.arrayContaining([
@@ -133,8 +179,6 @@ describe('developmentService public development contract', () => {
         'is_active',
       ]),
     );
-    expect(parts.params).toEqual(
-      expect.arrayContaining([7, 1, 'approved']),
-    );
+    expect(parts.params).toEqual(expect.arrayContaining([7, 1, 'approved']));
   });
 });

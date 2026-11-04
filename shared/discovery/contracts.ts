@@ -4,9 +4,6 @@ export type DiscoveryFeedMode = (typeof DISCOVERY_FEED_MODES)[number];
 export const DISCOVERY_INTENTS = ['buy', 'rent', 'invest', 'explore'] as const;
 export type DiscoveryIntent = (typeof DISCOVERY_INTENTS)[number];
 
-export const DISCOVERY_LOCATION_TYPES = ['province', 'city', 'suburb'] as const;
-export type DiscoveryLocationType = (typeof DISCOVERY_LOCATION_TYPES)[number];
-
 export const DISCOVERY_CATEGORIES = [
   'property',
   'development',
@@ -41,11 +38,6 @@ export const DISCOVERY_ENGAGEMENT_ACTIONS = [
 ] as const;
 export type DiscoveryEngagementAction = (typeof DISCOVERY_ENGAGEMENT_ACTIONS)[number];
 
-export interface DiscoveryLocationFilter {
-  type: DiscoveryLocationType;
-  id: number;
-}
-
 export interface DiscoveryPriceRange {
   min?: number;
   max?: number;
@@ -54,7 +46,8 @@ export interface DiscoveryPriceRange {
 export interface DiscoveryQuery {
   mode: DiscoveryFeedMode;
   intent?: DiscoveryIntent;
-  location?: DiscoveryLocationFilter;
+  /** One exact admitted Place identity. Labels and legacy handles never assign area. */
+  canonicalPlaceId?: string;
   category?: DiscoveryCategory;
   priceRange?: DiscoveryPriceRange;
   creatorActorId?: number;
@@ -82,6 +75,7 @@ export interface DiscoveryItemEngagement {
 export interface DiscoveryFeedItem {
   id: string;
   type: DiscoveryItemType;
+  canonicalPlaceId?: string;
   title?: string;
   description?: string;
   media: DiscoveryMediaAsset;

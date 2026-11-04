@@ -16,10 +16,9 @@ import { SkipToContent } from './components/ui/SkipToContent';
 import '@/styles/keyboard-navigation.css';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ADMIN_DASHBOARD_ROUTES } from '@/pages/admin/adminRouteRegistry';
-import { isCanonicalProvinceSlug } from './lib/locationDiscovery';
-import { buildPropertiesCompatibilityRedirect } from './lib/searchNavigation';
 import { LandPublicLayout } from './components/land/LandPublicLayout';
 import { DistributionPartnerIdentityGate } from '@/components/referral/DistributionPartnerIdentityGate';
+import { isLandPublicDiscoveryAvailable, isLandVerticalAvailable } from '@shared/landLaunchPolicy';
 
 // Eager Imports (Critical Path)
 import Home from './pages/Home';
@@ -36,8 +35,7 @@ const Agents = lazy(() => import('./pages/Agents'));
 const AgentPublicProfile = lazy(() => import('./pages/AgentPublicProfile'));
 const AgentMicrosite = lazy(() => import('./pages/AgentMicrosite'));
 const CountryDiscoveryPage = lazy(() => import('./pages/CountryDiscoveryPage'));
-const ProvincePage = lazy(() => import('./pages/ProvincePage'));
-const CityPage = lazy(() => import('./pages/CityPage'));
+const CanonicalPlacePage = lazy(() => import('./pages/CanonicalPlacePage'));
 const SmartDashboardRedirect = lazy(() => import('./components/SmartDashboardRedirect'));
 const Login = lazy(() => import('./pages/Login'));
 
@@ -56,6 +54,8 @@ const AgentSettings = lazy(() => import('./pages/AgentSettings'));
 const AgentSetup = lazy(() => import('./pages/AgentSetup'));
 const AgentPackageSelection = lazy(() => import('./pages/agent/AgentPackageSelection'));
 const LandDeferred = lazy(() => import('./pages/LandDeferred'));
+const LandAuthoringWorkspace = lazy(() => import('./pages/agent/LandAuthoringWorkspace'));
+const LandReviewWorkspace = lazy(() => import('./pages/admin/LandReviewWorkspace'));
 const PlotsAndLand = lazy(() => import('./pages/PlotsAndLand'));
 const LandDetail = lazy(() => import('./pages/LandDetail'));
 const AcceptInvitation = lazy(() => import('./pages/AcceptInvitation'));
@@ -71,9 +71,6 @@ const ActivationComplete = lazy(() => import('./pages/ActivationComplete'));
 const SavedSearchManagePage = lazy(() => import('./pages/SavedSearchManagePage'));
 const ServicesHomePage = lazy(() => import('./pages/services/ServicesHomePage'));
 const ServicesCategoryPage = lazy(() => import('./pages/services/ServicesCategoryPage'));
-const ServicesLocalizedCategoryPage = lazy(
-  () => import('./pages/services/ServicesLocalizedCategoryPage'),
-);
 const ServicesRequestPage = lazy(() => import('./pages/services/ServicesRequestPage'));
 const ServicesResultsPage = lazy(() => import('./pages/services/ServicesResultsPage'));
 const ServiceProviderProfilePage = lazy(
@@ -196,12 +193,6 @@ const DistributionReferralApplyPage = lazy(
 
 // Import SearchResults page for SEO-friendly URLs
 const SearchResults = lazy(() => import('./pages/SearchResults'));
-const SuburbGuidePage = lazy(() => import('./pages/SuburbGuidePage'));
-
-function LegacyDeveloperAuthoringRedirect() {
-  const query = typeof window === 'undefined' ? '' : window.location.search;
-  return <Redirect to={`/developer/create-development${query}`} />;
-}
 
 function Router() {
   // Auto-migrate guest data on login
@@ -255,11 +246,10 @@ function Router() {
           <Route path="/developer/:slug" component={DeveloperPublisherPage} />
 
           {/* ============================================================== */}
-          {/* 1B. PUBLIC AND LEGACY PRODUCT ROUTES                           */}
+          {/* 1B. PUBLIC PRODUCT ROUTES                                      */}
           {/* ============================================================== */}
 
-          {/* IMPORTANT: Admin Review must be BEFORE legacy wildcards */}
-          {/* Otherwise /:action/:province/:locationId matches /admin/review/360002 */}
+          {/* Admin review must precede the dynamic public Place route patterns. */}
           <Route path="/admin/review/:id">
             <RequireRole role="super_admin" unauthenticatedAuthEntry="signin">
               <AdminPropertyReview />
@@ -267,7 +257,7 @@ function Router() {
           </Route>
           <Route path="/admin/land-review">
             <RequireRole role="super_admin">
-              <LandDeferred audience="reviewer" />
+              {isLandVerticalAvailable() ? <LandReviewWorkspace /> : <LandDeferred audience="reviewer" />}
             </RequireRole>
           </Route>
           <Route path="/admin/shared-living-review">
@@ -276,15 +266,6 @@ function Router() {
             </RequireRole>
           </Route>
 
-          {/* Compatibility edge: preserve inbound query state, then hand off
-              immediately to the canonical Buy transaction root. */}
-          <Route
-            path="/properties"
-            component={() => {
-              window.location.replace(buildPropertiesCompatibilityRedirect(window.location.search));
-              return null;
-            }}
-          />
           <Route path="/property/:id" component={PropertyDetail} />
           <Route path="/favorites" component={Favorites} />
           <Route path="/agents" component={Agents} />
@@ -300,7 +281,7 @@ function Router() {
           </Route>
           <Route path="/agent/land/create">
             <RequireRole role="agent" unauthenticatedAuthEntry="signin">
-              <LandDeferred audience="author" />
+              {isLandVerticalAvailable() ? <LandAuthoringWorkspace /> : <LandDeferred audience="author" />}
             </RequireRole>
           </Route>
           <Route path="/agent/commercial/create">
@@ -410,11 +391,6 @@ function Router() {
             </RequireRole>
           </Route>
           <Route path="/listing-template" component={ListingTemplate} />
-          {/* Preserve legacy authoring URLs, but route them through the canonical
-              authenticated Developer boundary rather than mounting the wizard publicly. */}
-          <Route path="/developments/create" component={LegacyDeveloperAuthoringRedirect} />
-          <Route path="/development-wizard" component={LegacyDeveloperAuthoringRedirect} />
-
           {/* Canonical Developments Root */}
           <Route path="/new-developments" component={DevelopmentsDemo} />
           <Route path="/commercial" component={CommercialOffice} />
@@ -427,14 +403,6 @@ function Router() {
           <Route path="/shared-living/thread/:token" component={SharedLivingThread} />
           <Route path="/shared-living/:slug" component={SharedLivingDetail} />
           <Route path="/commercial/:slug" component={CommercialOfficeDetail} />
-          {/* Redirect Legacy /developments to /new-developments */}
-          <Route
-            path="/developments"
-            component={() => {
-              window.location.replace(`/new-developments${window.location.search}`);
-              return null;
-            }}
-          />
           <Route path="/development/:slug/unit/:unitId" component={DevelopmentUnitDetailPage} />
           <Route path="/development/:slug/qualification" component={DevelopmentQualificationPage} />
           <Route path="/development/:slug" component={DevelopmentDetail} />
@@ -507,10 +475,6 @@ function Router() {
             component={ProviderServiceDetailPage}
           />
           <Route path="/services/reviews/:providerId" component={ServiceProviderReviewsPage} />
-          <Route
-            path="/services/:category/:city/:province"
-            component={ServicesLocalizedCategoryPage}
-          />
           <Route path="/services/:category" component={ServicesCategoryPage} />
           <Route path="/services" component={ServicesHomePage} />
 
@@ -746,14 +710,14 @@ function Router() {
             }}
           />
           <Route path="/plots-and-land">
-            <LandPublicLayout>
-              <PlotsAndLand />
-            </LandPublicLayout>
+            {isLandPublicDiscoveryAvailable() ? (
+              <LandPublicLayout><PlotsAndLand /></LandPublicLayout>
+            ) : <LandDeferred audience="public" />}
           </Route>
           <Route path="/land/:slug">
-            <LandPublicLayout>
-              <LandDetail />
-            </LandPublicLayout>
+            {isLandPublicDiscoveryAvailable() ? (
+              <LandPublicLayout><LandDetail /></LandPublicLayout>
+            ) : <LandDeferred audience="public" />}
           </Route>
           <Route path="/property-to-rent" component={SearchResults} />
           <Route path="/farms-and-smallholdings" component={FarmsAndSmallholdings} />
@@ -765,37 +729,10 @@ function Router() {
               by it. */}
           <Route path="/south-africa" component={CountryDiscoveryPage} />
 
-          {/* ============================================================== */}
-          {/* 3. VALIDATED NEUTRAL GEOGRAPHY AUTHORITY                       */}
-          {/* Static/product/detail routes and transaction roots are above.  */}
-          {/* ============================================================== */}
-          <Route path="/:province/:city/:suburb">
-            {params =>
-              isCanonicalProvinceSlug(params.province) ? (
-                <SuburbGuidePage params={params as any} />
-              ) : (
-                <NotFound />
-              )
-            }
-          </Route>
-          <Route path="/:province/:city">
-            {params =>
-              isCanonicalProvinceSlug(params.province) ? (
-                <CityPage params={params as any} />
-              ) : (
-                <NotFound />
-              )
-            }
-          </Route>
-          <Route path="/:province">
-            {params =>
-              isCanonicalProvinceSlug(params.province) ? (
-                <ProvincePage params={params as any} />
-              ) : (
-                <NotFound />
-              )
-            }
-          </Route>
+          {/* Place pages resolve exact paths from the admitted national projection. */}
+          <Route path="/:province/:context/:place" component={CanonicalPlacePage} />
+          <Route path="/:province/:place" component={CanonicalPlacePage} />
+          <Route path="/:province" component={CanonicalPlacePage} />
 
           {/* Final fallback route */}
           <Route component={NotFound} />

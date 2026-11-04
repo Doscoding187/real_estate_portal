@@ -128,27 +128,6 @@ export function getCanonicalDevelopmentLocation(payload: CanonicalRecord): Canon
       payload.address,
       payloadLocation.address,
     ),
-    city: firstDefined(
-      locationStep.city,
-      developmentData.city,
-      location.city,
-      payload.city,
-      payloadLocation.city,
-    ),
-    province: firstDefined(
-      locationStep.province,
-      developmentData.province,
-      location.province,
-      payload.province,
-      payloadLocation.province,
-    ),
-    suburb: firstDefined(
-      locationStep.suburb,
-      developmentData.suburb,
-      location.suburb,
-      payload.suburb,
-      payloadLocation.suburb,
-    ),
     postalCode: firstDefined(
       locationStep.postalCode,
       developmentData.postalCode,
@@ -420,6 +399,13 @@ export function buildCanonicalHydrationDevelopmentDataSnapshot(
 
 export function buildCanonicalDevelopmentDataSnapshot(payload: CanonicalRecord): CanonicalRecord {
   const developmentData = getCanonicalDevelopmentData(payload);
+  const {
+    city: _city,
+    province: _province,
+    suburb: _suburb,
+    locationId: _locationId,
+    ...developmentDataWithoutRetiredGeography
+  } = developmentData;
   const configuration = getCanonicalDevelopmentConfiguration(payload);
   const identity = getCanonicalDevelopmentIdentity(payload);
   const location = getCanonicalDevelopmentLocation(payload);
@@ -429,7 +415,7 @@ export function buildCanonicalDevelopmentDataSnapshot(payload: CanonicalRecord):
   const media = getCanonicalDevelopmentMedia(payload);
 
   return {
-    ...developmentData,
+    ...developmentDataWithoutRetiredGeography,
     developmentType: configuration.developmentType,
     transactionType: configuration.transactionType,
     name: identity.name,

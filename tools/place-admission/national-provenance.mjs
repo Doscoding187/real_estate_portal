@@ -20,7 +20,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
-const REGISTRY = join(ROOT, 'data/place-admission-territories.v0.1/territory-registry.v0.1.json');
+const REGISTRY = join(ROOT, 'data/place-admission-territories.v0.2/territory-registry.v0.2.json');
 
 const args = new Set(process.argv.slice(2));
 const asJson = args.has('--json');

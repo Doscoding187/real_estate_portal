@@ -152,8 +152,8 @@ pnpm db:migrate:apply -- \
   --expected-new-head=<manifest-head>
 pnpm db:schema:congruency
 
-pnpm db:reference:prepare
-pnpm db:reference:verify
+pnpm db:places:prepare-national
+pnpm db:places:verify-national
 pnpm db:scenario:prepare
 pnpm db:scenario:verify
 
@@ -174,9 +174,9 @@ service, a migrated schema, or a reachable API.
 Replay the approved adapters explicitly when deterministic evidence is needed:
 
 ```bash
-pnpm db:reference:prepare
+pnpm db:places:prepare-national
 pnpm db:scenario:prepare
-pnpm db:reference:verify
+pnpm db:places:verify-national
 pnpm db:scenario:verify
 ```
 
@@ -304,10 +304,10 @@ pnpm db:worktree:create
 pnpm db:migrate:plan -- --accepted-old-head=none --expected-new-head=<manifest-head>
 pnpm db:migrate:apply -- --accepted-old-head=none --expected-new-head=<manifest-head>
 pnpm db:schema:congruency
-pnpm db:reference:prepare
+pnpm db:places:prepare-national
 pnpm db:foundation:prepare
 pnpm db:scenario:prepare
-pnpm db:reference:verify
+pnpm db:places:verify-national
 pnpm db:foundation:verify
 pnpm db:scenario:verify
 pnpm db:readiness -- --purpose=location-discovery
@@ -322,8 +322,8 @@ Use only records provided by the approved adapter for the feature under test;
 this workflow does not create retired agency demo records or the fixed
 `listify_local` database.
 
-The supported data lanes are intentionally separate. `db:reference:*` owns
-canonical geography, `db:foundation:*` owns Launch Access products and
+The supported data lanes are intentionally separate. `db:places:*` owns
+admitted canonical Place data, `db:foundation:*` owns Launch Access products and
 entitlements, `db:listing-preview:*` owns the small listing-preview auth demo,
 `db:distribution-referrer-preview:*` owns the referrer-only login,
 `db:distribution-referrer-activity:*` owns the referrer dashboard sample
