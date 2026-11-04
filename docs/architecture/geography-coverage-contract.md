@@ -135,11 +135,16 @@ surfaces (admin coverage dashboard, research queue) expose it.
 - Google Places and any future commercial provider are **evidence and
   enrichment only**. Provider place IDs can never become public identity, and a
   provider observation must never create or promote a public geography row.
-- ODbL obligation: `osm_only_odbl_provisional` rows may be materialized in
-  disposable development/preview targets under this contract. Any staging or
-  production release of OSM-only rows requires the founder-owned production
-  ODbL database-strategy gate to be cleared first. The adapter must keep row
-  licensing classification observable so that gate is enforceable mechanically.
+- Founder decision (2026-10-20; reconfirmed 2026-11-04): the former hold on
+  staging or production release of OSM-only Place rows is lifted so the Place
+  data work can proceed. See the [founder D3 decision record](launch-readiness-and-product-convergence/64-location-model-and-licensing-decision-2026-10-20.md#founder-decision-record--d3-osmodbl-hold-lifted).
+  This is a product/release decision, not a legal conclusion. Conditions:
+  preserve a source and source URL on every Place row; keep the 720 OSM-only
+  rows identifiable for removal or replacement; show OpenStreetMap attribution
+  on public pages that use this data; and obtain legal review of ODbL
+  obligations before any public paid launch. Keep each row's licensing
+  classification observable. This decision does not itself change the
+  registered release implementation or authorize a protected database operation.
 
 **v0.5 correction:** the v0.3 text of this decision is normative but was
 unenforced. Three live runtime paths can currently write provider observations
@@ -362,7 +367,7 @@ listings, statistics or market facts associated with it is not.
 | Tier                        | Meaning                                                                                  | Runtime behavior                                             |
 | --------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
 | A — verified                | Identity, parent chain, scope, licensing all supported                                   | status `verified`; fully searchable/selectable; SEO eligible |
-| B — provisional             | Identity and parent safe enough to search; evidence provisional or OSM-only pending gate | status `provisional`; searchable/selectable; no SEO          |
+| B — provisional             | Identity and parent safe enough to search; evidence remains provisional for its recorded reason | status `provisional`; searchable/selectable; no SEO          |
 | C — candidate/alias pending | Fails identity, parent, ambiguity, or natural-key gates                                  | No runtime row; recorded in disposition + review queue       |
 | D — rejected/retired        | Duplicate, non-independent, retired, licence-blocked                                     | Never public; retained as provenance                         |
 
@@ -993,10 +998,11 @@ Commercial importance is not an evidence class.
 **Materializer.** `dataAdapters/canonicalPlaces.ts` is the smallest Database
 Authority mechanism the governed admission source now justifies. It is
 digest-aware, fail-closed, idempotent, transactional, and refuses to remap an
-existing Place identity. Two guards are specific to this authority: OSM-only
-Places may be materialized only on a disposable target until the founder ODbL
-gate clears (D3), and a stored Place whose identity-bearing values differ from
-the package aborts the load rather than being silently updated.
+existing Place identity. The former D3 staging/production hold on OSM-only
+Places was lifted by the founder decision linked above; per-row source and
+source URL, observable licensing classification, and the decision's other
+conditions remain required. A stored Place whose identity-bearing values
+differ from the package aborts the load rather than being silently updated.
 
 **Physical proof** on a newly owned disposable target, disposed afterwards: 98
 migrations applied `0000`→`0097`; physical congruency congruent with matching
@@ -1222,9 +1228,10 @@ new Place, a second geography authority or unrestricted graph expansion:
 - This projection is bounded to province Listing search. It does not set raw
   `search_scope_authorized` flags or authorize another consumer to traverse
   arbitrary relationships. Per-edge default refusal remains binding elsewhere.
-- Tier B selection stays allowed under D2. Protected source activation,
-  licensing/ODbL decisions, physical/provider capability and SEO eligibility
-  remain separate gates. Approval of this policy is not a database release.
+- Tier B selection stays allowed under D2. Preserve the D3 founder-decision
+  conditions, including legal review before any public paid launch; physical /
+  provider capability and SEO eligibility remain separate gates. Approval of
+  this policy is not a database release.
 
 The implementation must publish its projection version, accepted source pins,
 member set and refusal evidence. It must prove the Listing assignment-to-public
@@ -1236,6 +1243,12 @@ No identity allocation, artifact or earlier operational approval is amended by
 this policy revision.
 
 ## 23. Protected Place reference release candidate (2026-10-08)
+
+This is a historical candidate snapshot. Its statement that the candidate did
+not clear D3 and held OSM-only rows records the state on 2026-10-08; the later
+founder decision linked above lifted the staging/production hold. This note does
+not change the historical package, current release implementation, or protected
+release requirements.
 
 The integration candidate registers a Place-specific protected reference adapter
 on the existing Database Authority release-reference operations. It does not
