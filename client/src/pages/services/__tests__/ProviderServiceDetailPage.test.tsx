@@ -84,9 +84,8 @@ function makeProfile(overrides: Record<string, unknown> = {}) {
     locations: [
       {
         id: 1,
-        suburb: 'Rondebosch',
-        city: 'Cape Town',
-        province: 'Western Cape',
+        canonicalPlaceId: 'pl-place-01-0000000000000000000000fi',
+        label: 'Rondebosch, Cape Town, Western Cape',
         isPrimary: 1,
       },
     ],
@@ -111,7 +110,7 @@ describe('ProviderServiceDetailPage contract', () => {
     expect(screen.getByRole('heading', { level: 1, name: /plumbing/i })).toBeInTheDocument();
     expect(screen.getByText('Fix pipes and fittings.')).toBeInTheDocument();
     expect(screen.getByText(/R500 – R2000/)).toBeInTheDocument();
-    expect(screen.getByText('Rondebosch')).toBeInTheDocument();
+    expect(screen.getByText('Rondebosch, Cape Town, Western Cape')).toBeInTheDocument();
     expect(screen.getAllByText('Platform verified').length).toBeGreaterThan(0);
   });
 
