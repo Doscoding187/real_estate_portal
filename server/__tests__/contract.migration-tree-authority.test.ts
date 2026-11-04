@@ -14,6 +14,16 @@ const ROLLBACK_PROOF_PATHS = [
   'scripts/verify-prospect-journey-security.ts',
   'server/__tests__/integration.agency-deal-engine.test.ts',
 ] as const;
+const PLACE_REFERENCE_SQL_EVIDENCE = [
+  {
+    path: 'docs/operations/place-reference-bucket-digests.sql',
+    allowsSessionDigestSetting: true,
+  },
+  {
+    path: 'docs/operations/place-reference-bucket-row-drilldown.sql',
+    allowsSessionDigestSetting: false,
+  },
+] as const;
 
 const ALLOWED_CLASSIFICATIONS = new Set([
   'canonical active',
@@ -25,6 +35,7 @@ const ALLOWED_CLASSIFICATIONS = new Set([
   'approved guarded local orchestration',
   'test/diagnostic fixture',
   'documentation/example',
+  'governed read-only verification evidence',
 ]);
 
 type Classification = {
@@ -398,6 +409,48 @@ describe('migration tree authority', () => {
     expect(runner).not.toContain('_archived');
   });
 
+  it('governs Place reference SQL as read-only evidence outside migration execution', () => {
+    const manifest = readManifest();
+    const executionManifest = JSON.parse(read('server/migrations/manifest.json')) as {
+      migrations: Array<{ filename: string }>;
+    };
+    const migrationPaths = executionManifest.migrations.map(
+      entry => `server/migrations/${entry.filename}`,
+    );
+    const runner = read(CANONICAL_RUNNER);
+
+    for (const evidence of PLACE_REFERENCE_SQL_EVIDENCE) {
+      const classifications = classifiedBy(evidence.path, manifest);
+      expect(classifications, evidence.path).toHaveLength(1);
+      expect(classifications[0]).toMatchObject({
+        path: evidence.path,
+        classification: 'governed read-only verification evidence',
+      });
+      expect(classifications[0]?.allowUntrackedSql).toBeUndefined();
+      expect(migrationPaths).not.toContain(evidence.path);
+      expect(runner).not.toContain(evidence.path);
+
+      const source = read(evidence.path);
+      const withoutLineComments = source.replace(/--[^\n]*/g, '');
+      const statements = withoutLineComments
+        .split(/;\s*(?=\r?\n|$)/)
+        .map(statement => statement.trim())
+        .filter(Boolean);
+
+      expect(statements.length, evidence.path).toBeGreaterThan(0);
+      for (const statement of statements) {
+        expect(statement, evidence.path).toMatch(
+          evidence.allowsSessionDigestSetting
+            ? /^(?:SET SESSION group_concat_max_len\s*=\s*16777216|SELECT)\b/i
+            : /^SELECT\b/i,
+        );
+      }
+      expect(withoutLineComments, evidence.path).not.toMatch(
+        /\b(?:INSERT|UPDATE|DELETE|REPLACE|CREATE|ALTER|DROP|TRUNCATE|RENAME|GRANT|REVOKE|CALL|LOAD)\b/i,
+      );
+    }
+  });
+
   it('keeps generated journals and Docker local initialization outside production authority', () => {
     const manifest = readManifest();
     const journal = 'drizzle/meta/_journal.json';
@@ -581,9 +634,9 @@ describe('migration tree authority', () => {
       [...manual.retiredPaths].sort(),
     );
     expect(manual.approvedProtectedReleaseRecoveries).toEqual([]);
-    expect(
-      manual.directSchemaCandidateClasses['approved protected release recovery'],
-    ).toEqual(manual.approvedProtectedReleaseRecoveries);
+    expect(manual.directSchemaCandidateClasses['approved protected release recovery']).toEqual(
+      manual.approvedProtectedReleaseRecoveries,
+    );
 
     for (const retiredPath of manual.retiredPaths) {
       expect(paths, `Retired manual schema executor returned: ${retiredPath}`).not.toContain(

@@ -1543,8 +1543,13 @@
     },
     {
       "path": "docs/operations/place-reference-bucket-digests.sql",
-      "classification": "documentation/example",
-      "purpose": "Session-scoped digest settings and SELECT-only Place-reference checks; not an executable migration."
+      "classification": "governed read-only verification evidence",
+      "purpose": "Exact-path Place reference digest verification evidence. It changes only the current session's group_concat_max_len and runs SELECT queries; it is not migration input."
+    },
+    {
+      "path": "docs/operations/place-reference-bucket-row-drilldown.sql",
+      "classification": "governed read-only verification evidence",
+      "purpose": "Exact-path Place reference row-hash drilldown evidence. It runs SELECT queries only and is not migration input."
     },
     {
       "path": "server/migrations/0133_distribution_application_requirement_document_fk_drop.sql",
