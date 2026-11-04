@@ -45,6 +45,13 @@ describe('Canonical Place area guides', () => {
         pathContext: null,
         publicationEligible: false,
         verificationStatus: 'provisional',
+        sourceAttributions: [
+          {
+            provider: 'osm',
+            label: '© OpenStreetMap contributors',
+            url: 'https://www.openstreetmap.org/copyright',
+          },
+        ],
       },
       isLoading: false,
       error: null,
@@ -90,10 +97,7 @@ describe('Canonical Place area guides', () => {
       ).toBeVisible();
       const areaList = screen.getByRole('list');
       const links = within(areaList).getAllByRole('link');
-      expect(links.map(link => link.textContent)).toEqual([
-        'Newclare2 Land listings',
-        'Westbury1 Land listing',
-      ]);
+      expect(links.map(link => link.textContent)).toEqual(['Newclare2 Land listings', 'Westbury1 Land listing']);
       expect(links[0]).toHaveAttribute(
         'href',
         '/plots-and-land?canonicalPlaceId=pl-place-01-000000000000000000000001',
@@ -102,6 +106,9 @@ describe('Canonical Place area guides', () => {
         'href',
         '/plots-and-land?canonicalPlaceId=pl-place-01-000000000000000000000002',
       );
+      const osmAttribution = screen.getByRole('link', { name: '© OpenStreetMap contributors' });
+      expect(osmAttribution).toHaveAttribute('href', 'https://www.openstreetmap.org/copyright');
+      expect(osmAttribution).toBeVisible();
     });
 
     it('shows a clear empty state and Land-search next step when the broad place has no inventory', () => {
