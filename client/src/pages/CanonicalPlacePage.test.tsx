@@ -38,6 +38,13 @@ describe('Canonical Place Land area guide', () => {
         pathContext: null,
         publicationEligible: false,
         verificationStatus: 'provisional',
+        sourceAttributions: [
+          {
+            provider: 'osm',
+            label: '© OpenStreetMap contributors',
+            url: 'https://www.openstreetmap.org/copyright',
+          },
+        ],
       },
       isLoading: false,
       error: null,
@@ -86,6 +93,9 @@ describe('Canonical Place Land area guide', () => {
       'href',
       '/plots-and-land?canonicalPlaceId=pl-place-01-000000000000000000000002',
     );
+    const osmAttribution = screen.getByRole('link', { name: '© OpenStreetMap contributors' });
+    expect(osmAttribution).toHaveAttribute('href', 'https://www.openstreetmap.org/copyright');
+    expect(osmAttribution).toBeVisible();
   });
 
   it('shows a clear empty state and Land-search next step when the broad place has no inventory', () => {
