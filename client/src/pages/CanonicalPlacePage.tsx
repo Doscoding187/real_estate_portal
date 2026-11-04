@@ -139,6 +139,16 @@ export default function CanonicalPlacePage() {
             </Button>
           </div>
         </section>
+        <p className="border-t pt-4 text-xs text-muted-foreground">
+          Some place data ©{' '}
+          <a
+            href="https://www.openstreetmap.org/copyright"
+            className="underline underline-offset-4"
+          >
+            OpenStreetMap contributors
+          </a>
+          .
+        </p>
       </div>
     </PageFrame>
   );
