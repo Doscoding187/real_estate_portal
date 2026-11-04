@@ -1187,7 +1187,7 @@ export function getCanonicalAccountDestination(user: PublicNavigationUser): stri
   if (role === 'property_developer') return '/developer/dashboard';
   if (role === 'agency_admin') return '/agency/overview';
   if (role === 'agent') return '/agent/dashboard';
-  if (role === 'service_provider') return '/service/profile';
+  if (role === 'service_provider') return '/service/dashboard';
   if (user.hasReferrerIdentity || role === 'referrer') {
     return '/distribution/partner/overview';
   }

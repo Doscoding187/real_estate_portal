@@ -5,6 +5,7 @@ import {
   ArrowRight,
   BadgeCheck,
   CalendarCheck,
+  Clock,
   Globe,
   Layers,
   MapPin,
@@ -20,7 +21,12 @@ import {
   buildServiceRequestPath,
   type ServiceCategory,
 } from '@/features/services/catalog';
+import { formatResponseLatency } from '@/features/services/leadMetrics';
 import { servicesUi } from '@/features/services/design';
+import {
+  buildProviderBusinessStructuredData,
+  buildServiceBreadcrumbStructuredData,
+} from '@/features/services/seoStructuredData';
 import {
   ProviderBrandPlate,
   ProviderRating,
@@ -86,8 +92,27 @@ export default function ServiceProviderProfilePage() {
         profile?.bio ||
         'Review published services, listed coverage, and platform verification for this provider.',
       canonicalPath: `/services/provider/${encodeURIComponent(slug)}`,
+      structuredData: profile
+        ? [
+            buildServiceBreadcrumbStructuredData([
+              { label: 'Home', path: '/' },
+              { label: 'Services', path: '/services' },
+              { label: profile.companyName },
+            ]),
+            buildProviderBusinessStructuredData({
+              slug,
+              companyName: profile.companyName,
+              headline: profile.headline,
+              bio: profile.bio,
+              logoUrl: profile.logoUrl,
+              locations: profile.locations,
+              averageRating: profile?.averageRating,
+              reviewCount: profile?.reviewCount,
+            }),
+          ]
+        : undefined,
     });
-  }, [profile?.bio, profile?.companyName, profile?.headline, slug]);
+  }, [profile, slug]);
 
   if (!providerId) {
     return (
@@ -152,6 +177,10 @@ export default function ServiceProviderProfilePage() {
   const locationLine = primaryLocation?.label || 'Coverage on request';
 
   // Only facts the platform actually holds may be presented as trust signals.
+  const responsePerformance =
+    profile.responsePerformance && profile.responsePerformance.sampleReady
+      ? profile.responsePerformance
+      : null;
   const trustFacts = [
     {
       title: 'Platform verified',
@@ -168,6 +197,21 @@ export default function ServiceProviderProfilePage() {
       description: 'Coverage is listed exactly as the provider supplied it.',
       icon: MapPin,
     },
+    ...(responsePerformance
+      ? [
+          {
+            title: `Typical first response: ${formatResponseLatency(
+              responsePerformance.medianResponseSeconds,
+            )}`,
+            description: `Median measured across ${
+              responsePerformance.measuredLeads
+            } request${responsePerformance.measuredLeads === 1 ? '' : 's'} in the last ${
+              responsePerformance.windowDays
+            } days.`,
+            icon: Clock,
+          },
+        ]
+      : []),
     {
       title: 'Direct request',
       description: 'Your request goes straight to the provider you choose.',
