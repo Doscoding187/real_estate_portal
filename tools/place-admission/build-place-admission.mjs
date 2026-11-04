@@ -212,6 +212,14 @@ const haversineKm = (a, b) => {
 };
 const byId = (rows, key) => new Map(rows.map(r => [r[key], r]));
 const normalizedName = value => String(value ?? '').trim().toLowerCase();
+const isGoogleMapsUrlAlias = value => {
+  try {
+    const url = new URL(String(value));
+    return /(^|\.)google\.[a-z.]+$/i.test(url.hostname) && /^\/maps(?:\/|$)/i.test(url.pathname);
+  } catch {
+    return false;
+  }
+};
 const adm2Of = identity => identity.administrative_context?.adm2?.[0]?.name ?? null;
 const provinceOf = identity => identity.administrative_context?.province?.name ?? null;
 const isContainer = identity => CONTAINER_TYPES.has(identity.canonical_type);
@@ -267,6 +275,17 @@ const D1_SCOPE_BY_TYPE = {
   locality: 'locality',
   village: 'locality',
 };
+
+/** Public pages cover the housing area ladder; verified village pages remain. */
+const PUBLIC_AREA_PAGE_TYPES = new Set([
+  'province',
+  'city',
+  'town',
+  'township',
+  'suburb',
+  'neighbourhood',
+  'locality',
+]);
 
 /* ------------------------------------------------------------------ *
  * 1a. Reviewed-correction inputs (optional governed overlay)
@@ -576,11 +595,8 @@ function chooseTypeBySourceClassification(members, primary) {
 }
 
 /**
- * Verification status. The source already separates "automatically promotable"
- * from "promotable with provisional attributes"; a Place is only fully verified
- * when its evidence, its type, its spatial confidence, its licence and its
- * boundary all agree. Anything else is Tier B provisional and stays selectable
- * but unpublishable (contract D2).
+ * Verification status remains an internal review tier. Public page eligibility
+ * is computed separately below from the explicit safe-area publication policy.
  */
 function verificationOf(members, licensing) {
   const isVerified =
@@ -830,14 +846,21 @@ for (const group of groups) {
 
   // A container is administrative context, never a searchable scope (D1).
   const searchEligible = verificationStatus !== 'candidate' && searchScope != null ? 1 : 0;
-  // Tier B is search-only until promoted; an OSM-only licence is never
-  // publishable before the founder ODbL gate clears (D2, D3). Publication is
-  // strictly a subset of search: a context-only container is never published,
-  // so a verified municipality cannot become a public page.
+  // Public-page eligibility is independent of the internal verification tier.
+  // Every expanded area page still needs an executable scope, supported spatial
+  // evidence and no unresolved boundary conflict. This keeps municipalities,
+  // facilities and disputed locations out while admitting a single traceable
+  // source and attributed OSM evidence.
+  const safePageEvidence =
+    group.members.length > 0 &&
+    group.members.every(
+      member => member.spatial_confidence === 'supported' && member.boundary_conflict === false,
+    );
+  const retainedVerifiedVillagePage = type === 'village' && verificationStatus === 'verified';
   const publicationEligible =
-    verificationStatus === 'verified' &&
-    licensing !== 'osm_only_odbl_provisional' &&
-    searchEligible === 1
+    searchEligible === 1 &&
+    safePageEvidence &&
+    (PUBLIC_AREA_PAGE_TYPES.has(type) || retainedVerifiedVillagePage)
       ? 1
       : 0;
 
@@ -928,6 +951,7 @@ placeRows.sort((a, b) => byIdLex(a.place_id, b.place_id));
 
 const nameRows = [];
 const nameKeySeen = new Set();
+let googleMapsUrlAliasesExcluded = 0;
 /** The exact spelling behind each emitted key, so a suppression can say which it was. */
 const nameSpellingByKey = new Map();
 
@@ -964,7 +988,13 @@ const preferredNamesTaken = new Set();
 for (const placeRow of placeRows) {
   const assertions = [];
   for (const identityId of placeRow.source_identity_ids) {
-    for (const assertion of namesByIdentity.get(identityId) ?? []) assertions.push(assertion);
+    for (const assertion of namesByIdentity.get(identityId) ?? []) {
+      if (isGoogleMapsUrlAlias(assertion.name)) {
+        googleMapsUrlAliasesExcluded += 1;
+        continue;
+      }
+      assertions.push(assertion);
+    }
   }
 
   // Governed selection policy (contract D8). An official name wins; otherwise a
@@ -1924,6 +1954,7 @@ const manifest = {
     ),
     admitted_without_executable_scope: placeRows.filter(row => row.search_eligible === 0).length,
     names: nameRows.length,
+    google_maps_url_alias_assertions_excluded: googleMapsUrlAliasesExcluded,
     name_roles: nameRoleTally,
     searchable_names: nameRows.filter(r => r.is_searchable === 1).length,
     preferred_public_names: nameRows.filter(r => r.name_role === 'preferred_public').length,

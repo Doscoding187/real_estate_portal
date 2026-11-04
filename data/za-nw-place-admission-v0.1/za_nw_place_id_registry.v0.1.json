@@ -1359,7 +1359,7 @@
   "provenance": {
     "admission_version": "za-nw-place-admission-v0.1",
     "territory_id": "za-nw",
-    "source_snapshot_id": "7e3cf43408f6e0f03a94085c223a55cf3e845e1bc361abb1bf8c9e2ca29a93de",
+    "source_snapshot_id": "75c51dbde561c52358e07fd6198e23f9913908ed57b4d977ca12648e651b0f8a",
     "note": "Assigned canonical Place identities. Reused verbatim on every regeneration. Never remap an id."
   }
 }

@@ -46,7 +46,8 @@ function rowsOf(result: unknown): Record<string, unknown>[] {
 // alone are not unique in a national dataset and must never pick the first row.
 const requiredPlaces = {
   Gauteng: 'pl-place-01-131e3e75ad70424e0f9c869a',
-  Lyttelton: 'pl-place-01-1a30ae4d635ef747d6c987df',
+  Centurion: 'pl-place-01-1a30ae4d635ef747d6c987df',
+  Kyalami: 'pl-place-01-c99102768b2e6f4c99fefd54',
   Bryanston: 'pl-place-01-f175328139bb845a4645b9d4',
   Soweto: 'pl-place-01-99b91be60755ea1f09bf6349',
   Sandton: 'pl-place-01-dee61758ef3bda7cd1a258ad',
@@ -153,18 +154,15 @@ describe('Slice 3: discovery resolves canonical identity', () => {
     expect(ids.size).toBe(response.results.length);
   });
 
-  it('resolves an alias to the same canonical identity as the preferred name', async () => {
-    // Centurion is an admitted alias of the Lyttelton Place. The preferred name
-    // must not be changed to make this pass; the alias must resolve to the
-    // admitted identity instead.
-    const preferred = await placeByPreferredName('Lyttelton');
+  it('resolves the Lyttelton alias to the preferred Centurion identity', async () => {
+    const preferred = await placeByPreferredName('Centurion');
     expect(preferred).not.toBeNull();
-    const response = await discoverPlaces('Centurion', { recordCoverage: false });
+    const response = await discoverPlaces('Lyttelton', { recordCoverage: false });
     expect(response.outcome).toBe('resolved');
     expect(response.results[0].placeId).toBe(preferred);
-    expect(response.results[0].matchedName).toBe('Centurion');
-    expect(response.results[0].matchedNameRole).not.toBe('preferred_public');
-    expect(response.results[0].preferredPublicLabel).toBe('Lyttelton');
+    expect(response.results[0].matchedName).toBe('Lyttelton');
+    expect(response.results[0].matchedNameRole).toBe('historical');
+    expect(response.results[0].preferredPublicLabel).toBe('Centurion');
   });
 
   it('finds a Place by a searchable historical or common name form', async () => {
@@ -188,10 +186,7 @@ describe('Slice 3: discovery resolves canonical identity', () => {
     }
   });
 
-  it('separates search eligibility from publication eligibility', async () => {
-    // OSM-only Places are searchable but must never be publishable. A consumer
-    // that treats "searchable" as "publishable" would leak attribution-free
-    // content, so the two gates are asserted as independent facts.
+  it('allows an attributed OSM area page while retaining provisional status', async () => {
     const db = await getDb();
     const osmOnly = await db.execute(sql`
       SELECT p.place_id AS placeId, p.verification_status AS verificationStatus,
@@ -205,15 +200,14 @@ describe('Slice 3: discovery resolves canonical identity', () => {
     expect(rows[0].placeId).toBe(requiredOsmPlaceId);
     expect(rows[0].licensingClassification).toBe('osm_only_odbl_provisional');
     expect(Number(rows[0].searchEligible)).toBe(1);
-    expect(Number(rows[0].publicationEligible)).toBe(0);
+    expect(Number(rows[0].publicationEligible)).toBe(1);
     expect(rows[0].verificationStatus).toBe('provisional');
     expect(
       isPublishable({
         publicationEligible: Number(rows[0].publicationEligible) === 1,
-        verificationStatus: String(rows[0].verificationStatus),
         lifecycleStatus: 'active',
       }),
-    ).toBe(false);
+    ).toBe(true);
   });
 });
 

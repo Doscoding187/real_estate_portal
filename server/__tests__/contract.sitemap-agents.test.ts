@@ -123,7 +123,7 @@ describe('canonical Place sitemap', () => {
     expect(getDbMock).not.toHaveBeenCalled();
   });
 
-  it('lists only active, verified Places admitted for publication', async () => {
+  it('lists only active Places admitted by the explicit publication decision', async () => {
     const capture = await requestSitemap([], '/sitemap-places.xml');
     expect(capture.body).toContain('<urlset');
     expect(capture.body).toContain('<loc>https://www.propertylistifysa.co.za/south-africa</loc>');

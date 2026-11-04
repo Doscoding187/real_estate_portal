@@ -414,7 +414,7 @@ jobs:
 
   browser-journey:
     name: Browser Journey (geography)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [db-contract-verification, journey-surface]
     # The journey is a gate for the geography surface. A change that cannot affect it skips the
     # journey, so it never blocks an unrelated change and never costs it the runner time.

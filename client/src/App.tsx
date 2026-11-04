@@ -729,6 +729,12 @@ function Router() {
               by it. */}
           <Route path="/south-africa" component={CountryDiscoveryPage} />
 
+          {/* Static-host fallback for the founder-approved Centurion rename.
+              The server route emits the corresponding permanent HTTP redirect. */}
+          <Route path="/gauteng/lyttelton">
+            <Redirect to="/gauteng/centurion" />
+          </Route>
+
           {/* Place pages resolve exact paths from the admitted national projection. */}
           <Route path="/:province/:context/:place" component={CanonicalPlacePage} />
           <Route path="/:province/:place" component={CanonicalPlacePage} />

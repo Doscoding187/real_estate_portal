@@ -5091,7 +5091,7 @@
   "provenance": {
     "admission_version": "za-ec-place-admission-v0.1",
     "territory_id": "za-ec",
-    "source_snapshot_id": "358c0642cc76f48335c4e428c9871baf06bee05a5343557205939394b93d5678",
+    "source_snapshot_id": "e393bca64bdb76062206322e52b3e15606a473da9ee1f42bad411aa309ee1a80",
     "note": "Assigned canonical Place identities. Reused verbatim on every regeneration. Never remap an id."
   }
 }
