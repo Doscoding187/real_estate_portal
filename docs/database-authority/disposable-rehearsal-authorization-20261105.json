@@ -1,0 +1,58 @@
+{
+  "status": "approved",
+  "authorizationLive": true,
+  "approvedBy": "Edward",
+  "createdAt": "2026-11-05T12:00:00Z",
+  "expiresAt": "2026-11-08T12:00:00Z",
+  "purpose": "RELEASE DRY RUN - RESTORED PRE-0197 BACKUP (0111-to-0197)",
+  "subscriptionId": "384dc69e-9e22-419f-9e3d-83fbac4f58d0",
+  "resourceGroup": "rg-property-listify",
+  "serverName": "pl-release-restore-20261105",
+  "database": "propertylistify_database",
+  "hostname": "pl-release-restore-20261105.mysql.database.azure.com",
+  "provider": "Microsoft.DBforMySQL/flexibleServers",
+  "engineFamily": "MySQL",
+  "serverCreatedAt": "2026-11-05T11:28:47.366224+00:00",
+  "acceptedOldHead": "0111_properties_canonical_place_reference_fk.sql",
+  "expectedHead": "0197_drop_seller_prospects_province.sql",
+  "manifestDigest": "4995e36715e60856bb87d925dd0eff03bcdccfcc50e1180648684c3bd2787e41",
+  "modelDigest": "a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9",
+  "allowed": [
+    "read-only-connect:read-only",
+    "verification:read-only",
+    "readiness:read-only",
+    "diagnostics:read-only",
+    "release-plan:read-only:0111-to-0197",
+    "release-apply:migration:0111-to-0197"
+  ],
+  "denied": [
+    "rehearsal-regression",
+    "runtime-connect",
+    "worker-connect",
+    "migration",
+    "DDL-outside-approved-release-apply",
+    "reference-seed",
+    "ledger-edit",
+    "server-settings"
+  ],
+  "sourceBinding": {
+    "algorithm": "sha256",
+    "files": [
+      "docs/database-authority/disposable-rehearsal-authorization-20261105.json",
+      "docs/database-authority/operation-policy.json",
+      "server/_core/databaseAuthority/authorization.ts",
+      "server/_core/databaseAuthority/connectionAuthority.ts",
+      "server/_core/databaseAuthority/context.ts",
+      "server/_core/databaseAuthority/credentialVault.ts",
+      "server/_core/databaseAuthority/environment.ts",
+      "server/_core/databaseAuthority/rehearsalAuthority.ts",
+      "server/_core/databaseAuthority/types.ts",
+      "server/_core/databaseTls.ts",
+      "server/migrations/manifest.json",
+      "server/migrations/migrationManifest.ts",
+      "server/migrations/runSqlMigrations.ts"
+    ],
+    "sha256": "dec6569f87c3edc3da25659b7245293b5dd4459dc19e41938b52294d2c8196ff"
+  },
+  "reviewTrigger": "This record expires at 2026-11-08T12:00:00Z. Any reuse requires new written approval after operator preflight verifies the exact ARM resource identity, creation time, and the guarded source digest."
+}
