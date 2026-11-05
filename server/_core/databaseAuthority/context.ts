@@ -1,5 +1,10 @@
 import { RECOVERY_VALIDATION_FINGERPRINT } from './recoveryValidationTarget';
-import { assertRehearsalSourceBinding, isRegisteredRehearsal } from './rehearsalAuthority';
+import {
+  assertRehearsalSourceBinding,
+  isRegisteredRehearsal,
+  REHEARSAL,
+  REHEARSAL_RESOURCE_ID,
+} from './rehearsalAuthority';
 import { createHash, randomUUID } from 'node:crypto';
 import { buildMysqlConnectionSecurityConfig } from '../databaseTls';
 import { storeDatabaseCredentialUrl, readDatabaseCredentialUrl } from './credentialVault';
@@ -41,6 +46,10 @@ const CREDENTIAL_CLASSES = new Set<DatabaseCredentialClass>([
   'test-owner',
   'unknown',
 ]);
+
+function selectedRehearsalBinding(): { resourceId: string; purpose: string } {
+  return { resourceId: REHEARSAL_RESOURCE_ID, purpose: REHEARSAL.purpose };
+}
 
 function sha256(value: string): string {
   return createHash('sha256').update(value).digest('hex');
@@ -291,6 +300,7 @@ export function resolveDatabaseAuthority(input: {
     port: resolvedPort,
     databaseName: resolvedDatabaseName,
   });
+  let rehearsalBindingForContext: { resourceId: string; purpose: string } | undefined;
   let targetClass: DatabaseTargetClass = 'unknown';
   if (
     resolvedLocal &&
@@ -309,7 +319,8 @@ export function resolveDatabaseAuthority(input: {
     }
   } else if (!resolvedLocal) {
     const registeredClass = REGISTERED_PROTECTED_REMOTE_TARGETS[resolvedTargetFingerprint];
-    if (isRegisteredRehearsal(resolvedTargetFingerprint, input.rehearsal)) {
+    rehearsalBindingForContext = input.rehearsal ?? selectedRehearsalBinding();
+    if (isRegisteredRehearsal(resolvedTargetFingerprint, rehearsalBindingForContext)) {
       // This guard runs during target resolution, before a connection can be
       // created. Registration cannot authorize code whose bound source drifted.
       assertRehearsalSourceBinding();
@@ -397,7 +408,7 @@ export function resolveDatabaseAuthority(input: {
       : parsed.toString();
   const resolvedAt = input.resolvedAt ?? new Date();
   const context: ResolvedDatabaseContext = deepFreeze({
-    rehearsal: targetClass === 'disposable-rehearsal' ? input.rehearsal : undefined,
+    rehearsal: targetClass === 'disposable-rehearsal' ? rehearsalBindingForContext : undefined,
     contextVersion: 1,
     contextId: randomUUID(),
     correlationId:
