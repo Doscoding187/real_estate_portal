@@ -1,0 +1,70 @@
+{
+  "record": "production-release-plan-2026-11-05",
+  "dateUtc": "2026-11-05T10:18:49Z",
+  "result": "Succeeded",
+  "operation": "db:release:plan (read-only; no schema/history/attempt/lock mutation; no credentials or full URLs recorded)",
+  "actor": "Edward (enetechsa@gmail.com); executed via Azure Container Apps job",
+  "target": {
+    "class": "production",
+    "server": "propertylistify-mysql (Azure Database for MySQL Flexible Server, MySQL 8.4)",
+    "database": "propertylistify_database",
+    "resourceGroup": "rg-property-listify",
+    "fingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+    "access": "dedicated SELECT-only inspector identity (propertylistify_b08_inspector); public network access disabled; private endpoint pe-mysql-propertylistify; verified TLS (sslaccept=strict)",
+    "workstationReach": "none (connection only from in-VNet job)"
+  },
+  "source": {
+    "commit": "2aab5f054e2f7a5661739408f3a34ea342db7a97",
+    "branch": "codex/schema-release-rehearsal-authority-20261104",
+    "manifestDigest": "4995e36715e60856bb87d925dd0eff03bcdccfcc50e1180648684c3bd2787e41",
+    "manifestHead": "0197_drop_seller_prospects_province.sql",
+    "artifact": "propertylistifyacr.azurecr.io/release-plan-20261105:dcb7f4f @ sha256:f80936072ac35f4fba755841ffbae0851e72c0f5bfd5c431ede44b498b332d86 (merged origin/main dcb7f4ff60a0f197252419b369fb537ca2361d08, PR #727)",
+    "runtimeIdentity": "declared via RAILWAY_GIT_COMMIT_SHA; identity is NOT part of the authorization gate or the plan digest"
+  },
+  "job": {
+    "name": "ca-release-plan-20261105",
+    "environment": "cae-property-listify-prod (VNet-injected, snet-aca)",
+    "execution": "ca-release-plan-20261105-rr81bm1; re-run from 9ed79cc05 tooling: ca-release-plan-20261105-7dpu5s5; re-run from merged tooling: ca-release-plan-20261105-tb01uxr (digest unchanged in all three)",
+    "runs": 1,
+    "retryLimit": 0,
+    "replicaTimeoutSeconds": 1800,
+    "cpu": 0.5,
+    "memory": "1Gi",
+    "identity": "SystemAssigned; single role AcrPull scoped to propertylistifyacr only (assignment fe88c5be-1fbd-45f8-a2f7-0e3c05aa08da); job principalId 088cbb59-ac91-4c49-9cc2-06dc136ef3e7",
+    "secrets": [
+      "database-url"
+    ],
+    "ingress": "none"
+  },
+  "plan": {
+    "mode": "plan",
+    "planId": "657f83b5ff95320baffc210b",
+    "planDigest": "657f83b5ff95320baffc210b7d5e4cc6d35954c58098613e5ef0e28b8b26e59e",
+    "acceptedOldHead": "0111_properties_canonical_place_reference_fk.sql",
+    "expectedNewHead": "0197_drop_seller_prospects_province.sql",
+    "pendingCount": 86,
+    "pendingRange": "0112_legal_releases.sql through 0197_drop_seller_prospects_province.sql",
+    "applied": [],
+    "lock": null,
+    "incompleteAttempts": "none (planning refuses on any incomplete/failed/blocked attempt; log scan found none)",
+    "executionOnOriginMain": "ca-release-plan-20261105-7dpu5s5",
+    "re-setDigestCheck": "re-run from origin/main tooling image (sha256:4b602e3f...) produced identical planDigest 657f83b5ff95320baffc210b7d5e4cc6d35954c58098613e5ef0e28b8b26e59e (execution 7dpu5s5, Succeeded)",
+    "re-runOnMergedImage": "ca-release-plan-20261105-tb01uxr Succeeded; planDigest 657f83b5ff95320baffc210b7d5e4cc6d35954c58098613e5ef0e28b8b26e59e unchanged; mode plan; applied []"
+  },
+  "checks": {
+    "pendingSequences": "exactly 112-197, none outside, none missing",
+    "checksums": "86/86 match manifest at 2aab5f054 (verified programmatically from Log Analytics fragments)",
+    "errorScan": "no incomplete/blocked/failed/error/refused markers in output",
+    "imageContains": "git-tracked files at 2aab5f054 only; .env*/backups/docs(except database-authority)/data(except place-admission-territories.v0.2 registry) excluded; no credentials"
+  },
+  "releaseRecordNote": "Plan executed from non-git artifact (ACR image release-plan-20261105@sha256:9e7455480026d1a75398ed9ecd8172cfa81513de1814a5a3034a5a77272ebd19); runtime identity declared via RAILWAY_GIT_COMMIT_SHA=2aab5f054e2f7a5661739408f3a34ea342db7a97; identity mechanism is not part of the authorization gate.",
+  "rehearsal": {
+    "authorizationFile": "docs/database-authority/disposable-rehearsal-authorization.json",
+    "status": "REVOKED/EXPIRED (2026-09-28 to 2026-10-05); not reused for production",
+    "priorEvidence": "September 2026 rehearsal of the same 0111->0197 window on restored copy; founder-verified production head 0111 (2026-10-30)"
+  },
+  "apply": "NOT AUTHORIZED. Apply requires separate founder approval naming planDigest 657f83b5ff95320baffc210b7d5e4cc6d35954c58098613e5ef0e28b8b26e59e.",
+  "cleanup": "Pending founder approval: job ca-release-plan-20261105, secret database-url, role assignment fe88c5be-1fbd-45f8-a2f7-0e3c05aa08da, image release-plan-20261105 (tag and digest).",
+  "reconstructionCheck": "planDigest reproduced exactly (match true) from repo manifest 4995e367... via repo loadAndValidateMigrationManifest + buildMigrationPlan over ledger 0000-0111; pending 86; matches production output byte-for-byte",
+  "bindingCheck": "ca-binding-check-20261105 (image sha256:f80936072ac35f4fba755841ffbae0851e72c0f5bfd5c431ede44b498b332d86): env-selected binding-ok; default registration refused as expected; no DB connection"
+}
