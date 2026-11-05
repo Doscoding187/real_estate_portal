@@ -1,3 +1,4 @@
+import './useRehearsal20261105';
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -266,10 +267,13 @@ describe('disposable rehearsal schema release authority', () => {
     ).toBe(false);
   });
 
-  it('does not grant any live authorization while the registration is revoked and expired', () => {
-    expect(REHEARSAL.status).toBe('revoked');
-    expect(REHEARSAL.authorizationLive).toBe(false);
-    expect(Date.parse(REHEARSAL.expiresAt)).toBeLessThan(Date.now());
+  it('scopes live authorization strictly to the 2026-11-05 window and rejects everything else', () => {
+    expect(REHEARSAL.status).toBe('approved');
+    expect(REHEARSAL.authorizationLive).toBe(true);
+    expect(Date.parse(REHEARSAL.expiresAt)).toBeGreaterThan(Date.now());
+    expect(
+      Date.parse(REHEARSAL.expiresAt) - Date.parse(REHEARSAL.createdAt),
+    ).toBeLessThanOrEqual(72 * 3600 * 1000);
     const plan = resolve('release-plan');
     expect(() =>
       authorizeDatabaseOperation(plan, {
@@ -282,10 +286,10 @@ describe('disposable rehearsal schema release authority', () => {
           rehearsalBinding: structuredApproval(),
         },
       }),
-    ).toThrow('expired, revoked or changed');
+    ).not.toThrow();
 
     const legacy = resolve('rehearsal-regression', { credentialClass: 'runtime' });
-    expect(() => authorizeDatabaseOperation(legacy)).toThrow('expired, revoked or changed');
+    expect(() => authorizeDatabaseOperation(legacy)).toThrow('Rehearsal refused');
   });
 
   it('refuses a source digest mismatch when any guarded file changes', () => {
