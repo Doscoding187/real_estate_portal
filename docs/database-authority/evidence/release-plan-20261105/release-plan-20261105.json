@@ -14,17 +14,16 @@
     "workstationReach": "none (connection only from in-VNet job)"
   },
   "source": {
-    "commit": "2aab5f054e2f7a5661739408f3a34ea342db7a97",
+    "commit": "3d7bde98beeb5fd6a3492a995e48491e3f80e333",
     "branch": "codex/schema-release-rehearsal-authority-20261104",
     "manifestDigest": "4995e36715e60856bb87d925dd0eff03bcdccfcc50e1180648684c3bd2787e41",
     "manifestHead": "0197_drop_seller_prospects_province.sql",
-    "artifact": "propertylistifyacr.azurecr.io/release-plan-20261105:dcb7f4f @ sha256:f80936072ac35f4fba755841ffbae0851e72c0f5bfd5c431ede44b498b332d86 (merged origin/main dcb7f4ff60a0f197252419b369fb537ca2361d08, PR #727)",
+    "artifact": "propertylistifyacr.azurecr.io/release-plan-20261105:3d7bde9 @ sha256:60e140a2cf1fac782c0989278f1c4988e0cd3272336a3323ecbe973bfdab1775 (merged origin/main 3d7bde98beeb5fd6a3492a995e48491e3f80e333, PRs #727/#729/#730)",
     "runtimeIdentity": "declared via RAILWAY_GIT_COMMIT_SHA; identity is NOT part of the authorization gate or the plan digest"
   },
   "job": {
     "name": "ca-release-plan-20261105",
     "environment": "cae-property-listify-prod (VNet-injected, snet-aca)",
-    "execution": "ca-release-plan-20261105-rr81bm1; re-run from 9ed79cc05 tooling: ca-release-plan-20261105-7dpu5s5; re-run from merged tooling: ca-release-plan-20261105-tb01uxr (digest unchanged in all three)",
     "runs": 1,
     "retryLimit": 0,
     "replicaTimeoutSeconds": 1800,
@@ -34,7 +33,34 @@
     "secrets": [
       "database-url"
     ],
-    "ingress": "none"
+    "ingress": "none",
+    "executionHistory": [
+      {
+        "execution": "ca-release-plan-20261105-rr81bm1",
+        "image": "sha256:9e7455480026d1a75398ed9ecd8172cfa81513de1814a5a3034a5a77272ebd19",
+        "result": "Succeeded; digest 657f83b5ff95320baffc210b7d5e4cc6d35954c58098613e5ef0e28b8b26e59e"
+      },
+      {
+        "execution": "ca-release-plan-20261105-7dpu5s5",
+        "image": "sha256:4b602e3f6bc319caad5aaf21dfca7febfa311977fa4ea21328009065987f2b01",
+        "result": "Succeeded; digest unchanged"
+      },
+      {
+        "execution": "ca-release-plan-20261105-tb01uxr",
+        "image": "sha256:f80936072ac35f4fba755841ffbae0851e72c0f5bfd5c431ede44b498b332d86",
+        "result": "Succeeded; digest unchanged"
+      },
+      {
+        "execution": "ca-release-plan-20261105-mcx528p",
+        "image": "sha256:60e140a2cf1fac782c0989278f1c4988e0cd3272336a3323ecbe973bfdab1775",
+        "result": "Succeeded; digest unchanged"
+      },
+      {
+        "execution": "ca-release-plan-20261105-jn7oda7",
+        "image": "sha256:60e140a2cf1fac782c0989278f1c4988e0cd3272336a3323ecbe973bfdab1775",
+        "result": "Succeeded; digest 657f83b5ff95320baffc210b7d5e4cc6d35954c58098613e5ef0e28b8b26e59e unchanged (this execution is the recorded production re-plan on the current image)"
+      }
+    ]
   },
   "plan": {
     "mode": "plan",
@@ -47,9 +73,7 @@
     "applied": [],
     "lock": null,
     "incompleteAttempts": "none (planning refuses on any incomplete/failed/blocked attempt; log scan found none)",
-    "executionOnOriginMain": "ca-release-plan-20261105-7dpu5s5",
-    "re-setDigestCheck": "re-run from origin/main tooling image (sha256:4b602e3f...) produced identical planDigest 657f83b5ff95320baffc210b7d5e4cc6d35954c58098613e5ef0e28b8b26e59e (execution 7dpu5s5, Succeeded)",
-    "re-runOnMergedImage": "ca-release-plan-20261105-tb01uxr Succeeded; planDigest 657f83b5ff95320baffc210b7d5e4cc6d35954c58098613e5ef0e28b8b26e59e unchanged; mode plan; applied []"
+    "executionOnOriginMain": "ca-release-plan-20261105-7dpu5s5"
   },
   "checks": {
     "pendingSequences": "exactly 112-197, none outside, none missing",
@@ -66,5 +90,5 @@
   "apply": "NOT AUTHORIZED. Apply requires separate founder approval naming planDigest 657f83b5ff95320baffc210b7d5e4cc6d35954c58098613e5ef0e28b8b26e59e.",
   "cleanup": "Pending founder approval: job ca-release-plan-20261105, secret database-url, role assignment fe88c5be-1fbd-45f8-a2f7-0e3c05aa08da, image release-plan-20261105 (tag and digest).",
   "reconstructionCheck": "planDigest reproduced exactly (match true) from repo manifest 4995e367... via repo loadAndValidateMigrationManifest + buildMigrationPlan over ledger 0000-0111; pending 86; matches production output byte-for-byte",
-  "bindingCheck": "ca-binding-check-20261105 (image sha256:f80936072ac35f4fba755841ffbae0851e72c0f5bfd5c431ede44b498b332d86): env-selected binding-ok; default registration refused as expected; no DB connection"
+  "bindingCheck": "ca-binding-check-20261105 (image sha256:60e140a2cf1fac782c0989278f1c4988e0cd3272336a3323ecbe973bfdab1775, execution ca-binding-check-20261105-qmmofr0): env-selected binding-ok; default registration refused as expected; no DB connection"
 }
