@@ -74,7 +74,7 @@ describe('revoked disposable rehearsal connection boundary', () => {
           targetFingerprintHash: resolved.context.targetFingerprintHash,
         },
       }),
-    ).toThrow('expired, revoked or changed');
+    ).toThrow('Rehearsal source binding refused');
 
     const forged = {
       decisionVersion: 1,

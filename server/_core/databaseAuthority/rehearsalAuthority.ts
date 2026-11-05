@@ -1,18 +1,42 @@
 import { createHash } from 'node:crypto';
 import { execFile } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
-import registration from '../../../docs/database-authority/disposable-rehearsal-authorization.json' with { type: 'json' };
 import type { ResolvedDatabaseContext } from './types';
 
-type RehearsalRegistration = typeof registration & {
+type RehearsalRegistration = {
   acceptedOldHead: string;
   expectedHead: string;
   authorizationLive: boolean;
   sourceBinding: { algorithm: 'sha256'; files: readonly string[]; sha256: string };
+  subscriptionId: string;
+  resourceGroup: string;
+  provider: string;
+  serverName: string;
+  hostname: string;
+  database: string;
+  purpose: string;
+  serverCreatedAt: string;
+  createdAt: string;
+  expiresAt: string;
+  status: string;
+  [key: string]: unknown;
 };
+
+const DEFAULT_REGISTRATION_RELATIVE =
+  'docs/database-authority/disposable-rehearsal-authorization.json';
+
+const repositoryRootForSelection = fileURLToPath(new URL('../../../', import.meta.url));
+const registrationSelection = process.env.PROPERTYLISTIFY_REHEARSAL_REGISTRATION?.trim();
+const registrationAbsolutePath = registrationSelection
+  ? resolve(registrationSelection)
+  : join(repositoryRootForSelection, DEFAULT_REGISTRATION_RELATIVE);
+const registrationRelativePath = relative(repositoryRootForSelection, registrationAbsolutePath);
+const registration: RehearsalRegistration = JSON.parse(
+  readFileSync(registrationAbsolutePath, 'utf8'),
+) as RehearsalRegistration;
 
 function deepFreeze<T>(value: T): T {
   if (value && typeof value === 'object' && !Object.isFrozen(value)) {
@@ -27,7 +51,6 @@ export const REHEARSAL_RESOURCE_ID = `/subscriptions/${REHEARSAL.subscriptionId}
 export const REHEARSAL_FINGERPRINT = `mysql://${REHEARSAL.hostname}:3306/${REHEARSAL.database}`;
 export const REHEARSAL_SOURCE_DIGEST = REHEARSAL.sourceBinding.sha256;
 
-const registrationRelativePath = 'docs/database-authority/disposable-rehearsal-authorization.json';
 export const REHEARSAL_SOURCE_FILES = Object.freeze([
   registrationRelativePath,
   'docs/database-authority/operation-policy.json',
@@ -45,7 +68,7 @@ export const REHEARSAL_SOURCE_FILES = Object.freeze([
 ]);
 
 const repositoryRoot = fileURLToPath(new URL('../../../', import.meta.url));
-const recordPath = join(repositoryRoot, registrationRelativePath);
+const recordPath = registrationAbsolutePath;
 
 function registrationContentForHash(root: string): string {
   const content = readFileSync(join(root, registrationRelativePath), 'utf8');
