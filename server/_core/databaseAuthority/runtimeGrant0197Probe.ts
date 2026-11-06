@@ -1,15 +1,14 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { authorizeDatabaseOperation, B08_RUNTIME_IDENTITY } from './authorization';
 import {
-  authorizeDatabaseOperation,
-  B08_AZURE_TARGET_FINGERPRINT_HASH,
-  B08_RUNTIME_IDENTITY,
-} from './authorization';
+  isAcceptedProbeTarget,
+  PROBE_DATABASE as DATABASE,
+  readFounderCounts,
+} from './runtimeGrant0197ProbeSupport';
 import { createAuthoritySqlConnection } from './connectionAuthority';
 import { resolveDatabaseAuthority } from './context';
 import { runtimeGrant0197Plan } from './runtimeGrant0197Plan';
-
-const DATABASE = 'propertylistify_database';
 
 function rowsFromQueryResult(result: unknown): Array<Record<string, unknown>> {
   const value: any = result;
@@ -52,12 +51,7 @@ async function main() {
     operation: 'read-only-connect',
     credentialClass: 'runtime',
   });
-  if (
-    authority.context.targetClass !== 'production' ||
-    authority.context.targetFingerprintHash !== B08_AZURE_TARGET_FINGERPRINT_HASH ||
-    authority.context.databaseName !== DATABASE ||
-    authority.context.credentialClass !== 'runtime'
-  )
+  if (!isAcceptedProbeTarget(authority.context))
     throw new Error('0197 probe refused: resolved target or credential identity differs.');
   const decision = authorizeDatabaseOperation(authority);
   const connection = await createAuthoritySqlConnection(authority, decision);
@@ -96,6 +90,7 @@ async function main() {
         tableResults.push({ table, status: 'denied', code });
       }
     }
+    const founder = await readFounderCounts(connection, process.env.FOUNDER_GOOGLE_EMAIL);
     process.stdout.write(
       JSON.stringify(
         {
@@ -106,7 +101,9 @@ async function main() {
           tableCount: tableResults.length,
           targetFingerprintHash: authority.context.targetFingerprintHash,
           credentialClass: authority.context.credentialClass,
+          targetClass: authority.context.targetClass,
           account: currentUser,
+          founder,
           grants,
           tables: tableResults,
           writesAttempted: false,
