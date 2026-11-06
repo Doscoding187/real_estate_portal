@@ -264,7 +264,7 @@
       "evidence": "sanitized-release-attempt-and-result"
     },
     "release-reference-plan": {
-      "allowedTargetClasses": ["staging", "production"],
+      "allowedTargetClasses": ["staging", "production", "disposable-rehearsal"],
       "credentialClasses": ["read-only", "migration"],
       "ownership": "none",
       "approval": "protected-target",
@@ -272,7 +272,7 @@
       "evidence": "sanitized-release-reference-plan"
     },
     "release-reference-apply": {
-      "allowedTargetClasses": ["staging", "production"],
+      "allowedTargetClasses": ["staging", "production", "disposable-rehearsal"],
       "credentialClasses": ["migration"],
       "ownership": "none",
       "approval": "protected-target",
@@ -280,7 +280,7 @@
       "evidence": "sanitized-release-reference-apply"
     },
     "release-reference-verify": {
-      "allowedTargetClasses": ["staging", "production"],
+      "allowedTargetClasses": ["staging", "production", "disposable-rehearsal"],
       "credentialClasses": ["read-only", "migration"],
       "ownership": "none",
       "approval": "protected-target",

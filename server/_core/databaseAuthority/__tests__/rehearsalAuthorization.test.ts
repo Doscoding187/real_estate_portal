@@ -245,11 +245,14 @@ describe('disposable rehearsal schema release authority', () => {
         'readiness',
         'release-apply',
         'release-plan',
+        'release-reference-apply',
+        'release-reference-plan',
+        'release-reference-verify',
         'verification',
       ].sort(),
     );
     expect(policy.operations['rehearsal-regression'].allowedTargetClasses).toEqual([]);
-    expect(policy.operations['release-reference-apply'].allowedTargetClasses).not.toContain(
+    expect(policy.operations['release-reference-apply'].allowedTargetClasses).toContain(
       'disposable-rehearsal',
     );
   });

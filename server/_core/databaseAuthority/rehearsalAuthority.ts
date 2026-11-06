@@ -163,11 +163,14 @@ export function assertRehearsalAuthorization(
     'readiness',
     'diagnostics',
     'release-plan',
+    'release-reference-plan',
+    'release-reference-verify',
   ]);
+  const applyOperations = new Set(['release-apply', 'release-reference-apply']);
   const allowedOperation =
-    readOnlyOperations.has(context.operation) || context.operation === 'release-apply';
+    readOnlyOperations.has(context.operation) || applyOperations.has(context.operation);
   const credentialMatches =
-    (context.operation === 'release-apply' &&
+    (applyOperations.has(context.operation) &&
       context.credentialClass === 'migration' &&
       context.credentialSource === 'protected-migration-url') ||
     (readOnlyOperations.has(context.operation) && context.credentialClass === 'read-only');
