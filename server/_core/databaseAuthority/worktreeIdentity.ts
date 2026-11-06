@@ -235,10 +235,12 @@ const present = (value: string | undefined): boolean => Boolean(String(value ?? 
 export function classifyContainerAppsContext(
   env: NodeJS.ProcessEnv = process.env,
 ): ContainerAppsContext {
+  // App markers count when defined at all, so a blanked value cannot flip an
+  // app replica into a job. Job markers must be non-empty.
   if (
-    present(env.CONTAINER_APP_NAME) ||
-    present(env.CONTAINER_APP_REVISION) ||
-    present(env.CONTAINER_APP_REPLICA_NAME)
+    env.CONTAINER_APP_NAME !== undefined ||
+    env.CONTAINER_APP_REVISION !== undefined ||
+    env.CONTAINER_APP_REPLICA_NAME !== undefined
   ) {
     return 'app';
   }
@@ -251,8 +253,9 @@ export function classifyContainerAppsContext(
 /**
  * Identity for the legal-release installer. App replicas are refused. Inside a
  * Container Apps job the real Git checkout in the image is read and must be
- * valid (readGitWorktreeIdentity throws when .git is missing). Elsewhere the
- * existing runtime behaviour is unchanged.
+ * valid (readGitWorktreeIdentity throws when .git is missing). A real Git
+ * checkout is required everywhere; deployment hosts without a job context are
+ * refused.
  */
 export function readInstallerWorktreeIdentity(
   cwd = process.cwd(),
@@ -263,8 +266,15 @@ export function readInstallerWorktreeIdentity(
   if (context === 'app') {
     throw new Error('Legal-release installer refused: it must not run inside an app replica.');
   }
-  if (context === 'job') return readGitWorktreeIdentity(cwd);
-  return readRuntimeWorktreeIdentity(cwd, { env });
+  if (
+    context === 'none' &&
+    (present(env.CONTAINER_APP_ENV_DNS_SUFFIX) || hasRailwayDeploymentIdentity(env))
+  ) {
+    throw new Error(
+      'Legal-release installer refused: deployment host without a Container Apps job context',
+    );
+  }
+  return readGitWorktreeIdentity(cwd);
 }
 
 export function isProtectedIntegrationBranch(branch: string): boolean {
