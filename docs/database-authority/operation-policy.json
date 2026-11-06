@@ -296,7 +296,7 @@
       "evidence": "revoked-and-expired-no-live-authorization"
     },
     "legal-release-plan": {
-      "allowedTargetClasses": ["disposable-worktree", "staging", "production"],
+      "allowedTargetClasses": ["disposable-worktree", "staging", "production", "disposable-rehearsal"],
       "credentialClasses": ["read-only", "migration", "local-owner"],
       "ownership": "exact-local-owner",
       "approval": "protected-target",
@@ -304,7 +304,7 @@
       "evidence": "sanitized-exact-copy-release-plan"
     },
     "legal-release-apply": {
-      "allowedTargetClasses": ["disposable-worktree", "staging", "production"],
+      "allowedTargetClasses": ["disposable-worktree", "staging", "production", "disposable-rehearsal"],
       "credentialClasses": ["migration", "local-owner"],
       "ownership": "exact-local-owner",
       "approval": "protected-target",
@@ -312,7 +312,7 @@
       "evidence": "sanitized-exact-copy-release-apply"
     },
     "legal-release-verify": {
-      "allowedTargetClasses": ["disposable-worktree", "staging", "production"],
+      "allowedTargetClasses": ["disposable-worktree", "staging", "production", "disposable-rehearsal"],
       "credentialClasses": ["read-only", "migration", "local-owner"],
       "ownership": "exact-local-owner",
       "approval": "protected-target",
