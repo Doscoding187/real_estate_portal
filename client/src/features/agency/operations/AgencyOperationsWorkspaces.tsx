@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { toastPaidError } from '@/components/commercial/PaidIntakeNotice';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -262,7 +263,7 @@ export function CommercialAgencyBillingWorkspace(
     onError: error => {
       legal.reload();
       void workspaceQuery.refetch();
-      toast.error(error.message || 'Invoice could not be issued');
+      toastPaidError(error, 'Invoice could not be issued');
     },
   });
   const submitProof = trpc.billing.submitLaunchAccessPaymentNotice.useMutation({
@@ -271,7 +272,7 @@ export function CommercialAgencyBillingWorkspace(
       await refreshBilling(utils);
       toast.success('Payment notification submitted. Bank verification is pending.');
     },
-    onError: error => toast.error(error.message || 'Payment notification could not be submitted'),
+    onError: error => toastPaidError(error, 'Payment notification could not be submitted'),
   });
 
   const billingState = billingStateQuery.data;

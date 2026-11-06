@@ -39,6 +39,7 @@ import {
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { toastPaidError } from '@/components/commercial/PaidIntakeNotice';
 import { CommercialActivationNotice } from '@/components/commercial/CommercialActivationNotice';
 import { useCommercialProductAvailability } from '@/hooks/useCommercialProductAvailability';
 import { usePaidLegalAcceptance } from '@/hooks/usePaidLegalAcceptance';
@@ -110,7 +111,7 @@ export function CommercialDeveloperPlans({ salesPaused = false }: { salesPaused?
       legal.reload();
       void refetchCatalog();
       setSelectedProduct(null);
-      toast.error(error.message || 'Launch Access invoice could not be issued');
+      toastPaidError(error, 'Launch Access invoice could not be issued');
     },
   });
 
