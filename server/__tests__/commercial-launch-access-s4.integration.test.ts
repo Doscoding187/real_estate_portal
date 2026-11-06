@@ -50,6 +50,7 @@ import {
 
 import { installSyntheticLegalRelease } from '../test-utils/legalReleaseFixture';
 import { getConfiguredLaunchFeeMinor } from '../services/commercialTerm';
+import { PAID_SALES_PAUSED_MESSAGE } from '../../shared/paidIntakeCopy';
 
 let legalFixture: Awaited<ReturnType<typeof installSyntheticLegalRelease>>;
 async function purchaseChoice(role: string, planId?: number) {
@@ -1885,7 +1886,7 @@ describeWithDb('S4 paid Launch Access disposable runtime', () => {
     });
     await expect(
       requestPaidLaunchAccessInvoice({ user: ownerUser, planId: plan.id }),
-    ).rejects.toThrow(/Invoice requests is paused/);
+    ).rejects.toThrow(PAID_SALES_PAUSED_MESSAGE);
     expect(await loadContainmentSnapshot(owner)).toEqual(beforePause);
     await expect(
       reviewManualPayment({
@@ -1894,7 +1895,7 @@ describeWithDb('S4 paid Launch Access disposable runtime', () => {
         decision: 'approve',
         verifiedAmount: renewalInvoice.invoice.amountDue,
       }),
-    ).rejects.toThrow(/Payment activation is paused/);
+    ).rejects.toThrow(PAID_SALES_PAUSED_MESSAGE);
     expect(await loadContainmentSnapshot(owner)).toEqual(beforePause);
 
     setPaidMvpProductionRelease(false);
