@@ -337,6 +337,7 @@
     "db:legal:release:ack": "tsx scripts/databaseAuthorityCli.ts worktree:ack --operation=legal-release-apply --credential=migration",
     "db:legal:runtime-grants:plan": "tsx scripts/legalRuntimeGrantCli.ts plan",
     "db:legal:runtime-grants:apply": "tsx scripts/legalRuntimeGrantCli.ts apply",
-    "db:legal:release:prepare": "tsx scripts/databaseAuthorityCli.ts legal-release:prepare"
+    "db:legal:release:prepare": "tsx scripts/databaseAuthorityCli.ts legal-release:prepare",
+    "db:runtime-grants:0197:plan": "tsx scripts/runtimeGrant0197PlanCli.ts"
   }
 }
