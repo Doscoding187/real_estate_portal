@@ -1,0 +1,28 @@
+{
+  "record": "production-apply-20261106-readiness-database-purpose",
+  "source": "az containerapp job exec (read-only, B08 inspector credential): ca-release-checks-20261105-mpksmwz; pnpm db:readiness -- --purpose=database",
+  "requestedRuntime": "database",
+  "applicationReady": true,
+  "checkedAt": "2026-11-06T10:06:11.487Z",
+  "layers": {
+    "processLiveness":         { "state": "ready",         "code": "process-alive" },
+    "serviceAvailable":        { "state": "ready",         "code": "target-connected" },
+    "targetOwned":             { "state": "ready",         "code": "approved-protected-target" },
+    "schemaMigrated":          { "state": "ready",         "code": "manifest-head-ready" },
+    "schemaCongruent":         { "state": "ready",         "code": "schema-congruent" },
+    "migrationHead":           { "state": "ready",         "code": "manifest-head-ready" },
+    "incompleteAttemptState":  { "state": "ready",         "code": "no-incomplete-attempts" },
+    "structuralSchema":        { "state": "ready",         "code": "required-schema-present" },
+    "commercialReferenceData": { "state": "ready",         "code": "canonical-foundation-ready" },
+    "requiredData":            { "state": "not-required",  "code": "requested-data-not-required" },
+    "canonicalReferenceData":  { "state": "not-evaluated", "code": "reference-not-evaluated" },
+    "acceptanceScenario":      { "state": "not-evaluated", "code": "scenario-not-evaluated" },
+    "consumerApi":             { "state": "not-evaluated", "code": "consumer-not-evaluated" },
+    "browserJourney":          { "state": "not-evaluated", "code": "browser-not-evaluated" },
+    "release":                 { "state": "not-evaluated", "code": "release-not-evaluated" },
+    "fullDiagnostics":         { "state": "not-evaluated", "code": "diagnostics-not-evaluated" }
+  },
+  "schemaCongruentDetail": "Physical schema matches canonical digest 869f441f3131b0f1bf4b56d416d049292bb48204918f8172d3699625c3208da7.",
+  "structuralSchemaDetail": "All 225 application tables are present.",
+  "commercialReferenceDataDetail": "canonical-launch-foundation-v1 (aaac24d45d655d27) verified: 3 Launch Access products and their entitlements."
+}

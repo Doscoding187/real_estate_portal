@@ -1,0 +1,12 @@
+{
+  "record": "production-apply-20261106-replan",
+  "source": "az containerapp job exec (read-only): ca-release-plan-20261105-yafazli; az containerapp job update restores the job to the approved 0111->0197 pair afterwards",
+  "acceptedOldHead": "0197_drop_seller_prospects_province.sql",
+  "expectedNewHead": "0197_drop_seller_prospects_province.sql",
+  "planDigest": "55d66ff12500c9fbf8f2c9552f8de73c1ad72acebee90a9c7f909234eac38352",
+  "mode": "plan",
+  "applied": [],
+  "pending": [],
+  "pendingSequenceLines": 0,
+  "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced"
+}

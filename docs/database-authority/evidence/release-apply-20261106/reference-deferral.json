@@ -1,0 +1,31 @@
+{
+  "record": "reference-release-20261106-not-possible-by-design",
+  "dateUtc": "2026-11-06T12:00:00Z",
+  "reason": "The three reference adapters admit staging/production targets only by construction; a disposable-rehearsal copy cannot be rehearsed against them.",
+  "details": {
+    "places": {
+      "adapter": "canonical-places-release",
+      "admission": "releaseCanonicalPlaces asserts the production target fingerprint b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced only (Place release refused: only the governed Azure production target is admitted.)",
+      "decision": "Deferred \u2014 not run in this window; optional later addition."
+    },
+    "geography": {
+      "adapter": "canonical-geography-release",
+      "admission": "Retired \u2014 the adapter targets provinces/cities/suburbs tables dropped by migration 0175-0177; inapplicable after 0197.",
+      "decision": "Retired; no longer referenced by any release path on or after 0197."
+    },
+    "commercial": {
+      "adapter": "canonical-commercial-release",
+      "admission": "releaseReferenceVerify allows verification/readiness operations per its own target gate (disposable targets; staging/production via release-reference-* scope)",
+      "stateOnProduction": "ready (canonical-launch-foundation-v1 aaac24d45d655d27 verified: 3 Launch Access products and their entitlements)",
+      "decision": "No action; already verified."
+    }
+  },
+  "productionState": {
+    "api": "deactivated (revision m1 inactive, 0 replicas; traffic weight 100 with no container serving it)",
+    "maintenanceWall": "still served by Vercel",
+    "paidIntake": "still closed",
+    "readinessDatabasePurpose": "applicationReady true (checkedAt 2026-11-06T10:06:11.487Z)",
+    "readinessLocationDiscovery": "applicationReady false (canonical reference layer not-evaluated by design)"
+  },
+  "note": "No reference adapter can be admitted on the restored copy, so the copy rehearsed only the migration (green). The places/commercial releases are production-first actions with their own approvals; they were not part of this window."
+}
