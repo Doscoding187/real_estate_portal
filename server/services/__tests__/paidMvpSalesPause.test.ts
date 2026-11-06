@@ -11,6 +11,7 @@ import {
   reviewManualPayment,
   startAgencyManualCheckout,
 } from '../billingFoundationService';
+import { PAID_SALES_PAUSED_MESSAGE } from '../../../shared/paidIntakeCopy';
 
 const releaseEnvironment = {
   NODE_ENV: 'production',
@@ -75,7 +76,7 @@ describe('founder-only new-sales pause', () => {
       productAvailability: { agency_launch_access: true },
     });
     expect(() => requirePaidMvpSalesOpen('Invoice requests', releaseEnvironment)).toThrow(
-      /Invoice requests is paused/,
+      PAID_SALES_PAUSED_MESSAGE,
     );
     expect(() =>
       requirePaidMvpSalesOpen('Invoice requests', {
@@ -99,13 +100,13 @@ describe('founder-only new-sales pause', () => {
     vi.stubEnv('PAID_MVP_SALES_PAUSED', 'true');
 
     await expect(requestPaidLaunchAccessInvoice({ user: {} as never })).rejects.toThrow(
-      /Invoice requests is paused/,
+      PAID_SALES_PAUSED_MESSAGE,
     );
     await expect(
       startAgencyManualCheckout({ user: {} as never, planId: 1, billingCycle: 'monthly' }),
-    ).rejects.toThrow(/Manual-EFT checkout is paused/);
+    ).rejects.toThrow(PAID_SALES_PAUSED_MESSAGE);
     await expect(
       reviewManualPayment({ actorUser: {} as never, paymentId: 1, decision: 'approve' }),
-    ).rejects.toThrow(/Payment activation is paused/);
+    ).rejects.toThrow(PAID_SALES_PAUSED_MESSAGE);
   });
 });

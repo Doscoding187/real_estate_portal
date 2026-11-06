@@ -8,6 +8,7 @@ import {
   isPaidMvpLaunchAccessProductKey,
   type PaidMvpLaunchAccessProductKey,
 } from '../../shared/commercialActivation';
+import { PAID_INTAKE_CLOSED_MESSAGE, PAID_SALES_PAUSED_MESSAGE } from '../../shared/paidIntakeCopy';
 
 type RuntimeEnvironment = Record<string, string | undefined>;
 
@@ -302,7 +303,7 @@ export function requirePaidMvpSalesOpen(
   if (!getConfiguration(environment).salesPaused) return;
   throw new TRPCError({
     code: 'PRECONDITION_FAILED',
-    message: `${operation} is paused while the founder is unavailable. Existing customer access remains available.`,
+    message: PAID_SALES_PAUSED_MESSAGE,
   });
 }
 
@@ -329,7 +330,7 @@ export function requirePaidMvpOwnerAdmission(
     return;
   throw new TRPCError({
     code: 'PRECONDITION_FAILED',
-    message: `${operation} is closed to owners outside the controlled release intake.`,
+    message: PAID_INTAKE_CLOSED_MESSAGE,
   });
 }
 

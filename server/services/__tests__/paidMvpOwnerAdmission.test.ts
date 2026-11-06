@@ -6,6 +6,8 @@ import {
   resolveCommercialActivationConfiguration,
 } from '../commercialActivationPolicy';
 
+import { PAID_INTAKE_CLOSED_MESSAGE, PAID_SALES_PAUSED_MESSAGE } from '../../../shared/paidIntakeCopy';
+
 const release = () => ({
   NODE_ENV: 'production',
   APP_ENV: 'production',
@@ -33,14 +35,14 @@ describe('controlled paid owner admission', () => {
     ).not.toThrow();
     expect(() =>
       requirePaidMvpOwnerAdmission('Invoice', { ownerType, ownerId: ownerId + 1 }, release()),
-    ).toThrow(/controlled release intake/);
+    ).toThrow(PAID_INTAKE_CLOSED_MESSAGE);
     expect(() =>
       requirePaidMvpOwnerAdmission(
         'Invoice',
         { ownerType: ownerType === 'agent' ? 'agency' : 'agent', ownerId },
         release(),
       ),
-    ).toThrow(/controlled release intake/);
+    ).toThrow(PAID_INTAKE_CLOSED_MESSAGE);
   });
   it.each([
     undefined,
@@ -63,7 +65,7 @@ describe('controlled paid owner admission', () => {
     const env = { ...release(), PAID_MVP_ADMITTED_OWNERS: value };
     expect(() =>
       requirePaidMvpOwnerAdmission('Invoice', { ownerType: 'agent', ownerId: 11 }, env),
-    ).toThrow(/controlled release intake/);
+    ).toThrow(PAID_INTAKE_CLOSED_MESSAGE);
     expect(isCommercialActivationAvailable(env, 'agent_launch_access')).toBe(true);
   });
   it('preserves the absolute pause and window expiry for an admitted owner', () => {
@@ -76,7 +78,7 @@ describe('controlled paid owner admission', () => {
         { ownerType: 'agent', ownerId: 11 },
         { ...env, PAID_MVP_SALES_PAUSED: 'true' },
       ),
-    ).toThrow(/paused/);
+    ).toThrow(PAID_SALES_PAUSED_MESSAGE);
     vi.advanceTimersByTime(60_000);
     expect(() =>
       requirePaidMvpOwnerAdmission('Activation', { ownerType: 'agent', ownerId: 11 }, env),
@@ -95,7 +97,7 @@ describe('controlled paid owner admission', () => {
     expect(resolveCommercialActivationConfiguration(env).mode).toBe('paid_mvp_release');
     expect(() =>
       requirePaidMvpOwnerAdmission('Invoice', { ownerType: 'agent', ownerId: 99 }, env),
-    ).toThrow(/controlled release intake/);
+    ).toThrow(PAID_INTAKE_CLOSED_MESSAGE);
   });
   it('uses the reviewed startup snapshot until reinitialization', () => {
     for (const [key, value] of Object.entries(release())) vi.stubEnv(key, value);
@@ -103,7 +105,7 @@ describe('controlled paid owner admission', () => {
     vi.stubEnv('PAID_MVP_ADMITTED_OWNERS', 'agent:99');
     expect(() =>
       requirePaidMvpOwnerAdmission('Invoice', { ownerType: 'agent', ownerId: 99 }),
-    ).toThrow(/controlled release intake/);
+    ).toThrow(PAID_INTAKE_CLOSED_MESSAGE);
     expect(() =>
       requirePaidMvpOwnerAdmission('Invoice', { ownerType: 'agent', ownerId: 11 }),
     ).not.toThrow();

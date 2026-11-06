@@ -34,6 +34,7 @@ import {
 import { cn } from '@/lib/utils';
 import { formatCommercialStatus, formatInvoiceStatus } from '@/lib/developerStatusVocabulary';
 import { toast } from 'sonner';
+import { toastPaidError } from '@/components/commercial/PaidIntakeNotice';
 import { CommercialActivationNotice } from '@/components/commercial/CommercialActivationNotice';
 import { useCommercialProductAvailability } from '@/hooks/useCommercialProductAvailability';
 
@@ -173,7 +174,7 @@ export function CommercialDeveloperBillingPanel() {
       await Promise.all([refetch(), workspaceQuery.refetch()]);
       toast.success('Payment notification submitted. Bank verification is pending.');
     },
-    onError: error => toast.error(error.message || 'Payment notification could not be submitted'),
+    onError: error => toastPaidError(error, 'Payment notification could not be submitted'),
   });
 
   // The tRPC procedure returns the canonical developer projection directly.

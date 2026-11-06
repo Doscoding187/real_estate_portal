@@ -39,6 +39,7 @@ import {
   UploadCloud,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { toastPaidError } from '@/components/commercial/PaidIntakeNotice';
 import { CommercialActivationNotice } from '@/components/commercial/CommercialActivationNotice';
 
 type RouterOutputs = inferRouterOutputs<AppRouter>;
@@ -451,7 +452,7 @@ export function CommercialAgentPackageSelection({
     } catch (error) {
       legal.reload();
       void catalog.refetch();
-      toast.error(error instanceof Error ? error.message : 'Could not request the Agent invoice');
+      toastPaidError(error, 'Could not request the Agent invoice');
     } finally {
       setIsRequestingInvoice(false);
     }
@@ -473,9 +474,7 @@ export function CommercialAgentPackageSelection({
       toast.success('Payment notification submitted. Bank verification is pending.');
       setLocation('/agent/dashboard');
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Payment notification could not be submitted.',
-      );
+      toastPaidError(error, 'Payment notification could not be submitted.');
     }
   };
 
