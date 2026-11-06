@@ -55,6 +55,7 @@
       "scripts/launchWorkerAdmissionCheck.ts",
       "scripts/verifyIsolatedCiDatabaseIdentities.ts",
       "server/_core/databaseAuthority/b08AzureInspectionIdentity.ts",
+      "server/_core/databaseAuthority/runtimeGrant0197Probe.ts",
       "tools/place-admission/prove-national-storage.mjs"
     ],
     "supportedDiagnostics": [
@@ -315,7 +316,7 @@
         "server/scripts/verify-hot-selling.ts"
       ]
     },
-    "guardedOperationalSurfaceCountAtClosure": 112,
+    "guardedOperationalSurfaceCountAtClosure": 113,
     "operationalSurfaceDefinition": "A current source path within the guard boundary that has direct database-client, execution, SQL mutation/inspection, or ambient-target capability signals. Historical documentation, ordinary runtime data access, migrations, tests and non-capable authority files are not counted as operational surfaces."
   },
   "policy": {
