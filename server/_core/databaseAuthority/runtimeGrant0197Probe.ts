@@ -1,8 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { authorizeDatabaseOperation, B08_RUNTIME_IDENTITY } from './authorization';
+import { B08_RUNTIME_IDENTITY } from './authorization';
 import {
+  authorizeProbe,
   isAcceptedProbeTarget,
+  safeProbeErrorLine,
   PROBE_DATABASE as DATABASE,
   readFounderCounts,
 } from './runtimeGrant0197ProbeSupport';
@@ -53,7 +55,7 @@ async function main() {
   });
   if (!isAcceptedProbeTarget(authority.context))
     throw new Error('0197 probe refused: resolved target or credential identity differs.');
-  const decision = authorizeDatabaseOperation(authority);
+  const decision = authorizeProbe(authority);
   const connection = await createAuthoritySqlConnection(authority, decision);
 
   const quote = String.fromCharCode(96);
@@ -117,7 +119,8 @@ async function main() {
   }
 }
 
-main().catch(() => {
+main().catch(error => {
+  process.stderr.write(safeProbeErrorLine(error) + '\n');
   process.stderr.write(
     '0197 runtime grant probe failed; preserve output and stop for read-only review. No automatic retry is allowed.\n',
   );

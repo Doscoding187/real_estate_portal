@@ -1,4 +1,40 @@
-import { B08_AZURE_TARGET_FINGERPRINT_HASH } from './authorization';
+import {
+  authorizeDatabaseOperation,
+  B08_AZURE_TARGET_FINGERPRINT_HASH,
+  protectedDatabaseApprovalFromEnvironment,
+} from './authorization';
+import type { ResolvedDatabaseAuthority } from './types';
+
+/** Same approval path as scripts/databaseAuthorityCli.ts: DATABASE_AUTHORITY_APPROVAL_* env. */
+export function authorizeProbe(
+  authority: ResolvedDatabaseAuthority,
+  env: NodeJS.ProcessEnv = process.env,
+  root?: string,
+) {
+  return authorizeDatabaseOperation(authority, {
+    root,
+    approval: protectedDatabaseApprovalFromEnvironment(authority, env),
+  });
+}
+
+const SAFE_MESSAGE_PREFIXES = ['Database operation refused:', '0197 probe refused:'];
+
+/** Error class plus message only when it is an authored refusal; never driver text, URLs or env values. */
+export function safeProbeErrorLine(error: unknown): string {
+  const name = error instanceof Error && /^[A-Za-z0-9_]{1,64}$/.test(error.name) ? error.name : 'Error';
+  const rawCode = (error as { code?: unknown } | null)?.code;
+  const code = typeof rawCode === 'string' && /^[A-Z0-9_]{1,64}$/.test(rawCode) ? rawCode : null;
+  const message =
+    error instanceof Error && SAFE_MESSAGE_PREFIXES.some(p => error.message.startsWith(p))
+      ? error.message.replace(/[a-z][a-z0-9+.-]*:\/\/\S+/gi, '[redacted]').slice(0, 300)
+      : null;
+  return (
+    '0197 probe error: class=' +
+    name +
+    (code ? ' code=' + code : '') +
+    (message ? ' message=' + message : '')
+  );
+}
 
 export const PROBE_DATABASE = 'propertylistify_database';
 
