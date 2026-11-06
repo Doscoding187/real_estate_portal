@@ -302,6 +302,13 @@ describe('Named legal-release authority protocol', () => {
       expect(f.statements).toEqual([]);
     },
   );
+  it('refuses when the checkout head differs from the packet sourceHead', async () => {
+    const f = fixture();
+    await expect(
+      run('legal-release-plan', f, { packet: { ...packet(), sourceHead: 'f'.repeat(40) } }),
+    ).rejects.toThrow('source head mismatch');
+    expect(f.statements).toEqual([]);
+  });
   it('refuses a window longer than 30 minutes', async () => {
     await expect(
       run('legal-release-plan', fixture(), {

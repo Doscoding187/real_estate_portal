@@ -42,6 +42,8 @@ import {
   verifyB08AzureEstablishment,
 } from '../server/_core/databaseAuthority/b08AzurePostApplyVerification';
 import { resolveDatabaseAuthority } from '../server/_core/databaseAuthority/context';
+import { readInstallerWorktreeIdentity } from '../server/_core/databaseAuthority/worktreeIdentity';
+import type { GitWorktreeIdentity } from '../server/_core/databaseAuthority/types';
 import {
   createOwnedWorktreeDatabase,
   disposeOwnedWorktreeDatabase,
@@ -210,9 +212,14 @@ function credentialClass(fallback?: DatabaseCredentialClass): DatabaseCredential
     | undefined;
 }
 
-function authorityFor(operation: DatabaseOperation, fallbackCredential?: DatabaseCredentialClass) {
+function authorityFor(
+  operation: DatabaseOperation,
+  fallbackCredential?: DatabaseCredentialClass,
+  gitIdentity?: GitWorktreeIdentity,
+) {
   return resolveDatabaseAuthority({
     operation,
+    gitIdentity,
     // The isolated GitHub service binds identity from the operation after
     // target resolution. A local-owner fallback must never select its role.
     credentialClass: credentialClass(
@@ -673,7 +680,11 @@ async function run(command: Command): Promise<void> {
         : 'legal-release-verify';
     const packet = JSON.parse(readFileSync(resolve(requiredOption('packet')), 'utf8'));
     const expectedPlanDigest = apply ? requiredOption('plan-digest') : undefined;
-    const authority = authorityFor(operation, apply ? 'migration' : 'read-only');
+    const authority = authorityFor(
+      operation,
+      apply ? 'migration' : 'read-only',
+      readInstallerWorktreeIdentity(process.cwd()),
+    );
     const decision = authorizationFor(authority, option('ack'));
     const connection = await createAuthoritySqlConnection(authority, decision);
     print(
