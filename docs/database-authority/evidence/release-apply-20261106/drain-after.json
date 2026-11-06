@@ -1,0 +1,27 @@
+{
+  "record": "production-apply-20261106-drain-after",
+  "source": "az containerapp revision list/deactivate; ARM read of containerApps/.../revisions; az monitor metrics list (active_connections)",
+  "app": {
+    "revision": "ca-property-listify-prod--m1",
+    "active": false,
+    "replicas": 0,
+    "trafficWeight": "100% (weight unchanged; no container serves it)",
+    "healthState": "Healthy"
+  },
+  "otherRevisionsNote": "Historic revisions (--cs6vp80, --0000001, --0000002, --0000003, --b1) were already inactive/0 replicas before the deactivation; nothing else changed.",
+  "metricsActiveConnectionsAfterPT1M": [
+    {"t": "2026-11-06T08:55:00Z", "avg": 5.0, "max": 6.0, "min": 4.0},
+    {"t": "2026-11-06T08:56:00Z", "avg": 4.0, "max": 4.0, "min": 4.0},
+    {"t": "2026-11-06T08:57:00Z", "avg": 4.0, "max": 4.0, "min": 4.0},
+    {"t": "2026-11-06T08:58:00Z", "avg": 4.0, "max": 4.0, "min": 4.0},
+    {"t": "2026-11-06T08:59:00Z", "avg": 4.0, "max": 4.0, "min": 4.0},
+    {"t": "2026-11-06T09:00:00Z", "avg": 4.0, "max": 4.0, "min": 4.0},
+    {"t": "2026-11-06T09:01:00Z", "avg": 4.0, "max": 4.0, "min": 4.0}
+  ],
+  "idleFloorProof": "Production drained floor 4.0 equals the restored copy's floor (4.0, no app/jobs running) and equals production's own undisturbed 2026-11-03..04 days (4.0). After the round of reactivation + drain the same 4.0 floor held (09:08-09:11Z).",
+  "verifiedAfterDrainActions": [
+    "ARM revision read: m1 active=false replicas=0 traffic=0 weight=100 health=Healthy",
+    "No other Container App in rg-property-listify serves traffic besides m1",
+    "active_connections fell to the 4.0 floor within 1-2 minutes of deactivation"
+  ]
+}

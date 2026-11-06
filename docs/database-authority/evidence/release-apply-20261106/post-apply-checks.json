@@ -1,0 +1,35 @@
+{
+  "record": "post-apply-checks-20261106",
+  "source": "az containerapp job exec (read-only, B08 inspector credential): ca-release-checks-20261105-wy9bm9t",
+  "ledger": { "appliedRows": 198, "lastApplied": "0197_drop_seller_prospects_province.sql" },
+  "attempts": { "succeeded": 198, "failed": 0, "running": 0, "blocked": 0 },
+  "droppedTablesVerifiedGone": [
+    "city_price_analytics",
+    "suburb_price_analytics",
+    "price_analytics",
+    "price_predictions",
+    "market_insights_cache",
+    "location_searches",
+    "recent_searches",
+    "location_provider_mappings",
+    "amenities",
+    "location_search_cache",
+    "suburbs",
+    "cities",
+    "provinces",
+    "locations"
+  ],
+  "fkReferencingDroppedTables": 0,
+  "fkReferencingDroppedColumns": 0,
+  "indexesOnDroppedColumns": [
+    {"table": "properties", "index": "city_idx",     "column": "city",     "nonUnique": 1},
+    {"table": "properties", "index": "province_idx", "column": "province", "nonUnique": 1}
+  ],
+  "remainingLegacyColumnsKeptByCanonicalModel": [
+    "agencies.city", "agencies.province",
+    "developer_organisations.city", "developer_organisations.province",
+    "developers.city", "developers.province",
+    "listings.city", "listings.province", "listings.suburb",
+    "properties.city", "properties.province"
+  ]
+}

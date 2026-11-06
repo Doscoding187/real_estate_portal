@@ -1,0 +1,21 @@
+{
+  "record": "production-apply-20261106-drain-before",
+  "source": "az containerapp show/revision list/containerapp replica list (read-only); az monitor metrics list (active_connections)",
+  "app": {
+    "minReplicas": 1,
+    "maxReplicas": 1,
+    "revision": "ca-property-listify-prod--m1",
+    "latestReadyRevisionName": "ca-property-listify-prod--m1",
+    "revisionHealth": "Healthy",
+    "revisionTrafficWeight": "100%",
+    "replica": "ca-property-listify-prod--m1-7f7d55c68d-phjg8"
+  },
+  "metricsActiveConnectionsBeforePT5M": [
+    {"t": "2026-11-06T08:20:00Z", "avg": 5.137, "max": 6.0, "min": 5.0},
+    {"t": "2026-11-06T08:35:00Z", "avg": 5.206, "max": 6.0, "min": 5.0},
+    {"t": "2026-11-06T08:50:00Z", "avg": 6.7,    "max": 14.0, "min": 4.0},
+    {"t": "2026-11-06T06:05:00Z", "avg": 5.103, "max": 6.0, "min": 5.0},
+    {"t": "2026-11-06T05:20:00Z", "avg": 5.206, "max": 6.0, "min": 5.0}
+  ],
+  "metricsHistoryNote": "Flat ~5.0-5.2 across 2026-11-03..2026-11-06 outside migration windows (multi-day calm value 4.0). The 08:50Z 6.7 average with max 14.0 preceded the deactivation; the 14.0 plateau on 2026-11-04/05 was the Azure migration deploy window."
+}

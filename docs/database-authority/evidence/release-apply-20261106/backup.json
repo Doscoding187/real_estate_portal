@@ -1,0 +1,14 @@
+{
+  "record": "pre-migrate-backup-2026-11-06",
+  "backup": {
+    "name": "pre-0197-apply-20261106",
+    "type": "FULL",
+    "completedTime": "2026-11-06T09:12:16.047084+00:00",
+    "provisioningState": "Ready",
+    "source": "Customer",
+    "id": "/subscriptions/384dc69e-9e22-419f-9e3d-83fbac4f58d0/resourceGroups/rg-property-listify/providers/Microsoft.DBforMySQL/flexibleServers/propertylistify-mysql/backupsv2/customer-20261106t091212-b1759c5b-c96f-4cc8-85fc-8d66ab21425f-pre-0197-apply-20261106"
+  },
+  "command": "az mysql flexible-server backup create -g rg-property-listify -n propertylistify-mysql --backup-name pre-0197-apply-20261106",
+  "elapsedSeconds": 9,
+  "rollbackAnchor": "Restore from this (or an earlier) backup to a NEW server only; Azure restores never modify the source server."
+}
