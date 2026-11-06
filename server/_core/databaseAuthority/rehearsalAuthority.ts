@@ -165,8 +165,14 @@ export function assertRehearsalAuthorization(
     'release-plan',
     'release-reference-plan',
     'release-reference-verify',
+    'legal-release-plan',
+    'legal-release-verify',
   ]);
-  const applyOperations = new Set(['release-apply', 'release-reference-apply']);
+  const applyOperations = new Set([
+    'release-apply',
+    'release-reference-apply',
+    'legal-release-apply',
+  ]);
   const allowedOperation =
     readOnlyOperations.has(context.operation) || applyOperations.has(context.operation);
   const credentialMatches =

@@ -241,6 +241,9 @@ describe('disposable rehearsal schema release authority', () => {
     expect(rehearsalOperations).toEqual(
       [
         'diagnostics',
+        'legal-release-apply',
+        'legal-release-plan',
+        'legal-release-verify',
         'read-only-connect',
         'readiness',
         'release-apply',
