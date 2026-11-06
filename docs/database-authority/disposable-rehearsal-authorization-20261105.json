@@ -23,7 +23,10 @@
     "readiness:read-only",
     "diagnostics:read-only",
     "release-plan:read-only:0111-to-0197",
-    "release-apply:migration:0111-to-0197"
+    "release-apply:migration:0111-to-0197",
+    "release-reference-plan:read-only",
+    "release-reference-apply:migration",
+    "release-reference-verify:read-only"
   ],
   "denied": [
     "rehearsal-regression",
@@ -52,7 +55,7 @@
       "server/migrations/migrationManifest.ts",
       "server/migrations/runSqlMigrations.ts"
     ],
-    "sha256": "3fafe58eed4e29fe39bd22d03164d776ec72c51675292b8df1420770df737451"
+    "sha256": "c01bacdad8b63c919782a98fa4dfc8ecbf2374f5a8ebbad54b936518491e8f0c"
   },
   "reviewTrigger": "This record expires at 2026-11-08T12:00:00Z. Any reuse requires new written approval after operator preflight verifies the exact ARM resource identity, creation time, and the guarded source digest."
 }
