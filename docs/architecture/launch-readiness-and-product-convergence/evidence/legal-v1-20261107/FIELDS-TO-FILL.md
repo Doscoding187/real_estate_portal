@@ -17,6 +17,10 @@ Validation is in `prepareLegalRelease` (`server/services/legalReleasePreparation
 | `actor` | final-privacy-approval.json | non-empty string, approver name (max 200 chars) | Edward | non-empty; stored as approval_actor |
 | `answer` | final-privacy-approval.json | exactly `Approve finalized Privacy wording` | Edward | zod literal |
 
+Extra guard: `assertNoUnsignedPlaceholders` (legalReleaseInstallation.ts) refuses the candidate or approval if ANY
+string at ANY depth, in any field, still contains `UNSIGNED-PLACEHOLDER`. Only the fields in the table carry the
+marker in the template, so filling them all clears it.
+
 Already computed (do not edit unless the texts change; then recompute and re-approve):
 bundleId, termsVersion, privacyVersion, `documents.*.sha256`, approval `document.sha256`, `termsSha256`, and
 versions. They are checked against the exact text bytes; a test asserts they match.

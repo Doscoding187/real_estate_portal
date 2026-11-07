@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { LEGAL_EVIDENCE_PATH } from '../legalReleaseInstallation';
+import { LEGAL_EVIDENCE_PATH, assertNoUnsignedPlaceholders } from '../legalReleaseInstallation';
 import { prepareLegalRelease } from '../../../services/legalReleasePreparation';
 
 const dir = resolve(process.cwd(), LEGAL_EVIDENCE_PATH);
@@ -37,20 +37,50 @@ describe('legal v1 evidence folder', () => {
     ).toThrow();
   });
 
-  it('prepare succeeds with a clearly fake filled fixture', () => {
-    const candidate = {
+  const filled = () => ({
+    candidate: {
       ...json('release-candidate.json'),
       sourceBusinessApproval: 'TEST-FIXTURE-FAKE-COPY-APPROVAL',
       finalPrivacyApproval: 'TEST-FIXTURE-FAKE-PRIVACY-APPROVAL',
-    };
-    const approval = {
+    },
+    approval: {
       ...json('final-privacy-approval.json'),
       reference: 'TEST-FIXTURE-FAKE-PRIVACY-APPROVAL',
       sourceBusinessApproval: 'TEST-FIXTURE-FAKE-COPY-APPROVAL',
       recordedAt: '2098-12-31T00:00:00Z',
       actor: 'TEST FIXTURE ONLY (not a real approval)',
       answer: 'Approve finalized Privacy wording',
-    };
+    },
+  });
+
+  it('refuses the committed template and any single placeholder left in place', () => {
+    expect(() => assertNoUnsignedPlaceholders(json('release-candidate.json'))).toThrow(
+      /unsigned/,
+    );
+    expect(() => assertNoUnsignedPlaceholders(json('final-privacy-approval.json'))).toThrow(
+      /unsigned/,
+    );
+    const marker = 'UNSIGNED-PLACEHOLDER-LEFT';
+    const cases: Array<['candidate' | 'approval', string]> = [
+      ['approval', 'reference'],
+      ['approval', 'actor'],
+      ['candidate', 'finalPrivacyApproval'],
+      ['candidate', 'sourceBusinessApproval'],
+    ];
+    for (const [side, field] of cases) {
+      const f = filled();
+      (f[side] as Record<string, unknown>)[field] = marker;
+      expect(() => assertNoUnsignedPlaceholders(f[side], side)).toThrow(/unsigned/);
+    }
+    const nested = filled();
+    nested.approval.document.version = marker;
+    expect(() => assertNoUnsignedPlaceholders(nested.approval)).toThrow(/unsigned/);
+  });
+
+  it('prepare succeeds with a clearly fake filled fixture', () => {
+    const { candidate, approval } = filled();
+    assertNoUnsignedPlaceholders(candidate);
+    assertNoUnsignedPlaceholders(approval);
     const prepared = prepareLegalRelease({
       candidate,
       approval,
