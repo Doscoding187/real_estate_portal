@@ -124,6 +124,26 @@ export function parseRuntime0197Grants(observed: readonly string[]): string[] {
   return [...entries].sort();
 }
 
+/**
+ * Single-sourced precondition: apply requires no planned privilege present;
+ * rollback requires all planned privileges present. Takes parsed grants.
+ */
+export function assertRuntime0197Precondition(
+  parsedBefore: readonly string[],
+  plannedPrivileges: readonly string[],
+  mode: Runtime0197Mode,
+) {
+  const planned = new Set(plannedPrivileges);
+  const beforeSet = new Set(parsedBefore);
+  const overlap = plannedPrivileges.filter(entry => beforeSet.has(entry));
+  if (mode === 'apply' && overlap.length > 0) {
+    throw new Error('Runtime 0197 grant refused: planned privileges already exist before apply.');
+  }
+  if (mode === 'rollback' && overlap.length !== planned.size) {
+    throw new Error('Runtime 0197 grant refused: planned privileges are not all present for rollback.');
+  }
+}
+
 /** After must equal before plus (apply) or minus (rollback) exactly the planned privileges. */
 export function reconcileRuntime0197Grants(
   beforeObserved: readonly string[],
@@ -133,14 +153,7 @@ export function reconcileRuntime0197Grants(
 ) {
   const before = parseRuntime0197Grants(beforeObserved);
   const planned = new Set(plannedPrivileges);
-  const beforeSet = new Set(before);
-  const overlap = plannedPrivileges.filter(entry => beforeSet.has(entry));
-  if (mode === 'apply' && overlap.length > 0) {
-    throw new Error('Runtime 0197 grant refused: planned privileges already exist before apply.');
-  }
-  if (mode === 'rollback' && overlap.length !== planned.size) {
-    throw new Error('Runtime 0197 grant refused: planned privileges are not all present for rollback.');
-  }
+  assertRuntime0197Precondition(before, plannedPrivileges, mode);
   const expected =
     mode === 'apply'
       ? [...new Set([...before, ...plannedPrivileges])].sort()
@@ -205,7 +218,11 @@ export async function executeRuntime0197GrantPlan(
     await verifyPhysical();
     stage = 'verify-prior-grants';
     const before = await showGrants(connection);
-    parseRuntime0197Grants(before);
+    assertRuntime0197Precondition(
+      parseRuntime0197Grants(before),
+      reviewedPlan.plannedPrivileges,
+      mode,
+    );
     observe({ ...progress }); // external custody retains intent before dispatch
     stage = 'grant-dispatch';
     for (const [index, statement] of statements.entries()) {
@@ -324,7 +341,17 @@ export async function applyRuntimeGrant0197(input: {
     approval,
     acknowledgement: expectedDatabaseAcknowledgement(authority.context),
   });
-  const connection = await createAuthoritySqlConnection(authority, decision);
+  let connection: AuthoritySqlConnection;
+  try {
+    connection = await createAuthoritySqlConnection(authority, decision);
+  } catch (error) {
+    throw new Runtime0197GrantFailure(
+      { completedStatements: 0, activeStatement: null, outcome: 'not-started' },
+      error,
+      [],
+      'connect',
+    );
+  }
   let lockHeld = false;
   const verifyPhysical = async () => {
     await acquireMigrationLock(connection, manifest.document.lockName);

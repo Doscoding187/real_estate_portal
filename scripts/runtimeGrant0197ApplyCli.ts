@@ -6,12 +6,7 @@ import {
   RUNTIME_0197_ADMIN_URL_ENV,
 } from '../server/_core/databaseAuthority/runtimeGrant0197Apply';
 
-function flag(args: string[], name: string): string {
-  const index = args.indexOf(name);
-  const value = index >= 0 ? args[index + 1] : undefined;
-  if (!value || value.startsWith('--')) throw new Error(`Missing required flag ${name}.`);
-  return value;
-}
+import { resolveRuntimeGrant0197CliInputs } from './runtimeGrant0197CliInputs';
 
 async function main() {
   const [mode, ...rest] = process.argv.slice(2);
@@ -34,8 +29,7 @@ async function main() {
   }
   const adminDatabaseUrl = process.env[RUNTIME_0197_ADMIN_URL_ENV];
   if (!adminDatabaseUrl) throw new Error('Admin connection input is missing.');
-  const planDigest = flag(rest, '--plan-digest');
-  const acknowledgement = flag(rest, '--ack');
+  const { planDigest, acknowledgement } = resolveRuntimeGrant0197CliInputs(rest, process.env);
   const result = await applyRuntimeGrant0197({
     mode,
     adminDatabaseUrl,
