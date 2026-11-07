@@ -19,6 +19,10 @@ import {
   normalizedDesiredSchema,
   normalizedPhysicalSchema,
 } from './schemaCongruency';
+import {
+  assertVerifiedLegalArtifactIdentity,
+  type VerifiedLegalArtifactIdentity,
+} from './legalArtifactIdentity';
 
 const digest = z.string().regex(/^[a-f0-9]{64}$/);
 const packetSchema = z
@@ -141,6 +145,7 @@ export async function installLegalRelease(input: {
   decision: AuthorizedDatabaseOperation;
   connection: AuthoritySqlConnection;
   packet: unknown;
+  artifactIdentity?: VerifiedLegalArtifactIdentity;
   expectedPlanDigest?: string;
   now?: () => Date;
 }) {
@@ -153,25 +158,29 @@ export async function installLegalRelease(input: {
   if (context.provider !== 'mysql')
     throw new Error('Legal release requires the admitted transactional MySQL authority');
   const protectedTarget = ['staging', 'production'].includes(context.targetClass);
+  const packet = packetSchema.parse(input.packet);
+  let artifactClaims:
+    | ReturnType<typeof assertVerifiedLegalArtifactIdentity>
+    | undefined;
   if (protectedTarget) {
-    if (!context.worktree.clean)
-      throw new Error('Protected legal release requires clean reviewed source');
+    artifactClaims = assertVerifiedLegalArtifactIdentity(input.artifactIdentity);
+    if (
+      artifactClaims.operation !== input.decision.operation ||
+      artifactClaims.targetFingerprintHash !== context.targetFingerprintHash ||
+      artifactClaims.sourceHead !== packet.sourceHead ||
+      artifactClaims.manifestDigest !== packet.manifestDigest ||
+      (input.decision.operation === 'legal-release-apply' &&
+        artifactClaims.planDigest !== input.expectedPlanDigest)
+    )
+      throw new Error('Protected legal release differs from its verified artifact identity');
   } else {
     assertOwnedDisposableTarget(input.authority);
   }
-  const packet = packetSchema.parse(input.packet);
-  if (packet.sourceHead !== context.repository.head)
+  if (
+    (!protectedTarget && packet.sourceHead !== context.repository.head) ||
+    (protectedTarget && packet.sourceHead !== artifactClaims?.sourceHead)
+  )
     throw new Error('Legal release source head mismatch');
-  if (protectedTarget) {
-    const reviewed = reviewedFiles(context.repository.root, packet.sourceHead);
-    if (
-      reviewed.terms !== packet.terms ||
-      reviewed.privacy !== packet.privacy ||
-      stableDigest(reviewed.candidate) !== stableDigest(packet.candidate) ||
-      stableDigest(reviewed.approval) !== stableDigest(packet.approval)
-    )
-      throw new Error('Legal release packet differs from the exact reviewed Git copy/approval');
-  }
   const prepared = prepareLegalRelease({
     candidate: packet.candidate,
     approval: packet.approval,
