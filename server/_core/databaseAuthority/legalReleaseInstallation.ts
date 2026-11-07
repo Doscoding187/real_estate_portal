@@ -52,9 +52,24 @@ const columns = {
 type LegalRow = ReturnType<typeof prepareLegalRelease>['databaseRow'];
 const fields = Object.keys(columns) as Array<keyof LegalRow>;
 
+export const LEGAL_EVIDENCE_PATH =
+  'docs/architecture/launch-readiness-and-product-convergence/evidence/legal-v1-20261107';
+
+/** Refuses any string, at any depth, that still carries the unsigned template marker. */
+export function assertNoUnsignedPlaceholders(value: unknown, path = 'root'): void {
+  if (typeof value === 'string') {
+    if (value.includes('UNSIGNED-PLACEHOLDER'))
+      throw new Error(`Legal approval is unsigned: placeholder remains at ${path}`);
+  } else if (Array.isArray(value)) {
+    value.forEach((item, i) => assertNoUnsignedPlaceholders(item, `${path}[${i}]`));
+  } else if (value && typeof value === 'object') {
+    for (const [key, item] of Object.entries(value))
+      assertNoUnsignedPlaceholders(item, `${path}.${key}`);
+  }
+}
+
 function reviewedFiles(root: string, head: string) {
-  const path =
-    'docs/architecture/launch-readiness-and-product-convergence/evidence/b15-existing-certificate-20261013';
+  const path = LEGAL_EVIDENCE_PATH;
   const read = (file: string) =>
     execFileSync('git', ['show', `${head}:${path}/${file}`], {
       cwd: root,
@@ -91,6 +106,8 @@ export function prepareLegalInstallationPacket(input: {
     validUntil: input.validUntil,
     ...reviewedFiles(input.root, identity.head),
   });
+  assertNoUnsignedPlaceholders(packet.candidate, 'candidate');
+  assertNoUnsignedPlaceholders(packet.approval, 'approval');
   prepareLegalRelease({ ...packet, candidate: packet.candidate, approval: packet.approval });
   const window = Date.parse(packet.validUntil) - Date.parse(packet.plannedEffectiveAt);
   if (window <= 0 || window > 30 * 60_000)
@@ -172,6 +189,8 @@ export async function installLegalRelease(input: {
     )
       throw new Error('Legal release packet differs from the exact reviewed Git copy/approval');
   }
+  assertNoUnsignedPlaceholders(packet.candidate, 'candidate');
+  assertNoUnsignedPlaceholders(packet.approval, 'approval');
   const prepared = prepareLegalRelease({
     candidate: packet.candidate,
     approval: packet.approval,
