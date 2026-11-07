@@ -1,4 +1,16 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterAll, describe, expect, it, vi } from 'vitest';
+
+// This file mocks the authorization module, which the global DB setup (vitest.setup.ts) also uses to open
+// its connection. It needs no database, so opt out of that setup for this file only and restore afterwards.
+const previousSkipDbInit = vi.hoisted(() => {
+  const previous = process.env.SKIP_DB_INIT;
+  process.env.SKIP_DB_INIT = '1';
+  return previous;
+});
+afterAll(() => {
+  if (previousSkipDbInit === undefined) delete process.env.SKIP_DB_INIT;
+  else process.env.SKIP_DB_INIT = previousSkipDbInit;
+});
 
 const mocks = vi.hoisted(() => ({ connect: vi.fn() }));
 
