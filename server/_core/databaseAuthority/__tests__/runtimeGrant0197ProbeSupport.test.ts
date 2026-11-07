@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { B08_AZURE_TARGET_FINGERPRINT_HASH } from '../authorization';
-import { isAcceptedProbeTarget, readFounderCounts } from '../runtimeGrant0197ProbeSupport';
+import {
+  PROBE_ACCOUNT_SQL,
+  PROBE_DATABASE,
+  PROBE_GRANTS_SQL,
+  founderCountSql,
+  isAcceptedProbeTarget,
+  probeTableSql,
+  readFounderCounts,
+  safeProbeErrorLine,
+} from '../runtimeGrant0197ProbeSupport';
 
 const good = {
   targetClass: 'production',
@@ -57,5 +66,49 @@ describe('0197 probe founder counts', () => {
     expect(calls[0].sql).toMatch(/^SELECT /);
     expect(calls[0].values).toEqual(['founder.person@example.com']);
     expect(JSON.stringify({ founder: counts }).toLowerCase()).not.toContain('example.com');
+  });
+});
+
+describe('0197 probe SQL builders', () => {
+  const RESERVED = ['CURRENT_USER', 'USER', 'GRANT', 'TABLE', 'ORDER', 'GROUP', 'KEY', 'RANK'];
+  const statements = [
+    PROBE_ACCOUNT_SQL,
+    PROBE_GRANTS_SQL,
+    probeTableSql(PROBE_DATABASE, 'users'),
+    founderCountSql(PROBE_DATABASE),
+  ];
+
+  it('never uses an unquoted reserved word as an alias', () => {
+    for (const sql of statements) {
+      for (const word of RESERVED) {
+        expect(sql).not.toMatch(new RegExp('\\bAS\\s+' + word + '\\b', 'i'));
+      }
+    }
+    expect(PROBE_ACCOUNT_SQL).toBe('SELECT CURRENT_USER() AS current_identity');
+  });
+
+  it('quotes identifiers and rejects unsafe names', () => {
+    const bt = String.fromCharCode(96);
+    expect(probeTableSql('db', 't')).toBe('SELECT * FROM ' + bt + 'db' + bt + '.' + bt + 't' + bt + ' LIMIT 0');
+    expect(founderCountSql('db')).toContain(bt + 'users' + bt);
+    expect(founderCountSql('db')).toContain('= ?');
+    expect(() => probeTableSql('db', 'a;b')).toThrow();
+    expect(() => probeTableSql('d-b', 't')).toThrow();
+    expect(() => founderCountSql('d b')).toThrow();
+  });
+});
+
+describe('0197 probe error line', () => {
+  it('prints a fixed step label with class and code only', () => {
+    const error = Object.assign(new Error('You have an error in SELECT secret FROM x'), {
+      code: 'ER_PARSE_ERROR',
+    });
+    expect(safeProbeErrorLine(error, 'account')).toBe(
+      '0197 probe error: step=account class=Error code=ER_PARSE_ERROR',
+    );
+  });
+
+  it('omits the step when it is not a known label', () => {
+    expect(safeProbeErrorLine(new Error('x'), 'bogus' as never)).toBe('0197 probe error: class=Error');
   });
 });

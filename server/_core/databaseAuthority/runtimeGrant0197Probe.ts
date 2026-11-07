@@ -7,6 +7,10 @@ import {
   safeProbeErrorLine,
   PROBE_DATABASE as DATABASE,
   readFounderCounts,
+  PROBE_ACCOUNT_SQL,
+  PROBE_GRANTS_SQL,
+  probeTableSql,
+  type ProbeStep,
 } from './runtimeGrant0197ProbeSupport';
 import { createAuthoritySqlConnection } from './connectionAuthority';
 import { resolveDatabaseAuthority } from './context';
@@ -35,7 +39,8 @@ function safeCode(error: unknown): string {
   return 'UNCLASSIFIED';
 }
 
-async function main() {
+async function main(setStep: (step: ProbeStep) => void) {
+  setStep('inventory');
   const plan = runtimeGrant0197Plan();
   const inventory = JSON.parse(
     readFileSync(resolve(process.cwd(), 'drizzle/schema/canonical-model-inventory.json'), 'utf8'),
@@ -49,6 +54,7 @@ async function main() {
   )
     throw new Error('0197 probe refused: canonical inventory differs from the reviewed plan.');
 
+  setStep('authority');
   const authority = resolveDatabaseAuthority({
     operation: 'read-only-connect',
     credentialClass: 'runtime',
@@ -56,35 +62,27 @@ async function main() {
   if (!isAcceptedProbeTarget(authority.context))
     throw new Error('0197 probe refused: resolved target or credential identity differs.');
   const decision = authorizeProbe(authority);
+  setStep('connect');
   const connection = await createAuthoritySqlConnection(authority, decision);
 
-  const quote = String.fromCharCode(96);
   const tableResults: Array<{ table: string; status: 'selectable' | 'denied'; code?: string }> = [];
   try {
-    const accountRows = await readRows(connection, 'SELECT CURRENT_USER() AS current_user');
-    const currentUser = String(accountRows[0]?.current_user ?? '');
+    setStep('account');
+    const accountRows = await readRows(connection, PROBE_ACCOUNT_SQL);
+    const currentUser = String(accountRows[0]?.current_identity ?? '');
     if (!currentUser.toLowerCase().startsWith(B08_RUNTIME_IDENTITY + '@'))
       throw new Error('0197 probe refused: connected MySQL account differs from runtime identity.');
 
-    const grantRows = await readRows(connection, 'SHOW GRANTS');
+    setStep('grants');
+    const grantRows = await readRows(connection, PROBE_GRANTS_SQL);
     const grants = grantRows.map(row => String(Object.values(row)[0] ?? '')).filter(Boolean);
     if (grants.length === 0)
       throw new Error('0197 probe refused: SHOW GRANTS returned no rows.');
 
+    setStep('table-select');
     for (const table of inventory.tables) {
       try {
-        await readRows(
-          connection,
-          'SELECT * FROM ' +
-            quote +
-            DATABASE +
-            quote +
-            '.' +
-            quote +
-            table +
-            quote +
-            ' LIMIT 0',
-        );
+        await readRows(connection, probeTableSql(DATABASE, table));
         tableResults.push({ table, status: 'selectable' });
       } catch (error) {
         const code = safeCode(error);
@@ -92,7 +90,9 @@ async function main() {
         tableResults.push({ table, status: 'denied', code });
       }
     }
+    setStep('founder-count');
     const founder = await readFounderCounts(connection, process.env.FOUNDER_GOOGLE_EMAIL);
+    setStep('output');
     process.stdout.write(
       JSON.stringify(
         {
@@ -119,8 +119,11 @@ async function main() {
   }
 }
 
-main().catch(error => {
-  process.stderr.write(safeProbeErrorLine(error) + '\n');
+let currentStep: ProbeStep = 'inventory';
+main(step => {
+  currentStep = step;
+}).catch(error => {
+  process.stderr.write(safeProbeErrorLine(error, currentStep) + '\n');
   process.stderr.write(
     '0197 runtime grant probe failed; preserve output and stop for read-only review. No automatic retry is allowed.\n',
   );

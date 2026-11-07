@@ -20,7 +20,19 @@ export function authorizeProbe(
 const SAFE_MESSAGE_PREFIXES = ['Database operation refused:', '0197 probe refused:'];
 
 /** Error class plus message only when it is an authored refusal; never driver text, URLs or env values. */
-export function safeProbeErrorLine(error: unknown): string {
+export const PROBE_STEPS = [
+  'inventory',
+  'authority',
+  'connect',
+  'account',
+  'grants',
+  'table-select',
+  'founder-count',
+  'output',
+] as const;
+export type ProbeStep = (typeof PROBE_STEPS)[number];
+
+export function safeProbeErrorLine(error: unknown, step?: ProbeStep): string {
   const name = error instanceof Error && /^[A-Za-z0-9_]{1,64}$/.test(error.name) ? error.name : 'Error';
   const rawCode = (error as { code?: unknown } | null)?.code;
   const code = typeof rawCode === 'string' && /^[A-Z0-9_]{1,64}$/.test(rawCode) ? rawCode : null;
@@ -28,8 +40,11 @@ export function safeProbeErrorLine(error: unknown): string {
     error instanceof Error && SAFE_MESSAGE_PREFIXES.some(p => error.message.startsWith(p))
       ? error.message.replace(/[a-z][a-z0-9+.-]*:\/\/\S+/gi, '[redacted]').slice(0, 300)
       : null;
+  const label = step && (PROBE_STEPS as readonly string[]).includes(step) ? step : null;
   return (
-    '0197 probe error: class=' +
+    '0197 probe error: ' +
+    (label ? 'step=' + label + ' ' : '') +
+    'class=' +
     name +
     (code ? ' code=' + code : '') +
     (message ? ' message=' + message : '')
@@ -37,6 +52,35 @@ export function safeProbeErrorLine(error: unknown): string {
 }
 
 export const PROBE_DATABASE = 'propertylistify_database';
+
+const BT = String.fromCharCode(96);
+const SAFE_IDENTIFIER = /^[A-Za-z0-9_]+$/;
+
+function quoteIdentifier(name: string): string {
+  if (!SAFE_IDENTIFIER.test(name)) throw new Error('0197 probe refused: unsafe SQL identifier.');
+  return BT + name + BT;
+}
+
+/** `current_user` is reserved in MySQL; the alias must stay `current_identity`. */
+export const PROBE_ACCOUNT_SQL = 'SELECT CURRENT_USER() AS current_identity';
+export const PROBE_GRANTS_SQL = 'SHOW GRANTS';
+
+export function probeTableSql(database: string, table: string): string {
+  return 'SELECT * FROM ' + quoteIdentifier(database) + '.' + quoteIdentifier(table) + ' LIMIT 0';
+}
+
+export function founderCountSql(database: string): string {
+  return (
+    'SELECT COUNT(*) AS email_rows, ' +
+    "COALESCE(SUM(role = 'super_admin'), 0) AS super_admin_rows, " +
+    "COALESCE(SUM(role = 'super_admin' AND founder_authority = 'platform_founder'), 0) AS platform_founder_rows " +
+    'FROM ' +
+    quoteIdentifier(database) +
+    '.' +
+    quoteIdentifier('users') +
+    ' WHERE LOWER(email) = ?'
+  );
+}
 
 export type ProbeTargetContext = {
   targetClass: string;
@@ -80,14 +124,7 @@ export async function readFounderCounts(
   if (!email) return null;
   const row = firstRow(
     await connection.query(
-      'SELECT COUNT(*) AS email_rows, ' +
-        "COALESCE(SUM(role = 'super_admin'), 0) AS super_admin_rows, " +
-        "COALESCE(SUM(role = 'super_admin' AND founder_authority = 'platform_founder'), 0) AS platform_founder_rows " +
-        'FROM ' +
-        String.fromCharCode(96) +
-        PROBE_DATABASE +
-        String.fromCharCode(96) +
-        '.users WHERE LOWER(email) = ?',
+      founderCountSql(PROBE_DATABASE),
       [email],
     ),
   );
