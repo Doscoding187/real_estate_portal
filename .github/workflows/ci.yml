@@ -199,7 +199,7 @@ jobs:
       - name: Run isolated CHECK/FK and lifecycle tests
         env:
           S2_DB_TESTS: '1'
-        run: pnpm test:authority -- server/__tests__/integration.developer-engine-s2-supersession.test.ts server/__tests__/integration.billing-billable-account.test.ts --reporter=basic
+        run: pnpm test:authority -- server/__tests__/integration.developer-engine-s2-supersession.test.ts server/__tests__/integration.billing-billable-account.test.ts server/__tests__/integration.runtime-grant-0197-probe-sql.test.ts --reporter=basic
 
   place-authority:
     name: Canonical Place Authority

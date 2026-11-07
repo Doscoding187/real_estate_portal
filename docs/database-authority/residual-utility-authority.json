@@ -316,7 +316,7 @@
         "server/scripts/verify-hot-selling.ts"
       ]
     },
-    "guardedOperationalSurfaceCountAtClosure": 113,
+    "guardedOperationalSurfaceCountAtClosure": 112,
     "operationalSurfaceDefinition": "A current source path within the guard boundary that has direct database-client, execution, SQL mutation/inspection, or ambient-target capability signals. Historical documentation, ordinary runtime data access, migrations, tests and non-capable authority files are not counted as operational surfaces."
   },
   "policy": {
