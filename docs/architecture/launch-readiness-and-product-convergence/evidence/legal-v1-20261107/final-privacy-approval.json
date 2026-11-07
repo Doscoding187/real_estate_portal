@@ -1,0 +1,21 @@
+{
+  "recordFormat": 1,
+  "reference": "UNSIGNED-PLACEHOLDER-REPLACE-WITH-FINAL-PRIVACY-APPROVAL-REFERENCE",
+  "recordedAt": "UNSIGNED-PLACEHOLDER-REPLACE-WITH-ISO-8601-UTC-TIMESTAMP",
+  "actor": "UNSIGNED-PLACEHOLDER-REPLACE-WITH-APPROVER-NAME",
+  "answer": "UNSIGNED-PLACEHOLDER-REPLACE-WITH-EXACT-ANSWER: Approve finalized Privacy wording",
+  "document": {
+    "file": "privacy.txt",
+    "version": "privacy-2026-11-07.1",
+    "sha256": "623185316e7edd188c9750598734ace85537786289ac1e35257c6fbcddca2b3d"
+  },
+  "sourceBusinessApproval": "UNSIGNED-PLACEHOLDER-REPLACE-WITH-FOUNDER-COPY-APPROVAL-REFERENCE",
+  "termsAndPayment": {
+    "versions": {
+      "terms": "terms-2026-11-07.1"
+    },
+    "termsSha256": "11ee059f4a759c3243f32e4f658df91fb406c67a76c40a27be4e6cb80d88bc7a"
+  },
+  "effectiveAtPolicy": "Actual controlled release timestamp, never earlier than final approval. No public effect or automatic installation from this candidate manifest.",
+  "scope": "UNSIGNED TEMPLATE. Not an approval. Edward must replace every UNSIGNED-PLACEHOLDER value; see FIELDS-TO-FILL.md."
+}

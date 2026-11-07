@@ -52,9 +52,11 @@ const columns = {
 type LegalRow = ReturnType<typeof prepareLegalRelease>['databaseRow'];
 const fields = Object.keys(columns) as Array<keyof LegalRow>;
 
+export const LEGAL_EVIDENCE_PATH =
+  'docs/architecture/launch-readiness-and-product-convergence/evidence/legal-v1-20261107';
+
 function reviewedFiles(root: string, head: string) {
-  const path =
-    'docs/architecture/launch-readiness-and-product-convergence/evidence/b15-existing-certificate-20261013';
+  const path = LEGAL_EVIDENCE_PATH;
   const read = (file: string) =>
     execFileSync('git', ['show', `${head}:${path}/${file}`], {
       cwd: root,
