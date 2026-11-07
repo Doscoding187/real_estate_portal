@@ -27,11 +27,55 @@ export const LEGAL_JOB_ENV = {
   ack: 'LEGAL_ACK',
 } as const;
 
+export interface LegalReleaseFailureDetail {
+  errorName?: string;
+  outcomeUnknown?: boolean;
+  /** Only fixed library refusal texts; never driver text. */
+  libraryMessage?: string;
+  applyCommitted?: boolean;
+  applyState?: string;
+}
+
 export class LegalReleaseJobFailure extends Error {
-  constructor(readonly stage: string) {
+  constructor(
+    readonly stage: string,
+    readonly detail: LegalReleaseFailureDetail = {},
+  ) {
     super(`Legal release job failed at ${stage}.`);
     this.name = 'LegalReleaseJobFailure';
   }
+}
+
+const SAFE_MESSAGE_PREFIXES = ['Legal release', 'Legal package'];
+
+function detailFrom(error: unknown): LegalReleaseFailureDetail {
+  if (!(error instanceof Error)) return { outcomeUnknown: false };
+  const unsafe = (error as { unsafeToReplay?: unknown }).unsafeToReplay === true;
+  const unknown =
+    unsafe ||
+    error.name === 'LegalReleaseOutcomeUnknown' ||
+    error.name === 'LegalReleaseCommandFailure';
+  const safeMessage = SAFE_MESSAGE_PREFIXES.some(prefix => error.message.startsWith(prefix));
+  return {
+    errorName: error.name,
+    outcomeUnknown: unknown,
+    ...(safeMessage ? { libraryMessage: error.message.slice(0, 300) } : {}),
+  };
+}
+
+/** Safe one-line failure record for the CLI. */
+export function legalReleaseFailureLine(error: unknown): Record<string, unknown> {
+  const failure = error instanceof LegalReleaseJobFailure ? error : undefined;
+  const detail = failure?.detail ?? detailFrom(error);
+  return {
+    event: 'legal-release-job-failed',
+    stage: failure?.stage ?? 'unknown',
+    errorName: detail.errorName ?? null,
+    outcomeUnknown: detail.outcomeUnknown ?? false,
+    safeToReplay: false,
+    ...(detail.applyCommitted ? { applyCommitted: true, applyState: detail.applyState } : {}),
+    ...(detail.libraryMessage ? { message: detail.libraryMessage } : {}),
+  };
 }
 
 const REJECTED_LITERALS = new Set(['undefined', 'null']);
@@ -99,16 +143,20 @@ function preparePacketFromEnv(env: Env, deps: LegalReleaseJobDeps) {
     });
   } catch (error) {
     if (error instanceof LegalReleaseJobFailure) throw error;
-    throw new LegalReleaseJobFailure('prepare');
+    throw new LegalReleaseJobFailure('prepare', detailFrom(error));
   }
 }
 
-async function runStage<T>(stage: string, fn: () => Promise<T>): Promise<T> {
+async function runStage<T>(
+  stage: string,
+  fn: () => Promise<T>,
+  extra: LegalReleaseFailureDetail = {},
+): Promise<T> {
   try {
     return await fn();
   } catch (error) {
     if (error instanceof LegalReleaseJobFailure) throw error;
-    throw new LegalReleaseJobFailure(stage);
+    throw new LegalReleaseJobFailure(stage, { ...detailFrom(error), ...extra });
   }
 }
 
@@ -116,7 +164,17 @@ async function runStage<T>(stage: string, fn: () => Promise<T>): Promise<T> {
 export async function runLegalReleaseJob(
   env: Env,
   deps: LegalReleaseJobDeps = defaultLegalReleaseJobDeps(),
+  emit: (line: Record<string, unknown>) => void = () => {},
 ): Promise<Array<Record<string, unknown>>> {
+  // The approved-credential-class variable would also bind the read-only
+  // verify that follows apply, so it must not be set for this job.
+  if ((env.DATABASE_AUTHORITY_APPROVED_CREDENTIAL_CLASS ?? '') !== '') {
+    throw new LegalReleaseJobFailure('validation');
+  }
+  // The authority layer ignores the requested credential class under GitHub Actions.
+  if ((env.GITHUB_ACTIONS ?? '') !== '') {
+    throw new LegalReleaseJobFailure('validation');
+  }
   const mode = cleanInput(env, LEGAL_JOB_ENV.mode);
   if (mode !== 'plan' && mode !== 'apply' && mode !== 'verify') {
     throw new LegalReleaseJobFailure('mode');
@@ -137,28 +195,30 @@ export async function runLegalReleaseJob(
 
   if (mode === 'plan') {
     const plan = await runStage('plan', () => run('legal-release-plan', 'read-only', optionalAck));
-    return [
-      {
-        event: 'legal-release-job-plan',
-        packetDigest,
-        planDigest: plan.planDigest,
-        requiredAcknowledgement: expectedDatabaseAcknowledgement({
-          operation: 'legal-release-apply',
-          targetFingerprintHash: plan.targetFingerprintHash,
-        }),
-        sourceHead: plan.sourceHead,
-        bundleId: plan.bundleId,
-        plannedEffectiveAt: plan.effectiveAt,
-        validUntil: plan.validUntil,
-      },
-    ];
+    const line = {
+      event: 'legal-release-job-plan',
+      packetDigest,
+      planDigest: plan.planDigest,
+      requiredAcknowledgement: expectedDatabaseAcknowledgement({
+        operation: 'legal-release-apply',
+        targetFingerprintHash: plan.targetFingerprintHash,
+      }),
+      sourceHead: plan.sourceHead,
+      bundleId: plan.bundleId,
+      plannedEffectiveAt: plan.effectiveAt,
+      validUntil: plan.validUntil,
+    };
+    emit(line);
+    return [line];
   }
 
   if (mode === 'verify') {
     const verified = await runStage('verify', () =>
       run('legal-release-verify', 'read-only', optionalAck),
     );
-    return [{ event: 'legal-release-job-verified', ...pick(verified) }];
+    const line = { event: 'legal-release-job-verified', ...pick(verified) };
+    emit(line);
+    return [line];
   }
 
   // apply
@@ -169,13 +229,17 @@ export async function runLegalReleaseJob(
   const completed = await runStage('apply', () =>
     run('legal-release-apply', 'migration', ack, planDigest),
   );
-  const verified = await runStage('post-apply-verify', () =>
-    run('legal-release-verify', 'read-only', undefined),
+  // Print the full apply evidence now, before the post-apply verify can fail.
+  const completedLine = { event: 'legal-release-job-completed', ...completed };
+  emit(completedLine);
+  const verified = await runStage(
+    'post-apply-verify',
+    () => run('legal-release-verify', 'read-only', undefined),
+    { applyCommitted: true, applyState: String(completed?.state ?? '') },
   );
-  return [
-    { event: 'legal-release-job-completed', ...pick(completed) },
-    { event: 'legal-release-job-verified', ...pick(verified) },
-  ];
+  const verifiedLine = { event: 'legal-release-job-verified', ...pick(verified) };
+  emit(verifiedLine);
+  return [completedLine, verifiedLine];
 }
 
 function pick(evidence: Record<string, any>) {

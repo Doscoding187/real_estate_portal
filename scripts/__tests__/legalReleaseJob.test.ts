@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   LEGAL_JOB_ENV,
   LegalReleaseJobFailure,
+  legalReleaseFailureLine,
   runLegalReleaseJob,
   type LegalReleaseJobDeps,
 } from '../legalReleaseJob';
@@ -59,8 +60,11 @@ function makeDeps() {
         decision: { operation },
         connection: { credential, ack },
       });
-      calls[calls.length - 1].credential = credential;
-      calls[calls.length - 1].ack = ack;
+      const last = calls[calls.length - 1];
+      if (last) {
+        last.credential = credential;
+        last.ack = ack;
+      }
       return out;
     },
   };
@@ -196,6 +200,92 @@ describe('legal release job wrapper', () => {
       expect(failure.message).not.toContain('hunter2');
       expect(failure.message).not.toContain('mysql://');
     }
+  });
+
+  it('prints full apply evidence before verify; verify failure reports applyCommitted', async () => {
+    const { deps, install } = makeDeps();
+    const full = {
+      ...evidence('legal-release-apply', 'committed'),
+      transactionCommitDispatchedAt: '2026-11-08T10:01:00.000Z',
+      transactionCommitAcknowledgedAt: '2026-11-08T10:01:01.000Z',
+      activationChanged: true,
+      contentSha256: 'f'.repeat(64),
+      manifestDigest: 'd'.repeat(64),
+      approvalReference: 'REF-1',
+    };
+    install.mockResolvedValueOnce(full);
+    install.mockRejectedValueOnce(new Error(`driver ${URL_SECRET}`));
+    const emitted: Array<Record<string, unknown>> = [];
+    const failure = await runLegalReleaseJob(applyEnv, deps, line => emitted.push(line)).catch(
+      e => e,
+    );
+    expect(emitted).toHaveLength(1);
+    expect(emitted[0]).toMatchObject({
+      event: 'legal-release-job-completed',
+      transactionCommitDispatchedAt: full.transactionCommitDispatchedAt,
+      transactionCommitAcknowledgedAt: full.transactionCommitAcknowledgedAt,
+      activationChanged: true,
+      targetFingerprintHash: FINGERPRINT,
+      contentSha256: full.contentSha256,
+      manifestDigest: full.manifestDigest,
+      approvalReference: 'REF-1',
+    });
+    expect(failure).toMatchObject({ stage: 'post-apply-verify' });
+    const line = legalReleaseFailureLine(failure);
+    expect(line).toMatchObject({
+      stage: 'post-apply-verify',
+      applyCommitted: true,
+      applyState: 'committed',
+      safeToReplay: false,
+    });
+    expect(JSON.stringify(line)).not.toContain('hunter2');
+  });
+
+  it('failure line flags unknown outcomes and only passes fixed library messages', async () => {
+    class LegalReleaseOutcomeUnknown extends Error {
+      readonly unsafeToReplay = true;
+      constructor() {
+        super('Legal release COMMIT outcome is unknown.');
+        this.name = 'LegalReleaseOutcomeUnknown';
+      }
+    }
+    const { deps, install } = makeDeps();
+    install.mockRejectedValueOnce(new LegalReleaseOutcomeUnknown());
+    const unknown = await runLegalReleaseJob(applyEnv, deps).catch(e => e);
+    expect(legalReleaseFailureLine(unknown)).toMatchObject({
+      stage: 'apply',
+      errorName: 'LegalReleaseOutcomeUnknown',
+      outcomeUnknown: true,
+      safeToReplay: false,
+      message: 'Legal release COMMIT outcome is unknown.',
+    });
+    install.mockRejectedValueOnce(new Error(`ER_ACCESS_DENIED ${URL_SECRET}`));
+    const driver = legalReleaseFailureLine(
+      await runLegalReleaseJob(applyEnv, deps).catch(e => e),
+    );
+    expect(driver).toMatchObject({ outcomeUnknown: false });
+    expect(driver).not.toHaveProperty('message');
+    expect(JSON.stringify(driver)).not.toContain('hunter2');
+  });
+
+  it('refuses at start when an approved credential class is set', async () => {
+    const { deps, preparePacket } = makeDeps();
+    const failure = await runLegalReleaseJob(
+      { ...baseEnv, LEGAL_RELEASE_MODE: 'plan', DATABASE_AUTHORITY_APPROVED_CREDENTIAL_CLASS: 'migration' },
+      deps,
+    ).catch(e => e);
+    expect(failure).toMatchObject({ stage: 'validation' });
+    expect(preparePacket).not.toHaveBeenCalled();
+  });
+
+  it('refuses at start under GITHUB_ACTIONS', async () => {
+    const { deps, preparePacket } = makeDeps();
+    const failure = await runLegalReleaseJob(
+      { ...baseEnv, LEGAL_RELEASE_MODE: 'plan', GITHUB_ACTIONS: 'true' },
+      deps,
+    ).catch(e => e);
+    expect(failure).toMatchObject({ stage: 'validation' });
+    expect(preparePacket).not.toHaveBeenCalled();
   });
 
   it('exposes the env names used', () => {
