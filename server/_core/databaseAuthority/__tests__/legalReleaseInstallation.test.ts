@@ -396,25 +396,19 @@ describe('Named legal-release authority protocol', () => {
     ).rejects.toThrow('ownership');
     expect(f.statements.some(s => s.startsWith('INSERT'))).toBe(false);
   });
-  it('refuses a dirty protected artifact without a verified digest-bound identity', async () => {
+  it('rejects dirty protected source', async () => {
     const f = fixture(),
       a = authority('legal-release-plan', true);
     a.authority.context.worktree.clean = false;
     await expect(
       installLegalRelease({ ...a, connection: f.connection, packet: packet(), now: clock }),
-    ).rejects.toThrow('verified digest-bound artifact identity');
+    ).rejects.toThrow('clean reviewed source');
   });
-  it('refuses a caller-constructed lookalike artifact identity', async () => {
+  it('refuses a caller-supplied approval/copy that differs from reviewed Git', async () => {
     const a = authority('legal-release-plan', true);
     await expect(
-      installLegalRelease({
-        ...a,
-        connection: fixture().connection,
-        packet: packet(),
-        artifactIdentity: { claims: { sourceHead: packet().sourceHead } } as never,
-        now: clock,
-      }),
-    ).rejects.toThrow('verified digest-bound artifact identity');
+      installLegalRelease({ ...a, connection: fixture().connection, packet: packet(), now: clock }),
+    ).rejects.toThrow('reviewed Git copy/approval');
   });
   it('does not authorize a protected apply without exact approval and acknowledgement', () => {
     const a = authority('legal-release-apply', true).authority;
