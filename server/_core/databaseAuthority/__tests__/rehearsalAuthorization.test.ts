@@ -2,7 +2,7 @@ import './useRehearsal20261105';
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   assertStructuredRehearsalApproval,
   authorizeDatabaseOperation,
@@ -81,6 +81,7 @@ function resource() {
 }
 
 afterEach(() => {
+  vi.useRealTimers();
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
@@ -274,6 +275,8 @@ describe('disposable rehearsal schema release authority', () => {
   });
 
   it('scopes live authorization strictly to the 2026-11-05 window and rejects everything else', () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(Date.parse(REHEARSAL.createdAt) + 3600 * 1000);
     expect(REHEARSAL.status).toBe('approved');
     expect(REHEARSAL.authorizationLive).toBe(true);
     expect(Date.parse(REHEARSAL.expiresAt)).toBeGreaterThan(Date.now());
@@ -297,6 +300,27 @@ describe('disposable rehearsal schema release authority', () => {
     const legacy = resolve('rehearsal-regression', { credentialClass: 'runtime' });
     expect(() => authorizeDatabaseOperation(legacy)).toThrow('Rehearsal refused');
   });
+
+  it.each([0, 24 * 3600 * 1000])(
+    'refuses the same authorization once the clock reaches expiresAt (+%d ms)',
+    offset => {
+      const plan = resolve('release-plan');
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(Date.parse(REHEARSAL.expiresAt) + offset);
+      expect(() =>
+        authorizeDatabaseOperation(plan, {
+          root: process.cwd(),
+          approval: {
+            reference: 'REHEARSAL-RELEASE-APPROVAL',
+            actor: 'reviewer',
+            operation: 'release-plan',
+            targetFingerprintHash: plan.context.targetFingerprintHash,
+            rehearsalBinding: structuredApproval(),
+          },
+        }),
+      ).toThrow('Rehearsal authorization expired, revoked or changed; review required.');
+    },
+  );
 
   it('refuses a source digest mismatch when any guarded file changes', () => {
     const root = mkdtempSync(join(tmpdir(), 'listify-rehearsal-source-'));
