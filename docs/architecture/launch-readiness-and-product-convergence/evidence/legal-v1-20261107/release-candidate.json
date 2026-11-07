@@ -15,8 +15,8 @@
   },
   "effectiveAt": null,
   "effectiveAtPolicy": "Actual controlled release timestamp, never earlier than final approval. No public effect or automatic installation from this candidate manifest.",
-  "sourceBusinessApproval": "UNSIGNED-PLACEHOLDER-REPLACE-WITH-FOUNDER-COPY-APPROVAL-REFERENCE",
-  "finalPrivacyApproval": "UNSIGNED-PLACEHOLDER-REPLACE-WITH-FINAL-PRIVACY-APPROVAL-REFERENCE",
+  "sourceBusinessApproval": "LEGAL-V1-COPY-APPROVAL-20261107-01",
+  "finalPrivacyApproval": "legal-release-20261107-edward-go",
   "scope": "Release candidate for the v1 Terms and Privacy texts. Payment notice is not part of this release. Not a runtime approved object, database release or launch GO.",
-  "copyStatus": "UNSIGNED TEMPLATE: awaiting founder approval; see FIELDS-TO-FILL.md"
+  "copyStatus": "Founder-approved: LEGAL-V1-COPY-APPROVAL-20261107-01; final Privacy approval legal-release-20261107-edward-go. Not installed."
 }

@@ -25,15 +25,62 @@ describe('legal v1 evidence folder', () => {
     expect(approval.termsAndPayment.versions.terms).toBe(candidate.termsVersion);
   });
 
-  it('prepare refuses the committed unsigned template', () => {
+  it('commits exactly the founder approval values given on 2026-11-07', () => {
+    const candidate = json('release-candidate.json');
+    const approval = json('final-privacy-approval.json');
+    expect(approval.reference).toBe('legal-release-20261107-edward-go');
+    expect(approval.recordedAt).toBe('2026-11-07T18:05:00Z');
+    expect(approval.actor).toBe('Lehlohonolo Banda');
+    expect(approval.answer).toBe('Approve finalized Privacy wording');
+    expect(approval.sourceBusinessApproval).toBe('LEGAL-V1-COPY-APPROVAL-20261107-01');
+    expect(candidate.sourceBusinessApproval).toBe(approval.sourceBusinessApproval);
+    expect(candidate.finalPrivacyApproval).toBe(approval.reference);
+    expect(candidate.bundleId).toBe('property-listify-legal-2026-11-07.1');
+    expect(candidate.effectiveAt).toBeNull();
+    expect(privacy).not.toContain('backup copies');
+  });
+
+  it('prepare accepts the committed approval and refuses backdating before recordedAt', () => {
+    const candidate = json('release-candidate.json');
+    const approval = json('final-privacy-approval.json');
+    assertNoUnsignedPlaceholders(candidate, 'candidate');
+    assertNoUnsignedPlaceholders(approval, 'approval');
+    const prepared = prepareLegalRelease({ candidate, approval, terms, privacy, plannedEffectiveAt });
+    expect(prepared.executionState).toBe('prepared_not_installed');
     expect(() =>
       prepareLegalRelease({
-        candidate: json('release-candidate.json'),
-        approval: json('final-privacy-approval.json'),
+        candidate,
+        approval,
         terms,
         privacy,
-        plannedEffectiveAt,
+        plannedEffectiveAt: '2026-11-07T18:04:59Z',
       }),
+    ).toThrow('Cannot backdate release');
+  });
+
+  const unsignedTemplate = () => {
+    const marker = 'UNSIGNED-PLACEHOLDER-TEMPLATE';
+    return {
+      candidate: {
+        ...json('release-candidate.json'),
+        sourceBusinessApproval: marker,
+        finalPrivacyApproval: marker,
+      },
+      approval: {
+        ...json('final-privacy-approval.json'),
+        reference: marker,
+        recordedAt: marker,
+        actor: marker,
+        answer: marker,
+        sourceBusinessApproval: marker,
+      },
+    };
+  };
+
+  it('prepare refuses an unsigned template', () => {
+    const { candidate, approval } = unsignedTemplate();
+    expect(() =>
+      prepareLegalRelease({ candidate, approval, terms, privacy, plannedEffectiveAt }),
     ).toThrow();
   });
 
@@ -53,13 +100,10 @@ describe('legal v1 evidence folder', () => {
     },
   });
 
-  it('refuses the committed template and any single placeholder left in place', () => {
-    expect(() => assertNoUnsignedPlaceholders(json('release-candidate.json'))).toThrow(
-      /unsigned/,
-    );
-    expect(() => assertNoUnsignedPlaceholders(json('final-privacy-approval.json'))).toThrow(
-      /unsigned/,
-    );
+  it('refuses an unsigned template and any single placeholder left in place', () => {
+    const template = unsignedTemplate();
+    expect(() => assertNoUnsignedPlaceholders(template.candidate)).toThrow(/unsigned/);
+    expect(() => assertNoUnsignedPlaceholders(template.approval)).toThrow(/unsigned/);
     const marker = 'UNSIGNED-PLACEHOLDER-LEFT';
     const cases: Array<['candidate' | 'approval', string]> = [
       ['approval', 'reference'],
