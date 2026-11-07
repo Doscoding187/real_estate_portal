@@ -223,6 +223,60 @@ export function readRuntimeWorktreeIdentity(
   return readGitWorktreeIdentity(cwd);
 }
 
+export type ContainerAppsContext = 'job' | 'app' | 'none';
+
+const present = (value: string | undefined): boolean => Boolean(String(value ?? '').trim());
+
+/**
+ * Classify the Azure Container Apps execution context. Any app-replica marker
+ * means 'app' regardless of other variables. A job needs both job markers and
+ * no app-replica marker. Used only by the legal-release installer path.
+ */
+export function classifyContainerAppsContext(
+  env: NodeJS.ProcessEnv = process.env,
+): ContainerAppsContext {
+  // App markers count when defined at all, so a blanked value cannot flip an
+  // app replica into a job. Job markers must be non-empty.
+  if (
+    env.CONTAINER_APP_NAME !== undefined ||
+    env.CONTAINER_APP_REVISION !== undefined ||
+    env.CONTAINER_APP_REPLICA_NAME !== undefined
+  ) {
+    return 'app';
+  }
+  if (present(env.CONTAINER_APP_JOB_NAME) && present(env.CONTAINER_APP_JOB_EXECUTION_NAME)) {
+    return 'job';
+  }
+  return 'none';
+}
+
+/**
+ * Identity for the legal-release installer. App replicas are refused. Inside a
+ * Container Apps job the real Git checkout in the image is read and must be
+ * valid (readGitWorktreeIdentity throws when .git is missing). A real Git
+ * checkout is required everywhere; deployment hosts without a job context are
+ * refused.
+ */
+export function readInstallerWorktreeIdentity(
+  cwd = process.cwd(),
+  options: RuntimeIdentityOptions = {},
+): GitWorktreeIdentity {
+  const env = options.env ?? process.env;
+  const context = classifyContainerAppsContext(env);
+  if (context === 'app') {
+    throw new Error('Legal-release installer refused: it must not run inside an app replica.');
+  }
+  if (
+    context === 'none' &&
+    (present(env.CONTAINER_APP_ENV_DNS_SUFFIX) || hasRailwayDeploymentIdentity(env))
+  ) {
+    throw new Error(
+      'Legal-release installer refused: deployment host without a Container Apps job context',
+    );
+  }
+  return readGitWorktreeIdentity(cwd);
+}
+
 export function isProtectedIntegrationBranch(branch: string): boolean {
   return branch === 'main' || branch === 'master';
 }

@@ -1,0 +1,2 @@
+# Intentionally empty. The build context root is the staging dir, so the repo's
+# own .dockerignore does not apply; src/ must be copied whole, including .git.

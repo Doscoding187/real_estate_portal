@@ -1,7 +1,12 @@
 import { createHash } from 'node:crypto';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { execFileSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { resolveDatabaseAuthority } from '../context';
-import { readGitWorktreeIdentity } from '../worktreeIdentity';
+import type { GitWorktreeIdentity } from '../types';
+import { readGitWorktreeIdentity, readInstallerWorktreeIdentity } from '../worktreeIdentity';
 import { authorizeDatabaseOperation, expectedDatabaseAcknowledgement } from '../authorization';
 import type { AuthoritySqlConnection } from '../connectionAuthority';
 import { loadAndValidateMigrationManifest } from '../../../migrations/migrationManifest';
@@ -25,6 +30,30 @@ vi.mock('../worktreeProfile', async importOriginal => ({
   readWorktreeDatabaseProfile: () => null,
 }));
 const identity = readGitWorktreeIdentity();
+const JOB_ENV = {
+  CONTAINER_APP_JOB_NAME: 'job-legal',
+  CONTAINER_APP_JOB_EXECUTION_NAME: 'job-legal-x1',
+};
+const jobRoots: string[] = [];
+afterEach(() => {
+  while (jobRoots.length) rmSync(jobRoots.pop()!, { recursive: true, force: true });
+});
+function jobRepo() {
+  const root = mkdtempSync(join(tmpdir(), 'legal-job-repo-'));
+  jobRoots.push(root);
+  const g = (...args: string[]) => execFileSync('git', args, { cwd: root, stdio: 'ignore' });
+  g('init', '-q');
+  g('config', 'user.email', 't@example.invalid');
+  g('config', 'user.name', 'T');
+  writeFileSync(join(root, 'a.txt'), 'a');
+  // The authorization layer reads the operation policy from the checkout root.
+  const policy = 'docs/database-authority/operation-policy.json';
+  mkdirSync(dirname(join(root, policy)), { recursive: true });
+  writeFileSync(join(root, policy), readFileSync(policy));
+  g('add', '.');
+  g('commit', '-q', '-m', 'init');
+  return root;
+}
 const sha = (text: string) => createHash('sha256').update(text).digest('hex');
 const terms = 'Synthetic installer Terms.\n',
   privacy = 'Synthetic installer Privacy.\n';
@@ -33,9 +62,12 @@ const clock = () => new Date('2026-10-13T12:01:00Z');
 function authority(
   operation: 'legal-release-plan' | 'legal-release-apply' | 'legal-release-verify',
   protectedTarget = false,
+  gitIdentity?: GitWorktreeIdentity,
+  forceClean = true,
 ) {
   const authority = resolveDatabaseAuthority({
     operation,
+    gitIdentity,
     explicitDatabaseUrl: protectedTarget
       ? 'mysql://reader:private@propertylistify-mysql.mysql.database.azure.com/propertylistify_database'
       : `mysql://listify_app:private@127.0.0.1:3307/${identity.expectedWorktreeDatabase}`,
@@ -64,7 +96,10 @@ function authority(
   return {
     authority: {
       ...authority,
-      context: { ...authority.context, worktree: { ...authority.context.worktree, clean: true } },
+      context: {
+        ...authority.context,
+        worktree: { ...authority.context.worktree, clean: forceClean ? true : authority.context.worktree.clean },
+      },
     },
     decision,
   };
@@ -302,6 +337,32 @@ describe('Named legal-release authority protocol', () => {
       expect(f.statements).toEqual([]);
     },
   );
+  it('refuses a job-context checkout whose head differs from the packet sourceHead', async () => {
+    const f = fixture();
+    const jobIdentity = readInstallerWorktreeIdentity(jobRepo(), { env: JOB_ENV });
+    expect(jobIdentity.head).not.toBe(identity.head);
+    const a = authority('legal-release-plan', true, jobIdentity);
+    await expect(
+      installLegalRelease({ ...a, connection: f.connection, packet: packet(), now: clock }),
+    ).rejects.toThrow('Legal release source head mismatch');
+    expect(f.statements).toEqual([]);
+  });
+  it('refuses a dirty job-context checkout on a protected target', async () => {
+    const f = fixture();
+    const root = jobRepo();
+    writeFileSync(join(root, 'a.txt'), 'dirty');
+    const jobIdentity = readInstallerWorktreeIdentity(root, { env: JOB_ENV });
+    const a = authority('legal-release-plan', true, jobIdentity, false);
+    await expect(
+      installLegalRelease({
+        ...a,
+        connection: f.connection,
+        packet: { ...packet(), sourceHead: jobIdentity.head },
+        now: clock,
+      }),
+    ).rejects.toThrow('Protected legal release requires clean reviewed source');
+    expect(f.statements).toEqual([]);
+  });
   it('refuses a window longer than 30 minutes', async () => {
     await expect(
       run('legal-release-plan', fixture(), {
