@@ -20,11 +20,6 @@ import {
   installLegalRelease,
   prepareLegalInstallationPacket,
 } from '../server/_core/databaseAuthority/legalReleaseInstallation';
-import {
-  parseAndVerifyLegalArtifactIdentitySignature,
-  verifyLegalArtifactIdentity,
-  type LegalArtifactOperation,
-} from '../server/_core/databaseAuthority/legalArtifactIdentity';
 import * as schema from '../drizzle/schema';
 import {
   authorizeDatabaseOperation,
@@ -691,34 +686,12 @@ async function run(command: Command): Promise<void> {
       readInstallerWorktreeIdentity(process.cwd()),
     );
     const decision = authorizationFor(authority, option('ack'));
-    const protectedTarget = ['staging', 'production'].includes(authority.context.targetClass);
-    const artifactIdentity = protectedTarget
-      ? await verifyLegalArtifactIdentity({
-          signed: parseAndVerifyLegalArtifactIdentitySignature({
-            envelope: JSON.parse(
-              readFileSync(resolve(requiredOption('artifact-identity')), 'utf8'),
-            ),
-          }),
-          packet,
-          operation: operation as LegalArtifactOperation,
-          targetFingerprintHash: authority.context.targetFingerprintHash,
-          planDigest: expectedPlanDigest,
-          root: process.cwd(),
-        })
-      : undefined;
     const connection = await createAuthoritySqlConnection(authority, decision);
     print(
       await completeLegalReleaseCommand({
         connection,
         operation: () =>
-          installLegalRelease({
-            authority,
-            decision,
-            connection,
-            packet,
-            artifactIdentity,
-            expectedPlanDigest,
-          }),
+          installLegalRelease({ authority, decision, connection, packet, expectedPlanDigest }),
       }),
     );
     return;
