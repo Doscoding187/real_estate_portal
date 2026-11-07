@@ -678,7 +678,7 @@ describe('immutable resolved database context and operation authorization', () =
       credentialClass: 'bootstrap-admin' as const,
       runtimeIdentity: 'propertylistify_app_runtime',
       runtimePreviousGrantDigest: 'cc6956ba9ba51dad7ceb3678f70658d46623adf66eedcc70a951aae602ae181d',
-      runtimeGrantDigest: 'eee8fa09d52b41c07f804e1484a92276f2c643b8575c547419bc721ddcf8f456',
+      runtimeGrantDigest: '594d286c6c803c649e2444739a6ca27a3a6d570bf90e49d8cde8097e93467af5',
     };
     const acknowledgement = expectedDatabaseAcknowledgement(authority.context);
     expect(() => authorizeDatabaseOperation(authority, { root: process.cwd(), approval, acknowledgement })).not.toThrow();
