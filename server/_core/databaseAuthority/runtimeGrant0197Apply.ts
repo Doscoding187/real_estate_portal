@@ -253,7 +253,7 @@ export async function executeRuntime0197GrantPlan(
     statementsExecuted: progress.completedStatements,
     outcome: progress.outcome,
     connectionClosed: true as const,
-    nextStep: 'Run the read-only runtime probe (db:runtime-grants:0197:probe) to confirm all 14 granted tables are selectable (development_inventory_items is deliberately ungranted).',
+    nextStep: 'Run the read-only runtime probe (db:runtime-grants:0197:probe) to confirm all 15 tables are selectable.',
   };
 }
 

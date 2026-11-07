@@ -16,23 +16,20 @@ describe('0197 runtime grant plan', () => {
       expectedModelDigest: '869f441f3131b0f1bf4b56d416d049292bb48204918f8172d3699625c3208da7',
       applyAuthority: 'none',
     });
-    expect(RUNTIME_GRANT_0197_TABLES).toHaveLength(14);
-    expect(plan.grants).toHaveLength(14);
-    expect(plan.revokes).toHaveLength(14);
-    expect(plan.deliberatelyUngranted).toEqual([
-      {
-        table: 'development_inventory_items',
-        reason: 'no runtime call site (schema + migrations only)',
-      },
-    ]);
-    expect(plan.grants.some(statement => statement.includes('development_inventory_items'))).toBe(
-      false,
+    expect(RUNTIME_GRANT_0197_TABLES).toHaveLength(15);
+    expect(plan.grants).toHaveLength(15);
+    expect(plan.revokes).toHaveLength(15);
+    expect(plan.grants).toContain(
+      "GRANT SELECT ON `propertylistify_database`.`development_inventory_items` TO 'propertylistify_app_runtime'@'%'",
     );
     expect(plan.grants).toContain(
       "GRANT SELECT, INSERT, UPDATE ON `propertylistify_database`.`development_place_assignments` TO 'propertylistify_app_runtime'@'%'",
     );
     expect(plan.grants).toContain(
       "GRANT SELECT, INSERT, DELETE ON `propertylistify_database`.`distribution_prospect_check_fit_matches` TO 'propertylistify_app_runtime'@'%'",
+    );
+    expect(plan.revokes).toContain(
+      "REVOKE SELECT ON `propertylistify_database`.`development_inventory_items` FROM 'propertylistify_app_runtime'@'%'",
     );
     expect(plan.revokes.every(statement => !statement.includes('GRANT OPTION'))).toBe(true);
     expect(plan.broadGrantNote).toMatch(/Re-derive/);
@@ -41,6 +38,8 @@ describe('0197 runtime grant plan', () => {
 
   it('documents an evidenced call site or an explicit no-call-site finding for every table', () => {
     expect(RUNTIME_GRANT_0197_TABLES.every(table => table.callSites.length > 0)).toBe(true);
-    expect(RUNTIME_GRANT_0197_TABLES.some(t => t.table === 'development_inventory_items')).toBe(false);
+    expect(RUNTIME_GRANT_0197_TABLES.find(t => t.table === 'development_inventory_items')?.callSites).toEqual(
+      ['drizzle/schema/developments.ts:850 (table declaration; no runtime call site found)'],
+    );
   });
 });

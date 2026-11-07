@@ -3,8 +3,6 @@ import { resolve } from 'node:path';
 import { B08_RUNTIME_IDENTITY } from './authorization';
 import {
   authorizeProbe,
-  classifyProbeTable,
-  type ProbeTableStatus,
   isAcceptedProbeTarget,
   safeProbeErrorLine,
   PROBE_DATABASE as DATABASE,
@@ -61,7 +59,7 @@ async function main() {
   const connection = await createAuthoritySqlConnection(authority, decision);
 
   const quote = String.fromCharCode(96);
-  const tableResults: Array<{ table: string; status: ProbeTableStatus; code?: string }> = [];
+  const tableResults: Array<{ table: string; status: 'selectable' | 'denied'; code?: string }> = [];
   try {
     const accountRows = await readRows(connection, 'SELECT CURRENT_USER() AS current_user');
     const currentUser = String(accountRows[0]?.current_user ?? '');
@@ -91,11 +89,7 @@ async function main() {
       } catch (error) {
         const code = safeCode(error);
         if (code !== 'ER_TABLEACCESS_DENIED_ERROR') throw error;
-        tableResults.push({
-          table,
-          status: classifyProbeTable(table, 'denied', plan.deliberatelyUngranted),
-          code,
-        });
+        tableResults.push({ table, status: 'denied', code });
       }
     }
     const founder = await readFounderCounts(connection, process.env.FOUNDER_GOOGLE_EMAIL);

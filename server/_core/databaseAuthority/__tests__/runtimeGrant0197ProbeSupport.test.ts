@@ -1,29 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { B08_AZURE_TARGET_FINGERPRINT_HASH } from '../authorization';
-import {
-  classifyProbeTable,
-  isAcceptedProbeTarget,
-  readFounderCounts,
-} from '../runtimeGrant0197ProbeSupport';
-import { RUNTIME_GRANT_0197_DELIBERATELY_UNGRANTED } from '../runtimeGrant0197Plan';
-
-describe('0197 probe table classification', () => {
-  const ungranted = RUNTIME_GRANT_0197_DELIBERATELY_UNGRANTED;
-  it('reports a denied deliberately-ungranted table as such, not as a failure', () => {
-    expect(classifyProbeTable('development_inventory_items', 'denied', ungranted)).toBe(
-      'deliberately ungranted',
-    );
-  });
-  it('still reports any other denied table as denied and selectable ones as selectable', () => {
-    expect(classifyProbeTable('development_place_assignments', 'denied', ungranted)).toBe('denied');
-    expect(classifyProbeTable('development_place_assignments', 'selectable', ungranted)).toBe(
-      'selectable',
-    );
-    expect(classifyProbeTable('development_inventory_items', 'selectable', ungranted)).toBe(
-      'selectable',
-    );
-  });
-});
+import { isAcceptedProbeTarget, readFounderCounts } from '../runtimeGrant0197ProbeSupport';
 
 const good = {
   targetClass: 'production',

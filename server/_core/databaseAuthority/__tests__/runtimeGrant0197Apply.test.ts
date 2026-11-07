@@ -25,6 +25,7 @@ const DB = 'propertylistify_database';
 const plan = runtimeGrant0197ApplyPlan();
 
 const expectedGrants = [
+  "GRANT SELECT ON `propertylistify_database`.`development_inventory_items` TO 'propertylistify_app_runtime'@'%'",
   "GRANT SELECT, INSERT, UPDATE ON `propertylistify_database`.`development_place_assignments` TO 'propertylistify_app_runtime'@'%'",
   "GRANT SELECT ON `propertylistify_database`.`development_team_contacts` TO 'propertylistify_app_runtime'@'%'",
   "GRANT SELECT, INSERT, UPDATE ON `propertylistify_database`.`distribution_deal_document_deliveries` TO 'propertylistify_app_runtime'@'%'",
@@ -103,7 +104,7 @@ function fixtureIdentity() {
 }
 
 describe('0197 runtime grant apply plan', () => {
-  it('emits exactly the 14 reviewed GRANT statements and mirrored REVOKE statements', () => {
+  it('emits exactly the 15 reviewed GRANT statements and mirrored REVOKE statements', () => {
     expect(plan.statements).toEqual(expectedGrants);
     expect(plan.statements).toHaveLength(RUNTIME_GRANT_0197_TABLES.length);
     expect(plan.rollbackStatements).toEqual(
@@ -218,14 +219,14 @@ describe('0197 runtime grant refusals', () => {
 });
 
 describe('0197 runtime grant execution and reconciliation', () => {
-  it('executes the 14 statements and reports digests and added privileges only', async () => {
+  it('executes the 15 statements and reports digests and added privileges only', async () => {
     const connection = fakeConnection();
     const observe = vi.fn();
     const result = await run(connection, 'apply', observe);
     expect(connection.execute.mock.calls.map(call => call[0])).toEqual(expectedGrants);
     expect(result).toMatchObject({
       mode: 'apply',
-      statementsExecuted: 14,
+      statementsExecuted: 15,
       outcome: 'complete',
       connectionClosed: true,
       removedPrivileges: [],
@@ -241,7 +242,7 @@ describe('0197 runtime grant execution and reconciliation', () => {
     const connection = fakeConnection({ before: [...baseline, ...plannedObserved], after: baseline });
     const result = await run(connection, 'rollback');
     expect(connection.execute.mock.calls.map(call => call[0])).toEqual(plan.rollbackStatements);
-    expect(result).toMatchObject({ mode: 'rollback', statementsExecuted: 14, addedPrivileges: [] });
+    expect(result).toMatchObject({ mode: 'rollback', statementsExecuted: 15, addedPrivileges: [] });
     expect(result.removedPrivileges).toEqual(plan.plannedPrivileges);
   });
 

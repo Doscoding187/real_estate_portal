@@ -5,6 +5,11 @@ import { loadAndValidateMigrationManifest } from '../../migrations/migrationMani
 
 export const RUNTIME_GRANT_0197_TABLES = [
   {
+    table: 'development_inventory_items',
+    privileges: ['SELECT'],
+    callSites: ['drizzle/schema/developments.ts:850 (table declaration; no runtime call site found)'],
+  },
+  {
     table: 'development_place_assignments',
     privileges: ['SELECT', 'INSERT', 'UPDATE'],
     callSites: [
@@ -97,14 +102,6 @@ export const RUNTIME_GRANT_0197_TABLES = [
   },
 ] as const;
 
-/** Canonical tables the runtime identity is intentionally NOT granted (least privilege). */
-export const RUNTIME_GRANT_0197_DELIBERATELY_UNGRANTED = [
-  {
-    table: 'development_inventory_items',
-    reason: 'no runtime call site (schema + migrations only)',
-  },
-] as const;
-
 const DATABASE = 'propertylistify_database';
 const RUNTIME_USER = 'propertylistify_app_runtime';
 const EXPECTED_TABLE_COUNT = 225;
@@ -119,7 +116,7 @@ const sha256 = (value: unknown) =>
   createHash('sha256').update(JSON.stringify(value)).digest('hex');
 
 /**
- * Creates a source-bound, offline-only delta for the 14 runtime tables not
+ * Creates a source-bound, offline-only delta for the 15 runtime tables not
  * covered by the 0094/0111/0115 grant plans. It never opens a connection and
  * deliberately exposes no apply operation.
  */
@@ -139,13 +136,9 @@ export function runtimeGrant0197Plan(root = process.cwd()) {
     manifest.document.expectedHead !== EXPECTED_HEAD ||
     manifest.orderedMigrations.length !== EXPECTED_MIGRATION_COUNT ||
     manifest.manifestDigest !== EXPECTED_MANIFEST_DIGEST ||
-    names.length !== 14 ||
+    names.length !== 15 ||
     new Set(names).size !== names.length ||
-    names.some(name => !inventory.tables.includes(name)) ||
-    RUNTIME_GRANT_0197_DELIBERATELY_UNGRANTED.some(
-      item =>
-        (names as string[]).includes(item.table) || !inventory.tables.includes(item.table),
-    )
+    names.some(name => !inventory.tables.includes(name))
   ) {
     throw new Error('0197 runtime grant plan refused: migration lineage or table inventory changed.');
   }
@@ -176,7 +169,6 @@ export function runtimeGrant0197Plan(root = process.cwd()) {
     expectedTableCount: EXPECTED_TABLE_COUNT,
     expectedModelDigest: EXPECTED_MODEL_DIGEST,
     tables: RUNTIME_GRANT_0197_TABLES,
-    deliberatelyUngranted: RUNTIME_GRANT_0197_DELIBERATELY_UNGRANTED,
     revokes,
     grants,
     applyAuthority: 'none' as const,
