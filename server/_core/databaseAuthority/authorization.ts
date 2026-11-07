@@ -384,6 +384,17 @@ export function authorizeDatabaseOperation(
     throw new Error('Database operation refused: exact legal runtime grant approval is required.');
   }
   if (
+    context.operation === 'runtime-0197-grant' &&
+    (context.targetFingerprintHash !== B08_AZURE_TARGET_FINGERPRINT_HASH ||
+      context.provider !== 'mysql' ||
+      !context.tls.required ||
+      !context.tls.certificateVerificationRequired ||
+      input.approval?.credentialClass !== 'bootstrap-admin' ||
+      input.approval?.runtimeIdentity !== B08_RUNTIME_IDENTITY)
+  ) {
+    throw new Error('Database operation refused: exact 0197 runtime grant approval is required.');
+  }
+  if (
     context.operation === 'b08-behavior-verify' &&
     (context.targetFingerprintHash !== B08_AZURE_TARGET_FINGERPRINT_HASH ||
       input.approval?.credentialClass !== 'migration' ||

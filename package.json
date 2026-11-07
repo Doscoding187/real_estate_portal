@@ -339,6 +339,9 @@
     "db:legal:runtime-grants:apply": "tsx scripts/legalRuntimeGrantCli.ts apply",
     "db:legal:release:prepare": "tsx scripts/databaseAuthorityCli.ts legal-release:prepare",
     "db:runtime-grants:0197:plan": "tsx scripts/runtimeGrant0197PlanCli.ts",
+    "db:runtime-grants:0197:apply-plan": "tsx scripts/runtimeGrant0197ApplyCli.ts plan",
+    "db:runtime-grants:0197:apply": "tsx scripts/runtimeGrant0197ApplyCli.ts apply",
+    "db:runtime-grants:0197:rollback": "tsx scripts/runtimeGrant0197ApplyCli.ts rollback",
     "db:runtime-grants:0197:probe": "tsx server/_core/databaseAuthority/runtimeGrant0197Probe.ts"
   }
 }

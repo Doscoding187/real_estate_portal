@@ -10,6 +10,8 @@
     "scripts/canonicalPlaceRuntimeGrantCli.ts",
     "server/_core/databaseAuthority/legalRuntimeGrants.ts",
     "scripts/legalRuntimeGrantCli.ts",
+    "server/_core/databaseAuthority/runtimeGrant0197Apply.ts",
+    "scripts/runtimeGrant0197ApplyCli.ts",
     "server/_core/databaseAuthority/dataAdapters/canonicalCommercial.ts",
     "server/_core/databaseAuthority/dataAdapters/canonicalFoundation.ts",
     "server/_core/databaseAuthority/dataAdapters/listingPreviewFixture.ts",

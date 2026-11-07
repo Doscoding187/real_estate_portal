@@ -58,7 +58,7 @@
       "server/migrations/migrationManifest.ts",
       "server/migrations/runSqlMigrations.ts"
     ],
-    "sha256": "19745467dae44c932e809407310c77d9733d6bc439321cc9216f9225c4fc29df"
+    "sha256": "d3581bdc05edceeffa9c396f529e6bd1e08ec2d9078da23d05f9383bffb56180"
   },
   "reviewTrigger": "This record expires at 2026-11-08T12:00:00Z. Any reuse requires new written approval after operator preflight verifies the exact ARM resource identity, creation time, and the guarded source digest."
 }

@@ -55,6 +55,19 @@ export function isAcceptedProbeTarget(context: ProbeTargetContext): boolean {
   );
 }
 
+export type ProbeTableStatus = 'selectable' | 'denied' | 'deliberately ungranted';
+
+/** A denied SELECT on a table the plan deliberately leaves ungranted is expected, not a failure. */
+export function classifyProbeTable(
+  table: string,
+  status: 'selectable' | 'denied',
+  deliberatelyUngranted: readonly { table: string }[],
+): ProbeTableStatus {
+  return status === 'denied' && deliberatelyUngranted.some(item => item.table === table)
+    ? 'deliberately ungranted'
+    : status;
+}
+
 export type FounderCounts = {
   emailRows: number;
   superAdminRows: number;
