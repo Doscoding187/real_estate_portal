@@ -279,6 +279,31 @@ describe('0197 runtime grant execution and reconciliation', () => {
     ).toThrow('already exist');
   });
 
+  it('replay refuses at verify-prior-grants before any execute and releases the lock', async () => {
+    const connection = fakeConnection({ before: [...baseline, ...plannedObserved] });
+    const observe = vi.fn();
+    const releaseLock = vi.fn(async () => {});
+    await expect(
+      executeRuntime0197GrantPlan(connection as any, plan, 'apply', async () => {}, observe, releaseLock),
+    ).rejects.toMatchObject({ failureStage: 'verify-prior-grants', safeToReplay: false });
+    expect(connection.execute).not.toHaveBeenCalled();
+    expect(observe).not.toHaveBeenCalled();
+    expect(releaseLock).toHaveBeenCalledOnce();
+    expect(connection.end).toHaveBeenCalledOnce();
+  });
+
+  it('rollback with a missing planned privilege refuses before any execute', async () => {
+    const connection = fakeConnection({ before: [...baseline, ...plannedObserved.slice(1)] });
+    const observe = vi.fn();
+    const releaseLock = vi.fn(async () => {});
+    await expect(
+      executeRuntime0197GrantPlan(connection as any, plan, 'rollback', async () => {}, observe, releaseLock),
+    ).rejects.toMatchObject({ failureStage: 'verify-prior-grants' });
+    expect(connection.execute).not.toHaveBeenCalled();
+    expect(observe).not.toHaveBeenCalled();
+    expect(releaseLock).toHaveBeenCalledOnce();
+  });
+
   it('fails closed on unsupported grant syntax (grant option, other account, role)', () => {
     for (const bad of [
       'GRANT SELECT ON `propertylistify_database`.`users` TO `propertylistify_app_runtime`@`%` WITH GRANT OPTION',

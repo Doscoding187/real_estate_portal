@@ -42,6 +42,26 @@ describe('resolveRuntimeGrant0197CliInputs', () => {
     );
   });
 
+  it('trims values and rejects blank, undefined and null literals', () => {
+    expect(
+      resolveRuntimeGrant0197CliInputs(['--plan-digest', '  d1  ', '--ack', ' a1 '], {}),
+    ).toEqual({ planDigest: 'd1', acknowledgement: 'a1' });
+    for (const bad of ['   ', 'undefined', 'null', ' null ']) {
+      expect(() => resolveRuntimeGrant0197CliInputs(['--plan-digest', bad, '--ack', 'a1'], {})).toThrow(
+        /Invalid/,
+      );
+      expect(() =>
+        resolveRuntimeGrant0197CliInputs([], { ...ENV, RUNTIME_GRANT_0197_ACK: bad }),
+      ).toThrow(/Invalid/);
+    }
+  });
+
+  it('rejects a flag given twice', () => {
+    expect(() =>
+      resolveRuntimeGrant0197CliInputs(['--plan-digest', 'd1', '--plan-digest', 'd1', '--ack', 'a1'], {}),
+    ).toThrow(/more than once/);
+  });
+
   it('does not affect plan mode (resolver is only called for apply/rollback)', () => {
     expect(() => resolveRuntimeGrant0197CliInputs([], {})).toThrow();
   });
