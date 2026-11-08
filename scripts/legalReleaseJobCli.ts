@@ -8,6 +8,6 @@ async function main() {
 
 main().catch(error => {
   // Never emit driver text or connection URLs.
-  console.error(JSON.stringify(legalReleaseFailureLine(error)));
+  console.error(JSON.stringify(legalReleaseFailureLine(error, process.env)));
   process.exitCode = 1;
 });
