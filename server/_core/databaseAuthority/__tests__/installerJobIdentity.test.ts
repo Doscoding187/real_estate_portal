@@ -72,20 +72,47 @@ describe('installer identity in Container Apps jobs', () => {
     expect(attempt).not.toThrow(APP_REFUSAL);
   });
 
-  it.each(['CONTAINER_APP_NAME', 'CONTAINER_APP_REVISION', 'CONTAINER_APP_REPLICA_NAME'])(
-    'refuses app marker %s with job markers, alone, and when blank',
+  it('treats job vars plus a replica or app name as a job', () => {
+    expect(classifyContainerAppsContext({ ...JOB, CONTAINER_APP_REPLICA_NAME: 'r' })).toBe('job');
+    expect(classifyContainerAppsContext({ ...JOB, CONTAINER_APP_NAME: 'a' })).toBe('job');
+  });
+
+  it('treats any defined revision as an app, even with job vars', () => {
+    const root = repo();
+    for (const value of ['v', '', '   ']) {
+      expect(classifyContainerAppsContext({ ...JOB, CONTAINER_APP_REVISION: value })).toBe('app');
+      expect(() =>
+        readInstallerWorktreeIdentity(root, { env: { ...JOB, CONTAINER_APP_REVISION: value } }),
+      ).toThrow(APP_REFUSAL);
+    }
+    expect(() =>
+      readInstallerWorktreeIdentity(root, { env: { CONTAINER_APP_REVISION: 'v' } }),
+    ).toThrow(APP_REFUSAL);
+  });
+
+  it.each(['CONTAINER_APP_NAME', 'CONTAINER_APP_REPLICA_NAME'])(
+    'refuses %s alone as an app replica',
     marker => {
       const root = repo();
       for (const value of ['v', '', '   ']) {
-        expect(() => readInstallerWorktreeIdentity(root, { env: { ...JOB, [marker]: value } })).toThrow(
+        expect(() => readInstallerWorktreeIdentity(root, { env: { [marker]: value } })).toThrow(
           APP_REFUSAL,
         );
       }
-      expect(() => readInstallerWorktreeIdentity(root, { env: { [marker]: 'v' } })).toThrow(
-        APP_REFUSAL,
-      );
     },
   );
+
+  it('treats a single job var, or blank job vars, plus a replica name as an app', () => {
+    const replica = { CONTAINER_APP_REPLICA_NAME: 'r' };
+    expect(classifyContainerAppsContext({ CONTAINER_APP_JOB_NAME: 'j', ...replica })).toBe('app');
+    expect(
+      classifyContainerAppsContext({
+        CONTAINER_APP_JOB_NAME: '',
+        CONTAINER_APP_JOB_EXECUTION_NAME: ' ',
+        ...replica,
+      }),
+    ).toBe('app');
+  });
 
   it('refuses a DNS suffix without job markers', () => {
     expect(() =>

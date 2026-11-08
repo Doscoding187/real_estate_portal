@@ -228,24 +228,23 @@ export type ContainerAppsContext = 'job' | 'app' | 'none';
 const present = (value: string | undefined): boolean => Boolean(String(value ?? '').trim());
 
 /**
- * Classify the Azure Container Apps execution context. Any app-replica marker
- * means 'app' regardless of other variables. A job needs both job markers and
- * no app-replica marker. Used only by the legal-release installer path.
+ * Classify the Azure Container Apps execution context, in order:
+ * 1. CONTAINER_APP_REVISION defined (even empty) is always 'app' (apps have
+ *    revisions, jobs do not), so spoofed job variables cannot flip an app.
+ * 2. Both job markers non-empty is 'job', even when a replica or app name is
+ *    set (job executions may carry a replica name).
+ * 3. CONTAINER_APP_NAME or CONTAINER_APP_REPLICA_NAME defined is 'app'.
+ * 4. Otherwise 'none'. Used only by the legal-release installer path.
  */
 export function classifyContainerAppsContext(
   env: NodeJS.ProcessEnv = process.env,
 ): ContainerAppsContext {
-  // App markers count when defined at all, so a blanked value cannot flip an
-  // app replica into a job. Job markers must be non-empty.
-  if (
-    env.CONTAINER_APP_NAME !== undefined ||
-    env.CONTAINER_APP_REVISION !== undefined ||
-    env.CONTAINER_APP_REPLICA_NAME !== undefined
-  ) {
-    return 'app';
-  }
+  if (env.CONTAINER_APP_REVISION !== undefined) return 'app';
   if (present(env.CONTAINER_APP_JOB_NAME) && present(env.CONTAINER_APP_JOB_EXECUTION_NAME)) {
     return 'job';
+  }
+  if (env.CONTAINER_APP_NAME !== undefined || env.CONTAINER_APP_REPLICA_NAME !== undefined) {
+    return 'app';
   }
   return 'none';
 }
