@@ -34,7 +34,20 @@ export interface LegalReleaseFailureDetail {
   libraryMessage?: string;
   applyCommitted?: boolean;
   applyState?: string;
+  step?: string;
+  code?: string;
 }
+
+export const LEGAL_JOB_STEPS = [
+  'installer-identity',
+  'resolve-authority',
+  'approval-env',
+  'authorize',
+  'connect',
+  'run',
+] as const;
+const STEP_PROPERTY = 'legalJobStep';
+const SAFE_CODE = /^[A-Z][A-Z0-9_]{1,63}$/;
 
 export class LegalReleaseJobFailure extends Error {
   constructor(
@@ -46,7 +59,26 @@ export class LegalReleaseJobFailure extends Error {
   }
 }
 
-const SAFE_MESSAGE_PREFIXES = ['Legal release', 'Legal package'];
+const SAFE_MESSAGE_PREFIXES = [
+  'Legal release',
+  'Legal package',
+  'Legal-release installer refused',
+  'Protected legal release',
+  'Database operation refused',
+  'Database connection refused',
+  'Recovery validation target',
+];
+
+function tagStep(error: unknown, step: string): unknown {
+  if (error !== null && typeof error === 'object' && !(STEP_PROPERTY in error)) {
+    try {
+      Object.defineProperty(error, STEP_PROPERTY, { value: step, enumerable: false });
+    } catch {
+      // frozen error objects stay untagged
+    }
+  }
+  return error;
+}
 
 function detailFrom(error: unknown): LegalReleaseFailureDetail {
   if (!(error instanceof Error)) return { outcomeUnknown: false };
@@ -55,10 +87,21 @@ function detailFrom(error: unknown): LegalReleaseFailureDetail {
     unsafe ||
     error.name === 'LegalReleaseOutcomeUnknown' ||
     error.name === 'LegalReleaseCommandFailure';
-  const safeMessage = SAFE_MESSAGE_PREFIXES.some(prefix => error.message.startsWith(prefix));
+  const raw = error as { code?: unknown; sqlState?: unknown; [k: string]: unknown };
+  const isDriverError = raw.code !== undefined || raw.sqlState !== undefined;
+  const safeMessage =
+    !isDriverError && SAFE_MESSAGE_PREFIXES.some(prefix => error.message.startsWith(prefix));
+  const stepValue = raw[STEP_PROPERTY];
+  const step =
+    typeof stepValue === 'string' && (LEGAL_JOB_STEPS as readonly string[]).includes(stepValue)
+      ? stepValue
+      : undefined;
+  const code = typeof raw.code === 'string' && SAFE_CODE.test(raw.code) ? raw.code : undefined;
   return {
     errorName: error.name,
     outcomeUnknown: unknown,
+    ...(step ? { step } : {}),
+    ...(code ? { code } : {}),
     ...(safeMessage ? { libraryMessage: error.message.slice(0, 300) } : {}),
   };
 }
@@ -73,6 +116,8 @@ export function legalReleaseFailureLine(error: unknown): Record<string, unknown>
     errorName: detail.errorName ?? null,
     outcomeUnknown: detail.outcomeUnknown ?? false,
     safeToReplay: false,
+    ...(detail.step ? { step: detail.step } : {}),
+    ...(detail.code ? { code: detail.code } : {}),
     ...(detail.applyCommitted ? { applyCommitted: true, applyState: detail.applyState } : {}),
     ...(detail.libraryMessage ? { message: detail.libraryMessage } : {}),
   };
@@ -114,20 +159,29 @@ export function defaultLegalReleaseJobDeps(): LegalReleaseJobDeps {
     install: installLegalRelease,
     root: process.cwd(),
     runOperation: async (operation, credential, acknowledgement, run) => {
-      const authority = resolveDatabaseAuthority({
-        operation,
-        gitIdentity: readInstallerWorktreeIdentity(process.cwd()),
-        credentialClass: process.env.GITHUB_ACTIONS === 'true' ? undefined : credential,
-      });
-      const decision = authorizeDatabaseOperation(authority, {
-        approval: protectedDatabaseApprovalFromEnvironment(authority),
-        acknowledgement,
-      });
-      const connection = await createAuthoritySqlConnection(authority, decision);
-      return completeLegalReleaseCommand({
-        connection,
-        operation: () => run({ authority, decision, connection }) as Promise<any>,
-      });
+      let step: string = 'installer-identity';
+      try {
+        const gitIdentity = readInstallerWorktreeIdentity(process.cwd());
+        step = 'resolve-authority';
+        const authority = resolveDatabaseAuthority({
+          operation,
+          gitIdentity,
+          credentialClass: process.env.GITHUB_ACTIONS === 'true' ? undefined : credential,
+        });
+        step = 'approval-env';
+        const approval = protectedDatabaseApprovalFromEnvironment(authority);
+        step = 'authorize';
+        const decision = authorizeDatabaseOperation(authority, { approval, acknowledgement });
+        step = 'connect';
+        const connection = await createAuthoritySqlConnection(authority, decision);
+        step = 'run';
+        return await completeLegalReleaseCommand({
+          connection,
+          operation: () => run({ authority, decision, connection }) as Promise<any>,
+        });
+      } catch (error) {
+        throw tagStep(error, step);
+      }
     },
   };
 }
