@@ -4,6 +4,12 @@ import {
   evaluateMaintenanceGateForRequest,
 } from './server/maintenanceGate';
 import {
+  MAINTENANCE_BYPASS_PATH,
+  handleBypassUnlockRequest,
+  requestHasValidBypassCookie,
+  usableBypassSecret,
+} from './server/maintenanceBypass';
+import {
   probeDevelopmentSupersession,
   publicApiOrigin,
 } from './shared/developmentSupersessionRouting';
@@ -13,10 +19,25 @@ export const config = {
 };
 
 export default async function middleware(request: Request): Promise<Response> {
+  const environment = process.env.VERCEL_ENV;
+  const previewGateEnabled = process.env.VITE_MAINTENANCE_GATE_ENABLED === 'true';
+  const gateActive =
+    environment === 'production' || (environment === 'preview' && previewGateEnabled);
+  // TEMPORARY private bypass (remove after launch). Secret is read only here.
+  const bypassSecret = gateActive
+    ? usableBypassSecret(process.env.MAINTENANCE_BYPASS_SECRET)
+    : null;
+  if (gateActive && new URL(request.url).pathname === MAINTENANCE_BYPASS_PATH) {
+    return handleBypassUnlockRequest(request, bypassSecret);
+  }
+  const bypassValid =
+    bypassSecret !== null && (await requestHasValidBypassCookie(request, bypassSecret));
+
   const maintenanceGate = await evaluateMaintenanceGateForRequest(request, {
-    environment: process.env.VERCEL_ENV,
+    environment,
     apiBaseUrl: publicApiOrigin(process.env),
-    previewGateEnabled: process.env.VITE_MAINTENANCE_GATE_ENABLED === 'true',
+    previewGateEnabled,
+    bypassValid,
   });
   if (maintenanceGate.response) {
     return addMaintenanceGateDiagnostics(maintenanceGate.response, maintenanceGate);

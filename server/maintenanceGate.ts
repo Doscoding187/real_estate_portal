@@ -93,13 +93,15 @@ export interface MaintenanceGateOptions {
   environment: string | undefined;
   apiBaseUrl: string | undefined;
   previewGateEnabled?: boolean;
+  /** TEMPORARY: true when the request carried a valid private bypass cookie. */
+  bypassValid?: boolean;
   fetcher?: typeof fetch;
   probeOptions?: Omit<ApiReadinessProbeOptions, 'fetcher'>;
 }
 
 export interface MaintenanceGateEvaluation {
   response: Response | null;
-  state: 'off' | 'up' | 'down';
+  state: 'off' | 'up' | 'down' | 'bypass';
   probeStatusCode: number | null;
 }
 
@@ -112,6 +114,9 @@ export async function evaluateMaintenanceGateForRequest(
     options.environment === 'preview' && options.previewGateEnabled === true;
   if (!productionGateEnabled && !optedInPreviewGateEnabled) {
     return { response: null, state: 'off', probeStatusCode: null };
+  }
+  if (options.bypassValid === true) {
+    return { response: null, state: 'bypass', probeStatusCode: null };
   }
   if (request.method !== 'GET' && request.method !== 'HEAD') {
     return { response: null, state: 'off', probeStatusCode: null };
