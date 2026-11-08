@@ -106,8 +106,21 @@ function detailFrom(error: unknown): LegalReleaseFailureDetail {
   };
 }
 
+const CONTAINER_APP_NAME_SHAPE = /^CONTAINER_APP_[A-Z0-9_]{1,64}$/;
+
+/** Names only (never values) of defined CONTAINER_APP_* keys, sorted, capped at 40. */
+function containerAppEnvNames(source: Record<string, string | undefined>): string[] {
+  return Object.keys(source)
+    .filter(key => source[key] !== undefined && CONTAINER_APP_NAME_SHAPE.test(key))
+    .sort()
+    .slice(0, 40);
+}
+
 /** Safe one-line failure record for the CLI. */
-export function legalReleaseFailureLine(error: unknown): Record<string, unknown> {
+export function legalReleaseFailureLine(
+  error: unknown,
+  source?: Record<string, string | undefined>,
+): Record<string, unknown> {
   const failure = error instanceof LegalReleaseJobFailure ? error : undefined;
   const detail = failure?.detail ?? detailFrom(error);
   return {
@@ -116,6 +129,7 @@ export function legalReleaseFailureLine(error: unknown): Record<string, unknown>
     errorName: detail.errorName ?? null,
     outcomeUnknown: detail.outcomeUnknown ?? false,
     safeToReplay: false,
+    ...(source ? { containerAppEnvNames: containerAppEnvNames(source) } : {}),
     ...(detail.step ? { step: detail.step } : {}),
     ...(detail.code ? { code: detail.code } : {}),
     ...(detail.applyCommitted ? { applyCommitted: true, applyState: detail.applyState } : {}),

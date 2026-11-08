@@ -100,4 +100,33 @@ describe('legal release job failure step label', () => {
     expect(line).not.toHaveProperty('message');
     expect(line.code).toBe('ECONNREFUSED');
   });
+
+  it('lists CONTAINER_APP_* names only, sorted, never values', () => {
+    const line = legalReleaseFailureLine(new Error('x'), {
+      CONTAINER_APP_JOB_NAME: 'secret-job-value',
+      CONTAINER_APP_REPLICA_NAME: 'rep-xyz',
+      CONTAINER_APP_FOO_BAR: 'v1',
+      OTHER_VAR: 'nope',
+    });
+    expect(line.containerAppEnvNames).toEqual([
+      'CONTAINER_APP_FOO_BAR',
+      'CONTAINER_APP_JOB_NAME',
+      'CONTAINER_APP_REPLICA_NAME',
+    ]);
+    const text = JSON.stringify(line);
+    for (const leaked of ['secret-job-value', 'rep-xyz', '"v1"', 'OTHER_VAR']) {
+      expect(text).not.toContain(leaked);
+    }
+  });
+
+  it('does not add containerAppEnvNames to a success line', async () => {
+    const deps = {
+      preparePacket: () => ({ fake: true }),
+      install: vi.fn(),
+      root: '/tmp',
+      runOperation: async () => ({ planDigest: 'p', targetFingerprintHash: 'h' }),
+    } as unknown as LegalReleaseJobDeps;
+    const [line] = await runLegalReleaseJob({ ...env, CONTAINER_APP_JOB_NAME: 'j' }, deps);
+    expect(line).not.toHaveProperty('containerAppEnvNames');
+  });
 });
