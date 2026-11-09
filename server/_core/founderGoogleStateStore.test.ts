@@ -177,7 +177,63 @@ describe('founder Google proof state availability boundary', () => {
     await vi.advanceTimersByTimeAsync(1501);
     await pending;
     expect(client.set).not.toHaveBeenCalled();
-    expect(client.destroy).toHaveBeenCalledTimes(1);
+    // The connect never settled, so destroy is deferred (never called on an unsettled connect).
+    expect(client.destroy).not.toHaveBeenCalled();
+    await store.close();
+  });
+
+  it('destroys a connection that comes up after the bound, exactly once, on a fresh client', async () => {
+    vi.useFakeTimers();
+    const late = fakeClient();
+    let resolveLate: () => void = () => undefined;
+    late.connect.mockImplementation(
+      () => new Promise<undefined>(resolve => (resolveLate = () => resolve(undefined))),
+    );
+    const fresh = fakeClient();
+    let now = 1000;
+    const factory = vi
+      .fn()
+      .mockReturnValueOnce(late)
+      .mockReturnValue(fresh) as unknown as typeof createClient & ReturnType<typeof vi.fn>;
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const store = new RedisFounderGoogleStateStore('redis://cache.example.test', {
+      clientFactory: factory,
+      now: () => now,
+    });
+    const pending = expect(store.save('s', RECORD)).rejects.toMatchObject({ status: 503 });
+    await vi.advanceTimersByTimeAsync(1501);
+    await pending;
+    expect(late.destroy).not.toHaveBeenCalled();
+    resolveLate();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(late.destroy).toHaveBeenCalledTimes(1);
+    now += 5001;
+    await store.save('s2', RECORD);
+    expect(factory).toHaveBeenCalledTimes(2);
+    expect(fresh.set).toHaveBeenCalledTimes(1);
+    expect(late.destroy).toHaveBeenCalledTimes(1);
+    warn.mockRestore();
+    await store.close();
+  });
+
+  it('does not destroy a late connect that rejects and leaves no unhandled rejection', async () => {
+    vi.useFakeTimers();
+    const late = fakeClient();
+    let rejectLate: (e: Error) => void = () => undefined;
+    late.connect.mockImplementation(
+      () => new Promise<undefined>((_resolve, reject) => (rejectLate = reject)),
+    );
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const store = new RedisFounderGoogleStateStore('redis://cache.example.test', {
+      clientFactory: factoryFor(late),
+    });
+    const pending = expect(store.save('s', RECORD)).rejects.toMatchObject({ status: 503 });
+    await vi.advanceTimersByTimeAsync(1501);
+    await pending;
+    rejectLate(new Error('late'));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(late.destroy).not.toHaveBeenCalled();
+    warn.mockRestore();
     await store.close();
   });
 
@@ -401,6 +457,38 @@ describe('founder Google proof state availability boundary', () => {
       warn.mockRestore();
     });
 
+    it('a burst of 50 concurrent failures during a stall logs one line per 5 s window', async () => {
+      vi.useFakeTimers();
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const stalled = fakeClient();
+      stalled.connect.mockImplementation(() => new Promise(() => undefined));
+      const fresh = fakeClient();
+      fresh.connect.mockRejectedValue(failWith(SECRET, { code: 'ECONNREFUSED' }));
+      const factory = vi
+        .fn()
+        .mockReturnValueOnce(stalled)
+        .mockReturnValue(fresh) as unknown as typeof createClient & ReturnType<typeof vi.fn>;
+      const store = new RedisFounderGoogleStateStore('redis://cache.example.test', {
+        clientFactory: factory,
+      });
+      const burst = Array.from({ length: 50 }, () =>
+        expect(store.save('s', RECORD)).rejects.toMatchObject({ status: 503 }),
+      );
+      await vi.advanceTimersByTimeAsync(1501);
+      await Promise.all(burst);
+      expect(lines(warn)).toEqual([
+        '[founder-google-state] unavailable step=connect-timeout name=TimeoutError code=- reply=-',
+      ]);
+      await vi.advanceTimersByTimeAsync(5000);
+      await expect(store.save('s', RECORD)).rejects.toMatchObject({ status: 503 });
+      expect(lines(warn)).toEqual([
+        '[founder-google-state] unavailable step=connect-timeout name=TimeoutError code=- reply=-',
+        '[founder-google-state] unavailable step=connect name=Error code=ECONNREFUSED reply=- suppressed=49',
+      ]);
+      warn.mockRestore();
+      await store.close();
+    });
+
     it('logs cooldown at most once per window and never leaks secrets', async () => {
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
       let now = 1000;
@@ -412,11 +500,13 @@ describe('founder Google proof state availability boundary', () => {
       }
       expect(lines(warn)).toEqual([
         '[founder-google-state] unavailable step=connect name=Error code=ETIMEDOUT reply=-',
-        '[founder-google-state] unavailable step=cooldown name=- code=- reply=-',
       ]);
       now += 5001;
       await expect(store.save('s', RECORD)).rejects.toMatchObject({ status: 503 });
-      expect(lines(warn)).toHaveLength(3);
+      expect(lines(warn)).toEqual([
+        '[founder-google-state] unavailable step=connect name=Error code=ETIMEDOUT reply=-',
+        '[founder-google-state] unavailable step=connect name=Error code=ETIMEDOUT reply=- suppressed=4',
+      ]);
       for (const line of lines(warn)) {
         expect(line).not.toMatch(/rediss?:|user|pw|host|6380|property-listify:|founder-google-proof/);
       }

@@ -11,6 +11,7 @@ import {
 const PREFIX = 'property-listify:founder-google-proof:';
 const TIMEOUT_MS = 1500;
 const COOLDOWN_MS = 5000;
+const LOG_WINDOW_MS = 5000;
 const CONSUME_STATE = `
 local value = redis.call('GET', KEYS[1])
 if not value then return false end
@@ -39,7 +40,12 @@ export class RedisFounderGoogleStateStore implements FounderGoogleStateStore {
   private connection: Promise<unknown> | null = null;
   private unavailableUntil = 0;
   private closed = false;
-  private cooldownLoggedFor = 0;
+  private lastLogAt = Number.NEGATIVE_INFINITY;
+  private suppressed = 0;
+  private readonly trackers = new WeakMap<
+    RedisClient,
+    { settled: boolean; discarded: boolean; promise: Promise<unknown> }
+  >();
 
   constructor(
     private readonly redisUrl: string,
@@ -61,8 +67,27 @@ export class RedisFounderGoogleStateStore implements FounderGoogleStateStore {
       this.client = null;
       this.connection = null;
     }
+    if (!client) return;
+    const tracker = this.trackers.get(client);
+    if (tracker && !tracker.settled) {
+      if (tracker.discarded) return;
+      tracker.discarded = true;
+      // destroy() before the socket exists only flips isOpen and orphans the socket created
+      // later; wait for the connect to settle, then destroy a connection that did come up.
+      tracker.promise.then(
+        () => {
+          try {
+            client.destroy();
+          } catch {
+            /* Already closing. */
+          }
+        },
+        () => undefined,
+      );
+      return;
+    }
     try {
-      if (client?.isOpen) client.destroy();
+      if (client.isOpen) client.destroy();
     } catch {
       /* Already closing. */
     }
@@ -98,8 +123,16 @@ export class RedisFounderGoogleStateStore implements FounderGoogleStateStore {
     } catch {
       /* Diagnostics must never change the response. */
     }
+    const at = (this.options.now ?? Date.now)();
+    if (at - this.lastLogAt < LOG_WINDOW_MS) {
+      this.suppressed += 1;
+      return;
+    }
+    this.lastLogAt = at;
+    const suffix = this.suppressed > 0 ? ` suppressed=${this.suppressed}` : '';
+    this.suppressed = 0;
     console.warn(
-      `[founder-google-state] unavailable step=${step} name=${name} code=${code} reply=${reply}`,
+      `[founder-google-state] unavailable step=${step} name=${name} code=${code} reply=${reply}${suffix}`,
     );
   }
 
@@ -142,10 +175,7 @@ export class RedisFounderGoogleStateStore implements FounderGoogleStateStore {
     if (this.closed) throw this.unavailable();
     const nowMs = (this.options.now ?? Date.now)();
     if (this.unavailableUntil > nowMs) {
-      if (this.cooldownLoggedFor !== this.unavailableUntil) {
-        this.cooldownLoggedFor = this.unavailableUntil;
-        this.logFailure('cooldown');
-      }
+      this.logFailure('cooldown');
       throw this.unavailable();
     }
     // A cached client whose socket is closed is dead (reconnectStrategy is false); never reuse it.
@@ -162,7 +192,24 @@ export class RedisFounderGoogleStateStore implements FounderGoogleStateStore {
         this.client.on('error', () => {
           /* Awaited operations own the fail-closed boundary. */
         });
-        this.connection = this.client.connect();
+        const created = this.client;
+        const connection = created.connect();
+        const tracker = {
+          settled: false,
+          discarded: false,
+          promise: connection as Promise<unknown>,
+        };
+        // Attaching both handlers also marks a rejection as handled.
+        connection.then(
+          () => {
+            tracker.settled = true;
+          },
+          () => {
+            tracker.settled = true;
+          },
+        );
+        this.trackers.set(created, tracker);
+        this.connection = connection;
       } catch (error) {
         throw this.markUnavailable(this.client, 'create', error);
       }
