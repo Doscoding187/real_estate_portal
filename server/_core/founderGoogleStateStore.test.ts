@@ -79,6 +79,88 @@ describe('founder Google proof state availability boundary', () => {
     await store.close();
   });
 
+  it('creates a new client instead of reusing one whose connection dropped after a save', async () => {
+    const first = fakeClient();
+    const second = fakeClient();
+    const factory = vi
+      .fn()
+      .mockReturnValueOnce(first)
+      .mockReturnValue(second) as unknown as typeof createClient & ReturnType<typeof vi.fn>;
+    const store = new RedisFounderGoogleStateStore('redis://cache.example.test', {
+      clientFactory: factory,
+    });
+    await store.save('state', RECORD);
+    first.isOpen = false;
+    first.isReady = false;
+    await store.save('state-2', RECORD);
+    expect(factory).toHaveBeenCalledTimes(2);
+    expect(first.set).toHaveBeenCalledTimes(1);
+    expect(second.set).toHaveBeenCalledTimes(1);
+    // Reconnected client serves consume too.
+    expect(await store.consume('state-2', RECORD.browserHash)).toEqual(RECORD);
+    expect(second.eval).toHaveBeenCalledTimes(1);
+    expect(first.eval).not.toHaveBeenCalled();
+    await store.close();
+  });
+
+  it('discards a connected-but-not-ready client, enters cooldown, then reconnects fresh', async () => {
+    let now = 1000;
+    const stale = fakeClient();
+    stale.isReady = false;
+    const good = fakeClient();
+    const factory = vi
+      .fn()
+      .mockReturnValueOnce(stale)
+      .mockReturnValue(good) as unknown as typeof createClient & ReturnType<typeof vi.fn>;
+    const store = new RedisFounderGoogleStateStore('redis://cache.example.test', {
+      clientFactory: factory,
+      now: () => now,
+    });
+    await expect(store.save('state', RECORD)).rejects.toMatchObject({
+      code: 'FOUNDER_GOOGLE_STATE_UNAVAILABLE',
+      status: 503,
+    });
+    expect(stale.destroy).toHaveBeenCalledTimes(1);
+    await expect(store.save('state', RECORD)).rejects.toMatchObject({ status: 503 });
+    expect(factory).toHaveBeenCalledTimes(1);
+    now += 5001;
+    await store.save('state', RECORD);
+    expect(factory).toHaveBeenCalledTimes(2);
+    expect(good.set).toHaveBeenCalledTimes(1);
+    await store.close();
+  });
+
+  it('always reports 503 and never falls back when every client fails', async () => {
+    let now = 1000;
+    const clients: ReturnType<typeof fakeClient>[] = [];
+    const factory = vi.fn(() => {
+      const c = fakeClient();
+      c.connect.mockRejectedValue(new Error('private-connection-details'));
+      clients.push(c);
+      return c;
+    }) as unknown as typeof createClient & ReturnType<typeof vi.fn>;
+    const store = new RedisFounderGoogleStateStore('redis://cache.example.test', {
+      clientFactory: factory,
+      now: () => now,
+    });
+    for (let i = 0; i < 3; i += 1) {
+      await expect(store.save('state', RECORD)).rejects.toMatchObject({
+        code: 'FOUNDER_GOOGLE_STATE_UNAVAILABLE',
+        status: 503,
+      });
+      await expect(store.consume('state', RECORD.browserHash)).rejects.toMatchObject({
+        status: 503,
+      });
+      now += 5001;
+    }
+    expect(factory).toHaveBeenCalledTimes(3);
+    for (const c of clients) {
+      expect(c.set).not.toHaveBeenCalled();
+      expect(c.eval).not.toHaveBeenCalled();
+    }
+    await store.close();
+  });
+
   it('bounds a hung connection and provides no in-memory success fallback', async () => {
     vi.useFakeTimers();
     const client = fakeClient();

@@ -65,17 +65,26 @@ export class RedisFounderGoogleStateStore implements FounderGoogleStateStore {
         }),
       ]);
     } catch {
-      this.unavailableUntil = (this.options.now ?? Date.now)() + COOLDOWN_MS;
-      this.discard(client);
-      throw this.unavailable();
+      throw this.markUnavailable(client);
     } finally {
       if (timer) clearTimeout(timer);
     }
   }
 
+  /** Starts the cooldown, drops the cached client so the next attempt is fresh, returns the error to throw. */
+  private markUnavailable(client: RedisClient | null): FounderGoogleIdentityError {
+    this.unavailableUntil = (this.options.now ?? Date.now)() + COOLDOWN_MS;
+    this.discard(client);
+    return this.unavailable();
+  }
+
   private async getClient(): Promise<RedisClient> {
     if (this.closed || this.unavailableUntil > (this.options.now ?? Date.now)()) {
       throw this.unavailable();
+    }
+    // A cached client whose socket is closed is dead (reconnectStrategy is false); never reuse it.
+    if (this.client && !this.client.isOpen) {
+      this.discard(this.client);
     }
     if (!this.client) {
       try {
@@ -89,16 +98,16 @@ export class RedisFounderGoogleStateStore implements FounderGoogleStateStore {
         });
         this.connection = this.client.connect();
       } catch {
-        this.discard(this.client);
-        this.unavailableUntil = (this.options.now ?? Date.now)() + COOLDOWN_MS;
-        throw this.unavailable();
+        throw this.markUnavailable(this.client);
       }
     }
     const client = this.client;
     const connection = this.connection;
-    if (!client || !connection) throw this.unavailable();
+    if (!client || !connection) throw this.markUnavailable(client);
     await this.bounded(connection, client);
-    if (this.closed || this.client !== client || !client.isReady) throw this.unavailable();
+    if (this.closed || this.client !== client || !client.isReady) {
+      throw this.markUnavailable(client);
+    }
     return client;
   }
 
