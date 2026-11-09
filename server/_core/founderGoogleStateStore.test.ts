@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { createClient } from 'redis';
+import {
+  ConnectionTimeoutError,
+  SimpleError,
+  SocketClosedUnexpectedlyError,
+  type createClient,
+} from 'redis';
 import { RedisFounderGoogleStateStore } from './founderGoogleStateStore';
 import { FOUNDER_GOOGLE_STATE_TTL_MS, type FounderGoogleState } from './founderGoogleIdentity';
 
@@ -291,10 +296,25 @@ describe('founder Google proof state availability boundary', () => {
     it('save-command step reports only the reply word', async () => {
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
       const client = fakeClient();
-      client.set.mockRejectedValue(failWith(`WRONGPASS ${SECRET}`, {}, 'ReplyError') as never);
+      client.set.mockRejectedValue(new SimpleError(`MOVED 3999 ${SECRET}`) as never);
       await expect(make(client).save('s', RECORD)).rejects.toMatchObject({ status: 503 });
       expect(lines(warn)).toEqual([
-        '[founder-google-state] unavailable step=save-command name=ReplyError code=- reply=WRONGPASS',
+        '[founder-google-state] unavailable step=save-command name=SimpleError code=- reply=MOVED',
+      ]);
+      warn.mockRestore();
+    });
+
+    it('real node-redis connection errors log their class name', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const a = fakeClient();
+      a.connect.mockRejectedValue(new ConnectionTimeoutError());
+      await expect(make(a).save('s', RECORD)).rejects.toMatchObject({ status: 503 });
+      const b = fakeClient();
+      b.connect.mockRejectedValue(new SocketClosedUnexpectedlyError());
+      await expect(make(b).save('s', RECORD)).rejects.toMatchObject({ status: 503 });
+      expect(lines(warn)).toEqual([
+        '[founder-google-state] unavailable step=connect name=ConnectionTimeoutError code=- reply=-',
+        '[founder-google-state] unavailable step=connect name=SocketClosedUnexpectedlyError code=- reply=-',
       ]);
       warn.mockRestore();
     });
@@ -303,11 +323,11 @@ describe('founder Google proof state availability boundary', () => {
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
       const client = fakeClient();
       client.set.mockRejectedValue(
-        failWith(`bad ${SECRET}`, { code: 'not a code' }, 'ReplyError') as never,
+        Object.assign(new SimpleError(`bad ${SECRET}`), { code: 'not a code' }) as never,
       );
       await expect(make(client).save('s', RECORD)).rejects.toMatchObject({ status: 503 });
       expect(lines(warn)).toEqual([
-        '[founder-google-state] unavailable step=save-command name=ReplyError code=- reply=-',
+        '[founder-google-state] unavailable step=save-command name=SimpleError code=- reply=-',
       ]);
       warn.mockRestore();
     });
@@ -340,12 +360,14 @@ describe('founder Google proof state availability boundary', () => {
     it('consume-command step', async () => {
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
       const client = fakeClient();
-      client.eval.mockRejectedValue(failWith(`NOPERM ${SECRET}`, {}, 'ReplyError') as never);
+      client.eval.mockRejectedValue(
+        new SimpleError(`NOPERM this user has no permissions ${SECRET}`) as never,
+      );
       await expect(make(client).consume('s', RECORD.browserHash)).rejects.toMatchObject({
         status: 503,
       });
       expect(lines(warn)).toEqual([
-        '[founder-google-state] unavailable step=consume-command name=ReplyError code=- reply=NOPERM',
+        '[founder-google-state] unavailable step=consume-command name=SimpleError code=- reply=NOPERM',
       ]);
       warn.mockRestore();
     });

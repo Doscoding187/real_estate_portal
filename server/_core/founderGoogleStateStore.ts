@@ -1,4 +1,4 @@
-import { createClient } from 'redis';
+import { createClient, ErrorReply } from 'redis';
 import { isValidAuthRateLimitRedisUrl } from './authRateLimitStore';
 import {
   FOUNDER_GOOGLE_STATE_TTL_MS,
@@ -76,12 +76,20 @@ export class RedisFounderGoogleStateStore implements FounderGoogleStateStore {
     try {
       if (error && typeof error === 'object') {
         const e = error as { name?: unknown; code?: unknown; message?: unknown };
-        name =
-          typeof e.name === 'string' && /^[A-Za-z][A-Za-z0-9_]{0,40}$/.test(e.name)
-            ? e.name
-            : 'Error';
+        // node-redis error classes do not set `name`, so the constructor name is the real class.
+        const safeName = /^[A-Za-z][A-Za-z0-9_]{0,40}$/;
+        const ctorName = (error as { constructor?: { name?: unknown } }).constructor?.name;
+        if (typeof ctorName === 'string' && ctorName !== 'Error' && safeName.test(ctorName)) {
+          name = ctorName;
+        } else if (typeof e.name === 'string' && safeName.test(e.name)) {
+          name = e.name;
+        } else {
+          name = 'Error';
+        }
         if (typeof e.code === 'string' && /^[A-Z][A-Z0-9_]{1,40}$/.test(e.code)) code = e.code;
-        if (/ReplyError|ErrorReply/.test(name) && typeof e.message === 'string') {
+        const isReplyError =
+          error instanceof ErrorReply || /^(ErrorReply|SimpleError|BlobError)$/.test(name);
+        if (isReplyError && typeof e.message === 'string') {
           const word = e.message.split(/\s/, 1)[0];
           if (/^[A-Z]{2,20}$/.test(word)) reply = word;
         }
