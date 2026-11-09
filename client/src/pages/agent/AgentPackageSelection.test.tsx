@@ -88,6 +88,11 @@ const product = {
   source: { authority: 'canonical_plans', planId: 42, planKey: 'agent_launch_access' },
 } as unknown as CommercialProduct;
 
+const PREP_ONLY_MESSAGE =
+  'Invoice requests is unavailable while Property Listify is in preparation-only onboarding. Commercial activation is not available yet. Complete your profile and prepare private drafts; publishing becomes available after approved commercial activation.';
+const NO_PRODUCT_MESSAGE =
+  'Invoice requests requires an approved persisted Paid MVP product and matching owner.';
+
 const invoice = {
   id: 77,
   invoiceNumber: 'PLI-AGENT-77',
@@ -203,6 +208,171 @@ describe('Agent pre-payment preparation', () => {
       ),
     );
   });
+  it('shows a friendly closed notice, not HTTP 409, when paid purchases are closed', async () => {
+    const toastModule = await import('sonner');
+    const base = apiFetchMock.getMockImplementation()!;
+    apiFetchMock.mockImplementation((endpoint: string, ...rest: unknown[]) => {
+      if (endpoint === '/agent/request-launch-access-invoice') {
+        return Promise.reject(
+          Object.assign(new Error(PREP_ONLY_MESSAGE), {
+            status: 409,
+          }),
+        );
+      }
+      return base(endpoint, ...rest);
+    });
+    render(<CommercialAgentPackageSelection agentLaunchAccessAvailable />);
+    fireEvent.click(await screen.findByRole('checkbox'));
+    fireEvent.click(screen.getByRole('button', { name: /Get Agent Launch Access/i }));
+    await waitFor(() => expect(toastModule.toast.info).toHaveBeenCalled());
+    const message = String((toastModule.toast.info as ReturnType<typeof vi.fn>).mock.calls[0][0]);
+    expect(message).toContain('not open for your account yet');
+    expect(message).toContain('support@propertylistifysa.co.za');
+    expect(message).not.toMatch(/HTTP 409/);
+    expect(toastModule.toast.error).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['preparation-only', PREP_ONLY_MESSAGE],
+    ['no approved product', NO_PRODUCT_MESSAGE],
+  ])('shows the info toast and refetches for the exact closed message (%s)', async (_l, msg) => {
+    const toastModule = await import('sonner');
+    const base = apiFetchMock.getMockImplementation()!;
+    apiFetchMock.mockImplementation((endpoint: string, ...rest: unknown[]) => {
+      if (endpoint === '/agent/request-launch-access-invoice') {
+        return Promise.reject(Object.assign(new Error(msg), { status: 409 }));
+      }
+      return base(endpoint, ...rest);
+    });
+    render(<CommercialAgentPackageSelection agentLaunchAccessAvailable />);
+    fireEvent.click(await screen.findByRole('checkbox'));
+    fireEvent.click(screen.getByRole('button', { name: /Get Agent Launch Access/i }));
+    await waitFor(() => expect(toastModule.toast.info).toHaveBeenCalled());
+    expect(toastModule.toast.error).not.toHaveBeenCalled();
+    expect(agentWorkspaceMock.mock.results[0].value.refetch).toHaveBeenCalled();
+  });
+
+  it.each([
+    'A previous invoice is closed; the price changed.',
+    'Account admitted elsewhere',
+  ])('shows the server message and refetches for a generic 409 (%s)', async msg => {
+    const toastModule = await import('sonner');
+    const base = apiFetchMock.getMockImplementation()!;
+    apiFetchMock.mockImplementation((endpoint: string, ...rest: unknown[]) => {
+      if (endpoint === '/agent/request-launch-access-invoice') {
+        return Promise.reject(Object.assign(new Error(msg), { status: 409 }));
+      }
+      return base(endpoint, ...rest);
+    });
+    render(<CommercialAgentPackageSelection agentLaunchAccessAvailable />);
+    fireEvent.click(await screen.findByRole('checkbox'));
+    fireEvent.click(screen.getByRole('button', { name: /Get Agent Launch Access/i }));
+    await waitFor(() => expect(toastModule.toast.error).toHaveBeenCalledWith(msg));
+    expect(toastModule.toast.info).not.toHaveBeenCalled();
+    expect(agentWorkspaceMock.mock.results[0].value.refetch).toHaveBeenCalled();
+  });
+
+  it('shows the server message for a 409 conflict', async () => {
+    const toastModule = await import('sonner');
+    const base = apiFetchMock.getMockImplementation()!;
+    apiFetchMock.mockImplementation((endpoint: string, ...rest: unknown[]) => {
+      if (endpoint === '/agent/request-launch-access-invoice') {
+        return Promise.reject(
+          Object.assign(new Error('The price changed. Review the new quote.'), { status: 409 }),
+        );
+      }
+      return base(endpoint, ...rest);
+    });
+    render(<CommercialAgentPackageSelection agentLaunchAccessAvailable />);
+    fireEvent.click(await screen.findByRole('checkbox'));
+    fireEvent.click(screen.getByRole('button', { name: /Get Agent Launch Access/i }));
+    await waitFor(() =>
+      expect(toastModule.toast.error).toHaveBeenCalledWith('The price changed. Review the new quote.'),
+    );
+  });
+
+  it('shows a generic message, not the closed notice, for a 409 without a server message', async () => {
+    const toastModule = await import('sonner');
+    const base = apiFetchMock.getMockImplementation()!;
+    apiFetchMock.mockImplementation((endpoint: string, ...rest: unknown[]) => {
+      if (endpoint === '/agent/request-launch-access-invoice') {
+        return Promise.reject(
+          Object.assign(new Error('HTTP 409 on /agent/request-launch-access-invoice'), {
+            status: 409,
+          }),
+        );
+      }
+      return base(endpoint, ...rest);
+    });
+    render(<CommercialAgentPackageSelection agentLaunchAccessAvailable />);
+    fireEvent.click(await screen.findByRole('checkbox'));
+    fireEvent.click(screen.getByRole('button', { name: /Get Agent Launch Access/i }));
+    await waitFor(() =>
+      expect(toastModule.toast.error).toHaveBeenCalledWith(
+        'We could not request your invoice. Refresh the page and try again, or contact support@propertylistifysa.co.za.',
+      ),
+    );
+    expect(toastModule.toast.info).not.toHaveBeenCalled();
+  });
+
+  it('disables the request and sends nothing while sales are paused', async () => {
+    render(<CommercialAgentPackageSelection agentLaunchAccessAvailable salesPaused />);
+    const button = await screen.findByRole('button', { name: /Paid plans open soon/ });
+    expect(button).toBeDisabled();
+    expect(screen.getByText(/New paid plan purchases are paused for now/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Join the list' })).toHaveAttribute(
+      'href',
+      expect.stringContaining('mailto:support@propertylistifysa.co.za'),
+    );
+    fireEvent.click(button);
+    expect(
+      apiFetchMock.mock.calls.filter(([e]) => e === '/agent/request-launch-access-invoice'),
+    ).toHaveLength(0);
+  });
+
+  it('maps the exact paused 409 message to the friendly notice', async () => {
+    const toastModule = await import('sonner');
+    const base = apiFetchMock.getMockImplementation()!;
+    apiFetchMock.mockImplementation((endpoint: string, ...rest: unknown[]) => {
+      if (endpoint === '/agent/request-launch-access-invoice') {
+        return Promise.reject(
+          Object.assign(
+            new Error('New paid plan purchases are paused for now. Existing access is not affected.'),
+            { status: 409 },
+          ),
+        );
+      }
+      return base(endpoint, ...rest);
+    });
+    render(<CommercialAgentPackageSelection agentLaunchAccessAvailable />);
+    fireEvent.click(await screen.findByRole('checkbox'));
+    fireEvent.click(screen.getByRole('button', { name: /Get Agent Launch Access/i }));
+    await waitFor(() => expect(toastModule.toast.info).toHaveBeenCalled());
+    expect(toastModule.toast.error).not.toHaveBeenCalled();
+  });
+
+  it('shows the PaidIntakeNotice for the exact intake-closed 409 message, with no generic error text', async () => {
+    const toastModule = await import('sonner');
+    const { PAID_INTAKE_CLOSED_MESSAGE } = await import('@shared/paidIntakeCopy');
+    const base = apiFetchMock.getMockImplementation()!;
+    apiFetchMock.mockImplementation((endpoint: string, ...rest: unknown[]) => {
+      if (endpoint === '/agent/request-launch-access-invoice') {
+        return Promise.reject(Object.assign(new Error(PAID_INTAKE_CLOSED_MESSAGE), { status: 409 }));
+      }
+      return base(endpoint, ...rest);
+    });
+    render(<CommercialAgentPackageSelection agentLaunchAccessAvailable />);
+    fireEvent.click(await screen.findByRole('checkbox'));
+    fireEvent.click(screen.getByRole('button', { name: /Get Agent Launch Access/i }));
+    await waitFor(() => expect(toastModule.toast.error).toHaveBeenCalled());
+    const [arg] = (toastModule.toast.error as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(typeof arg).not.toBe('string');
+    render(arg);
+    expect(screen.getByText(PAID_INTAKE_CLOSED_MESSAGE)).toBeInTheDocument();
+    expect(toastModule.toast.error).toHaveBeenCalledTimes(1);
+    expect(toastModule.toast.info).not.toHaveBeenCalled();
+  });
+
   it('keeps the direct package route in preparation without loading commercial data', () => {
     render(<AgentPackageSelection />);
 

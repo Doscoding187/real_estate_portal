@@ -39,8 +39,24 @@ import {
   UploadCloud,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { toastPaidError } from '@/components/commercial/PaidIntakeNotice';
+import {
+  PAID_SALES_PAUSED_MESSAGE,
+  PAID_WAITLIST_LABEL,
+  PAID_WAITLIST_MAILTO,
+} from '@shared/paidIntakeCopy';
+import { isPaidIntakeClosedError, toastPaidError } from '@/components/commercial/PaidIntakeNotice';
 import { CommercialActivationNotice } from '@/components/commercial/CommercialActivationNotice';
+
+// Exact server phrases for "launch access closed" on the invoice request
+// (server/services/commercialActivationPolicy.ts requirePaidMvp* / requireCommercialActivation).
+// Anchored phrases only: bare words such as "closed" or "paused" appear in genuine conflicts.
+const LAUNCH_ACCESS_CLOSED_PATTERN = new RegExp(
+  [
+    '^' + PAID_SALES_PAUSED_MESSAGE.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$',
+    '^.+ is unavailable while Property Listify is in preparation-only onboarding\\.',
+    '^.+ requires an approved persisted Paid MVP product and matching owner\\.$',
+  ].join('|'),
+);
 
 type RouterOutputs = inferRouterOutputs<AppRouter>;
 type AgentBillingWorkspace = RouterOutputs['billing']['agentWorkspace'];
@@ -275,8 +291,10 @@ function AgentManualEftPanel({
 
 export function CommercialAgentPackageSelection({
   agentLaunchAccessAvailable,
+  salesPaused = false,
 }: {
   agentLaunchAccessAvailable: boolean;
+  salesPaused?: boolean;
 }) {
   const [, setLocation] = useLocation();
   const search = useSearch();
@@ -427,6 +445,7 @@ export function CommercialAgentPackageSelection({
       setLocation('/agent/dashboard');
       return;
     }
+    if (salesPaused) return;
     const planId = launchProduct.source?.planId;
     if (!legal.choice) return;
     if (!planId) {
@@ -452,7 +471,29 @@ export function CommercialAgentPackageSelection({
     } catch (error) {
       legal.reload();
       void catalog.refetch();
-      toastPaidError(error, 'Could not request the Agent invoice');
+      const status = (error as { status?: unknown } | null)?.status;
+      if (isPaidIntakeClosedError(error)) {
+        toastPaidError(error, 'Could not request the Agent invoice');
+      } else if (status === 409) {
+        const raw = error instanceof Error ? error.message.trim() : '';
+        const message = raw && !/^HTTP \d+/.test(raw) ? raw : '';
+        if (!message) {
+          toast.error(
+            'We could not request your invoice. Refresh the page and try again, or contact support@propertylistifysa.co.za.',
+          );
+        } else if (LAUNCH_ACCESS_CLOSED_PATTERN.test(message)) {
+          toast.info(
+            'Agent Launch Access purchases are not open for your account yet. We will email you when they open. Questions: support@propertylistifysa.co.za',
+            { duration: 15000 },
+          );
+          void workspaceQuery.refetch();
+        } else {
+          toast.error(message);
+          void workspaceQuery.refetch();
+        }
+      } else {
+        toastPaidError(error, 'Could not request the Agent invoice');
+      }
     } finally {
       setIsRequestingInvoice(false);
     }
@@ -554,12 +595,17 @@ export function CommercialAgentPackageSelection({
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <Button
                   className="h-12 flex-1 rounded-2xl"
-                  disabled={isRequestingInvoice || (agentLaunchAccessAvailable && !legal.choice)}
+                  disabled={
+                    isRequestingInvoice ||
+                    (agentLaunchAccessAvailable && (salesPaused || !legal.choice))
+                  }
                   onClick={() => void handleRequestInvoice()}
                 >
                   {!agentLaunchAccessAvailable
                     ? 'Return to preparation workspace'
-                    : isRequestingInvoice
+                    : salesPaused
+                      ? 'Paid plans open soon'
+                      : isRequestingInvoice
                       ? 'Preparing invoice…'
                       : activeInvoice
                         ? 'Refresh invoice'
@@ -574,6 +620,14 @@ export function CommercialAgentPackageSelection({
                   Talk to Property Listify
                 </Button>
               </div>
+              {agentLaunchAccessAvailable && salesPaused ? (
+                <p role="status" className="mt-3 text-sm">
+                  {PAID_SALES_PAUSED_MESSAGE}{' '}
+                  <a href={PAID_WAITLIST_MAILTO} className="font-medium underline">
+                    {PAID_WAITLIST_LABEL}
+                  </a>
+                </p>
+              ) : null}
               {activeInvoice && agentLaunchAccessAvailable ? (
                 <AgentManualEftPanel
                   invoice={activeInvoice}
@@ -694,7 +748,10 @@ export default function AgentPackageSelection() {
   const availability = useCommercialProductAvailability('agent_launch_access');
 
   return availability.isAvailable ? (
-    <CommercialAgentPackageSelection agentLaunchAccessAvailable={availability.isAvailable} />
+    <CommercialAgentPackageSelection
+      agentLaunchAccessAvailable={availability.isAvailable}
+      salesPaused={availability.salesPaused}
+    />
   ) : (
     <PreparationAgentPackageSelection
       availabilityError={availability.isError}

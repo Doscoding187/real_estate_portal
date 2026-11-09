@@ -1,11 +1,24 @@
 import type { AnchorHTMLAttributes, ReactNode } from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { EnhancedNavbar } from '@/components/EnhancedNavbar';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useLocation } from 'wouter';
+
+// Fake timers only around the pointer-travel delay; real timers are restored before any waitFor.
+function leaveAndWait(trigger: Element, ms: number) {
+  vi.useFakeTimers();
+  try {
+    fireEvent.mouseLeave(trigger);
+    act(() => {
+      vi.advanceTimersByTime(ms);
+    });
+  } finally {
+    vi.useRealTimers();
+  }
+}
 
 vi.mock('@/_core/hooks/useAuth', () => ({
   useAuth: vi.fn(),
@@ -213,14 +226,13 @@ describe('EnhancedNavbar account menu', () => {
 
     await user.click(trigger);
     const menu = screen.getByRole('menu');
-    fireEvent.mouseLeave(trigger);
-    await new Promise(resolve => window.setTimeout(resolve, 260));
+    leaveAndWait(trigger, 260);
     expect(screen.getByRole('menu')).toBeInTheDocument();
     fireEvent.mouseEnter(menu);
     expect(screen.getByRole('menuitem', { name: 'Log in' })).toBeInTheDocument();
   });
 
-  it('closes the account menu when another top-level action is hovered', async () => {
+  it('keeps the account menu open when a sibling top-level action is hovered, and closes it on click', async () => {
     mockUseAuth.mockReturnValue({ user: null, logout: vi.fn() });
 
     render(<EnhancedNavbar />);
@@ -228,11 +240,38 @@ describe('EnhancedNavbar account menu', () => {
     await user.click(screen.getAllByRole('button', { name: accountTriggerName })[0]);
     expect(screen.getByRole('menu')).toBeInTheDocument();
 
-    await user.hover(document.getElementById('public-navbar-trigger-advertise')!);
+    fireEvent.mouseEnter(document.getElementById('public-navbar-trigger-advertise')!);
+    expect(screen.getByRole('menu')).toBeInTheDocument();
+
+    fireEvent.click(document.getElementById('public-navbar-trigger-advertise')!);
     await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument());
   });
 
-  it('keeps the existing pointer-leave dismissal for authenticated workspaces', async () => {
+  it.each([
+    ['visitor', null],
+    ['signed-in agent', { firstName: 'Ava', lastName: 'Agent', role: 'agent' }],
+  ])('%s account menu is click-open/click-close and survives pointer travel', async (_label, account) => {
+    mockUseAuth.mockReturnValue({ user: account, logout: vi.fn() });
+
+    render(<EnhancedNavbar />);
+    const user = userEvent.setup();
+    const trigger = screen.getAllByRole('button', { name: accountTriggerName })[0];
+
+    await user.click(trigger);
+    expect(screen.getByRole('menu')).toBeInTheDocument();
+
+    leaveAndWait(trigger, 320);
+    expect(screen.getByRole('menu')).toBeInTheDocument();
+
+    const referrals = screen.getByRole('link', { name: /Referrals/, hidden: true });
+    fireEvent.mouseEnter(referrals);
+    expect(screen.getByRole('menu')).toBeInTheDocument();
+
+    fireEvent.click(referrals);
+    await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument());
+  });
+
+  it('closes a signed-in account menu with Escape', async () => {
     mockUseAuth.mockReturnValue({
       user: { firstName: 'Ava', lastName: 'Agent', role: 'agent' },
       logout: vi.fn(),
@@ -240,11 +279,10 @@ describe('EnhancedNavbar account menu', () => {
 
     render(<EnhancedNavbar />);
     const user = userEvent.setup();
-    const trigger = screen.getAllByRole('button', { name: accountTriggerName })[0];
-
-    await user.click(trigger);
-    fireEvent.mouseLeave(trigger);
-    await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument());
+    await user.click(screen.getAllByRole('button', { name: accountTriggerName })[0]);
+    expect(screen.getByRole('menu')).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 
   it('closes an open Advertise menu when the pointer enters the login trigger', () => {

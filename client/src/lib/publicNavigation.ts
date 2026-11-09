@@ -1194,8 +1194,17 @@ export function getCanonicalAccountDestination(user: PublicNavigationUser): stri
   return '/user/dashboard';
 }
 
+export function isHomeNextPath(safeNext: string | null): boolean {
+  return safeNext !== null && /^\/(?:[?#].*)?$/.test(safeNext);
+}
+
 export function getLoginRedirectPath(user: PublicNavigationUser, nextPath: unknown): string {
-  return getSafeNextPath(nextPath) ?? getCanonicalAccountDestination(user) ?? '/user/dashboard';
+  const safeNext = getSafeNextPath(nextPath);
+  return (
+    (isHomeNextPath(safeNext) ? null : safeNext) ??
+    getCanonicalAccountDestination(user) ??
+    '/user/dashboard'
+  );
 }
 
 export function getAccountDisplayName(user: PublicNavigationUser) {

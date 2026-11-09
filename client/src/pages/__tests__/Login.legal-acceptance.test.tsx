@@ -1,7 +1,12 @@
 import { render, screen, waitFor, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-const controls = vi.hoisted(() => ({ fetch: vi.fn(), stale: false, unavailable: false }));
+const controls = vi.hoisted(() => ({
+  fetch: vi.fn(),
+  stale: false,
+  unavailable: false,
+  emailSent: true,
+}));
 vi.mock('wouter', () => ({
   useLocation: () => ['/login', vi.fn()],
   useSearch: () => '?mode=register&role=agency_admin',
@@ -49,6 +54,7 @@ describe('registration legal choice', () => {
     );
     controls.stale = false;
     controls.unavailable = false;
+    controls.emailSent = true;
     controls.fetch.mockImplementation(async (path: string) => {
       if (path === '/auth/google/status') return { founderLoginAvailable: false };
       if (path === '/auth/registration-legal') {
@@ -60,6 +66,8 @@ describe('registration legal choice', () => {
           code: 'LEGAL_VERSION_STALE',
           error: 'Review changed documents.',
         });
+      if (path === '/auth/register')
+        return { message: 'Synthetic success', verificationEmailSent: controls.emailSent };
       return { message: 'Synthetic success' };
     });
   });
@@ -121,5 +129,38 @@ describe('registration legal choice', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Continue to agency setup/ })).toBeDisabled();
     expect(screen.queryByRole('checkbox', { name: /I agree/ })).not.toBeInTheDocument();
+  });
+  it('shows a Check your email state after register, never Welcome back, and resends via the existing endpoint', async () => {
+    render(<Login />);
+    const choice = await screen.findByRole('checkbox', { name: /I agree to the Terms/ });
+    const user = await fillForm();
+    await user.click(choice);
+    await user.click(screen.getByRole('button', { name: /Continue to agency setup/ }));
+    expect(await screen.findByText('Check your email')).toBeInTheDocument();
+    expect(screen.getByText('person@example.invalid')).toBeInTheDocument();
+    expect(screen.getByText(/We sent a verification email/)).toBeInTheDocument();
+    expect(screen.queryByText('Welcome back')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Resend verification email' }));
+    await waitFor(() =>
+      expect(controls.fetch).toHaveBeenCalledWith(
+        '/auth/resend-verification',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ email: 'person@example.invalid' }),
+        }),
+      ),
+    );
+    expect(screen.getByRole('button', { name: 'Back to log in' })).toBeInTheDocument();
+  });
+  it('says the email could not be sent when verificationEmailSent is false', async () => {
+    controls.emailSent = false;
+    render(<Login />);
+    const choice = await screen.findByRole('checkbox', { name: /I agree to the Terms/ });
+    const user = await fillForm();
+    await user.click(choice);
+    await user.click(screen.getByRole('button', { name: /Continue to agency setup/ }));
+    expect(await screen.findByText('Check your email')).toBeInTheDocument();
+    expect(screen.getByText(/could not send the verification email/)).toBeInTheDocument();
+    expect(screen.queryByText(/We sent a verification email/)).not.toBeInTheDocument();
   });
 });

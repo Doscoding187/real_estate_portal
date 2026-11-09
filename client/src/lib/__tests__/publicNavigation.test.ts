@@ -467,4 +467,12 @@ describe('public navigation authority', () => {
   it('gives location pages to Locations without activating Buyers as well', () => {
     expect(getPublicNavigationActiveOwner('/gauteng/johannesburg')).toBe('locations');
   });
+
+  it('ignores a homepage next path so the canonical destination wins', () => {
+    for (const next of ['/', '/?ref=nav', '/#top', '']) {
+      expect(getLoginRedirectPath({ role: 'agent' }, next)).toBe('/agent/dashboard');
+    }
+    expect(getLoginRedirectPath({ role: 'agent' }, '/property/x')).toBe('/property/x');
+    expect(getLoginRedirectPath({ role: 'agent' }, 'https://evil.example')).toBe('/agent/dashboard');
+  });
 });

@@ -39,11 +39,13 @@ export const getApiUrl = (endpoint: string): string => {
 export class ApiError extends Error {
   status: number;
   body: any;
+  serverMessage: string | null;
 
-  constructor(status: number, message: string, body: any = null) {
+  constructor(status: number, message: string, body: any = null, serverMessage: string | null = null) {
     super(message);
     this.status = status;
     this.body = body;
+    this.serverMessage = serverMessage;
   }
 }
 
@@ -80,7 +82,16 @@ export async function apiFetch<T = any>(endpoint: string, init?: RequestInit): P
     } else {
       console.error(`[API] Error response (non-JSON):`, text);
     }
-    throw new ApiError(res.status, `HTTP ${res.status} on ${endpoint}`, body);
+    const serverMessage =
+      body && typeof body === 'object' && typeof (body as any).error === 'string'
+        ? ((body as any).error as string).trim() || null
+        : null;
+    throw new ApiError(
+      res.status,
+      serverMessage && res.status < 500 ? serverMessage : `HTTP ${res.status} on ${endpoint}`,
+      body,
+      serverMessage,
+    );
   }
 
   if (!text) {
