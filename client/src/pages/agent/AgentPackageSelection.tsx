@@ -459,7 +459,11 @@ export function CommercialAgentPackageSelection({
       if (status === 409) {
         const raw = error instanceof Error ? error.message.trim() : '';
         const message = raw && !/^HTTP \d+/.test(raw) ? raw : '';
-        if (!message || LAUNCH_ACCESS_CLOSED_PATTERN.test(message)) {
+        if (!message) {
+          toast.error(
+            'We could not request your invoice. Refresh the page and try again, or contact support@propertylistifysa.co.za.',
+          );
+        } else if (LAUNCH_ACCESS_CLOSED_PATTERN.test(message)) {
           toast.info(
             'Agent Launch Access purchases are not open for your account yet. We will email you when they open. Questions: support@propertylistifysa.co.za',
             { duration: 15000 },

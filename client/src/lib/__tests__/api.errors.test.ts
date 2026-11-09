@@ -28,4 +28,11 @@ describe('apiFetch error handling', () => {
     expect(error.message).toBe('HTTP 502 on /agent/x');
     expect(error.serverMessage).toBeNull();
   });
+
+  it('never uses server text as the message for 5xx', async () => {
+    respond(500, JSON.stringify({ error: 'SQL exploded at host x' }), 'application/json');
+    const error = (await apiFetch('/agent/x').catch(e => e)) as ApiError;
+    expect(error.message).toBe('HTTP 500 on /agent/x');
+    expect(error.serverMessage).toBe('SQL exploded at host x');
+  });
 });

@@ -256,6 +256,7 @@ export default function Login() {
   const [showRegisterPassword, setShowRegisterPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
+  const [verificationEmailSent, setVerificationEmailSent] = useState(true);
 
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -423,6 +424,7 @@ export default function Login() {
         result.message ||
           'Account created successfully! Please check your email to verify your account.',
       );
+      setVerificationEmailSent(result?.verificationEmailSent !== false);
       setRegisteredEmail(data.email);
       registerForm.reset(registerDefaults);
       closeRegister();
@@ -805,8 +807,17 @@ export default function Login() {
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold">Check your email</DialogTitle>
             <DialogDescription className="text-sm leading-6 text-slate-700 dark:text-slate-300">
-              Your account has been created. We sent a verification email to{' '}
-              <strong>{registeredEmail}</strong>. Verify your address, then log in.
+              {verificationEmailSent ? (
+                <>
+                  Your account has been created. We sent a verification email to{' '}
+                  <strong>{registeredEmail}</strong>. Verify your address, then log in.
+                </>
+              ) : (
+                <>
+                  Your account has been created, but we could not send the verification email to{' '}
+                  <strong>{registeredEmail}</strong>. Use Resend below, then log in.
+                </>
+              )}
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-3">

@@ -246,6 +246,30 @@ describe('Agent pre-payment preparation', () => {
     );
   });
 
+  it('shows a generic message, not the closed notice, for a 409 without a server message', async () => {
+    const toastModule = await import('sonner');
+    const base = apiFetchMock.getMockImplementation()!;
+    apiFetchMock.mockImplementation((endpoint: string, ...rest: unknown[]) => {
+      if (endpoint === '/agent/request-launch-access-invoice') {
+        return Promise.reject(
+          Object.assign(new Error('HTTP 409 on /agent/request-launch-access-invoice'), {
+            status: 409,
+          }),
+        );
+      }
+      return base(endpoint, ...rest);
+    });
+    render(<CommercialAgentPackageSelection agentLaunchAccessAvailable />);
+    fireEvent.click(await screen.findByRole('checkbox'));
+    fireEvent.click(screen.getByRole('button', { name: /Get Agent Launch Access/i }));
+    await waitFor(() =>
+      expect(toastModule.toast.error).toHaveBeenCalledWith(
+        'We could not request your invoice. Refresh the page and try again, or contact support@propertylistifysa.co.za.',
+      ),
+    );
+    expect(toastModule.toast.info).not.toHaveBeenCalled();
+  });
+
   it('keeps the direct package route in preparation without loading commercial data', () => {
     render(<AgentPackageSelection />);
 

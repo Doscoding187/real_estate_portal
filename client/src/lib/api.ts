@@ -88,7 +88,7 @@ export async function apiFetch<T = any>(endpoint: string, init?: RequestInit): P
         : null;
     throw new ApiError(
       res.status,
-      serverMessage ?? `HTTP ${res.status} on ${endpoint}`,
+      serverMessage && res.status < 500 ? serverMessage : `HTTP ${res.status} on ${endpoint}`,
       body,
       serverMessage,
     );
