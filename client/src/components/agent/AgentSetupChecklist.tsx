@@ -79,7 +79,7 @@ export function AgentSetupChecklist({
       actionLabel: invoice ? 'View invoice' : undefined,
       onAction: invoice ? openPlanGate : undefined,
     },
-    { key: 'live', label: 'Go live', done: Boolean(status.fullFeaturesUnlocked) },
+    { key: 'live', label: 'Go live', done: isAgentPlanEntitled(status) },
   ];
 
   if (steps.every(step => step.done)) return null;

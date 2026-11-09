@@ -192,8 +192,9 @@ export function isAgentProfileJourneyStep(
 }
 
 /**
- * The Agent workspace is open to every agent whose email is verified. Profile
- * and private drafts need no payment; publishing and leads stay gated.
+ * The Agent workspace is browsable for every agent whose email is verified.
+ * Only the profile is open before payment; every feature action is gated by
+ * isAgentPlanEntitled.
  */
 export function isAgentWorkspaceOpen(
   status: { recommendedNextStep?: AgentRecommendedNextStep } | null | undefined,
@@ -201,7 +202,7 @@ export function isAgentWorkspaceOpen(
   return Boolean(status) && status?.recommendedNextStep !== 'verify_email';
 }
 
-/** True when the agent already has paid access (full features or publishing allowed). */
+/** The ONE entitlement rule: paid access needs full features AND publishing (fail closed). */
 export function isAgentPlanEntitled(
   status:
     | {
@@ -211,7 +212,7 @@ export function isAgentPlanEntitled(
     | null
     | undefined,
 ) {
-  return Boolean(status?.fullFeaturesUnlocked) || Boolean(status?.entitlements?.canPublishListings);
+  return Boolean(status?.fullFeaturesUnlocked) && Boolean(status?.entitlements?.canPublishListings);
 }
 
 /**

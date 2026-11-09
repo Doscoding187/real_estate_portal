@@ -12,8 +12,7 @@ import { followAgentJourneyHref } from '@/lib/agentPlanGate';
 import {
   getAgentJourneyAction,
   getAgentProfileCompletionDescription,
-  isAgentProfileJourneyStep,
-} from '@/lib/agentJourney';
+  isAgentProfileJourneyStep, isAgentPlanEntitled } from '@/lib/agentJourney';
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 import { ArrowRight, Building2, Loader2, MapPinned, Megaphone, Share2, Users } from 'lucide-react';
@@ -136,12 +135,12 @@ export default function AgentCanvassing() {
     requireDashboardUnlocked: true,
   });
   const accessQuery = trpc.canvassing.getWorkspaceAccess.useQuery(undefined, {
-    enabled: !statusLoading && Boolean(status?.fullFeaturesUnlocked),
+    enabled: !statusLoading && isAgentPlanEntitled(status),
     retry: false,
   });
   const journeyAction = getAgentJourneyAction(status, { agentLaunchAccessAvailable });
   const needsProfileCompletion = isAgentProfileJourneyStep(status);
-  const journeyLocked = !statusLoading && !status?.fullFeaturesUnlocked;
+  const journeyLocked = !statusLoading && !isAgentPlanEntitled(status);
 
   return (
     <AgentAppShell>

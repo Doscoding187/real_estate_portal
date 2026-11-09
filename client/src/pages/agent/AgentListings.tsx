@@ -39,6 +39,7 @@ import {
   getAgentJourneyAction,
   getAgentProfileCompletionDescription,
   isAgentProfileJourneyStep,
+  isAgentPaymentBlocked,
   isAgentPlanEntitled,
   isAgentWorkspaceOpen,
 } from '@/lib/agentJourney';
@@ -111,7 +112,7 @@ export default function AgentListings() {
   const workspaceOpen = !statusLoading && isAgentWorkspaceOpen(status);
   // Listings data is a paid feature: nothing loads for an unpaid agent.
   const dashboardUnlocked = workspaceOpen && isAgentPlanEntitled(status);
-  const operationalDataEnabled = !statusLoading && Boolean(status?.fullFeaturesUnlocked);
+  const operationalDataEnabled = !statusLoading && isAgentPlanEntitled(status);
 
   const isListingInTab = (status: string | null | undefined, tab: ListingTab) => {
     const normalized = String(status || '').toLowerCase();
@@ -271,7 +272,7 @@ export default function AgentListings() {
       listing.city?.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
-  const listingAccessLocked = !statusLoading && !status?.entitlements?.canPublishListings;
+  const listingAccessLocked = !statusLoading && !isAgentPlanEntitled(status);
   // The existing APIs return the latest 50 records. Sort and paginate that
   // loaded set explicitly; do not imply an inventory-wide count or search.
   const sortedListings = [...(filteredListings ?? [])];
@@ -346,7 +347,7 @@ export default function AgentListings() {
           />
         ) : statusError ? (
           <AgentJourneyStatusErrorState onRetry={retryStatus} />
-        ) : workspaceOpen && !dashboardUnlocked ? (
+        ) : workspaceOpen && !dashboardUnlocked && !isAgentPaymentBlocked(status) ? (
           <AgentFeatureLockedState
             title="Listings unlock with a plan"
             description="Choose a plan to create, manage and publish listings. Only your profile is open before payment."

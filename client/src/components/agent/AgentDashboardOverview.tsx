@@ -352,7 +352,7 @@ export function AgentDashboardOverview({
     signature: string;
     dismissedAt: number;
   } | null>(null);
-  const operationalDataEnabled = Boolean(onboardingStatus?.fullFeaturesUnlocked);
+  const operationalDataEnabled = isAgentPlanEntitled(onboardingStatus);
   const authoredListingDataEnabled = Boolean(user && isAgentPlanEntitled(onboardingStatus));
 
   const { data: stats, isLoading: statsLoading } = trpc.agent.getDashboardStats.useQuery(
@@ -565,11 +565,11 @@ export function AgentDashboardOverview({
   const entitlements = onboardingStatus?.entitlements;
   const profileCompletionScore = onboardingStatus?.profileCompletionScore ?? 0;
   const profileSetupFlags = onboardingStatus?.profileCompletionFlags ?? [];
-  const fullFeaturesUnlocked = onboardingStatus?.fullFeaturesUnlocked ?? false;
+  const fullFeaturesUnlocked = isAgentPlanEntitled(onboardingStatus);
   const needsProfileCompletion = isAgentProfileJourneyStep(onboardingStatus);
   const journeyAction = getAgentJourneyAction(onboardingStatus, { agentLaunchAccessAvailable });
   const dashboardJourney = getAgentDashboardJourneyPresentation(journeyAction);
-  const canPublishListings = entitlements?.canPublishListings ?? false;
+  const canPublishListings = isAgentPlanEntitled(onboardingStatus);
   const setupPriorityFlags = profileSetupFlags.slice(0, 3).map(formatSetupFlag);
   const guidanceMode: DashboardGuidanceMode | null = needsProfileCompletion ? 'setup' : null;
   const guidanceSignature = JSON.stringify({

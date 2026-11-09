@@ -4,7 +4,7 @@ import { AgentStatusStrip } from '@/components/agent/AgentStatusStrip';
 import { AgentJourneyStatusErrorState } from '@/components/agent/AgentJourneyStatusErrorState';
 import { AgentServicesReferralPanel } from '@/components/agent/AgentServicesReferral';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
-import { isAgentWorkspaceOpen } from '@/lib/agentJourney';
+import { isAgentWorkspaceOpen, isAgentPlanEntitled } from '@/lib/agentJourney';
 
 export default function AgentDashboard() {
   const { status, isLoading, error, retry, agentLaunchAccessAvailable } = useAgentOnboardingStatus({
@@ -48,7 +48,7 @@ export default function AgentDashboard() {
       <div className="flex flex-col gap-4">
         <AgentStatusStrip agentLaunchAccessAvailable={agentLaunchAccessAvailable} />
         <AgentServicesReferralPanel />
-        {!status.fullFeaturesUnlocked ? (
+        {!isAgentPlanEntitled(status) ? (
           <section className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-amber-950">
             <h2 className="text-lg font-semibold">Prepare your professional workspace</h2>
             <p className="mt-2 text-sm">

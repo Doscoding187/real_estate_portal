@@ -63,6 +63,7 @@ beforeEach(() => {
   useOnboardingStatusMock.mockReturnValue({
     status: {
       fullFeaturesUnlocked: true,
+      entitlements: { canPublishListings: true },
       recommendedNextStep: 'dashboard',
       subscriptionStatus: 'active',
     },

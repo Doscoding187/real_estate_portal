@@ -4,7 +4,12 @@ import { useAuth } from '@/_core/hooks/useAuth';
 import { AgentAppShell } from '@/components/agent/AgentAppShell';
 import { AgentFeatureLockedState } from '@/components/agent/AgentFeatureLockedState';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
-import { getAgentJourneyAction, isAgentPlanEntitled, isAgentWorkspaceOpen } from '@/lib/agentJourney';
+import {
+  getAgentJourneyAction,
+  isAgentPaymentBlocked,
+  isAgentPlanEntitled,
+  isAgentWorkspaceOpen,
+} from '@/lib/agentJourney';
 import { openPlanGate } from '@/lib/agentPlanGate';
 
 /**
@@ -23,7 +28,8 @@ export function AgentListingAccessGate({ children }: { children: ReactNode }) {
   if (!error && isAgentPlanEntitled(status)) return <>{children}</>;
 
   const journeyAction = getAgentJourneyAction(status, { agentLaunchAccessAvailable });
-  const workspaceOpen = !error && isAgentWorkspaceOpen(status);
+  const workspaceOpen =
+    !error && isAgentWorkspaceOpen(status) && !isAgentPaymentBlocked(status);
 
   return (
     <AgentAppShell>

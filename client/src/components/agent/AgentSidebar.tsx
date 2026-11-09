@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
-import { isAgentWorkspaceOpen } from '@/lib/agentJourney';
+import { isAgentWorkspaceOpen, isAgentPlanEntitled } from '@/lib/agentJourney';
 import { openPlanGate } from '@/lib/agentPlanGate';
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
@@ -57,7 +57,7 @@ export function AgentSidebar({ mode = 'desktop' }: SidebarProps) {
   const { user, logout } = useAuth();
   const { status, isLoading: statusLoading } = useAgentOnboardingStatus();
   const operationalDataEnabled =
-    user?.role === 'agent' && !statusLoading && Boolean(status?.fullFeaturesUnlocked);
+    user?.role === 'agent' && !statusLoading && isAgentPlanEntitled(status);
 
   const { data: stats } = trpc.agent.getDashboardStats.useQuery(undefined, {
     enabled: operationalDataEnabled,
@@ -96,7 +96,7 @@ export function AgentSidebar({ mode = 'desktop' }: SidebarProps) {
     user?.role === 'agent' &&
     !statusLoading &&
     isAgentWorkspaceOpen(status) &&
-    !status?.entitlements?.canAccessExistingLeads;
+    !isAgentPlanEntitled(status);
   // Leads are locked until a plan is active: show the locked page and the plan dialog.
   const navigateFromSidebar = (path: string) => {
     setLocation(path);

@@ -38,6 +38,7 @@ function setStatus(canPublishListings: boolean, extra: Record<string, unknown> =
   statusMock.mockReturnValue({
     status: {
       recommendedNextStep: 'select_package',
+      fullFeaturesUnlocked: canPublishListings,
       entitlements: { canPublishListings },
       ...extra,
     },
@@ -116,9 +117,13 @@ describe('AgentPlanGateLayer', () => {
   });
 
   it('treats fullFeaturesUnlocked as entitled', () => {
-    setStatus(false, { fullFeaturesUnlocked: true });
+    setStatus(true, { fullFeaturesUnlocked: true });
     render(<AgentPlanGateLayer />);
     expect(screen.queryByTestId('agent-preview-banner')).not.toBeInTheDocument();
+    cleanup();
+    setStatus(true, { fullFeaturesUnlocked: false });
+    render(<AgentPlanGateLayer />);
+    expect(screen.getByTestId('agent-preview-banner')).toBeInTheDocument();
   });
 
   it('does not auto-prompt without a trigger (first login)', () => {

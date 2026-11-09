@@ -13,8 +13,7 @@ import { followAgentJourneyHref } from '@/lib/agentPlanGate';
 import {
   getAgentJourneyAction,
   getAgentProfileCompletionDescription,
-  isAgentProfileJourneyStep,
-} from '@/lib/agentJourney';
+  isAgentProfileJourneyStep, isAgentPlanEntitled } from '@/lib/agentJourney';
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 import { ArrowRight, Bell, CalendarDays, CheckCircle, Clock, MapPin } from 'lucide-react';
@@ -163,7 +162,7 @@ export default function AgentProductivity() {
   } = useAgentOnboardingStatus({
     requireDashboardUnlocked: true,
   });
-  const productivityLocked = !statusLoading && !status?.fullFeaturesUnlocked;
+  const productivityLocked = !statusLoading && !isAgentPlanEntitled(status);
   const operationalDataEnabled = !statusLoading && !productivityLocked;
   const journeyAction = getAgentJourneyAction(status, { agentLaunchAccessAvailable });
   const needsProfileCompletion = isAgentProfileJourneyStep(status);

@@ -15,8 +15,7 @@ import { followAgentJourneyHref } from '@/lib/agentPlanGate';
 import {
   getAgentJourneyAction,
   getAgentProfileCompletionDescription,
-  isAgentProfileJourneyStep,
-} from '@/lib/agentJourney';
+  isAgentProfileJourneyStep, isAgentPlanEntitled } from '@/lib/agentJourney';
 import { toast } from 'sonner';
 import { BarChart3, Download, Eye, Home, Target, TrendingUp, Users } from 'lucide-react';
 
@@ -161,7 +160,7 @@ export default function AgentAnalytics() {
     () => new Date(Date.now() - selectedRange.days * 24 * 60 * 60 * 1000).toISOString(),
     [selectedRange.days],
   );
-  const analyticsEnabled = !statusLoading && Boolean(status?.fullFeaturesUnlocked);
+  const analyticsEnabled = !statusLoading && isAgentPlanEntitled(status);
   const hasRecordedSurfaceView = useRef(false);
 
   const { data: performance, isLoading: performanceLoading } =
@@ -194,7 +193,7 @@ export default function AgentAnalytics() {
     },
   );
 
-  const analyticsLocked = !statusLoading && !status?.fullFeaturesUnlocked;
+  const analyticsLocked = !statusLoading && !isAgentPlanEntitled(status);
   const journeyAction = getAgentJourneyAction(status, { agentLaunchAccessAvailable });
   const needsProfileCompletion = isAgentProfileJourneyStep(status);
 

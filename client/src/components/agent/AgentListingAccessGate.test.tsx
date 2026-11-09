@@ -27,7 +27,11 @@ afterEach(() => cleanup());
 
 function status(canPublishListings: boolean) {
   statusMock.mockReturnValue({
-    status: { recommendedNextStep: 'select_package', entitlements: { canPublishListings } },
+    status: {
+      recommendedNextStep: 'select_package',
+      fullFeaturesUnlocked: canPublishListings,
+      entitlements: { canPublishListings },
+    },
     isLoading: false,
     error: null,
   });

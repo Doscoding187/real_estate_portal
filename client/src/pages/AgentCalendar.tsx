@@ -2,7 +2,7 @@ import { useLocation } from 'wouter';
 import { AgentFeatureLockedState } from '@/components/agent/AgentFeatureLockedState';
 import { AgentJourneyStatusErrorState } from '@/components/agent/AgentJourneyStatusErrorState';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
-import { getAgentJourneyAction, isAgentWorkspaceOpen } from '@/lib/agentJourney';
+import { getAgentJourneyAction, isAgentPaymentBlocked, isAgentWorkspaceOpen, isAgentPlanEntitled } from '@/lib/agentJourney';
 import { followAgentJourneyHref } from '@/lib/agentPlanGate';
 import { ShowingsCalendar } from '@/components/agent/ShowingsCalendar';
 
@@ -19,8 +19,8 @@ export default function AgentCalendar() {
   });
   // Showings are paid operational data: ShowingsCalendar (which loads and books
   // showings) only mounts for an agent with full features. Fail closed on error.
-  const calendarLocked = !statusLoading && !statusError && !status?.fullFeaturesUnlocked;
-  const workspaceOpen = isAgentWorkspaceOpen(status);
+  const calendarLocked = !statusLoading && !statusError && !isAgentPlanEntitled(status);
+  const workspaceOpen = isAgentWorkspaceOpen(status) && !isAgentPaymentBlocked(status);
   const journeyAction = getAgentJourneyAction(status, { agentLaunchAccessAvailable });
 
   return (

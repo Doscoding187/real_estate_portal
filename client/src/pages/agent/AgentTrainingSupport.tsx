@@ -13,8 +13,7 @@ import { followAgentJourneyHref } from '@/lib/agentPlanGate';
 import {
   getAgentJourneyAction,
   getAgentProfileCompletionDescription,
-  isAgentProfileJourneyStep,
-} from '@/lib/agentJourney';
+  isAgentProfileJourneyStep, isAgentPlanEntitled } from '@/lib/agentJourney';
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 import {
@@ -86,7 +85,7 @@ export default function AgentTrainingSupport() {
     agentLaunchAccessAvailable,
   } = useAgentOnboardingStatus();
   const trainingLocked = !statusLoading && !status?.dashboardUnlocked;
-  const operationalDataEnabled = !statusLoading && Boolean(status?.fullFeaturesUnlocked);
+  const operationalDataEnabled = !statusLoading && isAgentPlanEntitled(status);
   const journeyAction = getAgentJourneyAction(status, { agentLaunchAccessAvailable });
   const needsProfileCompletion = isAgentProfileJourneyStep(status);
 

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { trpc } from '@/lib/trpc';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
-import { getAgentJourneyAction, isAgentWorkspaceOpen } from '@/lib/agentJourney';
+import { getAgentJourneyAction, isAgentWorkspaceOpen, isAgentPlanEntitled } from '@/lib/agentJourney';
 import { openPlanGate } from '@/lib/agentPlanGate';
 import { Building2, CalendarDays, CalendarPlus, Loader2, Plus, Search, Users } from 'lucide-react';
 import { NotificationCenter } from './NotificationCenter';
@@ -86,7 +86,7 @@ export function AgentTopNav() {
   const workspaceUnlocked =
     !onboardingLoading &&
     !workspaceStatusUnavailable &&
-    Boolean(onboardingStatus?.fullFeaturesUnlocked);
+    isAgentPlanEntitled(onboardingStatus);
   const workspaceSearchLocked =
     !onboardingLoading && !workspaceStatusUnavailable && !workspaceUnlocked;
   const workspaceSearchUnavailable =
@@ -95,7 +95,7 @@ export function AgentTopNav() {
   const listingAccessLocked =
     !onboardingLoading &&
     !workspaceStatusUnavailable &&
-    !onboardingStatus?.entitlements?.canPublishListings;
+    !isAgentPlanEntitled(onboardingStatus);
   const journeyAction = getAgentJourneyAction(onboardingStatus, { agentLaunchAccessAvailable });
 
   const dateParts = useMemo(() => {

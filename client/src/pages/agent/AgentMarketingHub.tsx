@@ -11,11 +11,14 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { trpc } from '@/lib/trpc';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
-import { followAgentJourneyHref } from '@/lib/agentPlanGate';
+import { followAgentJourneyHref, openPlanGate } from '@/lib/agentPlanGate';
 import {
   getAgentJourneyAction,
   getAgentProfileCompletionDescription,
   isAgentProfileJourneyStep,
+  isAgentPlanEntitled,
+  isAgentPaymentBlocked,
+  isAgentWorkspaceOpen,
 } from '@/lib/agentJourney';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -258,41 +261,42 @@ export default function AgentMarketingHub() {
     }
   }, [activeTab]);
 
-  const marketingLocked = !statusLoading && !status?.entitlements?.canPublishListings;
+  const marketingLocked = !statusLoading && !isAgentPlanEntitled(status);
+  const marketingEnabled = !statusLoading && !statusError && isAgentPlanEntitled(status);
   const journeyAction = getAgentJourneyAction(status, { agentLaunchAccessAvailable });
   const needsProfileCompletion = isAgentProfileJourneyStep(status);
   const explorePublishingQuery = trpc.explore.getPublishingEligibility.useQuery(undefined, {
-    enabled: Boolean(user) && !marketingLocked,
+    enabled: Boolean(user) && marketingEnabled,
     retry: false,
     refetchOnWindowFocus: false,
   });
   const canPublishToExplore = explorePublishingQuery.data?.allowed === true;
 
   const profileQuery = trpc.agent.getMyProfileOnboarding.useQuery(undefined, {
-    enabled: Boolean(user) && !marketingLocked,
+    enabled: Boolean(user) && marketingEnabled,
     retry: false,
     refetchOnWindowFocus: false,
   });
   const listingsQuery = trpc.agent.getMyListings.useQuery(
     { limit: 24 },
     {
-      enabled: Boolean(user) && !marketingLocked,
+      enabled: Boolean(user) && marketingEnabled,
       retry: false,
       refetchOnWindowFocus: false,
     },
   );
   const marketingSummaryQuery = trpc.demand.myLeadSummary.useQuery(undefined, {
-    enabled: Boolean(user) && !marketingLocked,
+    enabled: Boolean(user) && marketingEnabled,
     retry: false,
   });
   const campaignsQuery = trpc.demand.listMyCampaigns.useQuery(undefined, {
-    enabled: Boolean(user) && !marketingLocked,
+    enabled: Boolean(user) && marketingEnabled,
     retry: false,
   });
   const exploreAnalyticsQuery = trpc.exploreAnalytics.getMyAnalyticsDashboard.useQuery(
     { period: 'week' },
     {
-      enabled: Boolean(user) && !marketingLocked,
+      enabled: Boolean(user) && marketingEnabled,
       retry: false,
       refetchOnWindowFocus: false,
     },
@@ -401,6 +405,13 @@ export default function AgentMarketingHub() {
           />
         ) : statusError ? (
           <AgentJourneyStatusErrorState onRetry={retryStatus} />
+        ) : marketingLocked && isAgentWorkspaceOpen(status) && !isAgentPaymentBlocked(status) ? (
+          <AgentFeatureLockedState
+            title="Marketing unlocks with a plan"
+            description="Choose a plan to run campaigns and track your marketing. Only your profile is open before payment."
+            actionLabel="Get access"
+            onAction={openPlanGate}
+          />
         ) : marketingLocked ? (
           <AgentFeatureLockedState
             title={

@@ -44,7 +44,11 @@ describe('AgentCalendar gate', () => {
 
   it('mounts the calendar for a paid agent', () => {
     statusMock.mockReturnValue({
-      status: { recommendedNextStep: 'dashboard', fullFeaturesUnlocked: true },
+      status: {
+        recommendedNextStep: 'dashboard',
+        fullFeaturesUnlocked: true,
+        entitlements: { canPublishListings: true },
+      },
       isLoading: false,
       error: null,
       retry: vi.fn(),

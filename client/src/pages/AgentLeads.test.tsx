@@ -87,7 +87,9 @@ function setOnboardingStatus(canAccessExistingLeads: boolean, canReceiveLeads: b
   useOnboardingStatusMock.mockReturnValue({
     status: {
       recommendedNextStep: 'await_agency_activation',
+      fullFeaturesUnlocked: canAccessExistingLeads,
       entitlements: {
+        canPublishListings: canAccessExistingLeads,
         canAccessExistingLeads,
         canReceiveLeads,
       },
@@ -185,10 +187,37 @@ describe('AgentLeads', () => {
     expect(screen.getByText(/An outreach attempt includes calls or messages logged without a reply/)).toBeInTheDocument();
   });
 
+  it('fires no lead, showing or notification query and mounts no pipeline for an unpaid agent', () => {
+    useOnboardingStatusMock.mockReturnValue({
+      status: {
+        recommendedNextStep: 'select_package',
+        fullFeaturesUnlocked: false,
+        entitlements: { canAccessExistingLeads: true, canReceiveLeads: true, canPublishListings: false },
+      },
+      isLoading: false,
+      error: null,
+      retry: vi.fn(),
+    });
+    render(<AgentLeads />);
+    expect(screen.queryByText('Lead pipeline')).not.toBeInTheDocument();
+    for (const mock of [
+      getLeadResponseSummaryQueryMock,
+      getDashboardStatsQueryMock,
+      getLeadsPipelineQueryMock,
+      getNotificationsQueryMock,
+    ]) {
+      expect(mock).toHaveBeenCalled();
+      for (const call of mock.mock.calls) {
+        expect(call[1]).toEqual(expect.objectContaining({ enabled: false }));
+      }
+    }
+  });
+
   it('locks leads for a verified, non-entitled agent and opens the plan dialog', async () => {
     useOnboardingStatusMock.mockReturnValue({
       status: {
         recommendedNextStep: 'select_package',
+        fullFeaturesUnlocked: false,
         entitlements: { canAccessExistingLeads: false, canReceiveLeads: false },
       },
       isLoading: false,
@@ -198,7 +227,7 @@ describe('AgentLeads', () => {
     const gate = renderHook(() => usePlanGateOpen());
     render(<AgentLeads />);
     expect(screen.getByText('Leads unlock with a plan')).toBeInTheDocument();
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Choose plan' }));
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Get access' }));
     expect(gate.result.current).toBe(true);
     expect(setLocationMock).not.toHaveBeenCalled();
     closePlanGate();
