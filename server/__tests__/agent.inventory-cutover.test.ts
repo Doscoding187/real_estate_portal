@@ -43,6 +43,14 @@ vi.mock('../services/agencyMembershipService', () => ({
   resolveCurrentAgencyMembershipForAgent: mockResolveCurrentAgencyMembershipForAgent,
 }));
 
+vi.mock('../services/agentEntitlementService', () => ({
+  getAgentEntitlementsForUserId: vi.fn(async () => ({
+    hasCommercialAccess: true,
+    canAccessExistingLeads: true,
+    canReceiveLeads: true,
+  })),
+}));
+
 import { agentRouter } from '../agentRouter';
 
 function createAgentCaller() {

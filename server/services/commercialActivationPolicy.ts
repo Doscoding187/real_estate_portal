@@ -314,6 +314,24 @@ export function requirePaidMvpOwnerAdmission(
   environment: RuntimeEnvironment = process.env,
 ): void {
   requirePaidMvpSalesOpen(operation, environment);
+  requirePaidMvpOwnerAdmitted(owner, environment);
+}
+
+/**
+ * Settlement of an already-issued invoice: the owner must still be admitted,
+ * but a closed sales window or sales pause does not block finance approval.
+ */
+export function requirePaidMvpOwnerAdmissionForSettlement(
+  owner: { ownerType: string; ownerId: number },
+  environment: RuntimeEnvironment = process.env,
+): void {
+  requirePaidMvpOwnerAdmitted(owner, environment);
+}
+
+function requirePaidMvpOwnerAdmitted(
+  owner: { ownerType: string; ownerId: number },
+  environment: RuntimeEnvironment,
+): void {
   const config = getConfiguration(environment);
   // Preserve the already-governed disposable fixture contract. A hosted
   // runtime cannot resolve to that mode, even with test selectors present.

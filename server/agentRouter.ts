@@ -62,6 +62,7 @@ import {
 import type { AgentOfferReadinessSummary } from './services/agentLeadOfferReadinessService';
 import { logAudit } from './_core/auditLog';
 import { getAgentEntitlementsForUserId } from './services/agentEntitlementService';
+import { hasAgentLeadAccess, requireAgentLeadAccess } from './services/agentLeadAccessGate';
 import { loadAgentPresenceSummary } from './services/agentPresenceSummaryService';
 import { agentOnboardingService } from './services/agentOnboardingService';
 import { AgentCoverageAreaValidationError } from './services/agentCoverageAreaService';
@@ -521,6 +522,12 @@ async function listAgentShowings(params: {
 /**
  * Agent Router - Dashboard and CRM functionality for agents
  */
+/** Lead and showing procedures: unpaid independent agents are refused server-side. */
+const agentLeadProcedure = agentProcedure.use(async ({ ctx, next }) => {
+  await requireAgentLeadAccess(ctx);
+  return next();
+});
+
 export const agentRouter = router({
   list: publicProcedure.query(async () => {
     const db = await getDb();
@@ -708,7 +715,7 @@ export const agentRouter = router({
    * two-way connections are measured separately so an unanswered call does not
    * appear as a connected buyer.
    */
-  getLeadResponseSummary: agentProcedure.query(async ({ ctx }) => {
+  getLeadResponseSummary: agentLeadProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     requireUser(ctx);
 
@@ -939,7 +946,7 @@ export const agentRouter = router({
   /**
    * Get leads pipeline for Kanban board
    */
-  getLeadsPipeline: agentProcedure
+  getLeadsPipeline: agentLeadProcedure
     .input(
       z.object({
         filters: z
@@ -1126,7 +1133,7 @@ export const agentRouter = router({
   /**
    * Move lead to different pipeline stage
    */
-  moveLeadToStage: agentProcedure
+  moveLeadToStage: agentLeadProcedure
     .input(
       z.object({
         leadId: z.number(),
@@ -1612,7 +1619,7 @@ export const agentRouter = router({
   /**
    * Get agent's leads with filtering
    */
-  getMyLeads: agentProcedure
+  getMyLeads: agentLeadProcedure
     .input(
       z.object({
         status: z
@@ -1677,7 +1684,7 @@ export const agentRouter = router({
    * of the canonical lead record so agency managers and agents see the same
    * work instead of maintaining competing task lists.
    */
-  getMyFollowUps: agentProcedure
+  getMyFollowUps: agentLeadProcedure
     .input(
       z.object({
         limit: z.number().int().min(1).max(100).default(50),
@@ -1737,7 +1744,7 @@ export const agentRouter = router({
    * Schedule a follow-up on an assigned lead. This mirrors the agency lead
    * operation while retaining the agent's narrower ownership boundary.
    */
-  setLeadFollowUp: agentProcedure
+  setLeadFollowUp: agentLeadProcedure
     .input(
       z.object({
         leadId: z.number().int().positive(),
@@ -1813,7 +1820,7 @@ export const agentRouter = router({
     }),
 
   /** Complete an assigned follow-up and retain the contact/audit trail. */
-  completeLeadFollowUp: agentProcedure
+  completeLeadFollowUp: agentLeadProcedure
     .input(
       z.object({
         leadId: z.number().int().positive(),
@@ -1879,7 +1886,7 @@ export const agentRouter = router({
     }),
 
   /** Record an outreach attempt without changing the lead's sales stage. */
-  recordLeadContactAttempt: agentProcedure
+  recordLeadContactAttempt: agentLeadProcedure
     .input(
       z
         .object({
@@ -1987,7 +1994,7 @@ export const agentRouter = router({
   /**
    * Update lead status
    */
-  updateLeadStatus: agentProcedure
+  updateLeadStatus: agentLeadProcedure
     .input(
       z.object({
         leadId: z.number(),
@@ -2081,7 +2088,7 @@ export const agentRouter = router({
    * latest agent-recorded checklist snapshot with the canonical lead
    * transition requirements, so the client never invents its own gate.
    */
-  getLeadOfferReadiness: agentProcedure
+  getLeadOfferReadiness: agentLeadProcedure
     .input(z.object({ leadId: z.number().int().positive() }))
     .query(async ({ ctx, input }): Promise<AgentOfferReadinessSummary> => {
       const db = await getDb();
@@ -2095,7 +2102,7 @@ export const agentRouter = router({
    * avoids a second schema authority while preserving who recorded the
    * readiness evidence and when it was changed.
    */
-  setLeadOfferReadiness: agentProcedure
+  setLeadOfferReadiness: agentLeadProcedure
     .input(
       z.object({
         leadId: z.number().int().positive(),
@@ -2164,7 +2171,7 @@ export const agentRouter = router({
   /**
    * Add lead activity/note
    */
-  addLeadActivity: agentProcedure
+  addLeadActivity: agentLeadProcedure
     .input(
       z.object({
         leadId: z.number(),
@@ -2228,7 +2235,7 @@ export const agentRouter = router({
   /**
    * Get lead activities
    */
-  getLeadActivities: agentProcedure
+  getLeadActivities: agentLeadProcedure
     .input(
       z.object({
         leadId: z.number(),
@@ -2253,7 +2260,7 @@ export const agentRouter = router({
   /**
    * Get agent's showings/calendar
    */
-  getMyShowings: agentProcedure
+  getMyShowings: agentLeadProcedure
     .input(
       z.object({
         startDate: z.string().optional(),
@@ -2277,7 +2284,7 @@ export const agentRouter = router({
       });
     }),
 
-  bookShowing: agentProcedure
+  bookShowing: agentLeadProcedure
     .input(
       z.object({
         listingId: z.number(),
@@ -2490,7 +2497,7 @@ export const agentRouter = router({
   /**
    * Update showing status
    */
-  updateShowingStatus: agentProcedure
+  updateShowingStatus: agentLeadProcedure
     .input(
       z.object({
         showingId: z.number(),
@@ -2539,7 +2546,7 @@ export const agentRouter = router({
   /**
    * Get agent's commissions
    */
-  getMyCommissions: agentProcedure
+  getMyCommissions: agentLeadProcedure
     .input(
       z.object({
         status: z.enum(['all', 'pending', 'approved', 'paid', 'cancelled']).optional(),
@@ -2590,7 +2597,7 @@ export const agentRouter = router({
   /**
    * Get performance analytics
    */
-  getPerformanceAnalytics: agentProcedure
+  getPerformanceAnalytics: agentLeadProcedure
     .input(
       z.object({
         period: z.enum(['week', 'month', 'quarter', 'year']).optional().default('month'),
@@ -2681,6 +2688,14 @@ export const agentRouter = router({
 
       const conditions = [eq(notifications.userId, requireUser(ctx).id)];
 
+      // Lead PII (names, enquiries) lives in these notification types; hide
+      // them while Launch Access is not current. Rows are kept, not deleted.
+      if (!(await hasAgentLeadAccess(requireUser(ctx)))) {
+        conditions.push(
+          notInArray(notifications.type, ['lead_assigned', 'showing_scheduled', 'offer_received']),
+        );
+      }
+
       if (input.unreadOnly) {
         conditions.push(eq(notifications.isRead, 0));
       }
@@ -2748,7 +2763,7 @@ export const agentRouter = router({
   /**
    * Export commissions to CSV
    */
-  exportCommissionsCSV: agentProcedure
+  exportCommissionsCSV: agentLeadProcedure
     .input(
       z.object({
         status: z.enum(['all', 'pending', 'approved', 'paid', 'cancelled']).optional(),

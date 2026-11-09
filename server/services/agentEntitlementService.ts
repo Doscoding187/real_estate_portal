@@ -26,6 +26,8 @@ export type AgentEntitlements = {
   emailVerified: boolean;
   profileCompletionScore: number;
   profileCompletionFlags: string[];
+  /** Current paid Launch Access or current agency-managed access. */
+  hasCommercialAccess: boolean;
   canPublishListings: boolean;
   canReceiveLeads: boolean;
   /**
@@ -277,6 +279,7 @@ export async function getAgentEntitlementsForUserId(
     emailVerified,
     profileCompletionScore,
     profileCompletionFlags: completion.flags,
+    hasCommercialAccess,
     canPublishListings,
     canReceiveLeads,
     canAccessExistingLeads,

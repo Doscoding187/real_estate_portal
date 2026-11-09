@@ -366,6 +366,8 @@ async function messageForDelivery(db: Database, row: Delivery) {
       ...(row.purpose === 'payment_notice_received' ? { noticeReviewed } : {}),
       ...(row.purpose === 'payment_approved' && typeof outcome?.paidTermStart === 'string' &&
         typeof outcome?.paidTermEnd === 'string' ? { term: { start: outcome.paidTermStart, end: outcome.paidTermEnd } } : {}),
+      ...(row.purpose === 'payment_approved' && typeof outcome?.paidOn === 'string' ? { paidOn: outcome.paidOn } : {}),
+      ...(row.purpose === 'payment_approved' && typeof outcome?.productName === 'string' ? { productName: outcome.productName } : {}),
     });
   } else {
     const [notice] = await db.select().from(notifications)

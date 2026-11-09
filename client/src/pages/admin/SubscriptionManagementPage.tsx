@@ -46,6 +46,7 @@ import {
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
+import { RecordPaymentByReferenceCard } from '@/components/admin/RecordPaymentByReferenceCard';
 import { useCommercialActivationAvailability } from '@/hooks/useCommercialProductAvailability';
 
 function formatDate(value: string | null | undefined) {
@@ -562,6 +563,7 @@ export default function SubscriptionManagementPage({
 
         {/* VERIFICATION TAB */}
         <TabsContent value="verification" className="space-y-6">
+          <RecordPaymentByReferenceCard onRecorded={() => refetchProofs()} />
           <GlassCard className="p-6">
             <div className="flex items-center justify-between mb-6">
               <div>

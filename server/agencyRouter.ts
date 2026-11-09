@@ -107,6 +107,7 @@ import {
   setSubscriptionPlanForOwner,
 } from './services/planAccessService';
 import { getManualEftBillingAmount } from './services/billingFoundationService';
+import { requireAgentCanReceiveAssignedLeads } from './services/agentLeadAccessGate';
 import { evaluateAgencyPublicationReadiness } from './services/listingPublicationEntitlementService';
 import { getAgencyOperatingHome } from './services/agencyOperatingHome';
 import {
@@ -5216,6 +5217,9 @@ export const agencyRouter = router({
       const assignedAgent = input.agentId
         ? await requireAgencyAgent(db, user.agencyId, input.agentId)
         : null;
+      if (assignedAgent?.userId) {
+        await requireAgentCanReceiveAssignedLeads(Number(assignedAgent.userId));
+      }
       const now = nowAsDbTimestamp();
 
       await db

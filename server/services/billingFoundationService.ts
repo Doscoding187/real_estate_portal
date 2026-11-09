@@ -40,6 +40,7 @@ import {
   requireCommercialActivation,
   requirePaidMvpSalesOpen,
   requirePaidMvpOwnerAdmission,
+  requirePaidMvpOwnerAdmissionForSettlement,
 } from './commercialActivationPolicy';
 import {
   getCommercialProductKey,
@@ -2747,7 +2748,8 @@ export async function reviewManualPayment(input: {
   overpaymentReconciled?: boolean;
 }) {
   requireAnyPaidMvpLaunchAccessActivation('Payment review');
-  if (input.decision === 'approve') requirePaidMvpSalesOpen('Payment activation');
+  // D1: approving an already-issued invoice is allowed after the sales window closes or
+  // a pause; only new invoice requests require sales to be open.
   const db = await getDb();
   if (!db)
     throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
@@ -2847,7 +2849,7 @@ export async function reviewManualPayment(input: {
       invoice = row.invoice;
     }
     if (input.decision === 'approve') {
-      requirePaidMvpOwnerAdmission('Payment activation', {
+      requirePaidMvpOwnerAdmissionForSettlement({
         ownerType: invoice.ownerType,
         ownerId: invoice.ownerId,
       });
@@ -3209,6 +3211,10 @@ export async function reviewManualPayment(input: {
         amountPaid,
         subscriptionStatus: subscription?.status || 'payment_under_review',
         activationOccurred,
+        // Drives the inline "Invoice - PAID" email; invoice number, reference
+        // and amount are re-read from the canonical invoice at send time.
+        paidOn: String(beforePayment.paymentDate || reviewedAt).slice(0, 10),
+        productName: reviewPlan?.displayName || null,
       },
     });
 
@@ -3295,6 +3301,198 @@ export async function reviewManualPayment(input: {
   }
 
   return result;
+}
+
+async function resolveInvoiceOwnerDisplay(db: DbOrTx, ownerType: string, ownerId: number) {
+  if (ownerType === 'agency') {
+    const [row] = await db
+      .select({ name: agencies.name })
+      .from(agencies)
+      .where(eq(agencies.id, ownerId))
+      .limit(1);
+    return row?.name || `Agency ${ownerId}`;
+  }
+  if (ownerType === 'developer') {
+    const [row] = await db
+      .select({ name: developerOrganisations.name })
+      .from(developerOrganisations)
+      .where(eq(developerOrganisations.id, ownerId))
+      .limit(1);
+    return row?.name || `Developer ${ownerId}`;
+  }
+  const [row] = await db
+    .select({ name: users.name, email: users.email })
+    .from(users)
+    .where(eq(users.id, ownerId))
+    .limit(1);
+  return row?.name || row?.email || `Agent ${ownerId}`;
+}
+
+/** Finance-only preview of the invoice behind a payment reference. */
+export async function lookupLaunchInvoiceByReference(input: {
+  actorUser: BillingUser;
+  paymentReference: string;
+}) {
+  if (!isBillingFinanceAdmin(input.actorUser)) {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'Finance admin privileges required.' });
+  }
+  const db = await getDb();
+  if (!db)
+    throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+  const reference = input.paymentReference.trim();
+  const [invoice] = await db
+    .select()
+    .from(billingInvoices)
+    .where(eq(billingInvoices.paymentReference, reference))
+    .limit(1);
+  if (!invoice) throw new TRPCError({ code: 'NOT_FOUND', message: 'No invoice with this reference' });
+  const payments = await db
+    .select()
+    .from(billingPayments)
+    .where(eq(billingPayments.invoiceId, invoice.id));
+  return {
+    invoiceId: invoice.id,
+    invoiceNumber: invoice.invoiceNumber,
+    paymentReference: invoice.paymentReference,
+    ownerType: invoice.ownerType,
+    ownerName: await resolveInvoiceOwnerDisplay(db, invoice.ownerType, invoice.ownerId),
+    amountDue: invoice.amountDue,
+    amountPaid: invoice.amountPaid,
+    currency: invoice.currency,
+    status: invoice.status,
+    payments: payments.map(payment => ({
+      id: payment.id,
+      state: payment.state,
+      amount: payment.amount,
+      paymentDate: payment.paymentDate,
+      bankReference: payment.bankReference,
+    })),
+  };
+}
+
+/**
+ * Finance records a received EFT by invoice reference, then settles it through
+ * the existing reviewManualPayment approval path (no duplicated activation).
+ */
+export async function recordLaunchPaymentByReference(input: {
+  actorUser: BillingUser;
+  paymentReference: string;
+  amountReceivedMinor: number;
+  paidOn: string;
+  bankReference?: string;
+}) {
+  if (!isBillingFinanceAdmin(input.actorUser)) {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'Finance admin privileges required.' });
+  }
+  requireAnyPaidMvpLaunchAccessActivation('Payment review');
+  const db = await getDb();
+  if (!db)
+    throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+  if (!Number.isSafeInteger(input.amountReceivedMinor) || input.amountReceivedMinor <= 0) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Amount received must be a positive integer minor-unit value.',
+    });
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.paidOn) || Number.isNaN(Date.parse(input.paidOn))) {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'Paid-on date must be YYYY-MM-DD.' });
+  }
+  const reference = input.paymentReference.trim();
+  const actorLabel = input.actorUser.email || input.actorUser.name || `user ${input.actorUser.id}`;
+
+  const [found] = await db
+    .select({ id: billingInvoices.id })
+    .from(billingInvoices)
+    .where(eq(billingInvoices.paymentReference, reference))
+    .limit(1);
+  if (!found) throw new TRPCError({ code: 'NOT_FOUND', message: 'No invoice with this reference' });
+
+  const prepared = await db.transaction(async tx => {
+    // Serialise concurrent recordings for the same invoice.
+    await tx.execute(sql`SELECT id FROM billing_invoices WHERE id = ${found.id} FOR UPDATE`);
+    const [invoice] = await tx
+      .select()
+      .from(billingInvoices)
+      .where(eq(billingInvoices.id, found.id))
+      .limit(1);
+    if (!invoice) throw new TRPCError({ code: 'NOT_FOUND', message: 'No invoice with this reference' });
+    if (invoice.status === 'paid') {
+      throw new TRPCError({ code: 'CONFLICT', message: 'Already paid' });
+    }
+    if (!['issued', 'submitted', 'partially_paid', 'overdue'].includes(invoice.status)) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: `Invoice cannot accept payment while ${invoice.status}.`,
+      });
+    }
+    const existing = await tx
+      .select()
+      .from(billingPayments)
+      .where(eq(billingPayments.invoiceId, invoice.id));
+    const reusable = existing.find(row => row.state === 'under_review');
+    const balance = Math.max(0, invoice.amountDue - invoice.amountPaid);
+    let paymentId: number;
+    if (reusable) {
+      paymentId = reusable.id;
+    } else {
+      const ownerName = await resolveInvoiceOwnerDisplay(tx, invoice.ownerType, invoice.ownerId);
+      const [insert] = await tx
+        .insert(billingPayments)
+        .values({
+          invoiceId: invoice.id,
+          subscriptionId: invoice.subscriptionId || null,
+          ownerType: toBillingOwnerType(invoice.ownerType),
+          ownerId: invoice.ownerId,
+          billableAccountId: invoice.billableAccountId,
+          paymentMethod: 'manual_eft',
+          state: 'under_review',
+          amount: input.amountReceivedMinor,
+          currency: invoice.currency,
+          paymentReference: invoice.paymentReference,
+          bankReference: input.bankReference?.trim() || null,
+          payerName: ownerName,
+          paymentDate: toDbTimestamp(`${input.paidOn}T00:00:00Z`),
+          submittedBy: input.actorUser.id,
+          idempotencyKey: `manual_eft_finance:${invoice.id}:${randomUUID()}`,
+          metadata: {
+            notes: `recorded by finance ${actorLabel}`,
+            submission_kind: 'finance_recorded',
+            upload_source: 'finance_by_reference',
+            commercial_product_key: getCommercialProductKeyFromInvoice(invoice),
+          },
+        })
+        .$returningId();
+      paymentId = Number(insert.id);
+    }
+    await logBillingEvent(tx, {
+      ownerType: toBillingOwnerType(invoice.ownerType),
+      ownerId: invoice.ownerId,
+      subscriptionId: invoice.subscriptionId,
+      invoiceId: invoice.id,
+      paymentId,
+      actorUserId: input.actorUser.id,
+      eventType: 'payment_recorded_by_finance',
+      message: `Payment recorded by finance ${actorLabel} by reference.`,
+      afterData: {
+        paymentReference: invoice.paymentReference,
+        amountReceivedMinor: input.amountReceivedMinor,
+        paidOn: input.paidOn,
+        reusedPayment: Boolean(reusable),
+      },
+    });
+    return { paymentId, balance, bankPaymentReference: invoice.paymentReference };
+  });
+
+  const settleDecision = input.amountReceivedMinor < prepared.balance ? 'partial_payment' : 'approve';
+  const result = await reviewManualPayment({
+    actorUser: input.actorUser,
+    paymentId: prepared.paymentId,
+    decision: settleDecision,
+    note: `Recorded by finance ${actorLabel} by reference; received ${input.paidOn}.`,
+    verifiedAmount: input.amountReceivedMinor,
+    bankPaymentReference: input.bankReference?.trim() || prepared.bankPaymentReference,
+  });
+  return { ...result, paymentId: prepared.paymentId };
 }
 
 export async function updateSubscriptionLifecycle(input: {
