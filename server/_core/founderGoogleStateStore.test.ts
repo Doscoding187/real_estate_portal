@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { createClient } from 'redis';
+import {
+  ConnectionTimeoutError,
+  SimpleError,
+  SocketClosedUnexpectedlyError,
+  type createClient,
+} from 'redis';
 import { RedisFounderGoogleStateStore } from './founderGoogleStateStore';
 import { FOUNDER_GOOGLE_STATE_TTL_MS, type FounderGoogleState } from './founderGoogleIdentity';
 
@@ -79,6 +84,88 @@ describe('founder Google proof state availability boundary', () => {
     await store.close();
   });
 
+  it('creates a new client instead of reusing one whose connection dropped after a save', async () => {
+    const first = fakeClient();
+    const second = fakeClient();
+    const factory = vi
+      .fn()
+      .mockReturnValueOnce(first)
+      .mockReturnValue(second) as unknown as typeof createClient & ReturnType<typeof vi.fn>;
+    const store = new RedisFounderGoogleStateStore('redis://cache.example.test', {
+      clientFactory: factory,
+    });
+    await store.save('state', RECORD);
+    first.isOpen = false;
+    first.isReady = false;
+    await store.save('state-2', RECORD);
+    expect(factory).toHaveBeenCalledTimes(2);
+    expect(first.set).toHaveBeenCalledTimes(1);
+    expect(second.set).toHaveBeenCalledTimes(1);
+    // Reconnected client serves consume too.
+    expect(await store.consume('state-2', RECORD.browserHash)).toEqual(RECORD);
+    expect(second.eval).toHaveBeenCalledTimes(1);
+    expect(first.eval).not.toHaveBeenCalled();
+    await store.close();
+  });
+
+  it('discards a connected-but-not-ready client, enters cooldown, then reconnects fresh', async () => {
+    let now = 1000;
+    const stale = fakeClient();
+    stale.isReady = false;
+    const good = fakeClient();
+    const factory = vi
+      .fn()
+      .mockReturnValueOnce(stale)
+      .mockReturnValue(good) as unknown as typeof createClient & ReturnType<typeof vi.fn>;
+    const store = new RedisFounderGoogleStateStore('redis://cache.example.test', {
+      clientFactory: factory,
+      now: () => now,
+    });
+    await expect(store.save('state', RECORD)).rejects.toMatchObject({
+      code: 'FOUNDER_GOOGLE_STATE_UNAVAILABLE',
+      status: 503,
+    });
+    expect(stale.destroy).toHaveBeenCalledTimes(1);
+    await expect(store.save('state', RECORD)).rejects.toMatchObject({ status: 503 });
+    expect(factory).toHaveBeenCalledTimes(1);
+    now += 5001;
+    await store.save('state', RECORD);
+    expect(factory).toHaveBeenCalledTimes(2);
+    expect(good.set).toHaveBeenCalledTimes(1);
+    await store.close();
+  });
+
+  it('always reports 503 and never falls back when every client fails', async () => {
+    let now = 1000;
+    const clients: ReturnType<typeof fakeClient>[] = [];
+    const factory = vi.fn(() => {
+      const c = fakeClient();
+      c.connect.mockRejectedValue(new Error('private-connection-details'));
+      clients.push(c);
+      return c;
+    }) as unknown as typeof createClient & ReturnType<typeof vi.fn>;
+    const store = new RedisFounderGoogleStateStore('redis://cache.example.test', {
+      clientFactory: factory,
+      now: () => now,
+    });
+    for (let i = 0; i < 3; i += 1) {
+      await expect(store.save('state', RECORD)).rejects.toMatchObject({
+        code: 'FOUNDER_GOOGLE_STATE_UNAVAILABLE',
+        status: 503,
+      });
+      await expect(store.consume('state', RECORD.browserHash)).rejects.toMatchObject({
+        status: 503,
+      });
+      now += 5001;
+    }
+    expect(factory).toHaveBeenCalledTimes(3);
+    for (const c of clients) {
+      expect(c.set).not.toHaveBeenCalled();
+      expect(c.eval).not.toHaveBeenCalled();
+    }
+    await store.close();
+  });
+
   it('bounds a hung connection and provides no in-memory success fallback', async () => {
     vi.useFakeTimers();
     const client = fakeClient();
@@ -90,7 +177,71 @@ describe('founder Google proof state availability boundary', () => {
     await vi.advanceTimersByTimeAsync(1501);
     await pending;
     expect(client.set).not.toHaveBeenCalled();
+    // Destroy is deferred while the connect is unsettled, then forced by the fallback timer.
+    expect(client.destroy).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(10_000);
     expect(client.destroy).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(20_000);
+    await store.close();
+    expect(client.destroy).toHaveBeenCalledTimes(1);
+  });
+
+  it('destroys a connection that comes up after the bound, exactly once, on a fresh client', async () => {
+    vi.useFakeTimers();
+    const late = fakeClient();
+    let resolveLate: () => void = () => undefined;
+    late.connect.mockImplementation(
+      () => new Promise<undefined>(resolve => (resolveLate = () => resolve(undefined))),
+    );
+    const fresh = fakeClient();
+    let now = 1000;
+    const factory = vi
+      .fn()
+      .mockReturnValueOnce(late)
+      .mockReturnValue(fresh) as unknown as typeof createClient & ReturnType<typeof vi.fn>;
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const store = new RedisFounderGoogleStateStore('redis://cache.example.test', {
+      clientFactory: factory,
+      now: () => now,
+    });
+    const pending = expect(store.save('s', RECORD)).rejects.toMatchObject({ status: 503 });
+    await vi.advanceTimersByTimeAsync(1501);
+    await pending;
+    expect(late.destroy).not.toHaveBeenCalled();
+    resolveLate();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(late.destroy).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(10_000); // fallback timer was cleared: no second destroy
+    expect(late.destroy).toHaveBeenCalledTimes(1);
+    now += 5001;
+    await store.save('s2', RECORD);
+    expect(factory).toHaveBeenCalledTimes(2);
+    expect(fresh.set).toHaveBeenCalledTimes(1);
+    expect(late.destroy).toHaveBeenCalledTimes(1);
+    warn.mockRestore();
+    await store.close();
+  });
+
+  it('does not destroy a late connect that rejects and leaves no unhandled rejection', async () => {
+    vi.useFakeTimers();
+    const late = fakeClient();
+    let rejectLate: (e: Error) => void = () => undefined;
+    late.connect.mockImplementation(
+      () => new Promise<undefined>((_resolve, reject) => (rejectLate = reject)),
+    );
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const store = new RedisFounderGoogleStateStore('redis://cache.example.test', {
+      clientFactory: factoryFor(late),
+    });
+    const pending = expect(store.save('s', RECORD)).rejects.toMatchObject({ status: 503 });
+    await vi.advanceTimersByTimeAsync(1501);
+    await pending;
+    rejectLate(new Error('late'));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(late.destroy).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(10_000); // timer cleared on reject
+    expect(late.destroy).not.toHaveBeenCalled();
+    warn.mockRestore();
     await store.close();
   });
 
@@ -134,6 +285,241 @@ describe('founder Google proof state availability boundary', () => {
     });
     expect(await store.consume('state', RECORD.browserHash)).toBeNull();
     await store.close();
+  });
+
+  describe('safe failure diagnostics', () => {
+    const SECRET = 'rediss://user:pw@host:6380 property-listify:founder-google-proof:abc';
+    function make(client: ReturnType<typeof fakeClient>, now?: () => number) {
+      return new RedisFounderGoogleStateStore('redis://cache.example.test', {
+        clientFactory: factoryFor(client),
+        ...(now ? { now } : {}),
+      });
+    }
+    function lines(spy: { mock: { calls: unknown[][] } }) {
+      return spy.mock.calls.map(call => String(call[0]));
+    }
+    function failWith(message: string, extra: object = {}, name = 'Error') {
+      return Object.assign(new Error(message), { name }, extra);
+    }
+
+    it('create step', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const factory = vi.fn(() => {
+        throw failWith(SECRET);
+      }) as unknown as typeof createClient & ReturnType<typeof vi.fn>;
+      const store = new RedisFounderGoogleStateStore('redis://cache.example.test', {
+        clientFactory: factory,
+      });
+      await expect(store.save('s', RECORD)).rejects.toMatchObject({
+        code: 'FOUNDER_GOOGLE_STATE_UNAVAILABLE',
+        status: 503,
+        message: 'Google sign-in is temporarily unavailable. Start again later.',
+      });
+      expect(lines(warn)).toEqual([
+        '[founder-google-state] unavailable step=create name=Error code=- reply=-',
+      ]);
+      warn.mockRestore();
+    });
+
+    it('connect step with error code, and no secrets in the line', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const client = fakeClient();
+      client.connect.mockRejectedValue(failWith(SECRET, { code: 'ECONNREFUSED' }));
+      await expect(make(client).save('s', RECORD)).rejects.toMatchObject({ status: 503 });
+      expect(lines(warn)).toEqual([
+        '[founder-google-state] unavailable step=connect name=Error code=ECONNREFUSED reply=-',
+      ]);
+      warn.mockRestore();
+    });
+
+    it('connect-timeout step', async () => {
+      vi.useFakeTimers();
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const client = fakeClient();
+      client.connect.mockImplementation(() => new Promise(() => undefined));
+      const pending = expect(make(client).save('s', RECORD)).rejects.toMatchObject({ status: 503 });
+      await vi.advanceTimersByTimeAsync(1501);
+      await pending;
+      expect(lines(warn)).toEqual([
+        '[founder-google-state] unavailable step=connect-timeout name=TimeoutError code=- reply=-',
+      ]);
+      warn.mockRestore();
+    });
+
+    it('not-ready step', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const client = fakeClient();
+      client.isReady = false;
+      await expect(make(client).save('s', RECORD)).rejects.toMatchObject({ status: 503 });
+      expect(lines(warn)).toEqual([
+        '[founder-google-state] unavailable step=not-ready name=- code=- reply=-',
+      ]);
+      warn.mockRestore();
+    });
+
+    it('save-command step reports only the reply word', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const client = fakeClient();
+      client.set.mockRejectedValue(new SimpleError(`MOVED 3999 ${SECRET}`) as never);
+      await expect(make(client).save('s', RECORD)).rejects.toMatchObject({ status: 503 });
+      expect(lines(warn)).toEqual([
+        '[founder-google-state] unavailable step=save-command name=SimpleError code=- reply=MOVED',
+      ]);
+      warn.mockRestore();
+    });
+
+    it('real node-redis connection errors log their class name', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const a = fakeClient();
+      a.connect.mockRejectedValue(new ConnectionTimeoutError());
+      await expect(make(a).save('s', RECORD)).rejects.toMatchObject({ status: 503 });
+      const b = fakeClient();
+      b.connect.mockRejectedValue(new SocketClosedUnexpectedlyError());
+      await expect(make(b).save('s', RECORD)).rejects.toMatchObject({ status: 503 });
+      expect(lines(warn)).toEqual([
+        '[founder-google-state] unavailable step=connect name=ConnectionTimeoutError code=- reply=-',
+        '[founder-google-state] unavailable step=connect name=SocketClosedUnexpectedlyError code=- reply=-',
+      ]);
+      warn.mockRestore();
+    });
+
+    it('drops a non-conforming reply word and code', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const client = fakeClient();
+      client.set.mockRejectedValue(
+        Object.assign(new SimpleError(`bad ${SECRET}`), { code: 'not a code' }) as never,
+      );
+      await expect(make(client).save('s', RECORD)).rejects.toMatchObject({ status: 503 });
+      expect(lines(warn)).toEqual([
+        '[founder-google-state] unavailable step=save-command name=SimpleError code=- reply=-',
+      ]);
+      warn.mockRestore();
+    });
+
+    it('save-timeout step', async () => {
+      vi.useFakeTimers();
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const client = fakeClient();
+      client.set.mockImplementation(() => new Promise(() => undefined) as never);
+      const pending = expect(make(client).save('s', RECORD)).rejects.toMatchObject({ status: 503 });
+      await vi.advanceTimersByTimeAsync(1501);
+      await pending;
+      expect(lines(warn)).toEqual([
+        '[founder-google-state] unavailable step=save-timeout name=TimeoutError code=- reply=-',
+      ]);
+      warn.mockRestore();
+    });
+
+    it('save-not-ok step reports the reply type only', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const client = fakeClient();
+      client.set.mockResolvedValue(null as never);
+      await expect(make(client).save('s', RECORD)).rejects.toMatchObject({ status: 503 });
+      expect(lines(warn)).toEqual([
+        '[founder-google-state] unavailable step=save-not-ok name=- code=- reply=null',
+      ]);
+      warn.mockRestore();
+    });
+
+    it('consume-command step', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const client = fakeClient();
+      client.eval.mockRejectedValue(
+        new SimpleError(`NOPERM this user has no permissions ${SECRET}`) as never,
+      );
+      await expect(make(client).consume('s', RECORD.browserHash)).rejects.toMatchObject({
+        status: 503,
+      });
+      expect(lines(warn)).toEqual([
+        '[founder-google-state] unavailable step=consume-command name=SimpleError code=- reply=NOPERM',
+      ]);
+      warn.mockRestore();
+    });
+
+    it('consume-timeout step', async () => {
+      vi.useFakeTimers();
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const client = fakeClient();
+      client.eval.mockImplementation(() => new Promise(() => undefined) as never);
+      const pending = expect(make(client).consume('s', RECORD.browserHash)).rejects.toMatchObject({
+        status: 503,
+      });
+      await vi.advanceTimersByTimeAsync(1501);
+      await pending;
+      expect(lines(warn)).toEqual([
+        '[founder-google-state] unavailable step=consume-timeout name=TimeoutError code=- reply=-',
+      ]);
+      warn.mockRestore();
+    });
+
+    it('consume-parse step never includes the payload', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const client = fakeClient();
+      client.eval.mockResolvedValue(`{${SECRET}` as never);
+      await expect(make(client).consume('s', RECORD.browserHash)).rejects.toMatchObject({
+        status: 503,
+      });
+      expect(lines(warn)).toEqual([
+        '[founder-google-state] unavailable step=consume-parse name=SyntaxError code=- reply=-',
+      ]);
+      warn.mockRestore();
+    });
+
+    it('a burst of 50 concurrent failures during a stall logs one line per 5 s window', async () => {
+      vi.useFakeTimers();
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const stalled = fakeClient();
+      stalled.connect.mockImplementation(() => new Promise(() => undefined));
+      const fresh = fakeClient();
+      fresh.connect.mockRejectedValue(failWith(SECRET, { code: 'ECONNREFUSED' }));
+      const factory = vi
+        .fn()
+        .mockReturnValueOnce(stalled)
+        .mockReturnValue(fresh) as unknown as typeof createClient & ReturnType<typeof vi.fn>;
+      const store = new RedisFounderGoogleStateStore('redis://cache.example.test', {
+        clientFactory: factory,
+      });
+      const burst = Array.from({ length: 50 }, () =>
+        expect(store.save('s', RECORD)).rejects.toMatchObject({ status: 503 }),
+      );
+      await vi.advanceTimersByTimeAsync(1501);
+      await Promise.all(burst);
+      expect(lines(warn)).toEqual([
+        '[founder-google-state] unavailable step=connect-timeout name=TimeoutError code=- reply=-',
+      ]);
+      await vi.advanceTimersByTimeAsync(5000);
+      await expect(store.save('s', RECORD)).rejects.toMatchObject({ status: 503 });
+      expect(lines(warn)).toEqual([
+        '[founder-google-state] unavailable step=connect-timeout name=TimeoutError code=- reply=-',
+        '[founder-google-state] unavailable step=connect name=Error code=ECONNREFUSED reply=- suppressed=49',
+      ]);
+      warn.mockRestore();
+      await store.close();
+    });
+
+    it('logs cooldown at most once per window and never leaks secrets', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      let now = 1000;
+      const client = fakeClient();
+      client.connect.mockRejectedValue(failWith(SECRET, { code: 'ETIMEDOUT' }));
+      const store = make(client, () => now);
+      for (let i = 0; i < 5; i += 1) {
+        await expect(store.save('s', RECORD)).rejects.toMatchObject({ status: 503 });
+      }
+      expect(lines(warn)).toEqual([
+        '[founder-google-state] unavailable step=connect name=Error code=ETIMEDOUT reply=-',
+      ]);
+      now += 5001;
+      await expect(store.save('s', RECORD)).rejects.toMatchObject({ status: 503 });
+      expect(lines(warn)).toEqual([
+        '[founder-google-state] unavailable step=connect name=Error code=ETIMEDOUT reply=-',
+        '[founder-google-state] unavailable step=connect name=Error code=ETIMEDOUT reply=- suppressed=4',
+      ]);
+      for (const line of lines(warn)) {
+        expect(line).not.toMatch(/rediss?:|user|pw|host|6380|property-listify:|founder-google-proof/);
+      }
+      warn.mockRestore();
+    });
   });
 
   it.each(['not-json', 'x'.repeat(2049)])('rejects corrupt Redis payloads', async value => {
