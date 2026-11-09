@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { trpc } from '@/lib/trpc';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
-import { getAgentJourneyAction } from '@/lib/agentJourney';
+import { getAgentJourneyAction, isAgentWorkspaceOpen } from '@/lib/agentJourney';
 import { openPlanGate } from '@/lib/agentPlanGate';
 import { Building2, CalendarDays, CalendarPlus, Loader2, Plus, Search, Users } from 'lucide-react';
 import { NotificationCenter } from './NotificationCenter';
@@ -246,7 +246,9 @@ export function AgentTopNav() {
   const startListing = () => {
     if (onboardingLoading || workspaceStatusUnavailable) return;
     if (listingAccessLocked) {
-      openPlanGate();
+      // Unverified agents have no plan dialog: send them to their journey step.
+      if (isAgentWorkspaceOpen(onboardingStatus)) openPlanGate();
+      else setLocation(journeyAction.href);
       return;
     }
     setLocation('/listings/create');
@@ -380,7 +382,9 @@ export function AgentTopNav() {
               {workspaceStatusUnavailable
                 ? 'Status unavailable'
                 : listingAccessLocked
-                  ? 'Choose plan'
+                  ? isAgentWorkspaceOpen(onboardingStatus)
+                    ? 'Choose plan'
+                    : journeyAction.label
                   : 'Add Listing'}
             </span>
           </Button>

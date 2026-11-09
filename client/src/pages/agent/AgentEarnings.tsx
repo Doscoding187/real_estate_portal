@@ -5,6 +5,7 @@ import { agentPageStyles } from '@/components/agent/agentPageStyles';
 import { AgentFeatureLockedState } from '@/components/agent/AgentFeatureLockedState';
 import { AgentJourneyStatusErrorState } from '@/components/agent/AgentJourneyStatusErrorState';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
+import { followAgentJourneyHref } from '@/lib/agentPlanGate';
 import {
   getAgentJourneyAction,
   getAgentProfileCompletionDescription,
@@ -56,7 +57,7 @@ export default function AgentEarnings() {
             }
             actionLabel={journeyAction.waiting ? 'Return to dashboard' : journeyAction.label}
             onAction={() =>
-              setLocation(journeyAction.waiting ? '/agent/dashboard' : journeyAction.href)
+              followAgentJourneyHref(journeyAction.waiting ? '/agent/dashboard' : journeyAction.href, setLocation)
             }
           />
         ) : earningsLocked ? (

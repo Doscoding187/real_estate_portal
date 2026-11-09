@@ -5,6 +5,7 @@ import { useSyncExternalStore } from 'react';
  * dashboard) can open the single PlanGateDialog rendered by the Agent shell.
  */
 let open = false;
+let available = true;
 const listeners = new Set<() => void>();
 
 function emit() {
@@ -12,7 +13,7 @@ function emit() {
 }
 
 export function openPlanGate() {
-  if (open) return;
+  if (open || !available) return;
   open = true;
   emit();
 }
@@ -23,8 +24,20 @@ export function closePlanGate() {
   emit();
 }
 
+/**
+ * The shell layer marks the gate unavailable (unverified email, entitled agent)
+ * so no control can open a dialog that is not rendered. Closes it too.
+ */
+export function setPlanGateAvailable(next: boolean) {
+  if (available === next && (next || !open)) return;
+  available = next;
+  if (!next) open = false;
+  emit();
+}
+
 export function resetPlanGateForTests() {
   open = false;
+  available = true;
   emit();
 }
 

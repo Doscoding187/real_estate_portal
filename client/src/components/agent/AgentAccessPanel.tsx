@@ -15,7 +15,7 @@ export function formatAccessAmount(amountMinor: number | null | undefined): stri
 const STEP_LABELS = ['Your plan', 'Make payment', 'Finance review'] as const;
 
 /** Visible 1-2-3 stepper shared by the plan dialog and the full-page package route. */
-export function AccessStepper({ current }: { current: 1 | 2 | 3 }) {
+export function AccessStepper({ current }: { current: 1 | 2 | 3 | 4 }) {
   return (
     <ol aria-label="Get access steps" className="flex items-center gap-2 text-xs">
       {STEP_LABELS.map((label, index) => {
@@ -82,19 +82,29 @@ function CopyRow({ label, value }: { label: string; value: string | null | undef
   );
 }
 
-const PAYABLE = ['issued', 'partially_paid', 'overdue'];
+// Every billing_invoices.status value (drizzle/schema/billing.ts), mapped explicitly.
+const INVOICE_STEP: Record<string, AccessStep> = {
+  draft: 1, // not issued yet: nothing to pay, get a reference
+  issued: 2, // awaiting payment
+  partially_paid: 2,
+  overdue: 2,
+  submitted: 3, // payment notice sent, finance reviewing
+  paid: 'active', // verified: access is active
+  void: 1, // closed: a new reference is needed
+};
 
-export function getAccessStep(invoiceStatus: string | null | undefined, rejected: boolean): 2 | 3 {
-  if (rejected) return 2;
-  return PAYABLE.includes(String(invoiceStatus)) ? 2 : 3;
+export type AccessStep = 1 | 2 | 3 | 'active';
+
+/** Unknown or terminal statuses (cancelled, expired, ...) fall back to step 1. */
+export function getAccessStep(invoiceStatus: string | null | undefined, rejected: boolean): AccessStep {
+  const mapped = INVOICE_STEP[String(invoiceStatus)] ?? 1;
+  return rejected && mapped === 2 ? 2 : mapped;
 }
 
-function statusLabel(status: string, rejected: boolean) {
-  if (rejected) return 'Rejected';
-  if (PAYABLE.includes(status)) return 'Awaiting payment';
-  if (status === 'submitted') return 'Under review';
-  if (status === 'paid') return 'Active';
-  return status.replace(/_/g, ' ');
+function statusLabel(step: AccessStep) {
+  if (step === 'active') return 'Active';
+  if (step === 3) return 'Under review';
+  return 'Awaiting payment';
 }
 
 /**
@@ -115,10 +125,11 @@ export function AgentAccessPanel({
   isSubmitting: boolean;
 }) {
   const step = getAccessStep(invoice.status, Boolean(rejectionMessage));
+  if (step === 1) return null;
 
   return (
     <div className="space-y-4" data-testid="agent-access-panel" data-step={step}>
-      <AccessStepper current={step} />
+      <AccessStepper current={step === 'active' ? 4 : step} />
 
       {step === 2 ? (
         <div className="space-y-3">
@@ -186,6 +197,13 @@ export function AgentAccessPanel({
             {isSubmitting ? 'Sending...' : 'I’ve paid'}
           </Button>
         </div>
+      ) : step === 'active' ? (
+        <div className="space-y-3" data-testid="agent-access-active">
+          <h3 className="text-base font-semibold text-slate-950">Your access is active</h3>
+          <p className="text-sm text-slate-700">
+            Your payment is confirmed. Publishing and enquiries are open.
+          </p>
+        </div>
       ) : (
         <div className="space-y-3" data-testid="agent-access-review">
           <h3 className="text-base font-semibold text-slate-950">Finance review</h3>
@@ -196,7 +214,7 @@ export function AgentAccessPanel({
           <p className="text-sm text-slate-600">
             Status:{' '}
             <span className="font-semibold text-slate-900">
-              {statusLabel(String(invoice.status), false)}
+              {statusLabel(step)}
             </span>
           </p>
           <p className="text-xs text-slate-500">

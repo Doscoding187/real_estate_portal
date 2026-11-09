@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import type { inferRouterOutputs } from '@trpc/server';
 import { toast } from 'sonner';
 import { apiFetch } from '@/lib/api';
@@ -56,14 +56,17 @@ export function useAgentLaunchInvoiceRequest({
   const [invoiceResponse, setInvoiceResponse] = useState<AgentInvoiceResponse | null>(null);
   const [isRequestingInvoice, setIsRequestingInvoice] = useState(false);
 
+  const inFlightRef = useRef(false);
+
   const requestInvoice = useCallback(async () => {
-    if (salesPaused) return;
+    if (salesPaused || inFlightRef.current) return;
     if (!legalChoice) return;
     if (!planId) {
       toast.error('The canonical Agent Launch Access product is not requestable right now.');
       return;
     }
 
+    inFlightRef.current = true;
     setIsRequestingInvoice(true);
     try {
       const result = await apiFetch<AgentInvoiceResponse>('/agent/request-launch-access-invoice', {
@@ -106,6 +109,7 @@ export function useAgentLaunchInvoiceRequest({
         toastPaidError(error, 'Could not request the Agent invoice');
       }
     } finally {
+      inFlightRef.current = false;
       setIsRequestingInvoice(false);
     }
   }, [legalChoice, planId, refetchCatalog, refetchWorkspace, reloadLegal, salesPaused]);

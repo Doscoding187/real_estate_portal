@@ -1,39 +1,55 @@
-import { useEffect, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
+import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { AgentAppShell } from '@/components/agent/AgentAppShell';
 import { AgentFeatureLockedState } from '@/components/agent/AgentFeatureLockedState';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
-import { isAgentPlanEntitled } from '@/lib/agentJourney';
+import { getAgentJourneyAction, isAgentPlanEntitled, isAgentWorkspaceOpen } from '@/lib/agentJourney';
 import { openPlanGate } from '@/lib/agentPlanGate';
 
 /**
- * Wraps the listing wizard route. Agents without a plan cannot create or edit
- * drafts: they see a locked state and the "Get access" panel. Other roles and
- * entitled agents pass straight through.
+ * Wraps the listing wizard route. Fails closed: an agent without a plan (or
+ * whose status cannot be confirmed) sees a locked state and must press "Get
+ * access" themselves. Other roles and entitled agents pass straight through.
  */
 export function AgentListingAccessGate({ children }: { children: ReactNode }) {
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
   const isAgent = user?.role === 'agent';
-  const { status, isLoading, error } = useAgentOnboardingStatus();
-  const locked = isAgent && !isLoading && !error && Boolean(status) && !isAgentPlanEntitled(status);
-
-  useEffect(() => {
-    if (locked) openPlanGate();
-  }, [locked]);
+  const { status, isLoading, error, retry, agentLaunchAccessAvailable } = useAgentOnboardingStatus();
 
   if (!isAgent) return <>{children}</>;
   if (isLoading) return null;
-  if (!locked) return <>{children}</>;
+  if (!error && isAgentPlanEntitled(status)) return <>{children}</>;
+
+  const journeyAction = getAgentJourneyAction(status, { agentLaunchAccessAvailable });
+  const workspaceOpen = !error && isAgentWorkspaceOpen(status);
 
   return (
     <AgentAppShell>
       <div className="mx-auto max-w-3xl p-6">
-        <AgentFeatureLockedState
-          title="Listings unlock with a plan"
-          description="Choose a plan to create and publish listings. Your profile stays open in the meantime."
-          actionLabel="Get access"
-          onAction={openPlanGate}
-        />
+        {error ? (
+          <AgentFeatureLockedState
+            title="We could not confirm your access"
+            description="Listings stay locked until your workspace status can be confirmed. Please try again."
+            actionLabel="Retry"
+            onAction={retry}
+          />
+        ) : workspaceOpen ? (
+          <AgentFeatureLockedState
+            title="Listings unlock with a plan"
+            description="Choose a plan to create and publish listings. Only your profile is open before payment."
+            actionLabel="Get access"
+            onAction={openPlanGate}
+          />
+        ) : (
+          <AgentFeatureLockedState
+            title={journeyAction.title}
+            description={journeyAction.description}
+            actionLabel={journeyAction.label}
+            onAction={() => setLocation(journeyAction.href)}
+          />
+        )}
       </div>
     </AgentAppShell>
   );

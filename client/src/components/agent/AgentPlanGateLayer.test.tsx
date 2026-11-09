@@ -34,9 +34,13 @@ import {
   resetPlanGateForTests,
 } from '@/lib/agentPlanGate';
 
-function setStatus(canPublishListings: boolean) {
+function setStatus(canPublishListings: boolean, extra: Record<string, unknown> = {}) {
   statusMock.mockReturnValue({
-    status: { recommendedNextStep: 'select_package', entitlements: { canPublishListings } },
+    status: {
+      recommendedNextStep: 'select_package',
+      entitlements: { canPublishListings },
+      ...extra,
+    },
     isLoading: false,
     error: null,
   });
@@ -90,6 +94,31 @@ describe('AgentPlanGateLayer', () => {
     markPlanPromptTrigger();
     render(<AgentPlanGateLayer />);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('shows a status banner instead of the preview banner for suspended or rejected agents', () => {
+    setStatus(false, { recommendedNextStep: 'contact_support' });
+    render(<AgentPlanGateLayer />);
+    expect(screen.getByTestId('agent-status-banner')).toHaveTextContent(
+      'Your Launch Access needs support',
+    );
+    expect(screen.queryByTestId('agent-preview-banner')).not.toBeInTheDocument();
+  });
+
+  it('renders no banner and no dead control for an unverified agent, and clears a stale open flag', () => {
+    openPlanGate();
+    setStatus(false, { recommendedNextStep: 'verify_email' });
+    render(<AgentPlanGateLayer />);
+    expect(screen.queryByTestId('agent-preview-banner')).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    act(() => openPlanGate());
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('treats fullFeaturesUnlocked as entitled', () => {
+    setStatus(false, { fullFeaturesUnlocked: true });
+    render(<AgentPlanGateLayer />);
+    expect(screen.queryByTestId('agent-preview-banner')).not.toBeInTheDocument();
   });
 
   it('does not auto-prompt without a trigger (first login)', () => {

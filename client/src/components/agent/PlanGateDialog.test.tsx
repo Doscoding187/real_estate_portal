@@ -1,24 +1,29 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { availabilityMock, catalogMock, workspaceMock, submitMock } = vi.hoisted(() => ({
+const { availabilityMock, catalogMock, workspaceMock, submitMock, legalChoiceMock, requestMock, toastMock } =
+  vi.hoisted(() => ({
+  legalChoiceMock: vi.fn(),
+  requestMock: vi.fn(),
+  toastMock: { success: vi.fn(), error: vi.fn(), info: vi.fn() },
   submitMock: vi.fn(),
   workspaceMock: vi.fn(),
   availabilityMock: vi.fn(),
   catalogMock: vi.fn(),
 }));
 
+vi.mock('sonner', () => ({ toast: toastMock }));
 vi.mock('@/hooks/useCommercialProductAvailability', () => ({
   useCommercialProductAvailability: () => availabilityMock(),
 }));
 vi.mock('@/hooks/useCommercialCatalog', () => ({ useCommercialCatalog: () => catalogMock() }));
 vi.mock('@/hooks/usePaidLegalAcceptance', () => ({
-  usePaidLegalAcceptance: () => ({ choice: null, reload: vi.fn() }),
+  usePaidLegalAcceptance: () => ({ choice: legalChoiceMock(), reload: vi.fn() }),
 }));
 vi.mock('@/hooks/useAgentLaunchInvoiceRequest', () => ({
   useAgentLaunchInvoiceRequest: () => ({
-    requestInvoice: vi.fn(),
+    requestInvoice: requestMock,
     isRequestingInvoice: false,
     invoiceResponse: null,
     setInvoiceResponse: vi.fn(),
@@ -52,6 +57,11 @@ vi.mock('@/lib/trpc', () => ({
 }));
 
 import { PlanGateDialog } from './PlanGateDialog';
+import {
+  getAccessStep,
+  getPayerDisplayName,
+  localDateIso,
+} from './AgentAccessPanel';
 
 const product = {
   audience: 'agent',
@@ -64,6 +74,8 @@ const product = {
 };
 
 beforeEach(() => {
+  vi.clearAllMocks();
+  legalChoiceMock.mockReturnValue({ accepted: true });
   workspaceMock.mockReturnValue({ data: undefined, refetch: vi.fn() });
   availabilityMock.mockReturnValue({ isAvailable: true, salesPaused: false, isLoading: false });
   catalogMock.mockReturnValue({ data: { products: [product] }, isLoading: false, refetch: vi.fn() });
@@ -163,5 +175,95 @@ describe('PlanGateDialog', () => {
     render(<PlanGateDialog open onOpenChange={vi.fn()} />);
     expect(screen.getByText('Paid plans open soon')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Get my payment reference' })).not.toBeInTheDocument();
+  });
+});
+
+describe('plan gate details', () => {
+  it('keeps the payment reference button disabled until the terms are accepted', () => {
+    legalChoiceMock.mockReturnValue(null);
+    render(<PlanGateDialog open onOpenChange={vi.fn()} />);
+    expect(screen.getByRole('button', { name: 'Get my payment reference' })).toBeDisabled();
+  });
+
+  it('disables the payment reference button for blocked journey states', () => {
+    render(<PlanGateDialog open onOpenChange={vi.fn()} blockedReason="Contact support." />);
+    expect(screen.getByRole('button', { name: 'Get my payment reference' })).toBeDisabled();
+    expect(screen.getByText('Contact support.')).toBeInTheDocument();
+  });
+
+  it('requests a payment reference once on a double click', async () => {
+    let release: () => void = () => {};
+    requestMock.mockImplementation(() => new Promise<void>(r => (release = r)));
+    render(<PlanGateDialog open onOpenChange={vi.fn()} />);
+    const button = screen.getByRole('button', { name: 'Get my payment reference' });
+    button.click();
+    button.click();
+    expect(requestMock).toHaveBeenCalled();
+    release();
+  });
+
+  it('sends the paid notice once on a double click', async () => {
+    let release: (v: unknown) => void = () => {};
+    submitMock.mockImplementation(() => new Promise(r => (release = r)));
+    workspaceMock.mockReturnValue({
+      data: { activeInvoice: { id: 9, status: 'issued', paymentReference: 'R', amountDue: 1 }, bankDetails: {}, payments: [] },
+      refetch: vi.fn().mockResolvedValue(undefined),
+    });
+    render(<PlanGateDialog open onOpenChange={vi.fn()} />);
+    const button = screen.getByRole('button', { name: 'I’ve paid' });
+    button.click();
+    button.click();
+    expect(submitMock).toHaveBeenCalledTimes(1);
+    release({});
+  });
+
+  it('shows an error toast when copying fails', async () => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: vi.fn().mockRejectedValue(new Error('denied')) },
+    });
+    workspaceMock.mockReturnValue({
+      data: { activeInvoice: { id: 9, status: 'issued', paymentReference: 'R', amountDue: 1 }, bankDetails: {}, payments: [] },
+      refetch: vi.fn(),
+    });
+    render(<PlanGateDialog open onOpenChange={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Copy payment reference' }));
+    await waitFor(() => expect(toastMock.error).toHaveBeenCalled());
+  });
+
+  it('maps every invoice status explicitly', () => {
+    expect(getAccessStep('draft', false)).toBe(1);
+    expect(getAccessStep('issued', false)).toBe(2);
+    expect(getAccessStep('partially_paid', false)).toBe(2);
+    expect(getAccessStep('overdue', false)).toBe(2);
+    expect(getAccessStep('submitted', false)).toBe(3);
+    expect(getAccessStep('paid', false)).toBe('active');
+    expect(getAccessStep('void', false)).toBe(1);
+    expect(getAccessStep('cancelled', false)).toBe(1);
+    expect(getAccessStep('expired', false)).toBe(1);
+    expect(getAccessStep(undefined, false)).toBe(1);
+  });
+
+  it('goes back to step 1 for a void invoice and shows active for a paid one', () => {
+    workspaceMock.mockReturnValue({
+      data: { activeInvoice: { id: 9, status: 'void', paymentReference: 'R', amountDue: 1 }, bankDetails: {}, payments: [] },
+      refetch: vi.fn(),
+    });
+    const { unmount } = render(<PlanGateDialog open onOpenChange={vi.fn()} />);
+    expect(screen.getByRole('button', { name: 'Get my payment reference' })).toBeInTheDocument();
+    unmount();
+    workspaceMock.mockReturnValue({
+      data: { activeInvoice: { id: 9, status: 'paid', paymentReference: 'R', amountDue: 1 }, bankDetails: {}, payments: [] },
+      refetch: vi.fn(),
+    });
+    render(<PlanGateDialog open onOpenChange={vi.fn()} />);
+    expect(screen.getByTestId('agent-access-active')).toBeInTheDocument();
+  });
+
+  it('falls back from display name to email local part to a generic name', () => {
+    expect(getPayerDisplayName({ name: ' Ada ', email: 'x@y.z' })).toBe('Ada');
+    expect(getPayerDisplayName({ name: '', email: 'ada.l@example.test' })).toBe('ada.l');
+    expect(getPayerDisplayName(null)).toBe('Agent');
+    expect(localDateIso(new Date(2026, 0, 5))).toBe('2026-01-05');
   });
 });

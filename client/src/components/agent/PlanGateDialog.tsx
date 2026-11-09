@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { Check } from 'lucide-react';
 import { toast } from 'sonner';
@@ -17,6 +17,7 @@ import {
   AccessStepper,
   AgentAccessPanel,
   getPayerDisplayName,
+  getAccessStep,
   getRejectionMessage,
   localDateIso,
 } from '@/components/agent/AgentAccessPanel';
@@ -42,8 +43,7 @@ function PaidPlansOpenSoon() {
     <div role="status" className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm">
       <p className="font-semibold text-slate-900">Paid plans open soon</p>
       <p className="mt-1 text-slate-600">
-        {PAID_INTAKE_CLOSED_MESSAGE.replace(/^Paid plans open soon\.\s*/, '')} Your profile and
-        private drafts stay available while you wait.{' '}
+        {PAID_INTAKE_CLOSED_MESSAGE.replace(/^Paid plans open soon\.\s*/, '')}{' '}
         <a href={PAID_WAITLIST_MAILTO} className="font-medium underline">
           {PAID_WAITLIST_LABEL}
         </a>
@@ -52,7 +52,7 @@ function PaidPlansOpenSoon() {
   );
 }
 
-function PlanGateContent() {
+function PlanGateContent({ blockedReason }: { blockedReason: string | null }) {
   const availability = useCommercialProductAvailability('agent_launch_access');
   const catalog = useCommercialCatalog('agent');
   const launchProduct = useMemo(() => {
@@ -98,8 +98,10 @@ function PlanGateContent() {
 
   const rejectionMessage = getRejectionMessage(activeInvoice?.id, workspaceQuery.data?.payments);
 
+  const submittingRef = useRef(false);
   const handleNoticeSubmit = async () => {
-    if (!activeInvoice) return;
+    if (!activeInvoice || submittingRef.current) return;
+    submittingRef.current = true;
     try {
       await submitNotice.mutateAsync(
         paymentNoticeRequest({
@@ -114,6 +116,8 @@ function PlanGateContent() {
       toast.success('Payment notification submitted. Bank verification is pending.');
     } catch (error) {
       toastPaidError(error, 'Payment notification could not be submitted.');
+    } finally {
+      submittingRef.current = false;
     }
   };
 
@@ -133,7 +137,7 @@ function PlanGateContent() {
   const price = getCommercialPricePresentation(launchProduct);
   const limits = getCommercialPresentationLimits(launchProduct);
 
-  if (activeInvoice) {
+  if (activeInvoice && getAccessStep(activeInvoice.status, Boolean(rejectionMessage)) !== 1) {
     return (
       <AgentAccessPanel
         invoice={activeInvoice}
@@ -173,12 +177,17 @@ function PlanGateContent() {
         </ul>
       </div>
 
+      {blockedReason ? (
+        <p role="status" className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
+          {blockedReason}
+        </p>
+      ) : null}
       <PaidCommitmentDisclosure legal={legal} />
 
       <Button
         type="button"
         className="w-full"
-        disabled={isRequestingInvoice || !legal.choice}
+        disabled={isRequestingInvoice || !legal.choice || Boolean(blockedReason)}
         onClick={() => void requestInvoice()}
       >
         {isRequestingInvoice ? 'Preparing your payment reference...' : 'Get my payment reference'}
@@ -190,8 +199,10 @@ function PlanGateContent() {
 export function PlanGateDialog({
   open,
   onOpenChange,
+  blockedReason = null,
 }: {
   open: boolean;
+  blockedReason?: string | null;
   onOpenChange: (open: boolean) => void;
 }) {
   return (
@@ -203,7 +214,7 @@ export function PlanGateDialog({
             Your profile is open. A plan unlocks listings, publishing and enquiries.
           </DialogDescription>
         </DialogHeader>
-        {open ? <PlanGateContent /> : null}
+        {open ? <PlanGateContent blockedReason={blockedReason} /> : null}
       </DialogContent>
     </Dialog>
   );

@@ -39,6 +39,7 @@ import {
   getAgentJourneyAction,
   getAgentProfileCompletionDescription,
   isAgentProfileJourneyStep,
+  isAgentPlanEntitled,
   isAgentWorkspaceOpen,
 } from '@/lib/agentJourney';
 import { calculateListingReadiness } from '@/lib/readiness';
@@ -107,7 +108,9 @@ export default function AgentListings() {
 
   const isDraftOrPending =
     activeTab === 'draft' || activeTab === 'pending' || activeTab === 'rejected';
-  const dashboardUnlocked = !statusLoading && isAgentWorkspaceOpen(status);
+  const workspaceOpen = !statusLoading && isAgentWorkspaceOpen(status);
+  // Listings data is a paid feature: nothing loads for an unpaid agent.
+  const dashboardUnlocked = workspaceOpen && isAgentPlanEntitled(status);
   const operationalDataEnabled = !statusLoading && Boolean(status?.fullFeaturesUnlocked);
 
   const isListingInTab = (status: string | null | undefined, tab: ListingTab) => {
@@ -343,6 +346,13 @@ export default function AgentListings() {
           />
         ) : statusError ? (
           <AgentJourneyStatusErrorState onRetry={retryStatus} />
+        ) : workspaceOpen && !dashboardUnlocked ? (
+          <AgentFeatureLockedState
+            title="Listings unlock with a plan"
+            description="Choose a plan to create, manage and publish listings. Only your profile is open before payment."
+            actionLabel="Get access"
+            onAction={openPlanGate}
+          />
         ) : !dashboardUnlocked ? (
           <div className="space-y-4">
             <AgentFeatureLockedState
@@ -366,26 +376,6 @@ export default function AgentListings() {
         ) : (
           <>
             <AgentServicesReferralPanel className="mb-6" />
-            {listingAccessLocked && isDraftOrPending ? (
-              <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-950">
-                <p className="font-medium">
-                  Your private {activeTab === 'draft' ? 'drafts' : 'submissions'} are still here.
-                </p>
-                <p className="mt-1 text-amber-900/80">
-                  {journeyAction.description} You can review or edit this work while access is being
-                  completed.
-                </p>
-                {!journeyAction.waiting ? (
-                  <Button
-                    variant="outline"
-                    className="mt-3 rounded-full border-amber-300 bg-white"
-                    onClick={() => followAgentJourneyHref(journeyAction.href, setLocation)}
-                  >
-                    {journeyAction.label}
-                  </Button>
-                ) : null}
-              </div>
-            ) : null}
 
             <div className={cn(agentPageStyles.controls, 'flex flex-wrap items-center gap-3')}>
               <div className="relative min-w-0 flex-1 basis-60">

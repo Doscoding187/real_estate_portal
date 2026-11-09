@@ -201,7 +201,7 @@ export function isAgentWorkspaceOpen(
   return Boolean(status) && status?.recommendedNextStep !== 'verify_email';
 }
 
-/** True when the agent already has paid access (publishing is allowed). */
+/** True when the agent already has paid access (full features or publishing allowed). */
 export function isAgentPlanEntitled(
   status:
     | {
@@ -211,5 +211,33 @@ export function isAgentPlanEntitled(
     | null
     | undefined,
 ) {
-  return Boolean(status?.entitlements?.canPublishListings);
+  return Boolean(status?.fullFeaturesUnlocked) || Boolean(status?.entitlements?.canPublishListings);
+}
+
+/**
+ * Journey states where the workspace stays visible but a plan cannot be bought
+ * here (rejected/suspended -> contact_support, profile under approval, agency
+ * managed access). They get a status banner instead of the preview banner.
+ */
+const PAYMENT_BLOCKED_STEPS: readonly AgentRecommendedNextStep[] = [
+  'contact_support',
+  'await_profile_approval',
+  'await_agency_activation',
+];
+
+export function isAgentPaymentBlocked(
+  status: { recommendedNextStep?: AgentRecommendedNextStep } | null | undefined,
+) {
+  return Boolean(
+    status?.recommendedNextStep && PAYMENT_BLOCKED_STEPS.includes(status.recommendedNextStep),
+  );
+}
+
+/** Existing journey copy for a payment-blocked state, or null. */
+export function getAgentStatusBannerCopy(
+  status: { recommendedNextStep?: AgentRecommendedNextStep } | null | undefined,
+): { title: string; description: string } | null {
+  if (!isAgentPaymentBlocked(status)) return null;
+  const { title, description } = getAgentJourneyAction(status);
+  return { title, description };
 }

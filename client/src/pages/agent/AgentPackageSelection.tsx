@@ -3,7 +3,7 @@ import {
   usePaymentNoticeRequest,
 } from '@/components/billing/EftPaymentNoticeForm';
 import { AgentAccessPanel, getPayerDisplayName, localDateIso } from '@/components/agent/AgentAccessPanel';
-import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
+import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { useLocation, useSearch } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { Badge } from '@/components/ui/badge';
@@ -158,6 +158,7 @@ export function CommercialAgentPackageSelection({
   });
   const submitProof = trpc.billing.submitLaunchAccessPaymentNotice.useMutation();
   const { paymentNoticeRequest, resetPaymentNoticeRequest } = usePaymentNoticeRequest();
+  const proofInFlight = useRef(false);
 
   const agentProducts = useMemo(
     () =>
@@ -299,7 +300,8 @@ export function CommercialAgentPackageSelection({
   };
 
   const handleProofSubmit = async () => {
-    if (!agentLaunchAccessAvailable || !activeInvoice) return;
+    if (!agentLaunchAccessAvailable || !activeInvoice || proofInFlight.current) return;
+    proofInFlight.current = true;
     try {
       await submitProof.mutateAsync(
         paymentNoticeRequest({
@@ -314,6 +316,8 @@ export function CommercialAgentPackageSelection({
       toast.success('Payment notification submitted. Bank verification is pending.');
     } catch (error) {
       toastPaidError(error, 'Payment notification could not be submitted.');
+    } finally {
+      proofInFlight.current = false;
     }
   };
 

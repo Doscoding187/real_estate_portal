@@ -377,7 +377,7 @@ export default function AgentLeads() {
           isAgentWorkspaceOpen(status) && !journeyAction.waiting ? (
             <AgentFeatureLockedState
               title="Leads unlock with a plan"
-              description="Choose a plan to receive and work enquiries. Your profile and private drafts stay open in the meantime."
+              description="Choose a plan to receive and work enquiries. Only your profile is open before payment."
               actionLabel="Choose plan"
               onAction={openPlanGate}
             />

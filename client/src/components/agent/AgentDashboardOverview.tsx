@@ -13,7 +13,7 @@ import {
   getAgentJourneyAction,
   getAgentProfileCompletionDescription,
   isAgentProfileJourneyStep,
-  isAgentWorkspaceOpen,
+  isAgentPlanEntitled,
 } from '@/lib/agentJourney';
 import { followAgentJourneyHref } from '@/lib/agentPlanGate';
 import { AgentSetupChecklist } from '@/components/agent/AgentSetupChecklist';
@@ -353,7 +353,7 @@ export function AgentDashboardOverview({
     dismissedAt: number;
   } | null>(null);
   const operationalDataEnabled = Boolean(onboardingStatus?.fullFeaturesUnlocked);
-  const authoredListingDataEnabled = Boolean(user && isAgentWorkspaceOpen(onboardingStatus));
+  const authoredListingDataEnabled = Boolean(user && isAgentPlanEntitled(onboardingStatus));
 
   const { data: stats, isLoading: statsLoading } = trpc.agent.getDashboardStats.useQuery(
     undefined,
