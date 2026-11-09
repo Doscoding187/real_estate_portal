@@ -47,8 +47,16 @@ import {
 import { isPaidIntakeClosedError, toastPaidError } from '@/components/commercial/PaidIntakeNotice';
 import { CommercialActivationNotice } from '@/components/commercial/CommercialActivationNotice';
 
-const LAUNCH_ACCESS_CLOSED_PATTERN =
-  /preparation-only onboarding|not open|paused|admitted|closed|not yet open|commercial activation/i;
+// Exact server phrases for "launch access closed" on the invoice request
+// (server/services/commercialActivationPolicy.ts requirePaidMvp* / requireCommercialActivation).
+// Anchored phrases only: bare words such as "closed" or "paused" appear in genuine conflicts.
+const LAUNCH_ACCESS_CLOSED_PATTERN = new RegExp(
+  [
+    '^' + PAID_SALES_PAUSED_MESSAGE.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$',
+    '^.+ is unavailable while Property Listify is in preparation-only onboarding\\.',
+    '^.+ requires an approved persisted Paid MVP product and matching owner\\.$',
+  ].join('|'),
+);
 
 type RouterOutputs = inferRouterOutputs<AppRouter>;
 type AgentBillingWorkspace = RouterOutputs['billing']['agentWorkspace'];
@@ -478,6 +486,7 @@ export function CommercialAgentPackageSelection({
             'Agent Launch Access purchases are not open for your account yet. We will email you when they open. Questions: support@propertylistifysa.co.za',
             { duration: 15000 },
           );
+          void workspaceQuery.refetch();
         } else {
           toast.error(message);
           void workspaceQuery.refetch();

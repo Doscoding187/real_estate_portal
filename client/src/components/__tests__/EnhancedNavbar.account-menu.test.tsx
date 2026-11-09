@@ -1,11 +1,24 @@
 import type { AnchorHTMLAttributes, ReactNode } from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { EnhancedNavbar } from '@/components/EnhancedNavbar';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useLocation } from 'wouter';
+
+// Fake timers only around the pointer-travel delay; real timers are restored before any waitFor.
+function leaveAndWait(trigger: Element, ms: number) {
+  vi.useFakeTimers();
+  try {
+    fireEvent.mouseLeave(trigger);
+    act(() => {
+      vi.advanceTimersByTime(ms);
+    });
+  } finally {
+    vi.useRealTimers();
+  }
+}
 
 vi.mock('@/_core/hooks/useAuth', () => ({
   useAuth: vi.fn(),
@@ -213,8 +226,7 @@ describe('EnhancedNavbar account menu', () => {
 
     await user.click(trigger);
     const menu = screen.getByRole('menu');
-    fireEvent.mouseLeave(trigger);
-    await new Promise(resolve => window.setTimeout(resolve, 260));
+    leaveAndWait(trigger, 260);
     expect(screen.getByRole('menu')).toBeInTheDocument();
     fireEvent.mouseEnter(menu);
     expect(screen.getByRole('menuitem', { name: 'Log in' })).toBeInTheDocument();
@@ -248,8 +260,7 @@ describe('EnhancedNavbar account menu', () => {
     await user.click(trigger);
     expect(screen.getByRole('menu')).toBeInTheDocument();
 
-    fireEvent.mouseLeave(trigger);
-    await new Promise(resolve => window.setTimeout(resolve, 320));
+    leaveAndWait(trigger, 320);
     expect(screen.getByRole('menu')).toBeInTheDocument();
 
     const referrals = screen.getByRole('link', { name: /Referrals/, hidden: true });
