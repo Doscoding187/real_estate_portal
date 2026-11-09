@@ -12,6 +12,7 @@ const PREFIX = 'property-listify:founder-google-proof:';
 const TIMEOUT_MS = 1500;
 const COOLDOWN_MS = 5000;
 const LOG_WINDOW_MS = 5000;
+const DEFERRED_DESTROY_MS = 10_000;
 const CONSUME_STATE = `
 local value = redis.call('GET', KEYS[1])
 if not value then return false end
@@ -74,15 +75,28 @@ export class RedisFounderGoogleStateStore implements FounderGoogleStateStore {
       tracker.discarded = true;
       // destroy() before the socket exists only flips isOpen and orphans the socket created
       // later; wait for the connect to settle, then destroy a connection that did come up.
+      let destroyed = false;
+      const destroyOnce = () => {
+        if (destroyed) return;
+        destroyed = true;
+        try {
+          client.destroy();
+        } catch {
+          /* Already closing. */
+        }
+      };
+      // A connect stalled after the socket is up (HELLO/AUTH unanswered) never settles; by then
+      // the socket exists, so a fallback destroy closes it.
+      const timer = setTimeout(() => {
+        if (!tracker.settled) destroyOnce();
+      }, DEFERRED_DESTROY_MS);
+      timer.unref();
       tracker.promise.then(
         () => {
-          try {
-            client.destroy();
-          } catch {
-            /* Already closing. */
-          }
+          clearTimeout(timer);
+          destroyOnce();
         },
-        () => undefined,
+        () => clearTimeout(timer),
       );
       return;
     }

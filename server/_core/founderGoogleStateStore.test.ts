@@ -177,9 +177,13 @@ describe('founder Google proof state availability boundary', () => {
     await vi.advanceTimersByTimeAsync(1501);
     await pending;
     expect(client.set).not.toHaveBeenCalled();
-    // The connect never settled, so destroy is deferred (never called on an unsettled connect).
+    // Destroy is deferred while the connect is unsettled, then forced by the fallback timer.
     expect(client.destroy).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(client.destroy).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(20_000);
     await store.close();
+    expect(client.destroy).toHaveBeenCalledTimes(1);
   });
 
   it('destroys a connection that comes up after the bound, exactly once, on a fresh client', async () => {
@@ -207,6 +211,8 @@ describe('founder Google proof state availability boundary', () => {
     resolveLate();
     await vi.advanceTimersByTimeAsync(0);
     expect(late.destroy).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(10_000); // fallback timer was cleared: no second destroy
+    expect(late.destroy).toHaveBeenCalledTimes(1);
     now += 5001;
     await store.save('s2', RECORD);
     expect(factory).toHaveBeenCalledTimes(2);
@@ -232,6 +238,8 @@ describe('founder Google proof state availability boundary', () => {
     await pending;
     rejectLate(new Error('late'));
     await vi.advanceTimersByTimeAsync(0);
+    expect(late.destroy).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(10_000); // timer cleared on reject
     expect(late.destroy).not.toHaveBeenCalled();
     warn.mockRestore();
     await store.close();
