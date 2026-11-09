@@ -270,6 +270,42 @@ describe('Agent pre-payment preparation', () => {
     expect(toastModule.toast.info).not.toHaveBeenCalled();
   });
 
+  it('disables the request and sends nothing while sales are paused', async () => {
+    render(<CommercialAgentPackageSelection agentLaunchAccessAvailable salesPaused />);
+    const button = await screen.findByRole('button', { name: /Paid plans open soon/ });
+    expect(button).toBeDisabled();
+    expect(screen.getByText(/New paid plan purchases are paused for now/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Join the list' })).toHaveAttribute(
+      'href',
+      expect.stringContaining('mailto:support@propertylistifysa.co.za'),
+    );
+    fireEvent.click(button);
+    expect(
+      apiFetchMock.mock.calls.filter(([e]) => e === '/agent/request-launch-access-invoice'),
+    ).toHaveLength(0);
+  });
+
+  it('maps the exact paused 409 message to the friendly notice', async () => {
+    const toastModule = await import('sonner');
+    const base = apiFetchMock.getMockImplementation()!;
+    apiFetchMock.mockImplementation((endpoint: string, ...rest: unknown[]) => {
+      if (endpoint === '/agent/request-launch-access-invoice') {
+        return Promise.reject(
+          Object.assign(
+            new Error('New paid plan purchases are paused for now. Existing access is not affected.'),
+            { status: 409 },
+          ),
+        );
+      }
+      return base(endpoint, ...rest);
+    });
+    render(<CommercialAgentPackageSelection agentLaunchAccessAvailable />);
+    fireEvent.click(await screen.findByRole('checkbox'));
+    fireEvent.click(screen.getByRole('button', { name: /Get Agent Launch Access/i }));
+    await waitFor(() => expect(toastModule.toast.info).toHaveBeenCalled());
+    expect(toastModule.toast.error).not.toHaveBeenCalled();
+  });
+
   it('keeps the direct package route in preparation without loading commercial data', () => {
     render(<AgentPackageSelection />);
 
