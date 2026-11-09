@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { trpc } from '@/lib/trpc';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
-import { getAgentJourneyAction, isAgentWorkspaceOpen, isAgentPlanEntitled } from '@/lib/agentJourney';
+import { getAgentJourneyAction, getPublishBlock, isAgentWorkspaceOpen, isAgentPlanEntitled } from '@/lib/agentJourney';
 import { openPlanGate } from '@/lib/agentPlanGate';
 import { Building2, CalendarDays, CalendarPlus, Loader2, Plus, Search, Users } from 'lucide-react';
 import { NotificationCenter } from './NotificationCenter';
@@ -97,6 +97,9 @@ export function AgentTopNav() {
     !workspaceStatusUnavailable &&
     !isAgentPlanEntitled(onboardingStatus);
   const journeyAction = getAgentJourneyAction(onboardingStatus, { agentLaunchAccessAvailable });
+  // Paid but cannot publish yet: show the reason, never the plan panel.
+  const publishBlock =
+    !onboardingLoading && !workspaceStatusUnavailable ? getPublishBlock(onboardingStatus) : null;
 
   const dateParts = useMemo(() => {
     const now = new Date();
@@ -251,6 +254,10 @@ export function AgentTopNav() {
       else setLocation(journeyAction.href);
       return;
     }
+    if (publishBlock) {
+      setLocation(publishBlock.href);
+      return;
+    }
     setLocation('/listings/create');
   };
 
@@ -385,7 +392,7 @@ export function AgentTopNav() {
                   ? isAgentWorkspaceOpen(onboardingStatus)
                     ? 'Choose plan'
                     : journeyAction.label
-                  : 'Add Listing'}
+                  : (publishBlock?.label ?? 'Add Listing')}
             </span>
           </Button>
 

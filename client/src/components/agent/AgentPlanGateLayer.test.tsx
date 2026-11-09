@@ -39,6 +39,7 @@ function setStatus(canPublishListings: boolean, extra: Record<string, unknown> =
     status: {
       recommendedNextStep: 'select_package',
       fullFeaturesUnlocked: canPublishListings,
+      subscriptionStatus: canPublishListings ? 'active' : 'unassigned',
       entitlements: { canPublishListings },
       ...extra,
     },
@@ -117,11 +118,11 @@ describe('AgentPlanGateLayer', () => {
   });
 
   it('treats fullFeaturesUnlocked as entitled', () => {
-    setStatus(true, { fullFeaturesUnlocked: true });
+    setStatus(true, { fullFeaturesUnlocked: true, subscriptionStatus: 'active' });
     render(<AgentPlanGateLayer />);
     expect(screen.queryByTestId('agent-preview-banner')).not.toBeInTheDocument();
     cleanup();
-    setStatus(true, { fullFeaturesUnlocked: false });
+    setStatus(true, { fullFeaturesUnlocked: true, subscriptionStatus: 'trial' });
     render(<AgentPlanGateLayer />);
     expect(screen.getByTestId('agent-preview-banner')).toBeInTheDocument();
   });

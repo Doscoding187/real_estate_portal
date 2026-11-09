@@ -50,6 +50,7 @@ vi.mock('@/lib/agentJourney', () => ({
   isAgentProfileJourneyStep: () => false,
   isAgentWorkspaceOpen: () => true,
   isAgentPlanEntitled: () => true,
+  getPublishBlock: () => null,
   getAgentProfileCompletionDescription: () => '',
 }));
 vi.mock('@/lib/readiness', () => ({

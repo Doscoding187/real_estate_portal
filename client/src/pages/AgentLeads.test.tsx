@@ -88,6 +88,7 @@ function setOnboardingStatus(canAccessExistingLeads: boolean, canReceiveLeads: b
     status: {
       recommendedNextStep: 'await_agency_activation',
       fullFeaturesUnlocked: canAccessExistingLeads,
+      subscriptionStatus: canAccessExistingLeads ? 'active' : 'unassigned',
       entitlements: {
         canPublishListings: canAccessExistingLeads,
         canAccessExistingLeads,
@@ -231,5 +232,23 @@ describe('AgentLeads', () => {
     expect(gate.result.current).toBe(true);
     expect(setLocationMock).not.toHaveBeenCalled();
     closePlanGate();
+  });
+
+  it('keeps leads open for a paid agent whose profile is below the publish threshold', () => {
+    useOnboardingStatusMock.mockReturnValue({
+      status: {
+        recommendedNextStep: 'dashboard',
+        fullFeaturesUnlocked: true,
+        subscriptionStatus: 'active',
+        profileCompletionScore: 65,
+        entitlements: { canPublishListings: false, canReceiveLeads: true },
+      },
+      isLoading: false,
+      error: null,
+      retry: vi.fn(),
+    });
+    render(<AgentLeads />);
+    expect(screen.getByText('Lead pipeline')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Get access' })).not.toBeInTheDocument();
   });
 });

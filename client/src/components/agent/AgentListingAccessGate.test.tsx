@@ -30,6 +30,7 @@ function status(canPublishListings: boolean) {
     status: {
       recommendedNextStep: 'select_package',
       fullFeaturesUnlocked: canPublishListings,
+      subscriptionStatus: canPublishListings ? 'active' : 'unassigned',
       entitlements: { canPublishListings },
     },
     isLoading: false,

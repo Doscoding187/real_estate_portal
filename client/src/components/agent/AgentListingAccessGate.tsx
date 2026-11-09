@@ -6,6 +6,7 @@ import { AgentFeatureLockedState } from '@/components/agent/AgentFeatureLockedSt
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
 import {
   getAgentJourneyAction,
+  getPublishBlock,
   isAgentPaymentBlocked,
   isAgentPlanEntitled,
   isAgentWorkspaceOpen,
@@ -25,7 +26,8 @@ export function AgentListingAccessGate({ children }: { children: ReactNode }) {
 
   if (!isAgent) return <>{children}</>;
   if (isLoading) return null;
-  if (!error && isAgentPlanEntitled(status)) return <>{children}</>;
+  const publishBlock = error ? null : getPublishBlock(status);
+  if (!error && isAgentPlanEntitled(status) && !publishBlock) return <>{children}</>;
 
   const journeyAction = getAgentJourneyAction(status, { agentLaunchAccessAvailable });
   const workspaceOpen =
@@ -34,7 +36,14 @@ export function AgentListingAccessGate({ children }: { children: ReactNode }) {
   return (
     <AgentAppShell>
       <div className="mx-auto max-w-3xl p-6">
-        {error ? (
+        {publishBlock ? (
+          <AgentFeatureLockedState
+            title={publishBlock.title}
+            description={publishBlock.description}
+            actionLabel={publishBlock.label}
+            onAction={() => setLocation(publishBlock.href)}
+          />
+        ) : error ? (
           <AgentFeatureLockedState
             title="We could not confirm your access"
             description="Listings stay locked until your workspace status can be confirmed. Please try again."

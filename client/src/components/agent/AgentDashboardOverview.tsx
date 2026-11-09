@@ -569,7 +569,9 @@ export function AgentDashboardOverview({
   const needsProfileCompletion = isAgentProfileJourneyStep(onboardingStatus);
   const journeyAction = getAgentJourneyAction(onboardingStatus, { agentLaunchAccessAvailable });
   const dashboardJourney = getAgentDashboardJourneyPresentation(journeyAction);
-  const canPublishListings = isAgentPlanEntitled(onboardingStatus);
+  // Paid is the plan rule; publishing additionally needs the server's canPublishListings.
+  const canPublishListings =
+    isAgentPlanEntitled(onboardingStatus) && Boolean(entitlements?.canPublishListings);
   const setupPriorityFlags = profileSetupFlags.slice(0, 3).map(formatSetupFlag);
   const guidanceMode: DashboardGuidanceMode | null = needsProfileCompletion ? 'setup' : null;
   const guidanceSignature = JSON.stringify({
@@ -966,7 +968,9 @@ export function AgentDashboardOverview({
           </CardShell>
 
           <div className="flex min-w-0 flex-col gap-4">
-            {onboardingStatus?.approvalStatus === 'approved' && <AgentPresenceProof />}
+            {onboardingStatus?.approvalStatus === 'approved' && operationalDataEnabled && (
+              <AgentPresenceProof />
+            )}
 
             <CardShell className="px-[22px] py-5">
               <div className="flex items-center justify-between gap-3 border-b border-slate-200 pb-4">

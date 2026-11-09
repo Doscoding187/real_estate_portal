@@ -28,7 +28,7 @@ vi.mock('@/components/agent/PlanGateDialog', () => ({
 import { AgentTopNav } from './AgentTopNav';
 import { AgentPlanGateLayer } from './AgentPlanGateLayer';
 import { resetPlanGateForTests } from '@/lib/agentPlanGate';
-import { isAgentPlanEntitled } from '@/lib/agentJourney';
+import { getPublishBlock, isAgentPlanEntitled } from '@/lib/agentJourney';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -36,44 +36,81 @@ beforeEach(() => {
 });
 afterEach(() => cleanup());
 
-describe('single entitlement rule', () => {
+function renderWith(status: Record<string, unknown>) {
+  statusMock.mockReturnValue({ status, isLoading: false, error: null });
+  return render(
+    <>
+      <AgentTopNav />
+      <AgentPlanGateLayer />
+    </>,
+  );
+}
+
+describe('single paid rule', () => {
   it.each([
-    [false, false],
-    [true, false],
-    [false, true],
-    [true, true],
+    ['unassigned', true, false],
+    ['trial', true, false],
+    ['pending_payment', false, false],
+    ['payment_under_review', false, false],
+    ['active', false, false],
+    ['active', true, true],
+    ['grace_period', true, true],
+    ['expired', true, false],
+  ])('subscription %s, fullFeaturesUnlocked=%s -> paid=%s', (subscriptionStatus, full, paid) => {
+    expect(isAgentPlanEntitled({ subscriptionStatus, fullFeaturesUnlocked: full })).toBe(paid);
+  });
+
+  it.each([
+    ['unassigned', true],
+    ['trial', true],
+    ['active', false],
   ])(
-    'fullFeaturesUnlocked=%s canPublishListings=%s: a visible plan button opens the panel or is absent',
-    (fullFeaturesUnlocked, canPublishListings) => {
-      const status = {
+    'unpaid (%s): every visible plan button opens the panel',
+    (subscriptionStatus, fullFeaturesUnlocked) => {
+      renderWith({
         recommendedNextStep: 'select_package',
-        subscriptionStatus: 'unassigned',
+        subscriptionStatus,
         fullFeaturesUnlocked,
-        entitlements: { canPublishListings },
-      };
-      statusMock.mockReturnValue({ status, isLoading: false, error: null });
-      render(
-        <>
-          <AgentTopNav />
-          <AgentPlanGateLayer />
-        </>,
-      );
-      const entitled = isAgentPlanEntitled(status);
-      expect(entitled).toBe(fullFeaturesUnlocked && canPublishListings);
+        profileCompletionScore: 90,
+        entitlements: { canPublishListings: true },
+      });
       const buttons = screen.queryAllByRole('button', { name: /choose plan|get access/i });
-      if (entitled) {
-        expect(buttons).toHaveLength(0);
-        expect(screen.getByRole('button', { name: /add listing/i })).toBeInTheDocument();
-        return;
-      }
       expect(buttons.length).toBeGreaterThan(0);
       for (const button of buttons) {
         act(() => button.click());
         expect(screen.getByRole('dialog')).toBeInTheDocument();
         act(() => resetPlanGateForTests());
-        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
       }
       expect(setLocationMock).not.toHaveBeenCalled();
     },
   );
+
+  it('paid agent with a 65% profile: no plan button or panel, publish shows the reason', () => {
+    const status = {
+      recommendedNextStep: 'dashboard',
+      subscriptionStatus: 'active',
+      fullFeaturesUnlocked: true,
+      profileCompletionScore: 65,
+      entitlements: { canPublishListings: false },
+    };
+    renderWith(status);
+    expect(screen.queryAllByRole('button', { name: /choose plan|get access/i })).toHaveLength(0);
+    expect(screen.queryByTestId('agent-preview-banner')).not.toBeInTheDocument();
+    expect(getPublishBlock(status)?.title).toBe('Complete your profile (65%) to publish');
+    act(() => screen.getByRole('button', { name: 'Complete profile' }).click());
+    expect(setLocationMock).toHaveBeenCalledWith('/agent/setup');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('paid agent who can publish: Add Listing, no reason, no panel', () => {
+    renderWith({
+      recommendedNextStep: 'dashboard',
+      subscriptionStatus: 'active',
+      fullFeaturesUnlocked: true,
+      profileCompletionScore: 90,
+      entitlements: { canPublishListings: true },
+    });
+    expect(screen.getByRole('button', { name: /add listing/i })).toBeInTheDocument();
+    expect(screen.queryAllByRole('button', { name: /choose plan|get access/i })).toHaveLength(0);
+  });
 });

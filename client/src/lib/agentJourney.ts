@@ -202,17 +202,65 @@ export function isAgentWorkspaceOpen(
   return Boolean(status) && status?.recommendedNextStep !== 'verify_email';
 }
 
-/** The ONE entitlement rule: paid access needs full features AND publishing (fail closed). */
+const PAID_SUBSCRIPTION_STATUSES = ['active', 'grace_period'];
+
+/**
+ * The ONE "paid" rule. Server fields already in the onboarding status payload:
+ * `fullFeaturesUnlocked` (shared/agentJourney.ts deriveAgentJourneyAccessState:
+ * approved agent with trial, active or grace_period) AND `subscriptionStatus`
+ * active or grace_period. A trial also unlocks full features, so the
+ * subscription status is what separates paid from trial. Fail closed.
+ * Whether a paid agent may publish is a separate question: see getPublishBlock.
+ */
 export function isAgentPlanEntitled(
   status:
     | {
         fullFeaturesUnlocked?: boolean;
-        entitlements?: { canPublishListings?: boolean } | null;
+        subscriptionStatus?: string | null;
       }
     | null
     | undefined,
 ) {
-  return Boolean(status?.fullFeaturesUnlocked) && Boolean(status?.entitlements?.canPublishListings);
+  return (
+    Boolean(status?.fullFeaturesUnlocked) &&
+    PAID_SUBSCRIPTION_STATUSES.includes(String(status?.subscriptionStatus))
+  );
+}
+
+type PublishStatus = {
+  fullFeaturesUnlocked?: boolean;
+  subscriptionStatus?: string | null;
+  recommendedNextStep?: AgentRecommendedNextStep;
+  profileCompletionScore?: number;
+  entitlements?: { canPublishListings?: boolean } | null;
+};
+
+/**
+ * For a PAID agent who cannot publish yet: the reason (no payment panel).
+ * Null when unpaid (that is the plan panel's job) or when publishing is allowed.
+ */
+export function getPublishBlock(
+  status: PublishStatus | null | undefined,
+): { title: string; description: string; label: string; href: string } | null {
+  if (!status || !isAgentPlanEntitled(status) || status.entitlements?.canPublishListings) {
+    return null;
+  }
+  const score = Math.round(Number(status.profileCompletionScore ?? 0));
+  if (score < 70) {
+    return {
+      title: `Complete your profile (${score}%) to publish`,
+      description: 'Your plan is active. Finish your professional profile to start publishing listings.',
+      label: 'Complete profile',
+      href: '/agent/setup',
+    };
+  }
+  const action = getAgentJourneyAction(status);
+  return {
+    title: action.title,
+    description: action.description,
+    label: action.label,
+    href: action.href,
+  };
 }
 
 /**

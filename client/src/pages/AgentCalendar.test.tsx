@@ -47,7 +47,41 @@ describe('AgentCalendar gate', () => {
       status: {
         recommendedNextStep: 'dashboard',
         fullFeaturesUnlocked: true,
+        subscriptionStatus: 'active',
         entitlements: { canPublishListings: true },
+      },
+      isLoading: false,
+      error: null,
+      retry: vi.fn(),
+    });
+    render(<AgentCalendar />);
+    expect(calendarMounted).toHaveBeenCalled();
+  });
+});
+
+describe('AgentCalendar paid vs trial', () => {
+  it('stays locked for a trial agent and unlocked for a paid agent with a 65% profile', () => {
+    statusMock.mockReturnValue({
+      status: {
+        recommendedNextStep: 'dashboard',
+        fullFeaturesUnlocked: true,
+        subscriptionStatus: 'trial',
+        entitlements: { canPublishListings: true },
+      },
+      isLoading: false,
+      error: null,
+      retry: vi.fn(),
+    });
+    const { unmount } = render(<AgentCalendar />);
+    expect(calendarMounted).not.toHaveBeenCalled();
+    unmount();
+    statusMock.mockReturnValue({
+      status: {
+        recommendedNextStep: 'dashboard',
+        fullFeaturesUnlocked: true,
+        subscriptionStatus: 'active',
+        profileCompletionScore: 65,
+        entitlements: { canPublishListings: false },
       },
       isLoading: false,
       error: null,

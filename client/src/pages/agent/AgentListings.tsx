@@ -39,6 +39,7 @@ import {
   getAgentJourneyAction,
   getAgentProfileCompletionDescription,
   isAgentProfileJourneyStep,
+  getPublishBlock,
   isAgentPaymentBlocked,
   isAgentPlanEntitled,
   isAgentWorkspaceOpen,
@@ -273,6 +274,7 @@ export default function AgentListings() {
   );
 
   const listingAccessLocked = !statusLoading && !isAgentPlanEntitled(status);
+  const publishBlock = !statusLoading ? getPublishBlock(status) : null;
   // The existing APIs return the latest 50 records. Sort and paginate that
   // loaded set explicitly; do not imply an inventory-wide count or search.
   const sortedListings = [...(filteredListings ?? [])];
@@ -297,6 +299,10 @@ export default function AgentListings() {
     if (statusLoading) return;
     if (listingAccessLocked) {
       openPlanGate();
+      return;
+    }
+    if (publishBlock) {
+      setLocation(publishBlock.href);
       return;
     }
     setLocation('/listings/create');
@@ -331,7 +337,9 @@ export default function AgentListings() {
             className={agentPageStyles.primaryButton}
           >
             <Plus className="h-4 w-4 mr-2" />
-            {listingAccessLocked ? 'Choose plan to publish' : 'Add New Listing'}
+            {listingAccessLocked
+              ? 'Choose plan to publish'
+              : (publishBlock?.label ?? 'Add New Listing')}
           </Button>
         </div>
       </header>
