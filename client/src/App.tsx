@@ -112,6 +112,7 @@ const UserDashboard = lazy(() => import('./pages/UserDashboard'));
 const LovableIntegrationHub = lazy(() => import('./pages/LovableIntegrationHub'));
 
 // Import the new Listing Wizard
+import { AgentListingAccessGate } from './components/agent/AgentListingAccessGate';
 const ListingWizard = lazy(() => import('./components/listing-wizard/ListingWizard'));
 const ListingTemplate = lazy(() => import('./pages/ListingTemplate'));
 
@@ -388,7 +389,9 @@ function Router() {
           {/* Route Handlers / Wizards */}
           <Route path="/listings/create">
             <RequireRole role={['agent', 'agency_admin']} unauthenticatedAuthEntry="register">
-              <ListingWizard />
+              <AgentListingAccessGate>
+                <ListingWizard />
+              </AgentListingAccessGate>
             </RequireRole>
           </Route>
           <Route path="/listing-template" component={ListingTemplate} />

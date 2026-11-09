@@ -48,6 +48,7 @@ vi.mock('@/hooks/useAgentOnboardingStatus', () => ({
 vi.mock('@/lib/agentJourney', () => ({
   getAgentJourneyAction: () => ({ waiting: false }),
   isAgentProfileJourneyStep: () => false,
+  isAgentWorkspaceOpen: () => true,
   getAgentProfileCompletionDescription: () => '',
 }));
 vi.mock('@/lib/readiness', () => ({

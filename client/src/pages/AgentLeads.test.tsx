@@ -54,6 +54,8 @@ vi.mock('@/lib/trpc', () => ({
 }));
 
 import AgentLeads from './AgentLeads';
+import { closePlanGate, usePlanGateOpen } from '@/lib/agentPlanGate';
+import { renderHook } from '@testing-library/react';
 
 const emptyPipeline = {
   new: [],
@@ -181,5 +183,24 @@ describe('AgentLeads', () => {
     expect(screen.getByText('1 awaiting first outreach')).toBeInTheDocument();
     expect(screen.getByText('3 awaiting connection')).toBeInTheDocument();
     expect(screen.getByText(/An outreach attempt includes calls or messages logged without a reply/)).toBeInTheDocument();
+  });
+
+  it('locks leads for a verified, non-entitled agent and opens the plan dialog', async () => {
+    useOnboardingStatusMock.mockReturnValue({
+      status: {
+        recommendedNextStep: 'select_package',
+        entitlements: { canAccessExistingLeads: false, canReceiveLeads: false },
+      },
+      isLoading: false,
+      error: null,
+      retry: vi.fn(),
+    });
+    const gate = renderHook(() => usePlanGateOpen());
+    render(<AgentLeads />);
+    expect(screen.getByText('Leads unlock with a plan')).toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Choose plan' }));
+    expect(gate.result.current).toBe(true);
+    expect(setLocationMock).not.toHaveBeenCalled();
+    closePlanGate();
   });
 });

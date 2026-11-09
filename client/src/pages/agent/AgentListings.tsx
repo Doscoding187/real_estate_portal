@@ -34,10 +34,12 @@ import {
 import { AgentFeatureLockedState } from '@/components/agent/AgentFeatureLockedState';
 import { AgentJourneyStatusErrorState } from '@/components/agent/AgentJourneyStatusErrorState';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
+import { followAgentJourneyHref, openPlanGate } from '@/lib/agentPlanGate';
 import {
   getAgentJourneyAction,
   getAgentProfileCompletionDescription,
   isAgentProfileJourneyStep,
+  isAgentWorkspaceOpen,
 } from '@/lib/agentJourney';
 import { calculateListingReadiness } from '@/lib/readiness';
 import {
@@ -105,7 +107,7 @@ export default function AgentListings() {
 
   const isDraftOrPending =
     activeTab === 'draft' || activeTab === 'pending' || activeTab === 'rejected';
-  const dashboardUnlocked = !statusLoading && Boolean(status?.dashboardUnlocked);
+  const dashboardUnlocked = !statusLoading && isAgentWorkspaceOpen(status);
   const operationalDataEnabled = !statusLoading && Boolean(status?.fullFeaturesUnlocked);
 
   const isListingInTab = (status: string | null | undefined, tab: ListingTab) => {
@@ -288,8 +290,12 @@ export default function AgentListings() {
   const journeyAction = getAgentJourneyAction(status, { agentLaunchAccessAvailable });
   const needsProfileCompletion = isAgentProfileJourneyStep(status);
   const startListing = () => {
-    if (statusLoading || journeyAction.waiting) return;
-    setLocation(listingAccessLocked ? journeyAction.href : '/listings/create');
+    if (statusLoading) return;
+    if (listingAccessLocked) {
+      openPlanGate();
+      return;
+    }
+    setLocation('/listings/create');
   };
 
   return (
@@ -317,11 +323,11 @@ export default function AgentListings() {
           </Button>
           <Button
             onClick={startListing}
-            disabled={statusLoading || journeyAction.waiting}
+            disabled={statusLoading}
             className={agentPageStyles.primaryButton}
           >
             <Plus className="h-4 w-4 mr-2" />
-            {listingAccessLocked ? journeyAction.label : 'Add New Listing'}
+            {listingAccessLocked ? 'Choose plan to publish' : 'Add New Listing'}
           </Button>
         </div>
       </header>
@@ -373,7 +379,7 @@ export default function AgentListings() {
                   <Button
                     variant="outline"
                     className="mt-3 rounded-full border-amber-300 bg-white"
-                    onClick={() => setLocation(journeyAction.href)}
+                    onClick={() => followAgentJourneyHref(journeyAction.href, setLocation)}
                   >
                     {journeyAction.label}
                   </Button>
@@ -586,7 +592,9 @@ export default function AgentListings() {
                           onEdit={
                             editListingId == null
                               ? undefined
-                              : () => setLocation(`/listings/create?id=${editListingId}&edit=true`)
+                              : listingAccessLocked
+                                ? openPlanGate
+                                : () => setLocation(`/listings/create?id=${editListingId}&edit=true`)
                           }
                           onDelete={deleteId == null ? undefined : () => handleDelete(deleteId)}
                           onView={

@@ -190,3 +190,26 @@ export function isAgentProfileJourneyStep(
     status?.recommendedNextStep === 'publish_profile'
   );
 }
+
+/**
+ * The Agent workspace is open to every agent whose email is verified. Profile
+ * and private drafts need no payment; publishing and leads stay gated.
+ */
+export function isAgentWorkspaceOpen(
+  status: { recommendedNextStep?: AgentRecommendedNextStep } | null | undefined,
+) {
+  return Boolean(status) && status?.recommendedNextStep !== 'verify_email';
+}
+
+/** True when the agent already has paid access (publishing is allowed). */
+export function isAgentPlanEntitled(
+  status:
+    | {
+        fullFeaturesUnlocked?: boolean;
+        entitlements?: { canPublishListings?: boolean } | null;
+      }
+    | null
+    | undefined,
+) {
+  return Boolean(status?.entitlements?.canPublishListings);
+}

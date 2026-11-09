@@ -2,9 +2,9 @@ import {
   EftPaymentNoticeForm,
   usePaymentNoticeRequest,
 } from '@/components/billing/EftPaymentNoticeForm';
+import { AgentAccessPanel, getPayerDisplayName, localDateIso } from '@/components/agent/AgentAccessPanel';
 import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
 import { useLocation, useSearch } from 'wouter';
-import type { inferRouterOutputs } from '@trpc/server';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,11 @@ import { APP_TITLE } from '@/const';
 import { apiFetch } from '@/lib/api';
 import { getAgentJourneyAction } from '@/lib/agentJourney';
 import { trpc } from '@/lib/trpc';
-import type { AppRouter } from '../../../../server/routers';
+import {
+  useAgentLaunchInvoiceRequest,
+  type AgentBankDetails,
+  type AgentInvoice,
+} from '@/hooks/useAgentLaunchInvoiceRequest';
 import {
   formatCommercialLimitLabel,
   formatCommercialLimitValue,
@@ -44,33 +48,8 @@ import {
   PAID_WAITLIST_LABEL,
   PAID_WAITLIST_MAILTO,
 } from '@shared/paidIntakeCopy';
-import { isPaidIntakeClosedError, toastPaidError } from '@/components/commercial/PaidIntakeNotice';
+import { toastPaidError } from '@/components/commercial/PaidIntakeNotice';
 import { CommercialActivationNotice } from '@/components/commercial/CommercialActivationNotice';
-
-// Exact server phrases for "launch access closed" on the invoice request
-// (server/services/commercialActivationPolicy.ts requirePaidMvp* / requireCommercialActivation).
-// Anchored phrases only: bare words such as "closed" or "paused" appear in genuine conflicts.
-const LAUNCH_ACCESS_CLOSED_PATTERN = new RegExp(
-  [
-    '^' + PAID_SALES_PAUSED_MESSAGE.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$',
-    '^.+ is unavailable while Property Listify is in preparation-only onboarding\\.',
-    '^.+ requires an approved persisted Paid MVP product and matching owner\\.$',
-  ].join('|'),
-);
-
-type RouterOutputs = inferRouterOutputs<AppRouter>;
-type AgentBillingWorkspace = RouterOutputs['billing']['agentWorkspace'];
-type AgentInvoice = NonNullable<AgentBillingWorkspace['activeInvoice']>;
-type AgentBankDetails = AgentBillingWorkspace['bankDetails'];
-
-type AgentInvoiceResponse = {
-  invoice: AgentInvoice;
-  bankDetails: AgentBankDetails;
-  paymentReference: string;
-  reused: boolean;
-  ownerType: string;
-  ownerId: number;
-};
 
 function formatLimitValue(value: unknown) {
   return formatCommercialLimitValue(value);
@@ -131,7 +110,7 @@ function ProductDetails({ product }: { product: CommercialProduct }) {
 
 function ActivationSteps() {
   const steps = [
-    'Request the canonical invoice',
+    'Get your payment reference',
     'Pay by manual EFT',
     'Submit payment notification',
     'Finance verifies and activates access',
@@ -151,141 +130,6 @@ function ActivationSteps() {
         </li>
       ))}
     </ol>
-  );
-}
-
-function formatInvoiceAmount(amountMinor: number | null | undefined): string {
-  return new Intl.NumberFormat('en-ZA', {
-    style: 'currency',
-    currency: 'ZAR',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(Number(amountMinor || 0) / 100);
-}
-
-function AgentManualEftPanel({
-  invoice,
-  bankDetails,
-  payerName,
-  setPayerName,
-  paymentDate,
-  setPaymentDate,
-  rejectionMessage,
-  onSubmit,
-  isSubmitting,
-}: {
-  invoice: AgentInvoice;
-  bankDetails?: AgentBankDetails;
-  payerName: string;
-  setPayerName: Dispatch<SetStateAction<string>>;
-  paymentDate: string;
-  setPaymentDate: Dispatch<SetStateAction<string>>;
-  rejectionMessage?: string | null;
-  onSubmit: () => void;
-  isSubmitting: boolean;
-}) {
-  const proofCanBeSubmitted = ['issued', 'partially_paid', 'overdue'].includes(invoice.status);
-
-  return (
-    <Card className="mt-6 border-blue-200 bg-blue-50/40">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <UploadCloud className="h-5 w-5 text-blue-600" />
-          Agent Launch Access invoice
-        </CardTitle>
-        <CardDescription>
-          {invoice.invoiceNumber} · {formatInvoiceAmount(invoice.amountDue)} once-off for 90 days.
-          Access starts only after finance verifies the EFT payment.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid gap-3 rounded-lg border border-blue-200 bg-white p-4 text-sm md:grid-cols-3">
-          <div>
-            <p className="text-slate-500">Amount due</p>
-            <p className="font-semibold text-slate-900">{formatInvoiceAmount(invoice.amountDue)}</p>
-          </div>
-          <div>
-            <p className="text-slate-500">Payment reference</p>
-            <p className="font-semibold text-slate-900">{invoice.paymentReference}</p>
-          </div>
-          <div>
-            <p className="text-slate-500">Status</p>
-            <Badge variant="outline" className="mt-1">
-              {invoice.status === 'submitted' ? 'Payment verification pending' : invoice.status}
-            </Badge>
-          </div>
-        </div>
-
-        <div className="rounded-lg border border-blue-200 bg-white p-4 text-sm text-slate-700">
-          <p className="font-semibold text-slate-900">Manual EFT instructions</p>
-          <dl className="mt-2 grid gap-1 sm:grid-cols-2">
-            <div>
-              <dt className="text-slate-500">Account</dt>
-              <dd className="font-medium text-slate-900">
-                {bankDetails?.accountName || 'Account details unavailable'}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-slate-500">Bank</dt>
-              <dd className="font-medium text-slate-900">
-                {bankDetails?.bankName || 'Bank details unavailable'}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-slate-500">Account number</dt>
-              <dd className="font-medium text-slate-900">
-                {bankDetails?.accountNumber || 'Account number unavailable'}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-slate-500">Branch</dt>
-              <dd className="font-medium text-slate-900">
-                {bankDetails?.branchCode || 'Branch unavailable'}
-              </dd>
-            </div>
-          </dl>
-          <p className="mt-3 text-xs text-slate-500">
-            Copy the invoice payment reference above exactly into your banking app’s transfer
-            reference field.{' '}
-            {bankDetails?.configurationMessage ||
-              'Finance verification is required before the 90-day term starts.'}
-          </p>
-        </div>
-
-        {rejectionMessage ? (
-          <div
-            role="alert"
-            className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"
-          >
-            <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" aria-hidden="true" />
-            <div>
-              <p className="font-semibold">Finance requested a correction</p>
-              <p className="mt-1 leading-6">{rejectionMessage}</p>
-              <p className="mt-1 text-xs text-amber-800">
-                Check your payment details, then submit a corrected notice below for a new review.
-              </p>
-            </div>
-          </div>
-        ) : null}
-
-        {proofCanBeSubmitted ? (
-          <EftPaymentNoticeForm
-            invoiceId={invoice.id}
-            paymentDate={paymentDate}
-            payerName={payerName}
-            setPaymentDate={setPaymentDate}
-            setPayerName={setPayerName}
-            isSubmitting={isSubmitting}
-            onSubmit={onSubmit}
-          />
-        ) : (
-          <p className="text-sm font-medium text-blue-800">
-            This invoice is already under review. Finance verification is required before the 90-day
-            Launch Access term can activate.
-          </p>
-        )}
-      </CardContent>
-    </Card>
   );
 }
 
@@ -313,11 +157,7 @@ export function CommercialAgentPackageSelection({
     refetchOnMount: true,
   });
   const submitProof = trpc.billing.submitLaunchAccessPaymentNotice.useMutation();
-  const [invoiceResponse, setInvoiceResponse] = useState<AgentInvoiceResponse | null>(null);
-  const [isRequestingInvoice, setIsRequestingInvoice] = useState(false);
-  const [payerName, setPayerName] = useState('');
   const { paymentNoticeRequest, resetPaymentNoticeRequest } = usePaymentNoticeRequest();
-  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().slice(0, 10));
 
   const agentProducts = useMemo(
     () =>
@@ -338,6 +178,16 @@ export function CommercialAgentPackageSelection({
         }
       : undefined,
   );
+
+  const { requestInvoice, isRequestingInvoice, invoiceResponse, setInvoiceResponse } =
+    useAgentLaunchInvoiceRequest({
+      planId: launchProduct?.source?.planId,
+      legalChoice: legal.choice,
+      salesPaused,
+      reloadLegal: legal.reload,
+      refetchCatalog: catalog.refetch,
+      refetchWorkspace: workspaceQuery.refetch,
+    });
 
   useEffect(() => {
     if (new URLSearchParams(search).get('verified') === 'true') {
@@ -445,58 +295,7 @@ export function CommercialAgentPackageSelection({
       setLocation('/agent/dashboard');
       return;
     }
-    if (salesPaused) return;
-    const planId = launchProduct.source?.planId;
-    if (!legal.choice) return;
-    if (!planId) {
-      toast.error('The canonical Agent Launch Access product is not requestable right now.');
-      return;
-    }
-
-    setIsRequestingInvoice(true);
-    try {
-      const result = await apiFetch<AgentInvoiceResponse>('/agent/request-launch-access-invoice', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ planId, legalAcceptance: legal.choice }),
-      });
-      setInvoiceResponse(result);
-      await workspaceQuery.refetch();
-      toast.success(
-        result.reused ? 'Your existing Agent invoice is ready.' : 'Agent invoice ready.',
-        {
-          description: 'Pay by manual EFT, then select “I’ve paid” for finance verification.',
-        },
-      );
-    } catch (error) {
-      legal.reload();
-      void catalog.refetch();
-      const status = (error as { status?: unknown } | null)?.status;
-      if (isPaidIntakeClosedError(error)) {
-        toastPaidError(error, 'Could not request the Agent invoice');
-      } else if (status === 409) {
-        const raw = error instanceof Error ? error.message.trim() : '';
-        const message = raw && !/^HTTP \d+/.test(raw) ? raw : '';
-        if (!message) {
-          toast.error(
-            'We could not request your invoice. Refresh the page and try again, or contact support@propertylistifysa.co.za.',
-          );
-        } else if (LAUNCH_ACCESS_CLOSED_PATTERN.test(message)) {
-          toast.info(
-            'Agent Launch Access purchases are not open for your account yet. We will email you when they open. Questions: support@propertylistifysa.co.za',
-            { duration: 15000 },
-          );
-          void workspaceQuery.refetch();
-        } else {
-          toast.error(message);
-          void workspaceQuery.refetch();
-        }
-      } else {
-        toastPaidError(error, 'Could not request the Agent invoice');
-      }
-    } finally {
-      setIsRequestingInvoice(false);
-    }
+    await requestInvoice();
   };
 
   const handleProofSubmit = async () => {
@@ -505,15 +304,14 @@ export function CommercialAgentPackageSelection({
       await submitProof.mutateAsync(
         paymentNoticeRequest({
           invoiceId: activeInvoice.id,
-          paymentDate,
-          payerName: payerName.trim(),
+          paymentDate: localDateIso(),
+          payerName: getPayerDisplayName(user),
         }),
       );
       resetPaymentNoticeRequest();
       await workspaceQuery.refetch();
       setInvoiceResponse(null);
       toast.success('Payment notification submitted. Bank verification is pending.');
-      setLocation('/agent/dashboard');
     } catch (error) {
       toastPaidError(error, 'Payment notification could not be submitted.');
     }
@@ -606,9 +404,9 @@ export function CommercialAgentPackageSelection({
                     : salesPaused
                       ? 'Paid plans open soon'
                       : isRequestingInvoice
-                      ? 'Preparing invoice…'
+                      ? 'Preparing your payment reference…'
                       : activeInvoice
-                        ? 'Refresh invoice'
+                        ? 'Refresh payment reference'
                         : action.label}{' '}
                   <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
                 </Button>
@@ -629,13 +427,9 @@ export function CommercialAgentPackageSelection({
                 </p>
               ) : null}
               {activeInvoice && agentLaunchAccessAvailable ? (
-                <AgentManualEftPanel
+                <AgentAccessPanel
                   invoice={activeInvoice}
                   bankDetails={bankDetails}
-                  payerName={payerName}
-                  setPayerName={setPayerName}
-                  paymentDate={paymentDate}
-                  setPaymentDate={setPaymentDate}
                   rejectionMessage={rejectionMessage}
                   onSubmit={() => void handleProofSubmit()}
                   isSubmitting={submitProof.isPending}

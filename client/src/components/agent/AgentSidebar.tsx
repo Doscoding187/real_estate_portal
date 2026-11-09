@@ -2,6 +2,8 @@ import { useMemo } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
+import { isAgentWorkspaceOpen } from '@/lib/agentJourney';
+import { openPlanGate } from '@/lib/agentPlanGate';
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 import {
@@ -90,6 +92,16 @@ export function AgentSidebar({ mode = 'desktop' }: SidebarProps) {
     : 'AG';
 
   const currentPath = location.split('?')[0];
+  const leadsLocked =
+    user?.role === 'agent' &&
+    !statusLoading &&
+    isAgentWorkspaceOpen(status) &&
+    !status?.entitlements?.canAccessExistingLeads;
+  // Leads are locked until a plan is active: show the locked page and the plan dialog.
+  const navigateFromSidebar = (path: string) => {
+    setLocation(path);
+    if (leadsLocked && path === '/agent/leads') openPlanGate();
+  };
 
   const operateLinks: NavItem[] = [
     {
@@ -158,7 +170,7 @@ export function AgentSidebar({ mode = 'desktop' }: SidebarProps) {
             title="Operate"
             items={operateLinks}
             currentPath={currentPath}
-            onNavigate={setLocation}
+            onNavigate={navigateFromSidebar}
           />
           <SidebarSection
             title="Grow"

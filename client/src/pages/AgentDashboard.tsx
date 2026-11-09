@@ -4,6 +4,7 @@ import { AgentStatusStrip } from '@/components/agent/AgentStatusStrip';
 import { AgentJourneyStatusErrorState } from '@/components/agent/AgentJourneyStatusErrorState';
 import { AgentServicesReferralPanel } from '@/components/agent/AgentServicesReferral';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
+import { isAgentWorkspaceOpen } from '@/lib/agentJourney';
 
 export default function AgentDashboard() {
   const { status, isLoading, error, retry, agentLaunchAccessAvailable } = useAgentOnboardingStatus({
@@ -29,7 +30,7 @@ export default function AgentDashboard() {
     );
   }
 
-  if (!status?.dashboardUnlocked) {
+  if (!isAgentWorkspaceOpen(status)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#f7f6f3]">
         <div className="text-center">
@@ -40,6 +41,8 @@ export default function AgentDashboard() {
     );
   }
 
+  if (!status) return null;
+
   return (
     <AgentAppShell>
       <div className="flex flex-col gap-4">
@@ -49,14 +52,11 @@ export default function AgentDashboard() {
           <section className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-amber-950">
             <h2 className="text-lg font-semibold">Prepare your professional workspace</h2>
             <p className="mt-2 text-sm">
-              Complete your profile and approval information, then prepare private listing drafts.
-              You can return and continue your work before payment. Marketplace publishing remains
-              locked until commercial activation.
+              Complete your profile and approval information. Listings, publishing and enquiries
+              unlock when you choose a plan.
             </p>
             <div className="mt-3 flex flex-wrap gap-4 text-sm font-semibold underline">
               <a href="/agent/setup">Complete profile</a>
-              <a href="/listings/create">Prepare a listing</a>
-              <a href="/agent/listings?tab=draft">Resume drafts</a>
             </div>
           </section>
         ) : null}

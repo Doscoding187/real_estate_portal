@@ -8,9 +8,9 @@ import { AgentJourneyStatusErrorState } from '@/components/agent/AgentJourneySta
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
 import {
   getAgentJourneyAction,
-  getAgentProfileCompletionDescription,
-  isAgentProfileJourneyStep,
+  isAgentWorkspaceOpen,
 } from '@/lib/agentJourney';
+import { openPlanGate } from '@/lib/agentPlanGate';
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -266,7 +266,6 @@ export default function AgentLeads() {
     Boolean(status?.entitlements?.canAccessExistingLeads) &&
     !status?.entitlements?.canReceiveLeads;
   const journeyAction = getAgentJourneyAction(status, { agentLaunchAccessAvailable });
-  const needsProfileCompletion = isAgentProfileJourneyStep(status);
 
   const { data: responseSummary, isLoading: responseSummaryLoading } =
     trpc.agent.getLeadResponseSummary.useQuery(undefined, {
@@ -375,22 +374,23 @@ export default function AgentLeads() {
         ) : statusError ? (
           <AgentJourneyStatusErrorState onRetry={retryStatus} />
         ) : leadsLocked ? (
-          <AgentFeatureLockedState
-            title={
-              needsProfileCompletion
-                ? 'Add your contact details before working leads'
-                : journeyAction.title
-            }
-            description={
-              needsProfileCompletion
-                ? getAgentProfileCompletionDescription({ agentLaunchAccessAvailable })
-                : journeyAction.description
-            }
-            actionLabel={journeyAction.waiting ? 'Return to dashboard' : journeyAction.label}
-            onAction={() =>
-              setLocation(journeyAction.waiting ? '/agent/dashboard' : journeyAction.href)
-            }
-          />
+          isAgentWorkspaceOpen(status) && !journeyAction.waiting ? (
+            <AgentFeatureLockedState
+              title="Leads unlock with a plan"
+              description="Choose a plan to receive and work enquiries. Your profile and private drafts stay open in the meantime."
+              actionLabel="Choose plan"
+              onAction={openPlanGate}
+            />
+          ) : (
+            <AgentFeatureLockedState
+              title={journeyAction.title}
+              description={journeyAction.description}
+              actionLabel={journeyAction.waiting ? 'Return to dashboard' : journeyAction.label}
+              onAction={() =>
+                setLocation(journeyAction.waiting ? '/agent/dashboard' : journeyAction.href)
+              }
+            />
+          )
         ) : (
           <>
             {newEnquiriesPaused ? (

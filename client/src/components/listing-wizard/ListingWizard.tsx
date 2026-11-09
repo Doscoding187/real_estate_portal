@@ -8,6 +8,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { hydrateListingWizardForUser, useListingWizardStore } from '@/hooks/useListingWizard';
 import { isReviewableListingEdit, loadedListingNavigation } from '@/lib/listingEditorNavigation';
 import { useAutoSave } from '@/hooks/useAutoSave';
+import { markPlanPromptTrigger } from '@/lib/agentPlanGate';
 import { DraftManager } from '@/components/wizard/DraftManager';
 import {
   ProgressIndicator,
@@ -613,6 +614,7 @@ const ListingWizard: React.FC = () => {
     if (activeOwner.current !== ownerId || sessionEpoch.current === epoch)
       localStorage.setItem(key, String(result.id));
     localStorage.removeItem(unknownKey);
+    markPlanPromptTrigger();
     if (activeOwner.current === ownerId && sessionEpoch.current === epoch) {
       setServerDraftId(result.id);
       setExistingListing({ property: { id: result.id, status: 'draft' } });

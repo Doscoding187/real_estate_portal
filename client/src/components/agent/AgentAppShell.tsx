@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Menu } from 'lucide-react';
 import { AgentSidebar } from '@/components/agent/AgentSidebar';
 import { AgentTopNav } from '@/components/agent/AgentTopNav';
+import { AgentPlanGateLayer } from '@/components/agent/AgentPlanGateLayer';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 
@@ -23,6 +24,7 @@ export function AgentAppShell({ children }: { children: ReactNode }) {
 
       <div className="min-w-0 flex-1 lg:pl-[232px]">
         <AgentTopNav />
+        <AgentPlanGateLayer />
         {children}
       </div>
     </div>

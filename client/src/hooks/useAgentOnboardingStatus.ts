@@ -92,9 +92,11 @@ export function useAgentOnboardingStatus(options: UseAgentOnboardingStatusOption
         const result = await apiFetch<AgentOnboardingStatus>('/agent/onboarding-status');
         if (cancelled) return;
 
-        // Professional identity work is available before activation. Paid
-        // capability remains gated server-side and via fullFeaturesUnlocked.
-        if (requireDashboardUnlocked && !result.dashboardUnlocked) {
+        // The Agent workspace is open before payment (and before the profile
+        // wizard is finished): profile and private drafts are usable, and the
+        // server still enforces publishing and leads. The only journey that
+        // keeps a redirect is an unverified email address.
+        if (requireDashboardUnlocked && result.recommendedNextStep === 'verify_email') {
           setStatus(result);
           setLocation('/agent/setup');
           return;

@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { trpc } from '@/lib/trpc';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
 import { getAgentJourneyAction } from '@/lib/agentJourney';
+import { openPlanGate } from '@/lib/agentPlanGate';
 import { Building2, CalendarDays, CalendarPlus, Loader2, Plus, Search, Users } from 'lucide-react';
 import { NotificationCenter } from './NotificationCenter';
 
@@ -243,9 +244,9 @@ export function AgentTopNav() {
   };
 
   const startListing = () => {
-    if (onboardingLoading || workspaceStatusUnavailable || journeyAction.waiting) return;
+    if (onboardingLoading || workspaceStatusUnavailable) return;
     if (listingAccessLocked) {
-      setLocation(journeyAction.href);
+      openPlanGate();
       return;
     }
     setLocation('/listings/create');
@@ -371,7 +372,7 @@ export function AgentTopNav() {
           <Button
             type="button"
             onClick={startListing}
-            disabled={onboardingLoading || workspaceStatusUnavailable || journeyAction.waiting}
+            disabled={onboardingLoading || workspaceStatusUnavailable}
             className="h-[34px] rounded-full bg-[var(--primary)] px-[18px] text-[12.5px] font-medium text-white shadow-[0_8px_28px_rgba(0,92,168,0.24)] hover:bg-[#0b4b81]"
           >
             <Plus className="h-3.5 w-3.5" />
@@ -379,7 +380,7 @@ export function AgentTopNav() {
               {workspaceStatusUnavailable
                 ? 'Status unavailable'
                 : listingAccessLocked
-                  ? journeyAction.label
+                  ? 'Choose plan'
                   : 'Add Listing'}
             </span>
           </Button>
