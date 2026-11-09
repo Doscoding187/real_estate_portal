@@ -1194,11 +1194,16 @@ export function getCanonicalAccountDestination(user: PublicNavigationUser): stri
   return '/user/dashboard';
 }
 
+export function isHomeNextPath(safeNext: string | null): boolean {
+  return safeNext !== null && /^\/(?:[?#].*)?$/.test(safeNext);
+}
+
 export function getLoginRedirectPath(user: PublicNavigationUser, nextPath: unknown): string {
   const safeNext = getSafeNextPath(nextPath);
-  const isHomeNext = safeNext !== null && /^\/(?:[?#].*)?$/.test(safeNext);
   return (
-    (isHomeNext ? null : safeNext) ?? getCanonicalAccountDestination(user) ?? '/user/dashboard'
+    (isHomeNextPath(safeNext) ? null : safeNext) ??
+    getCanonicalAccountDestination(user) ??
+    '/user/dashboard'
   );
 }
 

@@ -306,6 +306,28 @@ describe('Agent pre-payment preparation', () => {
     expect(toastModule.toast.error).not.toHaveBeenCalled();
   });
 
+  it('shows the PaidIntakeNotice for the exact intake-closed 409 message, with no generic error text', async () => {
+    const toastModule = await import('sonner');
+    const { PAID_INTAKE_CLOSED_MESSAGE } = await import('@shared/paidIntakeCopy');
+    const base = apiFetchMock.getMockImplementation()!;
+    apiFetchMock.mockImplementation((endpoint: string, ...rest: unknown[]) => {
+      if (endpoint === '/agent/request-launch-access-invoice') {
+        return Promise.reject(Object.assign(new Error(PAID_INTAKE_CLOSED_MESSAGE), { status: 409 }));
+      }
+      return base(endpoint, ...rest);
+    });
+    render(<CommercialAgentPackageSelection agentLaunchAccessAvailable />);
+    fireEvent.click(await screen.findByRole('checkbox'));
+    fireEvent.click(screen.getByRole('button', { name: /Get Agent Launch Access/i }));
+    await waitFor(() => expect(toastModule.toast.error).toHaveBeenCalled());
+    const [arg] = (toastModule.toast.error as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(typeof arg).not.toBe('string');
+    render(arg);
+    expect(screen.getByText(PAID_INTAKE_CLOSED_MESSAGE)).toBeInTheDocument();
+    expect(toastModule.toast.error).toHaveBeenCalledTimes(1);
+    expect(toastModule.toast.info).not.toHaveBeenCalled();
+  });
+
   it('keeps the direct package route in preparation without loading commercial data', () => {
     render(<AgentPackageSelection />);
 

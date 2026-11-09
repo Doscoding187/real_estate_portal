@@ -44,7 +44,7 @@ import {
   PAID_WAITLIST_LABEL,
   PAID_WAITLIST_MAILTO,
 } from '@shared/paidIntakeCopy';
-import { toastPaidError } from '@/components/commercial/PaidIntakeNotice';
+import { isPaidIntakeClosedError, toastPaidError } from '@/components/commercial/PaidIntakeNotice';
 import { CommercialActivationNotice } from '@/components/commercial/CommercialActivationNotice';
 
 const LAUNCH_ACCESS_CLOSED_PATTERN =
@@ -464,7 +464,9 @@ export function CommercialAgentPackageSelection({
       legal.reload();
       void catalog.refetch();
       const status = (error as { status?: unknown } | null)?.status;
-      if (status === 409) {
+      if (isPaidIntakeClosedError(error)) {
+        toastPaidError(error, 'Could not request the Agent invoice');
+      } else if (status === 409) {
         const raw = error instanceof Error ? error.message.trim() : '';
         const message = raw && !/^HTTP \d+/.test(raw) ? raw : '';
         if (!message) {

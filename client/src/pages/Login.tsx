@@ -46,7 +46,7 @@ import {
 import { toast } from 'sonner';
 import { APP_TITLE } from '@/const';
 import { apiFetch, ApiError } from '@/lib/api';
-import { getLoginRedirectPath, getSafeNextPath } from '@/lib/publicNavigation';
+import { getLoginRedirectPath, getSafeNextPath, isHomeNextPath } from '@/lib/publicNavigation';
 import { cn } from '@/lib/utils';
 import type { RegistrationLegalRelease } from '@/lib/registrationLegal';
 
@@ -861,7 +861,7 @@ export default function Login() {
               </SheetTitle>
               <SheetDescription className="text-left text-sm leading-6 text-slate-600 dark:text-slate-400">
                 Sign in to your account to continue.
-                {safeNextPath ? ` You will be returned to ${safeNextPath}.` : ''}
+                {safeNextPath && !isHomeNextPath(safeNextPath) ? ` You will be returned to ${safeNextPath}.` : ''}
               </SheetDescription>
             </SheetHeader>
 
