@@ -322,20 +322,9 @@ function AccountMenu({
 
   const handleTriggerMouseEnter = () => {
     cancelHoverClose();
-    // Account access is click-opened. Keep the visitor auth menu open while
-    // the pointer travels to an auth action; sibling navigation still closes
-    // it through the parent's closeSignal coordination.
+    // Account access is click-open / click-close only. Hover never closes it;
+    // sibling navigation closes it on click through the parent's closeSignal.
     onTriggerMouseEnter?.();
-  };
-
-  const scheduleHoverClose = () => {
-    if (isVisitor || !open) return;
-
-    cancelHoverClose();
-    accountMenuCloseTimerRef.current = window.setTimeout(() => {
-      accountMenuCloseTimerRef.current = null;
-      handleOpenChange(false);
-    }, 220);
   };
 
   const handleLogout = async () => {
@@ -362,7 +351,6 @@ function AccountMenu({
             type="button"
             className="public-navbar__account-trigger public-navbar__account-trigger--mobile"
             onMouseEnter={handleTriggerMouseEnter}
-            onMouseLeave={isVisitor ? undefined : scheduleHoverClose}
             aria-label={
               user ? `Open account menu for ${accountName}` : 'Open login and account menu'
             }
@@ -387,7 +375,6 @@ function AccountMenu({
             type="button"
             className="public-navbar__account-trigger"
             onMouseEnter={handleTriggerMouseEnter}
-            onMouseLeave={isVisitor ? undefined : scheduleHoverClose}
             aria-label={
               user ? `Open account menu for ${accountName}` : 'Open login and account menu'
             }
@@ -404,8 +391,6 @@ function AccountMenu({
         align="end"
         sideOffset={8}
         className="public-navbar__account-menu-content"
-        onMouseEnter={isVisitor ? undefined : cancelHoverClose}
-        onMouseLeave={isVisitor ? undefined : scheduleHoverClose}
       >
         {user ? (
           <>
@@ -640,18 +625,19 @@ export function EnhancedNavbar() {
     }
   };
 
-  const openDesktopMenu = (menuValue: string) => {
+  const openDesktopMenu = (menuValue: string, closeAccount = true) => {
     cancelDesktopMenuClose();
-    closeAccountMenus();
+    if (closeAccount) closeAccountMenus();
     setDesktopMenuValue(menuValue);
   };
 
   const handleDesktopMenuMouseEnter = (menuValue: string) => {
     desktopMenuOpenedByHoverRef.current = true;
-    openDesktopMenu(menuValue);
+    openDesktopMenu(menuValue, false);
   };
 
   const toggleDesktopMenu = (menuValue: string) => {
+    closeAccountMenus();
     // Pointer activation fires mouseenter before click. Keep the panel open in
     // that sequence; keyboard activation still toggles normally.
     if (desktopMenuOpenedByHoverRef.current && desktopMenuValue === menuValue) {
@@ -677,6 +663,12 @@ export function EnhancedNavbar() {
   const handleDirectNavigation = () => {
     closeDesktopMenu();
     closeAccountMenus();
+  };
+
+  // Hovering a sibling link only dismisses desktop mega-menus; the account
+  // menu closes on click.
+  const handleDirectHover = () => {
+    closeDesktopMenu();
   };
 
   const handleAccountOpenChange = (open: boolean, closeMobileDrawer = false) => {
@@ -767,7 +759,7 @@ export function EnhancedNavbar() {
                       className="public-navbar__desktop-trigger public-navbar__desktop-direct-link"
                       data-active={activeNavigationOwner === menu.id}
                       aria-current={activeNavigationOwner === menu.id ? 'page' : undefined}
-                      onMouseEnter={handleDirectNavigation}
+                      onMouseEnter={handleDirectHover}
                       onClick={handleDirectNavigation}
                     >
                       {menu.label}
@@ -815,7 +807,7 @@ export function EnhancedNavbar() {
                 ? 'page'
                 : undefined
             }
-            onMouseEnter={handleDirectNavigation}
+            onMouseEnter={handleDirectHover}
             onClick={handleDirectNavigation}
           >
             <Briefcase className="size-4" aria-hidden="true" />

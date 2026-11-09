@@ -45,7 +45,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { APP_TITLE } from '@/const';
-import { apiFetch, ApiError, getApiUrl } from '@/lib/api';
+import { apiFetch, ApiError } from '@/lib/api';
 import { getLoginRedirectPath, getSafeNextPath } from '@/lib/publicNavigation';
 import { cn } from '@/lib/utils';
 import type { RegistrationLegalRelease } from '@/lib/registrationLegal';
@@ -255,26 +255,7 @@ export default function Login() {
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showRegisterPassword, setShowRegisterPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [founderLoginAvailable, setFounderLoginAvailable] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    const controller = new AbortController();
-    void (async () => {
-      try {
-        const status = await apiFetch<{ founderLoginAvailable: boolean }>('/auth/google/status', {
-          signal: controller.signal,
-        });
-        if (active && status?.founderLoginAvailable === true) setFounderLoginAvailable(true);
-      } catch {
-        /* Availability remains false unless the server explicitly enables it. */
-      }
-    })();
-    return () => {
-      active = false;
-      controller.abort();
-    };
-  }, []);
+  const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
 
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -390,8 +371,8 @@ export default function Login() {
     }
   };
 
-  const onResendVerification = async () => {
-    const email = loginForm.getValues('email');
+  const onResendVerification = async (emailOverride?: string) => {
+    const email = typeof emailOverride === 'string' ? emailOverride : loginForm.getValues('email');
     if (!email) {
       toast.error('Enter your email address first.');
       return;
@@ -442,9 +423,10 @@ export default function Login() {
         result.message ||
           'Account created successfully! Please check your email to verify your account.',
       );
+      setRegisteredEmail(data.email);
       registerForm.reset(registerDefaults);
       closeRegister();
-      setSignInOpen(true);
+      setSignInOpen(false);
     } catch (error) {
       if (error instanceof ApiError) {
         toast.error(error.body?.error || `Registration failed (${error.status})`);
@@ -713,11 +695,11 @@ export default function Login() {
                 <div className="border-t border-slate-200 dark:border-white/[0.08]" />
 
                 {legalRelease ? (
-                  <div className="space-y-3 text-sm">
+                  <div className="space-y-3 text-sm text-slate-800 dark:text-slate-100">
                     <p>
                       Read the{' '}
                       <a
-                        className="underline"
+                        className="font-medium text-indigo-700 underline underline-offset-2 hover:text-indigo-900 focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-2 dark:text-indigo-300 dark:hover:text-indigo-100 dark:focus-visible:ring-indigo-300"
                         href={`${legalRelease.terms.path}?bundle=${encodeURIComponent(legalRelease.bundleId)}`}
                         target="_blank"
                         rel="noopener noreferrer"
@@ -726,7 +708,7 @@ export default function Login() {
                       </a>{' '}
                       and{' '}
                       <a
-                        className="underline"
+                        className="font-medium text-indigo-700 underline underline-offset-2 hover:text-indigo-900 focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-2 dark:text-indigo-300 dark:hover:text-indigo-100 dark:focus-visible:ring-indigo-300"
                         href={`${legalRelease.privacy.path}?bundle=${encodeURIComponent(legalRelease.bundleId)}`}
                         target="_blank"
                         rel="noopener noreferrer"
@@ -738,7 +720,7 @@ export default function Login() {
                     <div className="flex items-start gap-3">
                       <Checkbox
                         id="registration-terms"
-                        className="mt-0.5 border-slate-500 bg-white data-[state=checked]:border-indigo-600 data-[state=checked]:bg-indigo-600"
+                        className="mt-0.5 border-slate-500 bg-white dark:border-slate-300 dark:bg-slate-900 data-[state=checked]:border-indigo-600 data-[state=checked]:bg-indigo-600"
                         checked={registerForm.watch('termsAccepted')}
                         onCheckedChange={checked =>
                           registerForm.setValue('termsAccepted', checked === true, {
@@ -746,7 +728,7 @@ export default function Login() {
                           })
                         }
                       />
-                      <label htmlFor="registration-terms">
+                      <label htmlFor="registration-terms" className="text-slate-800 dark:text-slate-100">
                         I agree to the Terms of Service. I have been shown the Privacy Notice.
                       </label>
                     </div>
@@ -813,6 +795,39 @@ export default function Login() {
             </div>
           </DialogContent>
         ) : null}
+      </Dialog>
+
+      <Dialog
+        open={registeredEmail !== null}
+        onOpenChange={open => (!open ? setRegisteredEmail(null) : undefined)}
+      >
+        <DialogContent className="border-slate-200/80 bg-white/95 text-slate-950 dark:border-white/10 dark:bg-[#141d2e]/95 dark:text-slate-50 sm:max-w-[460px]">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold">Check your email</DialogTitle>
+            <DialogDescription className="text-sm leading-6 text-slate-700 dark:text-slate-300">
+              Your account has been created. We sent a verification email to{' '}
+              <strong>{registeredEmail}</strong>. Verify your address, then log in.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-3">
+            <Button
+              type="button"
+              onClick={() => void onResendVerification(registeredEmail ?? undefined)}
+            >
+              Resend verification email
+            </Button>
+            <button
+              type="button"
+              onClick={() => {
+                setRegisteredEmail(null);
+                setSignInOpen(true);
+              }}
+              className="text-sm font-semibold text-indigo-700 underline hover:text-indigo-600 dark:text-indigo-300 dark:hover:text-indigo-200"
+            >
+              Back to log in
+            </button>
+          </div>
+        </DialogContent>
       </Dialog>
 
       <Sheet open={signInOpen} onOpenChange={setSignInOpen}>
@@ -954,7 +969,7 @@ export default function Login() {
                       <Button
                         type="button"
                         variant="link"
-                        onClick={onResendVerification}
+                        onClick={() => void onResendVerification()}
                         className="mt-2 h-auto p-0 font-semibold text-amber-800 hover:text-amber-700 dark:text-amber-300 dark:hover:text-amber-200"
                       >
                         Resend verification email
@@ -963,13 +978,6 @@ export default function Login() {
                   ) : null}
                 </form>
               </Form>
-              {founderLoginAvailable ? (
-                <div className="mt-5 border-t border-slate-200 pt-5 dark:border-white/[0.08]">
-                  <Button asChild variant="outline" className="h-12 w-full rounded-xl">
-                    <a href={getApiUrl('/auth/google/start')}>Founder sign-in with Google</a>
-                  </Button>
-                </div>
-              ) : null}
             </div>
 
             <div className="mt-8 border-t border-slate-200 pt-5 dark:border-white/[0.08]">

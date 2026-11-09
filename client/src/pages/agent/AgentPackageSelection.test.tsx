@@ -203,6 +203,49 @@ describe('Agent pre-payment preparation', () => {
       ),
     );
   });
+  it('shows a friendly closed notice, not HTTP 409, when paid purchases are closed', async () => {
+    const toastModule = await import('sonner');
+    const base = apiFetchMock.getMockImplementation()!;
+    apiFetchMock.mockImplementation((endpoint: string, ...rest: unknown[]) => {
+      if (endpoint === '/agent/request-launch-access-invoice') {
+        return Promise.reject(
+          Object.assign(new Error('Your account is in preparation-only onboarding.'), {
+            status: 409,
+          }),
+        );
+      }
+      return base(endpoint, ...rest);
+    });
+    render(<CommercialAgentPackageSelection agentLaunchAccessAvailable />);
+    fireEvent.click(await screen.findByRole('checkbox'));
+    fireEvent.click(screen.getByRole('button', { name: /Get Agent Launch Access/i }));
+    await waitFor(() => expect(toastModule.toast.info).toHaveBeenCalled());
+    const message = String((toastModule.toast.info as ReturnType<typeof vi.fn>).mock.calls[0][0]);
+    expect(message).toContain('not open for your account yet');
+    expect(message).toContain('support@propertylistifysa.co.za');
+    expect(message).not.toMatch(/HTTP 409/);
+    expect(toastModule.toast.error).not.toHaveBeenCalled();
+  });
+
+  it('shows the server message for a 409 conflict', async () => {
+    const toastModule = await import('sonner');
+    const base = apiFetchMock.getMockImplementation()!;
+    apiFetchMock.mockImplementation((endpoint: string, ...rest: unknown[]) => {
+      if (endpoint === '/agent/request-launch-access-invoice') {
+        return Promise.reject(
+          Object.assign(new Error('The price changed. Review the new quote.'), { status: 409 }),
+        );
+      }
+      return base(endpoint, ...rest);
+    });
+    render(<CommercialAgentPackageSelection agentLaunchAccessAvailable />);
+    fireEvent.click(await screen.findByRole('checkbox'));
+    fireEvent.click(screen.getByRole('button', { name: /Get Agent Launch Access/i }));
+    await waitFor(() =>
+      expect(toastModule.toast.error).toHaveBeenCalledWith('The price changed. Review the new quote.'),
+    );
+  });
+
   it('keeps the direct package route in preparation without loading commercial data', () => {
     render(<AgentPackageSelection />);
 

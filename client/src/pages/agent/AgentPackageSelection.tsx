@@ -42,6 +42,9 @@ import { toast } from 'sonner';
 import { toastPaidError } from '@/components/commercial/PaidIntakeNotice';
 import { CommercialActivationNotice } from '@/components/commercial/CommercialActivationNotice';
 
+const LAUNCH_ACCESS_CLOSED_PATTERN =
+  /preparation-only onboarding|not open|paused|admitted|closed|not yet open|commercial activation/i;
+
 type RouterOutputs = inferRouterOutputs<AppRouter>;
 type AgentBillingWorkspace = RouterOutputs['billing']['agentWorkspace'];
 type AgentInvoice = NonNullable<AgentBillingWorkspace['activeInvoice']>;
@@ -452,7 +455,22 @@ export function CommercialAgentPackageSelection({
     } catch (error) {
       legal.reload();
       void catalog.refetch();
-      toastPaidError(error, 'Could not request the Agent invoice');
+      const status = (error as { status?: unknown } | null)?.status;
+      if (status === 409) {
+        const raw = error instanceof Error ? error.message.trim() : '';
+        const message = raw && !/^HTTP \d+/.test(raw) ? raw : '';
+        if (!message || LAUNCH_ACCESS_CLOSED_PATTERN.test(message)) {
+          toast.info(
+            'Agent Launch Access purchases are not open for your account yet. We will email you when they open. Questions: support@propertylistifysa.co.za',
+            { duration: 15000 },
+          );
+        } else {
+          toast.error(message);
+          void workspaceQuery.refetch();
+        }
+      } else {
+        toastPaidError(error, 'Could not request the Agent invoice');
+      }
     } finally {
       setIsRequestingInvoice(false);
     }

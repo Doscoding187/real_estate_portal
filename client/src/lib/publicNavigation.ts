@@ -1195,7 +1195,11 @@ export function getCanonicalAccountDestination(user: PublicNavigationUser): stri
 }
 
 export function getLoginRedirectPath(user: PublicNavigationUser, nextPath: unknown): string {
-  return getSafeNextPath(nextPath) ?? getCanonicalAccountDestination(user) ?? '/user/dashboard';
+  const safeNext = getSafeNextPath(nextPath);
+  const isHomeNext = safeNext !== null && /^\/(?:[?#].*)?$/.test(safeNext);
+  return (
+    (isHomeNext ? null : safeNext) ?? getCanonicalAccountDestination(user) ?? '/user/dashboard'
+  );
 }
 
 export function getAccountDisplayName(user: PublicNavigationUser) {

@@ -38,6 +38,7 @@ const CountryDiscoveryPage = lazy(() => import('./pages/CountryDiscoveryPage'));
 const CanonicalPlacePage = lazy(() => import('./pages/CanonicalPlacePage'));
 const SmartDashboardRedirect = lazy(() => import('./components/SmartDashboardRedirect'));
 const Login = lazy(() => import('./pages/Login'));
+const FounderLogin = lazy(() => import('./pages/FounderLogin'));
 
 const AgencyDashboard = lazy(() => import('./pages/agency/AgencyDashboard'));
 const AgentDashboard = lazy(() => import('./pages/AgentDashboard'));
@@ -504,6 +505,7 @@ function Router() {
 
           {/* Auth */}
           <Route path="/login" component={Login} />
+          <Route path="/founder/login" component={FounderLogin} />
           <Route path="/forgot-password" component={ForgotPassword} />
           <Route path="/reset-password" component={ResetPassword} />
           <Route path="/set-password" component={SetPassword} />

@@ -122,4 +122,25 @@ describe('registration legal choice', () => {
     expect(screen.getByRole('button', { name: /Continue to agency setup/ })).toBeDisabled();
     expect(screen.queryByRole('checkbox', { name: /I agree/ })).not.toBeInTheDocument();
   });
+  it('shows a Check your email state after register, never Welcome back, and resends via the existing endpoint', async () => {
+    render(<Login />);
+    const choice = await screen.findByRole('checkbox', { name: /I agree to the Terms/ });
+    const user = await fillForm();
+    await user.click(choice);
+    await user.click(screen.getByRole('button', { name: /Continue to agency setup/ }));
+    expect(await screen.findByText('Check your email')).toBeInTheDocument();
+    expect(screen.getByText('person@example.invalid')).toBeInTheDocument();
+    expect(screen.queryByText('Welcome back')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Resend verification email' }));
+    await waitFor(() =>
+      expect(controls.fetch).toHaveBeenCalledWith(
+        '/auth/resend-verification',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ email: 'person@example.invalid' }),
+        }),
+      ),
+    );
+    expect(screen.getByRole('button', { name: 'Back to log in' })).toBeInTheDocument();
+  });
 });
