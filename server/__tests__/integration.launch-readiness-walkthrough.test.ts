@@ -373,8 +373,8 @@ describeWithDb('AGY-S8: full Agency journey walkthrough', () => {
       const [invoiceAfter] = await db.select().from(billingInvoices)
         .where(eq(billingInvoices.id, invoiceId)).limit(1);
       expect(invoiceAfter.status).toBe('paid');
-      // Publication still waits for the agency approval stage.
-      expect((await principalCaller.agency.getAccessState()).workspaceAccess.publishing).toBe(false);
+      // Settlement activates the subscription, so publishing opens (as stage 4d asserted before D1).
+      expect((await principalCaller.agency.getAccessState()).workspaceAccess.publishing).toBe(true);
     } finally {
       if (previousPause === undefined) delete process.env.PAID_MVP_SALES_PAUSED;
       else process.env.PAID_MVP_SALES_PAUSED = previousPause;
