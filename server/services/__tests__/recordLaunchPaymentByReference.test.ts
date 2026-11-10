@@ -22,6 +22,7 @@ type Fixture = {
 
 function fakeDb(fixture: Fixture) {
   const inserts: Array<{ table: string; values: any }> = [];
+  const deletes: string[] = [];
   const rowsFor = (name: string, joined: boolean) => {
     if (joined) return [];
     if (name === 'billing_invoices') return fixture.invoice ? [fixture.invoice] : [];
@@ -59,9 +60,14 @@ function fakeDb(fixture: Fixture) {
         return { $returningId: async () => [{ id: 77 }], onDuplicateKeyUpdate: async () => [] };
       },
     }),
+    delete: (table: any) => ({
+      where: async () => {
+        deletes.push(tableName(table));
+      },
+    }),
     transaction: async (fn: (tx: any) => Promise<unknown>) => fn(db),
   };
-  return { db, inserts };
+  return { db, inserts, deletes };
 }
 
 const issuedInvoice = {
@@ -135,35 +141,109 @@ describe('billing.recordLaunchPaymentByReference', () => {
     ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
   });
 
-  it('inserts a manual_eft under_review payment and an audit event, then hands off to review', async () => {
+  const approveOk = { success: true, invoiceStatus: 'paid', activationOccurred: true };
+
+  it('approves the exact balance through reviewManualPayment and logs the audit after success', async () => {
     const { db, inserts } = fakeDb({ invoice: issuedInvoice, payments: [] });
     mockGetDb.mockResolvedValue(db);
-    // The fake has no payment row for the review join, so review stops at NOT_FOUND.
-    await expect(recordLaunchPaymentByReference(input)).rejects.toThrow('Payment not found.');
+    const review = vi.fn(async () => {
+      // No audit event exists until the review has succeeded.
+      expect(inserts.find(row => row.table === 'billing_audit_events')).toBeUndefined();
+      return approveOk;
+    });
+    const result = await recordLaunchPaymentByReference(input, { review: review as any });
+    expect(review).toHaveBeenCalledWith(
+      expect.objectContaining({
+        paymentId: 77,
+        decision: 'approve',
+        verifiedAmount: 49900,
+        bankPaymentReference: 'PL-AN-REF123',
+      }),
+    );
+    expect(result).toMatchObject({ success: true, paymentId: 77 });
     const payment = inserts.find(row => row.table === 'billing_payments');
     expect(payment?.values).toMatchObject({
       invoiceId: 5,
       paymentMethod: 'manual_eft',
       state: 'under_review',
       amount: 49900,
-      paymentReference: 'PL-AN-REF123',
       payerName: 'Pat Agent',
       submittedBy: 1,
     });
     expect(payment?.values.metadata.notes).toContain('recorded by finance finance@example.com');
-    const event = inserts.find(row => row.table === 'billing_audit_events');
-    expect(event?.values.eventType).toBe('payment_recorded_by_finance');
+    expect(inserts.find(row => row.table === 'billing_audit_events')?.values.eventType).toBe(
+      'payment_recorded_by_finance',
+    );
   });
 
-  it('reuses an existing under_review payment instead of inserting a second one', async () => {
-    const { db, inserts } = fakeDb({
+  it('uses the supplied bank reference for the review', async () => {
+    mockGetDb.mockResolvedValue(fakeDb({ invoice: issuedInvoice }).db);
+    const review = vi.fn(async () => approveOk);
+    await recordLaunchPaymentByReference({ ...input, bankReference: 'BANK-1' }, { review: review as any });
+    expect(review).toHaveBeenCalledWith(expect.objectContaining({ bankPaymentReference: 'BANK-1' }));
+  });
+
+  it('routes an amount below the balance to partial_payment', async () => {
+    mockGetDb.mockResolvedValue(fakeDb({ invoice: issuedInvoice }).db);
+    const review = vi.fn(async () => ({ success: true }));
+    await recordLaunchPaymentByReference({ ...input, amountReceivedMinor: 10000 }, { review: review as any });
+    expect(review).toHaveBeenCalledWith(
+      expect.objectContaining({ decision: 'partial_payment', verifiedAmount: 10000 }),
+    );
+  });
+
+  it('rejects an overpayment before any write and never calls review', async () => {
+    const { db, inserts, deletes } = fakeDb({ invoice: issuedInvoice });
+    mockGetDb.mockResolvedValue(db);
+    const review = vi.fn();
+    await expect(
+      recordLaunchPaymentByReference({ ...input, amountReceivedMinor: 49901 }, { review: review as any }),
+    ).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+      message: expect.stringContaining('more than the balance due'),
+    });
+    expect(inserts).toEqual([]);
+    expect(deletes).toEqual([]);
+    expect(review).not.toHaveBeenCalled();
+  });
+
+  it('rejects a non-payable invoice before any write', async () => {
+    const { db, inserts } = fakeDb({ invoice: { ...issuedInvoice, status: 'void' } });
+    mockGetDb.mockResolvedValue(db);
+    await expect(recordLaunchPaymentByReference(input)).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    expect(inserts).toEqual([]);
+  });
+
+  it('removes the new row and writes no audit event when review fails', async () => {
+    const { db, inserts, deletes } = fakeDb({ invoice: issuedInvoice });
+    mockGetDb.mockResolvedValue(db);
+    const review = vi.fn(async () => {
+      throw new Error('review refused');
+    });
+    await expect(recordLaunchPaymentByReference(input, { review: review as any })).rejects.toThrow(
+      'review refused',
+    );
+    expect(inserts.filter(row => row.table === 'billing_payments')).toHaveLength(1);
+    expect(deletes).toEqual(['billing_payments']);
+    expect(inserts.find(row => row.table === 'billing_audit_events')).toBeUndefined();
+  });
+
+  it('reuses an existing under_review payment: no second insert, and it is kept if review fails', async () => {
+    const { db, inserts, deletes } = fakeDb({
       invoice: issuedInvoice,
       payments: [{ id: 41, invoiceId: 5, state: 'under_review', amount: 49900 }],
     });
     mockGetDb.mockResolvedValue(db);
-    await expect(recordLaunchPaymentByReference(input)).rejects.toThrow('Payment not found.');
+    const review = vi.fn(async () => approveOk);
+    await recordLaunchPaymentByReference(input, { review: review as any });
     expect(inserts.filter(row => row.table === 'billing_payments')).toEqual([]);
-    const event = inserts.find(row => row.table === 'billing_audit_events');
-    expect(event?.values.paymentId).toBe(41);
+    expect(review).toHaveBeenCalledWith(expect.objectContaining({ paymentId: 41 }));
+    expect(inserts.find(row => row.table === 'billing_audit_events')?.values.paymentId).toBe(41);
+
+    const failing = vi.fn(async () => {
+      throw new Error('nope');
+    });
+    await expect(recordLaunchPaymentByReference(input, { review: failing as any })).rejects.toThrow('nope');
+    expect(deletes).toEqual([]);
   });
 });

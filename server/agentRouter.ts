@@ -137,6 +137,8 @@ const NOTIFICATION_TYPES = [
   'system_alert',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
+/** Notification types that carry lead or showing detail; hidden while locked. */
+const LEAD_NOTIFICATION_TYPES = ['lead_assigned', 'showing_scheduled', 'offer_received'] as const;
 const LIVE_AGENT_LISTING_STATUSES = ['available', 'published'] as const;
 const TERMINAL_FOLLOW_UP_STATUSES = ['converted', 'closed', 'lost'] as const;
 
@@ -654,9 +656,12 @@ export const agentRouter = router({
       const workspace = await resolveAgentWorkspaceProfile(db, userId);
       const agentRecord = workspace.agent?.status === 'approved' ? workspace.agent : null;
       const agentId = agentRecord?.id ?? null;
-      const leadWorkspace = agentRecord
-        ? { agent: agentRecord, currentAgencyId: workspace.currentAgencyId }
-        : null;
+      // Lead-derived figures are zeroed while Launch Access is not current.
+      const leadsUnlocked = await hasAgentLeadAccess(requireUser(ctx));
+      const leadWorkspace =
+        agentRecord && leadsUnlocked
+          ? { agent: agentRecord, currentAgencyId: workspace.currentAgencyId }
+          : null;
 
       const todayDate = new Date();
       todayDate.setHours(0, 0, 0, 0);
@@ -685,7 +690,7 @@ export const agentRouter = router({
           );
       }
 
-      if (agentId) {
+      if (agentId && leadsUnlocked) {
         showingsTodayCount = await countAgentShowingsInRange({
           db,
           agentId,
@@ -2692,7 +2697,7 @@ export const agentRouter = router({
       // them while Launch Access is not current. Rows are kept, not deleted.
       if (!(await hasAgentLeadAccess(requireUser(ctx)))) {
         conditions.push(
-          notInArray(notifications.type, ['lead_assigned', 'showing_scheduled', 'offer_received']),
+          notInArray(notifications.type, [...LEAD_NOTIFICATION_TYPES]),
         );
       }
 
@@ -2752,10 +2757,14 @@ export const agentRouter = router({
   getUnreadNotificationCount: agentProcedure.query(async ({ ctx }) => {
     const db = await getDb();
 
+    const conditions = [eq(notifications.userId, requireUser(ctx).id), eq(notifications.isRead, 0)];
+    if (!(await hasAgentLeadAccess(requireUser(ctx)))) {
+      conditions.push(notInArray(notifications.type, [...LEAD_NOTIFICATION_TYPES]));
+    }
     const [result] = await db
       .select({ count: count() })
       .from(notifications)
-      .where(and(eq(notifications.userId, requireUser(ctx).id), eq(notifications.isRead, 0)));
+      .where(and(...conditions));
 
     return { count: result?.count || 0 };
   }),

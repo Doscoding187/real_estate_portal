@@ -3374,13 +3374,17 @@ export async function lookupLaunchInvoiceByReference(input: {
  * Finance records a received EFT by invoice reference, then settles it through
  * the existing reviewManualPayment approval path (no duplicated activation).
  */
-export async function recordLaunchPaymentByReference(input: {
+export async function recordLaunchPaymentByReference(
+  input: {
   actorUser: BillingUser;
   paymentReference: string;
   amountReceivedMinor: number;
   paidOn: string;
   bankReference?: string;
-}) {
+},
+  // Injectable for tests only; production always uses the real review path.
+  deps: { review?: typeof reviewManualPayment } = {},
+) {
   if (!isBillingFinanceAdmin(input.actorUser)) {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Finance admin privileges required.' });
   }
@@ -3431,6 +3435,13 @@ export async function recordLaunchPaymentByReference(input: {
       .where(eq(billingPayments.invoiceId, invoice.id));
     const reusable = existing.find(row => row.state === 'under_review');
     const balance = Math.max(0, invoice.amountDue - invoice.amountPaid);
+    if (input.amountReceivedMinor > balance) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message:
+          'Amount is more than the balance due; record the exact amount or use the full review screen',
+      });
+    }
     let paymentId: number;
     if (reusable) {
       paymentId = reusable.id;
@@ -3464,33 +3475,65 @@ export async function recordLaunchPaymentByReference(input: {
         .$returningId();
       paymentId = Number(insert.id);
     }
-    await logBillingEvent(tx, {
-      ownerType: toBillingOwnerType(invoice.ownerType),
-      ownerId: invoice.ownerId,
-      subscriptionId: invoice.subscriptionId,
-      invoiceId: invoice.id,
+    return {
       paymentId,
-      actorUserId: input.actorUser.id,
-      eventType: 'payment_recorded_by_finance',
-      message: `Payment recorded by finance ${actorLabel} by reference.`,
-      afterData: {
-        paymentReference: invoice.paymentReference,
-        amountReceivedMinor: input.amountReceivedMinor,
-        paidOn: input.paidOn,
-        reusedPayment: Boolean(reusable),
-      },
-    });
-    return { paymentId, balance, bankPaymentReference: invoice.paymentReference };
+      balance,
+      bankPaymentReference: invoice.paymentReference,
+      created: !reusable,
+      invoice,
+    };
   });
 
   const settleDecision = input.amountReceivedMinor < prepared.balance ? 'partial_payment' : 'approve';
-  const result = await reviewManualPayment({
-    actorUser: input.actorUser,
+  // reviewManualPayment owns its own locked transaction and cannot take an outer
+  // one without changing its semantics, so a newly inserted row is compensated
+  // (deleted) if the review fails, and the audit event is written on success only.
+  let result: Awaited<ReturnType<typeof reviewManualPayment>>;
+  try {
+    result = await (deps.review ?? reviewManualPayment)({
+      actorUser: input.actorUser,
+      paymentId: prepared.paymentId,
+      decision: settleDecision,
+      note: `Recorded by finance ${actorLabel} by reference; received ${input.paidOn}.`,
+      verifiedAmount: input.amountReceivedMinor,
+      bankPaymentReference: input.bankReference?.trim() || prepared.bankPaymentReference,
+    });
+  } catch (error) {
+    if (prepared.created) {
+      try {
+        await db
+          .delete(billingPayments)
+          .where(
+            and(
+              eq(billingPayments.id, prepared.paymentId),
+              eq(billingPayments.state, 'under_review'),
+            ),
+          );
+      } catch (cleanupError) {
+        console.error('[Billing] Could not remove finance-recorded payment after failed review', {
+          paymentId: prepared.paymentId,
+          cleanupError,
+        });
+      }
+    }
+    throw error;
+  }
+  const invoice = prepared.invoice;
+  await logBillingEvent(db, {
+    ownerType: toBillingOwnerType(invoice.ownerType),
+    ownerId: invoice.ownerId,
+    subscriptionId: invoice.subscriptionId,
+    invoiceId: invoice.id,
     paymentId: prepared.paymentId,
-    decision: settleDecision,
-    note: `Recorded by finance ${actorLabel} by reference; received ${input.paidOn}.`,
-    verifiedAmount: input.amountReceivedMinor,
-    bankPaymentReference: input.bankReference?.trim() || prepared.bankPaymentReference,
+    actorUserId: input.actorUser.id,
+    eventType: 'payment_recorded_by_finance',
+    message: `Payment recorded by finance ${actorLabel} by reference.`,
+    afterData: {
+      paymentReference: invoice.paymentReference,
+      amountReceivedMinor: input.amountReceivedMinor,
+      paidOn: input.paidOn,
+      reusedPayment: !prepared.created,
+    },
   });
   return { ...result, paymentId: prepared.paymentId };
 }

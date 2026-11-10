@@ -13,7 +13,14 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 
-const rand = (minor: number) => `R${(minor / 100).toFixed(2)}`;
+const rand = (minor: number) =>
+  new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR' }).format(minor / 100);
+
+function localDateString(date = new Date()) {
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${date.getFullYear()}-${month}-${day}`;
+}
 
 /** Finance records a received EFT by invoice reference, then approves and activates. */
 export function RecordPaymentByReferenceCard({ onRecorded }: { onRecorded?: () => void }) {
@@ -21,7 +28,7 @@ export function RecordPaymentByReferenceCard({ onRecorded }: { onRecorded?: () =
   const [reference, setReference] = useState('');
   const [lookedUp, setLookedUp] = useState<string | null>(null);
   const [amountRand, setAmountRand] = useState('');
-  const [paidOn, setPaidOn] = useState(new Date().toISOString().slice(0, 10));
+  const [paidOn, setPaidOn] = useState(localDateString());
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const lookup = trpc.billing.admin.lookupLaunchInvoiceByReference.useQuery(
@@ -51,8 +58,20 @@ export function RecordPaymentByReferenceCard({ onRecorded }: { onRecorded?: () =
       : invoice
         ? String(Math.max(0, invoice.amountDue - invoice.amountPaid) / 100)
         : '';
-  const amountMinor = Math.round(Number(effectiveAmount) * 100);
-  const amountValid = Number.isSafeInteger(amountMinor) && amountMinor > 0;
+  const amountFormatOk = /^\d+(\.\d{1,2})?$/.test(effectiveAmount);
+  const amountMinor = amountFormatOk ? Math.round(Number(effectiveAmount) * 100) : 0;
+  const balanceMinor = invoice ? Math.max(0, invoice.amountDue - invoice.amountPaid) : 0;
+  const amountValid = amountFormatOk && amountMinor > 0 && amountMinor <= balanceMinor;
+  const amountMessage =
+    effectiveAmount === ''
+      ? null
+      : !amountFormatOk
+        ? 'Enter an amount in rand with at most 2 decimals.'
+        : amountMinor <= 0
+          ? 'Amount must be more than zero.'
+          : amountMinor > balanceMinor
+            ? `Amount is more than the balance due (${rand(balanceMinor)}).`
+            : null;
   const canApprove = Boolean(invoice) && invoice?.status !== 'paid' && amountValid && !!paidOn;
 
   return (
@@ -118,6 +137,7 @@ export function RecordPaymentByReferenceCard({ onRecorded }: { onRecorded?: () =
                 Date paid
                 <Input type="date" value={paidOn} onChange={event => setPaidOn(event.target.value)} />
               </label>
+              {amountMessage ? <p className="text-red-600 w-full">{amountMessage}</p> : null}
               <Button
                 disabled={!canApprove}
                 onClick={() => setConfirmOpen(true)}

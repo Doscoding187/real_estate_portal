@@ -9019,6 +9019,7 @@ export const agencyRouter = router({
             });
           }
 
+          await requireAgentCanReceiveAssignedLeads(Number(reassignmentUser.id));
           reassignTo = { user: reassignmentUser, agent: reassignmentAgent };
         }
 

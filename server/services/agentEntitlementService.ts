@@ -249,9 +249,10 @@ export async function getAgentEntitlementsForUserId(
     !trialExpired &&
     hasValue(agent?.phone);
   // An agency-affiliated profile without a current canonical membership is
-  // deliberately fail-closed. Independent agents have no agency claim and
-  // may continue working their own existing custody after commercial expiry.
-  // The lead routes apply the same membership boundary to each agency-owned
+  // deliberately fail-closed. This flag is custody only: it does not require
+  // commercial access. A lapsed independent agent keeps the data, but loses
+  // lead access through requireAgentLeadAccess (agentLeadAccessGate), which
+  // also requires hasCommercialAccess. The lead routes apply the same membership boundary to each agency-owned
   // lead, so this presentation capability cannot widen data access.
   const canAccessExistingLeads =
     emailVerified &&

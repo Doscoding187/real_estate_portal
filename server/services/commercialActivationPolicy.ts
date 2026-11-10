@@ -295,7 +295,11 @@ export function getCommercialActivationOperatorStatus(
   };
 }
 
-/** Suspend new invoices and finance activation without disabling paid access. */
+/**
+ * Suspend NEW invoice requests and checkout without disabling paid access.
+ * A pause or closed window does not block finance settlement of invoices that
+ * were already issued (see requirePaidMvpOwnerAdmissionForSettlement).
+ */
 export function requirePaidMvpSalesOpen(
   operation: string,
   environment: RuntimeEnvironment = process.env,
