@@ -19,7 +19,7 @@ export interface PartnerType {
   title: string;
   benefit: string;
   href: string;
-  /** Held at launch: shown with a "Coming soon" badge and not linked. */
+  /** Held at launch: shown with a "Not open yet" badge and not linked. */
   comingSoon?: boolean;
 }
 
@@ -137,7 +137,7 @@ export const PartnerSelectionSection: React.FC<PartnerSelectionSectionProps> = (
                   className="block h-full rounded-2xl bg-white p-6 opacity-70 md:p-8"
                 >
                   <span className="mb-4 inline-block rounded-full bg-slate-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-slate-600">
-                    Coming soon
+                    Not open yet
                   </span>
                   <h3 className="mb-3 text-2xl font-bold leading-tight text-gray-900">
                     {partnerType.title}

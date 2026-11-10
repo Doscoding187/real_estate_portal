@@ -177,7 +177,7 @@ export const SegmentationLayer: React.FC<SegmentationLayerProps> = () => {
                     data-testid="audience-gateway-coming-soon"
                     className="mt-8 inline-flex items-center justify-center rounded-xl bg-slate-100 px-5 py-4 text-base font-bold text-slate-600"
                   >
-                    Coming soon
+                    Not open yet
                   </span>
                 )}
               </article>

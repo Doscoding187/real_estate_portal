@@ -23,7 +23,7 @@ describe('Advertise product-led gateway', () => {
       'href',
       '/advertise/sell/agents',
     );
-    // Agency and Developer are held at launch: "Coming soon", not links.
+    // Agency and Developer are held at launch: "Not open yet", not links.
     expect(screen.queryByRole('link', { name: 'Explore Agency tools' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Explore Developer tools' })).not.toBeInTheDocument();
     expect(screen.getAllByTestId('audience-gateway-coming-soon')).toHaveLength(2);

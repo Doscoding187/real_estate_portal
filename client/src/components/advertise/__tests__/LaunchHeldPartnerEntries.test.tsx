@@ -29,10 +29,10 @@ describe('launch-held partner entries', () => {
     expect(document.querySelector('a[href*="service%2Fprofile"]')).toBeNull();
   });
 
-  it('partner selection shows Coming soon, not links, for developer and service provider', () => {
+  it('partner selection shows Not open yet, not links, for developer and service provider', () => {
     render(<PartnerSelectionSection />);
     expect(screen.getAllByTestId('partner-card-coming-soon')).toHaveLength(2);
-    expect(screen.getAllByText('Coming soon')).toHaveLength(2);
+    expect(screen.getAllByText('Not open yet')).toHaveLength(2);
     expect(document.querySelector('a[href="/advertise/developers"]')).toBeNull();
     expect(document.querySelector('a[href="/advertise/service-providers"]')).toBeNull();
     expect(document.querySelector('a[href="/advertise/agents"]')).not.toBeNull();
@@ -41,6 +41,7 @@ describe('launch-held partner entries', () => {
   it('segmentation keeps the agent link and holds agency and developer', () => {
     render(<SegmentationLayer />);
     expect(screen.getAllByTestId('audience-gateway-coming-soon')).toHaveLength(2);
+    expect(screen.getAllByText('Not open yet')).toHaveLength(2);
     expect(document.querySelector('a[href="/advertise/sell/agents"]')).not.toBeNull();
     expect(document.querySelector('a[href="/advertise/sell/agencies"]')).toBeNull();
     expect(document.querySelector('a[href="/advertise/sell/developers"]')).toBeNull();
