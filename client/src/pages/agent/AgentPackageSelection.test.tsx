@@ -309,7 +309,7 @@ describe('Agent pre-payment preparation', () => {
     fireEvent.click(screen.getByRole('button', { name: /Get Agent Launch Access/i }));
     await waitFor(() =>
       expect(toastModule.toast.error).toHaveBeenCalledWith(
-        'We could not request your invoice. Refresh the page and try again, or contact support@propertylistifysa.co.za.',
+        'We could not create your payment reference. Please try again.',
       ),
     );
     expect(toastModule.toast.info).not.toHaveBeenCalled();

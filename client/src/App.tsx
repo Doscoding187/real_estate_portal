@@ -3,6 +3,7 @@ import { lazy, Suspense } from 'react';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/NotFound';
+import { AgentListingAccessGate } from './components/agent/AgentListingAccessGate';
 import { Route, Switch, Redirect } from 'wouter';
 import ErrorBoundary from './components/ErrorBoundary';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -112,7 +113,6 @@ const UserDashboard = lazy(() => import('./pages/UserDashboard'));
 const LovableIntegrationHub = lazy(() => import('./pages/LovableIntegrationHub'));
 
 // Import the new Listing Wizard
-import { AgentListingAccessGate } from './components/agent/AgentListingAccessGate';
 const ListingWizard = lazy(() => import('./components/listing-wizard/ListingWizard'));
 const ListingTemplate = lazy(() => import('./pages/ListingTemplate'));
 
@@ -283,22 +283,30 @@ function Router() {
           </Route>
           <Route path="/agent/land/create">
             <RequireRole role="agent" unauthenticatedAuthEntry="signin">
+              <AgentListingAccessGate>
               {isLandVerticalAvailable() ? <LandAuthoringWorkspace /> : <LandDeferred audience="author" />}
+              </AgentListingAccessGate>
             </RequireRole>
           </Route>
           <Route path="/agent/commercial/create">
             <RequireRole role="agent" unauthenticatedAuthEntry="signin">
+              <AgentListingAccessGate>
               <CommercialOfficeAuthoringWorkspace />
+              </AgentListingAccessGate>
             </RequireRole>
           </Route>
           <Route path="/agent/commercial">
             <RequireRole role="agent" unauthenticatedAuthEntry="signin">
+              <AgentListingAccessGate>
               <CommercialInventory />
+              </AgentListingAccessGate>
             </RequireRole>
           </Route>
           <Route path="/agent/commercial/office/create">
             <RequireRole role="agent" unauthenticatedAuthEntry="signin">
+              <AgentListingAccessGate>
               <CommercialOfficeAuthoringWorkspace />
+              </AgentListingAccessGate>
             </RequireRole>
           </Route>
           <Route path="/agency/commercial/create">

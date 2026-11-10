@@ -96,7 +96,10 @@ const INVOICE_STEP: Record<string, AccessStep> = {
 export type AccessStep = 1 | 2 | 3 | 'active';
 
 /** Unknown or terminal statuses (cancelled, expired, ...) fall back to step 1. */
-export function getAccessStep(invoiceStatus: string | null | undefined, rejected: boolean): AccessStep {
+export function getAccessStep(
+  invoiceStatus: string | null | undefined,
+  rejected: boolean,
+): AccessStep {
   const mapped = INVOICE_STEP[String(invoiceStatus)] ?? 1;
   return rejected && mapped === 2 ? 2 : mapped;
 }
@@ -117,12 +120,15 @@ export function AgentAccessPanel({
   rejectionMessage,
   onSubmit,
   isSubmitting,
+  submitDisabledReason = null,
 }: {
   invoice: AgentInvoice;
   bankDetails?: AgentBankDetails;
   rejectionMessage?: string | null;
   onSubmit: () => void;
   isSubmitting: boolean;
+  /** When set (journey blocked or sales paused) the "I've paid" action is hidden. */
+  submitDisabledReason?: string | null;
 }) {
   const step = getAccessStep(invoice.status, Boolean(rejectionMessage));
   if (step === 1) return null;
@@ -178,7 +184,10 @@ export function AgentAccessPanel({
               role="alert"
               className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"
             >
-              <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" aria-hidden="true" />
+              <TriangleAlert
+                className="mt-0.5 h-4 w-4 shrink-0 text-amber-700"
+                aria-hidden="true"
+              />
               <div>
                 <p className="font-semibold">Finance requested a correction</p>
                 <p className="mt-1 leading-6">{rejectionMessage}</p>
@@ -188,14 +197,23 @@ export function AgentAccessPanel({
               </div>
             </div>
           ) : null}
-          <Button
-            type="button"
-            className="w-full"
-            disabled={isSubmitting}
-            onClick={onSubmit}
-          >
-            {isSubmitting ? 'Sending...' : 'I’ve paid'}
-          </Button>
+          {submitDisabledReason ? (
+            <div
+              role="status"
+              data-testid="agent-access-submit-closed"
+              className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950"
+            >
+              <p>{submitDisabledReason}</p>
+              <p className="mt-1 font-medium">
+                Already paid? Finance matches payments by your reference. You don&apos;t need to do
+                anything else.
+              </p>
+            </div>
+          ) : (
+            <Button type="button" className="w-full" disabled={isSubmitting} onClick={onSubmit}>
+              {isSubmitting ? 'Sending...' : 'I’ve paid'}
+            </Button>
+          )}
         </div>
       ) : step === 'active' ? (
         <div className="space-y-3" data-testid="agent-access-active">
@@ -212,10 +230,7 @@ export function AgentAccessPanel({
             it&apos;s confirmed, your access opens and we email you a paid invoice.
           </p>
           <p className="text-sm text-slate-600">
-            Status:{' '}
-            <span className="font-semibold text-slate-900">
-              {statusLabel(step)}
-            </span>
+            Status: <span className="font-semibold text-slate-900">{statusLabel(step)}</span>
           </p>
           <p className="text-xs text-slate-500">
             Reference {invoice.paymentReference} · {formatAccessAmount(invoice.amountDue)}

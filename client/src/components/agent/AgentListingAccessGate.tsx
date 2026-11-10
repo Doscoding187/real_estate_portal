@@ -22,7 +22,8 @@ export function AgentListingAccessGate({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const isAgent = user?.role === 'agent';
-  const { status, isLoading, error, retry, agentLaunchAccessAvailable } = useAgentOnboardingStatus();
+  const { status, isLoading, error, retry, agentLaunchAccessAvailable } =
+    useAgentOnboardingStatus();
 
   if (!isAgent) return <>{children}</>;
   if (isLoading) return null;
@@ -30,8 +31,7 @@ export function AgentListingAccessGate({ children }: { children: ReactNode }) {
   if (!error && isAgentPlanEntitled(status) && !publishBlock) return <>{children}</>;
 
   const journeyAction = getAgentJourneyAction(status, { agentLaunchAccessAvailable });
-  const workspaceOpen =
-    !error && isAgentWorkspaceOpen(status) && !isAgentPaymentBlocked(status);
+  const workspaceOpen = !error && isAgentWorkspaceOpen(status) && !isAgentPaymentBlocked(status);
 
   return (
     <AgentAppShell>

@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { PlanGateDialog } from '@/components/agent/PlanGateDialog';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
@@ -25,12 +26,19 @@ import {
  */
 export function AgentPlanGateLayer() {
   const { status, isLoading, error } = useAgentOnboardingStatus();
+  const [location] = useLocation();
   const open = usePlanGateOpen();
   const ready = !isLoading && !error && isAgentWorkspaceOpen(status);
   const entitled = isAgentPlanEntitled(status);
   const blocked = isAgentPaymentBlocked(status);
   const statusBanner = getAgentStatusBannerCopy(status);
   const available = ready && !entitled;
+
+  useEffect(() => {
+    // A route change or unmounting the shell must not leave a stale open flag.
+    closePlanGate();
+    return () => closePlanGate();
+  }, [location]);
 
   useEffect(() => {
     // Not ready (loading, error, unverified) or already entitled: no control may
@@ -81,6 +89,7 @@ export function AgentPlanGateLayer() {
         <PlanGateDialog
           open={open}
           blockedReason={statusBanner?.description ?? null}
+          workspaceEnabled={status?.commercial?.ownerSource !== 'agency_membership'}
           onOpenChange={next => {
             if (next) {
               openPlanGate();

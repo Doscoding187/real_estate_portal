@@ -1,23 +1,16 @@
-import {
-  EftPaymentNoticeForm,
-  usePaymentNoticeRequest,
-} from '@/components/billing/EftPaymentNoticeForm';
+import { usePaymentNoticeRequest } from '@/components/billing/EftPaymentNoticeForm';
 import { AgentAccessPanel, getPayerDisplayName, localDateIso } from '@/components/agent/AgentAccessPanel';
-import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useSearch } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { APP_TITLE } from '@/const';
 import { apiFetch } from '@/lib/api';
 import { getAgentJourneyAction } from '@/lib/agentJourney';
 import { trpc } from '@/lib/trpc';
-import {
-  useAgentLaunchInvoiceRequest,
-  type AgentBankDetails,
-  type AgentInvoice,
-} from '@/hooks/useAgentLaunchInvoiceRequest';
+import { useAgentLaunchInvoiceRequest } from '@/hooks/useAgentLaunchInvoiceRequest';
 import {
   formatCommercialLimitLabel,
   formatCommercialLimitValue,
@@ -39,8 +32,6 @@ import {
   ExternalLink,
   LogOut,
   ShieldCheck,
-  TriangleAlert,
-  UploadCloud,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {

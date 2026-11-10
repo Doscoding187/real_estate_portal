@@ -60,7 +60,9 @@ export const PLAN_PROMPT_SESSION_KEY = 'pl.agent.planPrompt.v1';
 
 function readSession(): string | null {
   try {
-    return typeof window === 'undefined' ? null : window.sessionStorage.getItem(PLAN_PROMPT_SESSION_KEY);
+    return typeof window === 'undefined'
+      ? null
+      : window.sessionStorage.getItem(PLAN_PROMPT_SESSION_KEY);
   } catch {
     return null;
   }

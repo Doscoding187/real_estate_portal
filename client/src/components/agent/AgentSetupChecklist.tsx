@@ -11,18 +11,12 @@ type ChecklistStep = {
   key: 'profile' | 'draft' | 'plan' | 'pay' | 'live';
   label: string;
   done: boolean;
+  note?: string;
   actionLabel?: string;
   onAction?: () => void;
 };
 
-const PLAN_CHOSEN_STATES = [
-  'pending_payment',
-  'payment_under_review',
-  'trial',
-  'active',
-  'grace_period',
-];
-const PAID_STATES = ['payment_under_review', 'trial', 'active', 'grace_period'];
+const PLAN_CHOSEN_STATES = ['pending_payment', 'payment_under_review', 'active', 'grace_period'];
 
 /**
  * "Get set up" checklist for the Agent dashboard. Done states come only from
@@ -46,6 +40,8 @@ export function AgentSetupChecklist({
   const invoice = workspaceQuery.data?.activeInvoice ?? null;
   const entitled = isAgentPlanEntitled(status);
   const subscriptionStatus = String(status.subscriptionStatus);
+  const underReview =
+    !entitled && (subscriptionStatus === 'payment_under_review' || invoice?.status === 'submitted');
 
   const steps: ChecklistStep[] = [
     {
@@ -72,12 +68,11 @@ export function AgentSetupChecklist({
     {
       key: 'pay',
       label: 'Pay',
-      done:
-        entitled ||
-        invoice?.status === 'submitted' ||
-        PAID_STATES.includes(subscriptionStatus),
-      actionLabel: invoice ? 'View invoice' : undefined,
-      onAction: invoice ? openPlanGate : undefined,
+      // Done only when paid by the shared rule; a payment notice under review is not done.
+      done: entitled,
+      note: underReview ? 'Under review' : undefined,
+      actionLabel: invoice || underReview ? 'View payment details' : undefined,
+      onAction: invoice || underReview ? openPlanGate : undefined,
     },
     { key: 'live', label: 'Go live', done: isAgentPlanEntitled(status) },
   ];
@@ -109,6 +104,9 @@ export function AgentSetupChecklist({
                 {index + 1}. {step.label}
               </span>
             </div>
+            {!step.done && step.note ? (
+              <span className="text-xs font-medium text-amber-700">{step.note}</span>
+            ) : null}
             {!step.done && step.onAction && step.actionLabel ? (
               <Button
                 type="button"

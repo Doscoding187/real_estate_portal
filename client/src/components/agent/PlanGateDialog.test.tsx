@@ -2,8 +2,15 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { availabilityMock, catalogMock, workspaceMock, submitMock, legalChoiceMock, requestMock, toastMock } =
-  vi.hoisted(() => ({
+const {
+  availabilityMock,
+  catalogMock,
+  workspaceMock,
+  submitMock,
+  legalChoiceMock,
+  requestMock,
+  toastMock,
+} = vi.hoisted(() => ({
   legalChoiceMock: vi.fn(),
   requestMock: vi.fn(),
   toastMock: { success: vi.fn(), error: vi.fn(), info: vi.fn() },
@@ -51,17 +58,15 @@ vi.mock('@/lib/trpc', () => ({
   trpc: {
     billing: {
       agentWorkspace: { useQuery: () => workspaceMock() },
-      submitLaunchAccessPaymentNotice: { useMutation: () => ({ mutateAsync: submitMock, isPending: false }) },
+      submitLaunchAccessPaymentNotice: {
+        useMutation: () => ({ mutateAsync: submitMock, isPending: false }),
+      },
     },
   },
 }));
 
 import { PlanGateDialog } from './PlanGateDialog';
-import {
-  getAccessStep,
-  getPayerDisplayName,
-  localDateIso,
-} from './AgentAccessPanel';
+import { getAccessStep, getPayerDisplayName, localDateIso } from './AgentAccessPanel';
 
 const product = {
   audience: 'agent',
@@ -78,7 +83,11 @@ beforeEach(() => {
   legalChoiceMock.mockReturnValue({ accepted: true });
   workspaceMock.mockReturnValue({ data: undefined, refetch: vi.fn() });
   availabilityMock.mockReturnValue({ isAvailable: true, salesPaused: false, isLoading: false });
-  catalogMock.mockReturnValue({ data: { products: [product] }, isLoading: false, refetch: vi.fn() });
+  catalogMock.mockReturnValue({
+    data: { products: [product] },
+    isLoading: false,
+    refetch: vi.fn(),
+  });
 });
 afterEach(() => cleanup());
 
@@ -92,7 +101,9 @@ describe('PlanGateDialog', () => {
     expect(screen.getByText('Commitment disclosure')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Get my payment reference' })).toBeInTheDocument();
     expect(screen.getByRole('listitem', { current: 'step' })).toHaveTextContent('Your plan');
-    expect(screen.getAllByRole('listitem').filter(li => li.hasAttribute('data-step'))).toHaveLength(3);
+    expect(screen.getAllByRole('listitem').filter(li => li.hasAttribute('data-step'))).toHaveLength(
+      3,
+    );
     expect(document.body.textContent).not.toMatch(/invoice/i);
   });
 
@@ -116,13 +127,15 @@ describe('PlanGateDialog', () => {
     render(<PlanGateDialog open onOpenChange={vi.fn()} />);
     expect(screen.getByTestId('agent-access-panel')).toHaveAttribute('data-step', String(step));
     expect(screen.getByRole('heading', { name: heading })).toBeInTheDocument();
-    expect((document.body.textContent || '').replace('we email you a paid invoice', '')).not.toMatch(
-      /invoice/i,
-    );
+    expect(
+      (document.body.textContent || '').replace('we email you a paid invoice', ''),
+    ).not.toMatch(/invoice/i);
     expect(document.querySelector('input[type="file"]')).toBeNull();
     if (step === 2) {
       expect(screen.getByTestId('payment-reference')).toHaveTextContent('PLI-REF-9');
-      expect(screen.getByText('Use this exact reference. It identifies your account.')).toBeInTheDocument();
+      expect(
+        screen.getByText('Use this exact reference. It identifies your account.'),
+      ).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Copy payment reference' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Copy account number' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Copy branch code' })).toBeInTheDocument();
@@ -130,7 +143,9 @@ describe('PlanGateDialog', () => {
       expect(screen.getByRole('button', { name: 'Copy account holder' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Copy amount' })).toBeInTheDocument();
     } else {
-      expect(screen.getByText(/matching your payment to your reference, usually within 1 business day/)).toBeInTheDocument();
+      expect(
+        screen.getByText(/matching your payment to your reference, usually within 1 business day/),
+      ).toBeInTheDocument();
       expect(screen.getByText(/we email you a paid invoice/)).toBeInTheDocument();
       expect(screen.getByText('Under review')).toBeInTheDocument();
     }
@@ -174,7 +189,9 @@ describe('PlanGateDialog', () => {
     availabilityMock.mockReturnValue({ isAvailable: false, salesPaused: true, isLoading: false });
     render(<PlanGateDialog open onOpenChange={vi.fn()} />);
     expect(screen.getByText('Paid plans open soon')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Get my payment reference' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Get my payment reference' }),
+    ).not.toBeInTheDocument();
   });
 });
 
@@ -206,7 +223,11 @@ describe('plan gate details', () => {
     let release: (v: unknown) => void = () => {};
     submitMock.mockImplementation(() => new Promise(r => (release = r)));
     workspaceMock.mockReturnValue({
-      data: { activeInvoice: { id: 9, status: 'issued', paymentReference: 'R', amountDue: 1 }, bankDetails: {}, payments: [] },
+      data: {
+        activeInvoice: { id: 9, status: 'issued', paymentReference: 'R', amountDue: 1 },
+        bankDetails: {},
+        payments: [],
+      },
       refetch: vi.fn().mockResolvedValue(undefined),
     });
     render(<PlanGateDialog open onOpenChange={vi.fn()} />);
@@ -223,7 +244,11 @@ describe('plan gate details', () => {
       value: { writeText: vi.fn().mockRejectedValue(new Error('denied')) },
     });
     workspaceMock.mockReturnValue({
-      data: { activeInvoice: { id: 9, status: 'issued', paymentReference: 'R', amountDue: 1 }, bankDetails: {}, payments: [] },
+      data: {
+        activeInvoice: { id: 9, status: 'issued', paymentReference: 'R', amountDue: 1 },
+        bankDetails: {},
+        payments: [],
+      },
       refetch: vi.fn(),
     });
     render(<PlanGateDialog open onOpenChange={vi.fn()} />);
@@ -246,14 +271,22 @@ describe('plan gate details', () => {
 
   it('goes back to step 1 for a void invoice and shows active for a paid one', () => {
     workspaceMock.mockReturnValue({
-      data: { activeInvoice: { id: 9, status: 'void', paymentReference: 'R', amountDue: 1 }, bankDetails: {}, payments: [] },
+      data: {
+        activeInvoice: { id: 9, status: 'void', paymentReference: 'R', amountDue: 1 },
+        bankDetails: {},
+        payments: [],
+      },
       refetch: vi.fn(),
     });
     const { unmount } = render(<PlanGateDialog open onOpenChange={vi.fn()} />);
     expect(screen.getByRole('button', { name: 'Get my payment reference' })).toBeInTheDocument();
     unmount();
     workspaceMock.mockReturnValue({
-      data: { activeInvoice: { id: 9, status: 'paid', paymentReference: 'R', amountDue: 1 }, bankDetails: {}, payments: [] },
+      data: {
+        activeInvoice: { id: 9, status: 'paid', paymentReference: 'R', amountDue: 1 },
+        bankDetails: {},
+        payments: [],
+      },
       refetch: vi.fn(),
     });
     render(<PlanGateDialog open onOpenChange={vi.fn()} />);
@@ -265,5 +298,43 @@ describe('plan gate details', () => {
     expect(getPayerDisplayName({ name: '', email: 'ada.l@example.test' })).toBe('ada.l');
     expect(getPayerDisplayName(null)).toBe('Agent');
     expect(localDateIso(new Date(2026, 0, 5))).toBe('2026-01-05');
+  });
+});
+
+describe('existing payment reference when sales are paused or blocked', () => {
+  const withInvoice = () =>
+    workspaceMock.mockReturnValue({
+      data: {
+        activeInvoice: { id: 9, status: 'issued', paymentReference: 'PLI-REF-9', amountDue: 99900 },
+        bankDetails: { bankName: 'Test Bank' },
+        payments: [],
+      },
+      refetch: vi.fn(),
+    });
+
+  it('still shows the reference and hides I’ve paid when sales are paused', () => {
+    availabilityMock.mockReturnValue({ isAvailable: false, salesPaused: true, isLoading: false });
+    withInvoice();
+    render(<PlanGateDialog open onOpenChange={vi.fn()} />);
+    expect(screen.getByTestId('payment-reference')).toHaveTextContent('PLI-REF-9');
+    expect(screen.queryByRole('button', { name: 'I’ve paid' })).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/Already paid\? Finance matches payments by your reference/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Paid plans open soon')).not.toBeInTheDocument();
+  });
+
+  it('still shows the reference and hides I’ve paid when the journey is blocked', () => {
+    withInvoice();
+    render(<PlanGateDialog open onOpenChange={vi.fn()} blockedReason="Contact support." />);
+    expect(screen.getByTestId('payment-reference')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'I’ve paid' })).not.toBeInTheDocument();
+    expect(screen.getByText('Contact support.')).toBeInTheDocument();
+  });
+
+  it('shows Paid plans open soon only when there is no payment reference', () => {
+    availabilityMock.mockReturnValue({ isAvailable: false, salesPaused: true, isLoading: false });
+    render(<PlanGateDialog open onOpenChange={vi.fn()} />);
+    expect(screen.getByText('Paid plans open soon')).toBeInTheDocument();
   });
 });

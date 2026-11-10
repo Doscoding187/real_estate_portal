@@ -77,7 +77,9 @@ export function useAgentLaunchInvoiceRequest({
       setInvoiceResponse(result);
       await refetchWorkspace();
       toast.success(
-        result.reused ? 'Your existing payment reference is ready.' : 'Your payment reference is ready.',
+        result.reused
+          ? 'Your existing payment reference is ready.'
+          : 'Your payment reference is ready.',
         {
           description: 'Pay by EFT, then select “I’ve paid” for finance verification.',
         },
@@ -87,14 +89,12 @@ export function useAgentLaunchInvoiceRequest({
       void refetchCatalog();
       const status = (error as { status?: unknown } | null)?.status;
       if (isPaidIntakeClosedError(error)) {
-        toastPaidError(error, 'Could not request the Agent invoice');
+        toastPaidError(error, 'Could not create your payment reference');
       } else if (status === 409) {
         const raw = error instanceof Error ? error.message.trim() : '';
         const message = raw && !/^HTTP \d+/.test(raw) ? raw : '';
         if (!message) {
-          toast.error(
-            'We could not request your invoice. Refresh the page and try again, or contact support@propertylistifysa.co.za.',
-          );
+          toast.error('We could not create your payment reference. Please try again.');
         } else if (LAUNCH_ACCESS_CLOSED_PATTERN.test(message)) {
           toast.info(
             'Agent Launch Access purchases are not open for your account yet. We will email you when they open. Questions: support@propertylistifysa.co.za',
@@ -106,7 +106,7 @@ export function useAgentLaunchInvoiceRequest({
           void refetchWorkspace();
         }
       } else {
-        toastPaidError(error, 'Could not request the Agent invoice');
+        toastPaidError(error, 'Could not create your payment reference');
       }
     } finally {
       inFlightRef.current = false;

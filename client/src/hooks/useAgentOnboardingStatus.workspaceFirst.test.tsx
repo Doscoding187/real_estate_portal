@@ -21,7 +21,10 @@ beforeEach(() => vi.clearAllMocks());
 
 describe('useAgentOnboardingStatus workspace-first', () => {
   it('still redirects an unverified agent to the verify journey', async () => {
-    apiFetchMock.mockResolvedValue({ recommendedNextStep: 'verify_email', dashboardUnlocked: false });
+    apiFetchMock.mockResolvedValue({
+      recommendedNextStep: 'verify_email',
+      dashboardUnlocked: false,
+    });
     renderHook(() => useAgentOnboardingStatus({ requireDashboardUnlocked: true }));
     await waitFor(() => expect(setLocationMock).toHaveBeenCalledWith('/agent/setup'));
   });
@@ -32,7 +35,9 @@ describe('useAgentOnboardingStatus workspace-first', () => {
       dashboardUnlocked: false,
       fullFeaturesUnlocked: false,
     });
-    const { result } = renderHook(() => useAgentOnboardingStatus({ requireDashboardUnlocked: true }));
+    const { result } = renderHook(() =>
+      useAgentOnboardingStatus({ requireDashboardUnlocked: true }),
+    );
     await waitFor(() => expect(result.current.status).not.toBeNull());
     expect(setLocationMock).not.toHaveBeenCalled();
   });

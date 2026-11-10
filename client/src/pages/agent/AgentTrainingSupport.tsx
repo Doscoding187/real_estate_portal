@@ -9,11 +9,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
-import { followAgentJourneyHref } from '@/lib/agentPlanGate';
+import { followAgentJourneyHref, openPlanGate } from '@/lib/agentPlanGate';
 import {
   getAgentJourneyAction,
   getAgentProfileCompletionDescription,
-  isAgentProfileJourneyStep, isAgentPlanEntitled } from '@/lib/agentJourney';
+  isAgentProfileJourneyStep,
+  isAgentPlanEntitled,
+  isAgentPaymentBlocked,
+  isAgentWorkspaceOpen,
+} from '@/lib/agentJourney';
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 import {
@@ -84,7 +88,8 @@ export default function AgentTrainingSupport() {
     retry: retryStatus,
     agentLaunchAccessAvailable,
   } = useAgentOnboardingStatus();
-  const trainingLocked = !statusLoading && !status?.dashboardUnlocked;
+  const trainingLocked = !statusLoading && !isAgentPlanEntitled(status);
+  const planPrompt = isAgentWorkspaceOpen(status) && !isAgentPaymentBlocked(status);
   const operationalDataEnabled = !statusLoading && isAgentPlanEntitled(status);
   const journeyAction = getAgentJourneyAction(status, { agentLaunchAccessAvailable });
   const needsProfileCompletion = isAgentProfileJourneyStep(status);
@@ -116,6 +121,13 @@ export default function AgentTrainingSupport() {
           />
         ) : statusError ? (
           <AgentJourneyStatusErrorState onRetry={retryStatus} />
+        ) : trainingLocked && planPrompt ? (
+          <AgentFeatureLockedState
+            title="Training and support unlock with a plan"
+            description="Choose a plan to open guidance and support tools. Only your profile is open before payment."
+            actionLabel="Get access"
+            onAction={openPlanGate}
+          />
         ) : trainingLocked ? (
           <AgentFeatureLockedState
             title={

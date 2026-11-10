@@ -34,7 +34,7 @@ import {
 import { AgentFeatureLockedState } from '@/components/agent/AgentFeatureLockedState';
 import { AgentJourneyStatusErrorState } from '@/components/agent/AgentJourneyStatusErrorState';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
-import { followAgentJourneyHref, openPlanGate } from '@/lib/agentPlanGate';
+import { openPlanGate } from '@/lib/agentPlanGate';
 import {
   getAgentJourneyAction,
   getAgentProfileCompletionDescription,

@@ -1,4 +1,4 @@
-import { act, cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, render, renderHook, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -32,6 +32,7 @@ import {
   markPlanPromptTrigger,
   openPlanGate,
   resetPlanGateForTests,
+  usePlanGateOpen,
 } from '@/lib/agentPlanGate';
 
 function setStatus(canPublishListings: boolean, extra: Record<string, unknown> = {}) {
@@ -140,5 +141,15 @@ describe('AgentPlanGateLayer', () => {
     act(() => openPlanGate());
     expect(screen.queryByTestId('agent-preview-banner')).not.toBeInTheDocument();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('clears the open flag when the shell unmounts', () => {
+    setStatus(false);
+    const gate = renderHook(() => usePlanGateOpen());
+    const view = render(<AgentPlanGateLayer />);
+    act(() => openPlanGate());
+    expect(gate.result.current).toBe(true);
+    view.unmount();
+    expect(gate.result.current).toBe(false);
   });
 });

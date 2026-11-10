@@ -90,7 +90,7 @@ export function getAgentJourneyAction(
         label: 'Complete payment',
         title: 'Complete your Launch Access payment',
         description:
-          'Your Launch Access invoice is ready. Pay by EFT and select “I’ve paid” to notify finance. No document is required.',
+          'Your payment reference is ready. Pay by EFT and select “I’ve paid” to notify finance. No document is required.',
       };
     case 'await_payment_review':
       return {

@@ -52,7 +52,13 @@ function PaidPlansOpenSoon() {
   );
 }
 
-function PlanGateContent({ blockedReason }: { blockedReason: string | null }) {
+function PlanGateContent({
+  blockedReason,
+  workspaceEnabled,
+}: {
+  blockedReason: string | null;
+  workspaceEnabled: boolean;
+}) {
   const availability = useCommercialProductAvailability('agent_launch_access');
   const catalog = useCommercialCatalog('agent');
   const launchProduct = useMemo(() => {
@@ -61,10 +67,13 @@ function PlanGateContent({ blockedReason }: { blockedReason: string | null }) {
     );
     return products.find(product => product.productKey === 'agent_launch_access') ?? products[0];
   }, [catalog.data?.products]);
-  const purchasable = availability.isAvailable && !availability.salesPaused && Boolean(launchProduct);
+  const purchasable =
+    availability.isAvailable && !availability.salesPaused && Boolean(launchProduct);
 
   const workspaceQuery = trpc.billing.agentWorkspace.useQuery(undefined, {
-    enabled: purchasable,
+    // An existing payment reference must stay visible even when sales are paused
+    // or the journey is blocked; only agency-managed access skips the workspace.
+    enabled: workspaceEnabled,
     retry: false,
     staleTime: 0,
     refetchOnMount: true,
@@ -121,6 +130,22 @@ function PlanGateContent({ blockedReason }: { blockedReason: string | null }) {
     }
   };
 
+  const submitClosedReason =
+    blockedReason ?? (purchasable ? null : 'Paid plans are not open for new payments right now.');
+
+  if (activeInvoice && getAccessStep(activeInvoice.status, Boolean(rejectionMessage)) !== 1) {
+    return (
+      <AgentAccessPanel
+        invoice={activeInvoice}
+        bankDetails={bankDetails}
+        rejectionMessage={rejectionMessage}
+        onSubmit={() => void handleNoticeSubmit()}
+        isSubmitting={submitNotice.isPending}
+        submitDisabledReason={submitClosedReason}
+      />
+    );
+  }
+
   if (availability.isLoading || (availability.isAvailable && catalog.isLoading)) {
     return <p className="text-sm text-slate-500">Loading plan details...</p>;
   }
@@ -136,18 +161,6 @@ function PlanGateContent({ blockedReason }: { blockedReason: string | null }) {
 
   const price = getCommercialPricePresentation(launchProduct);
   const limits = getCommercialPresentationLimits(launchProduct);
-
-  if (activeInvoice && getAccessStep(activeInvoice.status, Boolean(rejectionMessage)) !== 1) {
-    return (
-      <AgentAccessPanel
-        invoice={activeInvoice}
-        bankDetails={bankDetails}
-        rejectionMessage={rejectionMessage}
-        onSubmit={() => void handleNoticeSubmit()}
-        isSubmitting={submitNotice.isPending}
-      />
-    );
-  }
 
   return (
     <div className="space-y-4">
@@ -178,7 +191,10 @@ function PlanGateContent({ blockedReason }: { blockedReason: string | null }) {
       </div>
 
       {blockedReason ? (
-        <p role="status" className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
+        <p
+          role="status"
+          className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950"
+        >
           {blockedReason}
         </p>
       ) : null}
@@ -200,9 +216,11 @@ export function PlanGateDialog({
   open,
   onOpenChange,
   blockedReason = null,
+  workspaceEnabled = true,
 }: {
   open: boolean;
   blockedReason?: string | null;
+  workspaceEnabled?: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
   return (
@@ -214,7 +232,9 @@ export function PlanGateDialog({
             Your profile is open. A plan unlocks listings, publishing and enquiries.
           </DialogDescription>
         </DialogHeader>
-        {open ? <PlanGateContent blockedReason={blockedReason} /> : null}
+        {open ? (
+          <PlanGateContent blockedReason={blockedReason} workspaceEnabled={workspaceEnabled} />
+        ) : null}
       </DialogContent>
     </Dialog>
   );
