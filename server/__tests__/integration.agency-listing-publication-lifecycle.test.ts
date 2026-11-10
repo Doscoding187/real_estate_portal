@@ -174,7 +174,7 @@ async function agentOnboardingStatus(
 async function registerAndVerify(input: {
   email: string;
   name: string;
-  role: 'visitor' | 'agency_admin';
+  role: 'visitor' | 'agent';
   expectedPath: string;
 }): Promise<RegisteredFixtureUser> {
   const registration = await fetch(`${baseUrl}/api/auth/register`, {
@@ -419,12 +419,28 @@ afterAll(async () => {
 describeWithDb('agency full operating journey acceptance', () => {
   it('runs verified agency onboarding through controlled activation, publication, enquiry, and continued custody', async () => {
     const suffix = `${Date.now()}-${randomUUID().slice(0, 8)}`;
-    const owner = await registerAndVerify({
-      email: `publication-owner-${suffix}@example.test`,
-      name: `Publication Owner ${suffix}`,
-      role: 'agency_admin',
-      expectedPath: '/agency/setup?verified=true',
+    const heldOwnerEmail = `publication-held-owner-${suffix}@example.test`;
+    const heldRegistration = await fetch(`${baseUrl}/api/auth/register`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        email: heldOwnerEmail,
+        password: 'StrongPassword1!',
+        name: `Publication Held Owner ${suffix}`,
+        role: 'agency_admin',
+        legalAcceptance: legalFixture.registrationChoice,
+      }),
     });
+    expect(heldRegistration.status).toBe(400);
+    const heldOwnerRows = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.email, heldOwnerEmail));
+    expect(heldOwnerRows).toHaveLength(0);
+
+    // agency_admin self-registration is held; the owner is provisioned as an operator would.
+    const ownerFixture = await insertUser('PublicationOwner', 'agency_admin');
+    const owner = { ...ownerFixture, cookie: await sessionCookie(ownerFixture.id) };
     const member = await registerAndVerify({
       email: `publication-member-${suffix}@example.test`,
       name: `Publication Member ${suffix}`,
