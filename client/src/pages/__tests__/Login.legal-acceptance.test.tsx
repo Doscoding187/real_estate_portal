@@ -9,7 +9,7 @@ const controls = vi.hoisted(() => ({
 }));
 vi.mock('wouter', () => ({
   useLocation: () => ['/login', vi.fn()],
-  useSearch: () => '?mode=register&role=agency_admin',
+  useSearch: () => '?mode=register&role=visitor',
 }));
 vi.mock('@/lib/api', () => ({
   apiFetch: controls.fetch,
@@ -77,7 +77,7 @@ describe('registration legal choice', () => {
   });
   async function fillForm() {
     const user = userEvent.setup();
-    await user.type(screen.getByPlaceholderText('Agency owner'), 'Test Person');
+    await user.type(screen.getByPlaceholderText('Jane Smith'), 'Test Person');
     await user.type(screen.getByPlaceholderText('you@example.com'), 'person@example.invalid');
     await user.type(screen.getByPlaceholderText('Min 8 characters'), 'Pass123!');
     await user.type(screen.getByPlaceholderText('Repeat password'), 'Pass123!');
@@ -87,7 +87,7 @@ describe('registration legal choice', () => {
     render(<Login />);
     const choice = await screen.findByRole('checkbox', { name: /I agree to the Terms/ });
     expect(choice).not.toBeChecked();
-    expect(screen.getByRole('button', { name: /Continue to agency setup/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /Create free account/ })).toBeDisabled();
     const terms = screen.getByRole('link', { name: /Terms of Service/ });
     expect(terms).toHaveAttribute('href', '/legal/terms?bundle=test-current');
     expect(terms).toHaveAttribute('target', '_blank');
@@ -103,7 +103,7 @@ describe('registration legal choice', () => {
     const user = await fillForm();
     await user.click(choice);
     controls.stale = true;
-    await user.click(screen.getByRole('button', { name: /Continue to agency setup/ }));
+    await user.click(screen.getByRole('button', { name: /Create free account/ }));
     await waitFor(() =>
       expect(screen.getByRole('link', { name: /Terms of Service/ })).toHaveAttribute(
         'href',
@@ -111,13 +111,13 @@ describe('registration legal choice', () => {
       ),
     );
     expect(screen.getByRole('checkbox', { name: /I agree to the Terms/ })).not.toBeChecked();
-    expect(screen.getByPlaceholderText('Agency owner')).toHaveValue('Test Person');
+    expect(screen.getByPlaceholderText('Jane Smith')).toHaveValue('Test Person');
     const [, init] = controls.fetch.mock.calls.find(([path]) => path === '/auth/register')!;
     expect(JSON.parse(init.body).legalAcceptance).toEqual({
       bundleId: 'test-current',
       termsAccepted: true,
     });
-    expect(screen.getByRole('button', { name: /Continue to agency setup/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /Create free account/ })).toBeDisabled();
   });
   it('keeps new registration disabled when approved documents cannot be loaded', async () => {
     controls.unavailable = true;
@@ -127,7 +127,7 @@ describe('registration legal choice', () => {
         'New account registration is temporarily unavailable. Please try again later.',
       ),
     ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Continue to agency setup/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /Create free account/ })).toBeDisabled();
     expect(screen.queryByRole('checkbox', { name: /I agree/ })).not.toBeInTheDocument();
   });
   it('shows a Check your email state after register, never Welcome back, and resends via the existing endpoint', async () => {
@@ -135,7 +135,7 @@ describe('registration legal choice', () => {
     const choice = await screen.findByRole('checkbox', { name: /I agree to the Terms/ });
     const user = await fillForm();
     await user.click(choice);
-    await user.click(screen.getByRole('button', { name: /Continue to agency setup/ }));
+    await user.click(screen.getByRole('button', { name: /Create free account/ }));
     expect(await screen.findByText('Check your email')).toBeInTheDocument();
     expect(screen.getByText('person@example.invalid')).toBeInTheDocument();
     expect(screen.getByText(/We sent a verification email/)).toBeInTheDocument();
@@ -158,7 +158,7 @@ describe('registration legal choice', () => {
     const choice = await screen.findByRole('checkbox', { name: /I agree to the Terms/ });
     const user = await fillForm();
     await user.click(choice);
-    await user.click(screen.getByRole('button', { name: /Continue to agency setup/ }));
+    await user.click(screen.getByRole('button', { name: /Create free account/ }));
     expect(await screen.findByText('Check your email')).toBeInTheDocument();
     expect(screen.getByText(/could not send the verification email/)).toBeInTheDocument();
     expect(screen.queryByText(/We sent a verification email/)).not.toBeInTheDocument();

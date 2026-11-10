@@ -46,7 +46,12 @@ import {
 import { toast } from 'sonner';
 import { APP_TITLE } from '@/const';
 import { apiFetch, ApiError } from '@/lib/api';
-import { getLoginRedirectPath, getSafeNextPath, isHomeNextPath } from '@/lib/publicNavigation';
+import {
+  getLoginRedirectPath,
+  getSafeNextPath,
+  isHomeNextPath,
+  stripHeldRoleNextPath,
+} from '@/lib/publicNavigation';
 import { cn } from '@/lib/utils';
 import type { RegistrationLegalRelease } from '@/lib/registrationLegal';
 
@@ -158,7 +163,8 @@ const roles: RoleCard[] = [
       'Create the owner account first. Company registration and office setup happen after verification.',
     tag: 'Business setup',
     cta: 'Continue to agency setup',
-    available: true,
+    // Held at launch: buyers and agents only. Set true to release.
+    available: false,
     Icon: Building2,
     iconWrap: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300',
     tagClass: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300',
@@ -177,7 +183,8 @@ const roles: RoleCard[] = [
       'Register your development account first. Project and unit setup continue in the onboarding flow.',
     tag: 'Company onboarding',
     cta: 'Continue to company onboarding',
-    available: true,
+    // Held at launch: buyers and agents only. Set true to release.
+    available: false,
     Icon: HardHat,
     iconWrap: 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300',
     tagClass: 'bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300',
@@ -196,7 +203,8 @@ const roles: RoleCard[] = [
       'Create your partner account first. You will complete your directory profile, service coverage, and explore setup after verification.',
     tag: 'Partner network',
     cta: 'Create partner account',
-    available: true,
+    // Held at launch: buyers and agents only. Set true to release.
+    available: false,
     wide: true,
     Icon: Wrench,
     iconWrap: 'bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300',
@@ -246,7 +254,15 @@ export default function Login() {
   const search = useSearch();
   const searchParams = useMemo(() => new URLSearchParams(search), [search]);
   const prefersReducedMotion = useReducedMotion();
-  const safeNextPath = getSafeNextPath(searchParams.get('next'));
+  const requestedRoleParam = searchParams.get('role');
+  const unavailableRoleRequested = Boolean(
+    requestedRoleParam &&
+      roles.some(role => !role.available && role.role === requestedRoleParam),
+  );
+  const safeNextPath = stripHeldRoleNextPath(
+    getSafeNextPath(searchParams.get('next')),
+    unavailableRoleRequested,
+  );
 
   const [selectedRole, setSelectedRole] = useState<RoleCard | null>(null);
   const [signInOpen, setSignInOpen] = useState(false);
@@ -471,13 +487,22 @@ export default function Login() {
             Choose your <span className="text-indigo-600 dark:text-indigo-400">role</span>
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-slate-600 dark:text-slate-400 sm:text-lg">
-            One platform for buyers, agents, agencies, developers, and service providers. Start with
-            the path that fits you.
+            One platform for buyers and agents. Start with the path that fits you.
           </p>
         </div>
 
+        {unavailableRoleRequested ? (
+          <p
+            role="status"
+            data-testid="unavailable-role-notice"
+            className="mb-6 w-full max-w-5xl rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+          >
+            Agency, developer and service provider accounts are not open yet. You can create a
+            buyer or an agent account now.
+          </p>
+        ) : null}
         <div className="grid w-full max-w-5xl grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {roles.map(role => (
+          {roles.filter(role => role.available).map(role => (
             <motion.button
               key={role.id}
               type="button"

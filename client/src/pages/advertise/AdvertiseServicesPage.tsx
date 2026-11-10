@@ -1,7 +1,8 @@
 import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowRight, BadgeCheck, ClipboardCheck, MapPinned } from 'lucide-react';
+import { BadgeCheck, ClipboardCheck, MapPinned } from 'lucide-react';
+import { NotOpenYetCta } from '@/components/advertise/NotOpenYetCta';
 
 export default function AdvertiseServicesPage() {
   return (
@@ -21,12 +22,7 @@ export default function AdvertiseServicesPage() {
             profile and receive requests from people working through a property journey.
           </p>
           <div className="flex flex-wrap gap-3">
-            <Link href="/login?next=%2Fservice%2Fprofile">
-              <Button className="bg-[#0f3d91] hover:bg-[#0a2e6e]">
-                Provider sign in
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
+            <NotOpenYetCta tone="light" />
             <Link href="/services">
               <Button variant="outline">Browse the directory</Button>
             </Link>

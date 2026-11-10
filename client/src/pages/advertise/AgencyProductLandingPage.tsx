@@ -34,13 +34,9 @@ import {
   getCommercialPresentationLimits,
   getCommercialTermPresentation,
 } from '@/lib/commercialCatalog';
-import { getAccountAuthHref } from '@/lib/publicNavigation';
+import { NotOpenYetCta } from '@/components/advertise/NotOpenYetCta';
 import { AgencyWorkspacePreview } from './AgencyWorkspacePreview';
 import { COMMERCIAL_HERO_CLASS } from './commercialHero';
-
-const AGENCY_ACCOUNT_START_HREF = getAccountAuthHref('register', '/agency/setup', {
-  registerRole: 'agency_admin',
-});
 
 type AgencyCapability = {
   label: string;
@@ -829,13 +825,7 @@ export function AgencyCommercialLandingPage() {
                   — with clearer ownership, follow-up and business visibility when interest arrives.
                 </p>
                 <div className="mt-9 flex flex-wrap gap-3">
-                  <a
-                    href={AGENCY_ACCOUNT_START_HREF}
-                    className="inline-flex items-center gap-2 rounded-2xl bg-[var(--conversion)] px-5 py-3.5 text-sm font-bold text-white shadow-lg shadow-orange-950/25 transition hover:bg-[var(--conversion-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
-                  >
-                    Create your Agency owner account{' '}
-                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                  </a>
+                  <NotOpenYetCta tone="dark" />
                   <a
                     href="/contact"
                     className="inline-flex items-center gap-2 rounded-2xl border border-white/35 bg-white/10 px-5 py-3.5 text-sm font-bold text-white shadow-sm transition hover:border-white/60 hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
@@ -1256,13 +1246,7 @@ export function AgencyCommercialLandingPage() {
               finance-verified EFT handoff.
             </p>
             <div className="mt-7 flex flex-wrap justify-center gap-3">
-              <a
-                href={AGENCY_ACCOUNT_START_HREF}
-                className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-5 py-3.5 text-sm font-bold text-white transition hover:bg-[var(--brand-blue)]"
-              >
-                Create your Agency owner account{' '}
-                <ArrowRight className="h-4 w-4" aria-hidden="true" />
-              </a>
+              <NotOpenYetCta tone="light" />
               <a
                 href="/contact"
                 className="inline-flex items-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 py-3.5 text-sm font-bold text-slate-950 transition hover:border-slate-950"
@@ -1337,13 +1321,7 @@ function AgencyPreparationLandingPage({
                   protected.
                 </p>
                 <div className="mt-9 flex flex-wrap gap-3">
-                  <a
-                    href={AGENCY_ACCOUNT_START_HREF}
-                    className="inline-flex items-center gap-2 rounded-2xl bg-[var(--conversion)] px-5 py-3.5 text-sm font-bold text-white shadow-lg shadow-orange-950/25 transition hover:bg-[var(--conversion-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
-                  >
-                    Start Agency preparation
-                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                  </a>
+                  <NotOpenYetCta tone="dark" />
                 </div>
               </div>
 
@@ -1421,12 +1399,9 @@ function AgencyPreparationLandingPage({
                 Private inventory stays private. Team access and marketplace participation remain
                 subject to their existing approval and commercial activation requirements.
               </p>
-              <a
-                href={AGENCY_ACCOUNT_START_HREF}
-                className="mt-7 inline-flex items-center gap-2 rounded-2xl bg-[var(--conversion)] px-5 py-3.5 text-sm font-bold text-white shadow-lg shadow-orange-900/15 transition hover:bg-[var(--conversion-hover)]"
-              >
-                Start Agency preparation <ArrowRight className="h-4 w-4" aria-hidden="true" />
-              </a>
+              <div className="mt-7">
+                <NotOpenYetCta tone="light" />
+              </div>
             </div>
           </div>
         </section>

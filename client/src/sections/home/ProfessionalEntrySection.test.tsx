@@ -4,28 +4,17 @@ import { describe, expect, it } from 'vitest';
 import { ProfessionalEntrySection } from './ProfessionalEntrySection';
 
 describe('ProfessionalEntrySection', () => {
-  it('offers each professional audience its canonical preparation entry point while activation is disabled', () => {
+  it('offers only the agent entry point at launch', () => {
     render(<ProfessionalEntrySection />);
 
     expect(screen.getByRole('link', { name: /explore agent preparation/i })).toHaveAttribute(
       'href',
       '/advertise/sell/agents',
     );
-    expect(screen.getByRole('link', { name: /explore agency preparation/i })).toHaveAttribute(
-      'href',
-      '/advertise/sell/agencies',
-    );
-    expect(screen.getByRole('link', { name: /explore developer preparation/i })).toHaveAttribute(
-      'href',
-      '/advertise/sell/developers',
-    );
-    expect(screen.getByRole('link', { name: /explore service solutions/i })).toHaveAttribute(
-      'href',
-      '/advertise/services',
-    );
-    expect(
-      screen.getByRole('link', { name: /explore all professional solutions/i }),
-    ).toHaveAttribute('href', '/advertise');
+    expect(screen.getAllByRole('link')).toHaveLength(1);
+    expect(screen.queryByText(/agenc/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/developer/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/service/i)).not.toBeInTheDocument();
     expect(screen.getByText('Establish your Property Listify presence.')).toBeInTheDocument();
     expect(screen.queryByText(/commercial offering behind it/i)).not.toBeInTheDocument();
   });

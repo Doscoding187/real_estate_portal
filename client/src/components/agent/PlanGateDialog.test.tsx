@@ -332,6 +332,14 @@ describe('existing payment reference when sales are paused or blocked', () => {
     expect(screen.getByText('Contact support.')).toBeInTheDocument();
   });
 
+  it('shows the interim cancellation notice with a link to the Terms under the bank details', () => {
+    withInvoice();
+    render(<PlanGateDialog open onOpenChange={vi.fn()} />);
+    const notice = screen.getByTestId('payment-cancellation-notice');
+    expect(notice).toHaveTextContent('Cancellations and refunds are handled under our Terms.');
+    expect(screen.getByRole('link', { name: 'Terms' })).toHaveAttribute('href', '/legal/terms');
+  });
+
   it('shows Paid plans open soon only when there is no payment reference', () => {
     availabilityMock.mockReturnValue({ isAvailable: false, salesPaused: true, isLoading: false });
     render(<PlanGateDialog open onOpenChange={vi.fn()} />);

@@ -2,13 +2,21 @@ import { Link } from 'wouter';
 import { Home } from 'lucide-react';
 import { SERVICE_CATEGORIES } from '@/features/services/catalog';
 import { toServiceCategorySlug } from '@/features/services/catalog';
+import { isHomepageHeroJourneyEnabled } from '@/lib/publicNavigation';
 
 const platformLinks = [
   { label: 'Buy', href: '/property-for-sale' },
   { label: 'Rent', href: '/property-to-rent' },
-  { label: 'Developments', href: '/new-developments' },
-  { label: 'Land', href: '/plots-and-land' },
-  { label: 'Commercial', href: '/commercial' },
+  // Developments, Land and Commercial are hidden while their journeys are held.
+  ...(isHomepageHeroJourneyEnabled('developments')
+    ? [{ label: 'Developments', href: '/new-developments' }]
+    : []),
+  ...(isHomepageHeroJourneyEnabled('plot_land')
+    ? [{ label: 'Land', href: '/plots-and-land' }]
+    : []),
+  ...(isHomepageHeroJourneyEnabled('commercial')
+    ? [{ label: 'Commercial', href: '/commercial' }]
+    : []),
   { label: 'Services', href: '/services' },
 ];
 

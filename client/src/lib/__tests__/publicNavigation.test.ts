@@ -176,7 +176,7 @@ describe('public navigation authority', () => {
       ])
         .filter(item => item.journey === 'developments')
         .map(item => item.href),
-    ).toEqual(['/new-developments']);
+    ).toEqual(['/new-developments', '/developers', '/developers']);
   });
 
   it('keeps Commercial navigation on its canonical product journey and release gate', () => {
@@ -217,9 +217,10 @@ describe('public navigation authority', () => {
       homepageVisible: false,
       homepageEnabled: false,
     });
+    // Held at launch: the manifest cannot release it until it leaves LAUNCH_HELD_JOURNEYS.
     expect(getPublicHeroJourney('commercial', explicitHostedRelease)).toMatchObject({
-      homepageVisible: true,
-      homepageEnabled: true,
+      homepageVisible: false,
+      homepageEnabled: false,
     });
 
     const commercialItems = PUBLIC_NAVIGATION_MENUS.flatMap(menu =>
@@ -256,13 +257,18 @@ describe('public navigation authority', () => {
     expect(sharedLivingItem).toBeDefined();
     expect(sharedLivingItem?.href).toBe('/shared-living');
     expect(sharedLivingItem?.capability).toBe('LAUNCH_READY');
-    // Staged exposure: hidden from hosted builds until named in the release
-    // manifest, exactly like Commercial and Developments before it.
+    // Held at launch: hidden from hosted builds even when named in the release manifest.
     const releasedContext = {
       hostedReleaseControlled: true,
       supplementalReleasedJourneys: ['shared_living'],
     };
-    expect(isPublicNavigationVisible(sharedLivingItem!, 'desktop', releasedContext)).toBe(true);
+    expect(isPublicNavigationVisible(sharedLivingItem!, 'desktop', releasedContext)).toBe(false);
+    expect(
+      isPublicNavigationVisible(sharedLivingItem!, 'desktop', {
+        hostedReleaseControlled: false,
+        supplementalReleasedJourneys: [],
+      }),
+    ).toBe(true);
     expect(
       isPublicNavigationVisible(sharedLivingItem!, 'desktop', {
         hostedReleaseControlled: true,

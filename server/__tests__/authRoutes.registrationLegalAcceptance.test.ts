@@ -47,7 +47,7 @@ describe('registration legal HTTP boundary', () => {
       email: 'person@example.invalid',
       password: 'Pass123!',
       name: 'Person',
-      role: 'agency_admin',
+      role: 'visitor',
       legalAcceptance: choice,
       acceptedAt: 'forged',
       userId: 1,
@@ -57,7 +57,7 @@ describe('registration legal HTTP boundary', () => {
       'person@example.invalid',
       'Pass123!',
       'Person',
-      'agency_admin',
+      'visitor',
       undefined,
       choice,
     );

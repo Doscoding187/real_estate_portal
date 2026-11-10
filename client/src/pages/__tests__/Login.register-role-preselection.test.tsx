@@ -39,13 +39,13 @@ describe('Login register role preselection', () => {
     searchMock.mockReturnValue('');
   });
 
-  it('preselects the Agency role card for the agency commercial entry link', () => {
+  it('does not preselect the held Agency role for the agency commercial entry link', () => {
     searchMock.mockReturnValue('?mode=register&role=agency_admin&next=%2Fagency%2Fsetup');
     render(<Login />);
 
-    expect(screen.getByText('Owner name')).toBeInTheDocument();
-    expect(screen.getByText('Work email')).toBeInTheDocument();
-    expect(screen.queryByText('Phone number')).not.toBeInTheDocument();
+    expect(screen.queryByText('Owner name')).not.toBeInTheDocument();
+    expect(screen.queryByText('Work email')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Choose your role/i })).toBeInTheDocument();
   });
 
   it('preselects other available roles passed through the role parameter', () => {

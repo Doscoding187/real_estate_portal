@@ -121,16 +121,12 @@ describe('public Developer product landing page', () => {
       ),
     ).toBeInTheDocument();
 
-    const preparationLinks = screen.getAllByRole('link', {
-      name: /Start Developer preparation/i,
-    });
-    expect(preparationLinks).toHaveLength(2);
-    preparationLinks.forEach(link => {
-      expect(link).toHaveAttribute(
-        'href',
-        '/login?mode=register&next=%2Fdeveloper%2Fsetup&role=property_developer',
-      );
-    });
+    // Held at launch: the sign-up CTA is a non-link "Not open yet" state.
+    expect(
+      screen.queryByRole('link', { name: /Start Developer preparation/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.getAllByTestId('cta-not-open-yet')).toHaveLength(2);
+    expect(document.querySelector('a[href*="developer%2Fsetup"]')).toBeNull();
 
     expect(useCatalogMock).not.toHaveBeenCalled();
   });

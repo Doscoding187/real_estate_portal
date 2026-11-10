@@ -3,7 +3,7 @@ import { Building2, MapPinned, SearchCheck } from 'lucide-react';
 const journeySteps = [
   {
     title: 'Discover',
-    description: 'Search homes, developments and local areas from one starting point.',
+    description: 'Search homes for sale and to rent, and local areas, from one starting point.',
     icon: SearchCheck,
   },
   {
@@ -13,7 +13,7 @@ const journeySteps = [
   },
   {
     title: 'Connect',
-    description: 'Find agents, developers and service businesses when you need support.',
+    description: 'Find an agent when you need support.',
     icon: Building2,
   },
 ] as const;

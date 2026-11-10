@@ -19,6 +19,8 @@ export interface PartnerType {
   title: string;
   benefit: string;
   href: string;
+  /** Held at launch: shown with a "Not open yet" badge and not linked. */
+  comingSoon?: boolean;
 }
 
 const defaultPartnerTypes: PartnerType[] = [
@@ -37,6 +39,7 @@ const defaultPartnerTypes: PartnerType[] = [
     benefit:
       'Promote your developments with immersive media, reach qualified buyers, and track leads in real-time.',
     href: '/advertise/developers',
+    comingSoon: true,
   },
   {
     id: 'bank',
@@ -60,6 +63,7 @@ const defaultPartnerTypes: PartnerType[] = [
     benefit:
       'Reach homeowners and property managers who need your services, from maintenance to renovations.',
     href: '/advertise/service-providers',
+    comingSoon: true,
   },
 ];
 
@@ -127,13 +131,28 @@ export const PartnerSelectionSection: React.FC<PartnerSelectionSectionProps> = (
         >
           {partnerTypes.map((partnerType, index) => (
             <div key={partnerType.id} role="listitem">
-              <PartnerTypeCard
-                icon={partnerType.icon}
-                title={partnerType.title}
-                benefit={partnerType.benefit}
-                href={partnerType.href}
-                index={index}
-              />
+              {partnerType.comingSoon ? (
+                <div
+                  data-testid="partner-card-coming-soon"
+                  className="block h-full rounded-2xl bg-white p-6 opacity-70 md:p-8"
+                >
+                  <span className="mb-4 inline-block rounded-full bg-slate-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-slate-600">
+                    Not open yet
+                  </span>
+                  <h3 className="mb-3 text-2xl font-bold leading-tight text-gray-900">
+                    {partnerType.title}
+                  </h3>
+                  <p className="text-base leading-relaxed text-gray-600">{partnerType.benefit}</p>
+                </div>
+              ) : (
+                <PartnerTypeCard
+                  icon={partnerType.icon}
+                  title={partnerType.title}
+                  benefit={partnerType.benefit}
+                  href={partnerType.href}
+                  index={index}
+                />
+              )}
             </div>
           ))}
         </motion.div>

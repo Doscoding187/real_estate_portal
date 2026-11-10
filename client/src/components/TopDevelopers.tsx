@@ -12,6 +12,7 @@ import {
   CarouselPrevious,
 } from '@/components/ui/carousel';
 import { trpc } from '@/lib/trpc';
+import { isHomepageHeroJourneyEnabled } from '@/lib/publicNavigation';
 import { developerDiscoveryHref } from '@shared/developerDiscovery';
 import {
   CanonicalPlaceSelector,
@@ -25,10 +26,14 @@ const projectCount = (value: unknown) => {
 
 export function TopDevelopers() {
   const [placeSelection, setPlaceSelection] = useState<CanonicalPlaceSelection | null>(null);
-  const query = trpc.cataloguePublisher.listPublishers.useQuery({
-    canonicalPlaceId: placeSelection?.canonicalPlaceId,
-    limit: 12,
-  });
+  const developmentsHeld = !isHomepageHeroJourneyEnabled('developments');
+  const query = trpc.cataloguePublisher.listPublishers.useQuery(
+    {
+      canonicalPlaceId: placeSelection?.canonicalPlaceId,
+      limit: 12,
+    },
+    { enabled: !developmentsHeld },
+  );
   const {
     data: developers,
     isError,
@@ -41,6 +46,11 @@ export function TopDevelopers() {
   const selectedPlaceLabel = placeSelection?.label;
   const directoryHref = developerDiscoveryHref('/developers', selectedPlaceId);
   const scopeLabel = selectedPlaceLabel ? ` in ${selectedPlaceLabel}` : ' across South Africa';
+  // Render nothing while developments are held, or when there are no publishers to show
+  // (an unfiltered, successfully loaded empty list). A filtered empty list keeps the
+  // selector so the visitor can change the Place.
+  if (developmentsHeld) return null;
+  if (!isLoading && !isError && !profiles.length && !selectedPlaceId) return null;
   return (
     <section className="home-section bg-white">
       <div className="home-section-content">

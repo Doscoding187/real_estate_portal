@@ -97,9 +97,10 @@ describe('hero journey authority', () => {
       homepageVisible: false,
       homepageEnabled: false,
     });
+    // Held at launch: the manifest cannot release it until it leaves LAUNCH_HELD_JOURNEYS.
     expect(getPublicHeroJourney('developments', explicitHostedRelease)).toMatchObject({
-      homepageVisible: true,
-      homepageEnabled: true,
+      homepageVisible: false,
+      homepageEnabled: false,
     });
     expect(getHomepageHeroJourneys(containedHostedRelease).map(journey => journey.key)).toEqual([
       'buy',
@@ -109,7 +110,6 @@ describe('hero journey authority', () => {
     expect(getHomepageHeroJourneys(explicitHostedRelease).map(journey => journey.key)).toEqual([
       'buy',
       'rent',
-      'developments',
       'find_agent',
     ]);
   });
@@ -124,9 +124,10 @@ describe('hero journey authority', () => {
     expect(isLandPublicDiscoveryAvailable()).toBe(false);
     expect(isLandVerticalAvailable()).toBe(false);
 
+    // Shared Living and Commercial are held at launch even when the manifest lists them.
     expect(getPublicHeroJourney('shared_living', hostedRelease)).toMatchObject({
-      homepageVisible: true,
-      homepageEnabled: true,
+      homepageVisible: false,
+      homepageEnabled: false,
       destination: '/shared-living',
     });
     expect(getPublicHeroJourney('plot_land', hostedRelease)).toMatchObject({
@@ -134,8 +135,8 @@ describe('hero journey authority', () => {
       homepageEnabled: false,
     });
     expect(getPublicHeroJourney('commercial', hostedRelease)).toMatchObject({
-      homepageVisible: true,
-      homepageEnabled: true,
+      homepageVisible: false,
+      homepageEnabled: false,
       destination: '/commercial',
     });
   });
