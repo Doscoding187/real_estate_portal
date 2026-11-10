@@ -142,14 +142,10 @@ describe('public Agency product landing page', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('Prepare private inventory')).toBeInTheDocument();
 
-    const preparationLinks = screen.getAllByRole('link', { name: /Start Agency preparation/i });
-    expect(preparationLinks).toHaveLength(2);
-    preparationLinks.forEach(link => {
-      expect(link).toHaveAttribute(
-        'href',
-        '/login?mode=register&next=%2Fagency%2Fsetup&role=agency_admin',
-      );
-    });
+    // Held at launch: the sign-up CTA is a non-link "Not open yet" state.
+    expect(screen.queryByRole('link', { name: /Start Agency preparation/i })).not.toBeInTheDocument();
+    expect(screen.getAllByTestId('cta-not-open-yet')).toHaveLength(2);
+    expect(document.querySelector('a[href*="agency%2Fsetup"]')).toBeNull();
 
     expect(useCatalogMock).not.toHaveBeenCalled();
   });
@@ -283,16 +279,11 @@ describe('public Agency product landing page', () => {
   it('retains the enabled-runtime owner account start and commercial proposition', () => {
     render(<AgencyCommercialLandingPage />);
 
-    const accountLinks = screen.getAllByRole('link', {
-      name: /Create your Agency owner account/i,
-    });
-    expect(accountLinks).toHaveLength(2);
-    for (const link of accountLinks) {
-      expect(link).toHaveAttribute(
-        'href',
-        '/login?mode=register&next=%2Fagency%2Fsetup&role=agency_admin',
-      );
-    }
+    // Held at launch: no owner-account sign-up link, a "Not open yet" state instead.
+    expect(
+      screen.queryByRole('link', { name: /Create your Agency owner account/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.getAllByTestId('cta-not-open-yet')).toHaveLength(2);
     expect(screen.getAllByText(/not a reduced feature tier/i).length).toBeGreaterThan(0);
   });
 

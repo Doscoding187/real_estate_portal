@@ -105,7 +105,9 @@ export function Navbar() {
       ? [{ href: '/new-developments', label: 'Developments' }]
       : []),
     { href: '/agents', label: 'Agents' },
-    { href: '/developers', label: 'Developers' },
+    ...(isHomepageHeroJourneyEnabled('developments')
+      ? [{ href: '/developers', label: 'Developers' }]
+      : []),
     { href: '/advertise', label: 'Advertise / List Property' },
     // Role-specific dashboards are account actions, not public discovery promises.
     ...(showDashboardLink

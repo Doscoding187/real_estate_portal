@@ -46,7 +46,12 @@ import {
 import { toast } from 'sonner';
 import { APP_TITLE } from '@/const';
 import { apiFetch, ApiError } from '@/lib/api';
-import { getLoginRedirectPath, getSafeNextPath, isHomeNextPath } from '@/lib/publicNavigation';
+import {
+  getLoginRedirectPath,
+  getSafeNextPath,
+  isHomeNextPath,
+  stripHeldRoleNextPath,
+} from '@/lib/publicNavigation';
 import { cn } from '@/lib/utils';
 import type { RegistrationLegalRelease } from '@/lib/registrationLegal';
 
@@ -249,7 +254,15 @@ export default function Login() {
   const search = useSearch();
   const searchParams = useMemo(() => new URLSearchParams(search), [search]);
   const prefersReducedMotion = useReducedMotion();
-  const safeNextPath = getSafeNextPath(searchParams.get('next'));
+  const requestedRoleParam = searchParams.get('role');
+  const unavailableRoleRequested = Boolean(
+    requestedRoleParam &&
+      roles.some(role => !role.available && role.role === requestedRoleParam),
+  );
+  const safeNextPath = stripHeldRoleNextPath(
+    getSafeNextPath(searchParams.get('next')),
+    unavailableRoleRequested,
+  );
 
   const [selectedRole, setSelectedRole] = useState<RoleCard | null>(null);
   const [signInOpen, setSignInOpen] = useState(false);
@@ -478,6 +491,16 @@ export default function Login() {
           </p>
         </div>
 
+        {unavailableRoleRequested ? (
+          <p
+            role="status"
+            data-testid="unavailable-role-notice"
+            className="mb-6 w-full max-w-5xl rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+          >
+            Agency, developer and service provider accounts are not open yet. You can create a
+            buyer or an agent account now.
+          </p>
+        ) : null}
         <div className="grid w-full max-w-5xl grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {roles.filter(role => role.available).map(role => (
             <motion.button

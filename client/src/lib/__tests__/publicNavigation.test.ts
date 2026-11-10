@@ -176,7 +176,7 @@ describe('public navigation authority', () => {
       ])
         .filter(item => item.journey === 'developments')
         .map(item => item.href),
-    ).toEqual(['/new-developments']);
+    ).toEqual(['/new-developments', '/developers', '/developers']);
   });
 
   it('keeps Commercial navigation on its canonical product journey and release gate', () => {

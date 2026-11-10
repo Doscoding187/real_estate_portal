@@ -337,7 +337,7 @@ describe('existing payment reference when sales are paused or blocked', () => {
     render(<PlanGateDialog open onOpenChange={vi.fn()} />);
     const notice = screen.getByTestId('payment-cancellation-notice');
     expect(notice).toHaveTextContent('Cancellations and refunds are handled under our Terms.');
-    expect(screen.getByRole('link', { name: 'Read our Terms' })).toHaveAttribute('href', '/terms');
+    expect(screen.getByRole('link', { name: 'Terms' })).toHaveAttribute('href', '/legal/terms');
   });
 
   it('shows Paid plans open soon only when there is no payment reference', () => {

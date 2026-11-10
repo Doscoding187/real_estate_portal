@@ -43,6 +43,9 @@ describe('Login registration audience preselection', () => {
       render(<Login />);
 
       expect(screen.getByRole('heading', { name: /Choose your role/i })).toBeInTheDocument();
+      expect(screen.getByTestId('unavailable-role-notice')).toHaveTextContent(
+        'Agency, developer and service provider accounts are not open yet. You can create a buyer or an agent account now.',
+      );
       expect(screen.queryByRole('heading', { name: 'Create your account' })).not.toBeInTheDocument();
       expect(screen.getAllByText('Buyer / User').length).toBeGreaterThan(0);
       expect(screen.getAllByText('Real Estate Agent').length).toBeGreaterThan(0);
@@ -56,6 +59,7 @@ describe('Login registration audience preselection', () => {
     expect(screen.getByRole('heading', { name: /Choose your role/i })).toBeInTheDocument();
     expect(screen.getAllByText('Buyer / User').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Real Estate Agent').length).toBeGreaterThan(0);
+    expect(screen.queryByTestId('unavailable-role-notice')).not.toBeInTheDocument();
     expect(screen.queryByText('Developer')).not.toBeInTheDocument();
     expect(screen.queryByText('Agency')).not.toBeInTheDocument();
     expect(screen.queryByText('Service Provider')).not.toBeInTheDocument();

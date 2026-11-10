@@ -244,9 +244,17 @@ function Router() {
           <Route path="/developer/:rest*" component={DeveloperRouteBoundary} />
 
           {/* Developer Brand Directory (public) */}
-          <Route path="/developers" component={DeveloperDirectoryPage} />
+          <Route path="/developers">
+            <HeldJourneyGate journey="developments">
+              <DeveloperDirectoryPage />
+            </HeldJourneyGate>
+          </Route>
           {/* Governed public publisher projection - MUST be after all /developer/* routes */}
-          <Route path="/developer/:slug" component={DeveloperPublisherPage} />
+          <Route path="/developer/:slug">
+            <HeldJourneyGate journey="developments">
+              <DeveloperPublisherPage />
+            </HeldJourneyGate>
+          </Route>
 
           {/* ============================================================== */}
           {/* 1B. PUBLIC PRODUCT ROUTES                                      */}

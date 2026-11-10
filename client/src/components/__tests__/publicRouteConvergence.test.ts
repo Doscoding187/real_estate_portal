@@ -24,9 +24,21 @@ describe('public route convergence', () => {
     const app = readRepoFile('client/src/App.tsx');
 
     expect(app).not.toContain('<Route path="/developments"');
-    expect(app).toContain(
-      '<Route path="/new-developments">\n            <HeldJourneyGate journey="developments">\n              <DevelopmentsDemo />',
+    expect(app).toMatch(
+      /<Route path="\/new-developments">\s*<HeldJourneyGate journey="developments">\s*<DevelopmentsDemo \/>/,
     );
+    expect(app).toMatch(
+      /<Route path="\/developers">\s*<HeldJourneyGate journey="developments">\s*<DeveloperDirectoryPage \/>/,
+    );
+    expect(app).toMatch(
+      /<Route path="\/developer\/:slug">\s*<HeldJourneyGate journey="developments">\s*<DeveloperPublisherPage \/>/,
+    );
+    // Public brand profiles are resolved by the boundary, which holds them too; dashboards stay open.
+    const boundary = readRepoFile('client/src/pages/DeveloperRoutes.tsx');
+    expect(boundary).toMatch(
+      /<HeldJourneyGate journey="developments">\s*<DeveloperPublisherPage \/>/,
+    );
+    expect(boundary).toContain('return <DeveloperRoutes />;');
   });
   it('hands the stale public activation URL to preparation rather than a false live workspace', () => {
     const app = readRepoFile('client/src/App.tsx');

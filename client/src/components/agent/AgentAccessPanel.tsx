@@ -182,10 +182,9 @@ export function AgentAccessPanel({
           ) : null}
           <p data-testid="payment-cancellation-notice" className="text-xs text-slate-500">
             {PAYMENT_PANEL_CANCELLATION_NOTICE}{' '}
-            <a href="/terms" className="underline underline-offset-2">
-              Read our Terms
+            <a href="/legal/terms" className="underline underline-offset-2">
+              Terms
             </a>
-            .
           </p>
           {rejectionMessage ? (
             <div

@@ -33,13 +33,10 @@ import {
 } from '@/lib/commercialCatalog';
 import { DeveloperWorkspacePreview } from './DeveloperWorkspacePreview';
 import { COMMERCIAL_HERO_CLASS } from './commercialHero';
-import { getAccountAuthHref, isHomepageHeroJourneyEnabled } from '@/lib/publicNavigation';
+import { isHomepageHeroJourneyEnabled } from '@/lib/publicNavigation';
+import { NotOpenYetCta } from '@/components/advertise/NotOpenYetCta';
 import { useCommercialProductAvailability } from '@/hooks/useCommercialProductAvailability';
 import { SalesPauseNotice } from '@/components/commercial/SalesPauseNotice';
-
-const DEVELOPER_ACCOUNT_START_HREF = getAccountAuthHref('register', '/developer/setup', {
-  registerRole: 'property_developer',
-});
 
 type DeveloperCapability = {
   label: string;
@@ -1120,13 +1117,7 @@ function DeveloperPreparationLandingPage({
                   private development drafts while commercial activation remains protected.
                 </p>
                 <div className="mt-9 flex flex-wrap gap-3">
-                  <a
-                    href={DEVELOPER_ACCOUNT_START_HREF}
-                    className="inline-flex items-center gap-2 rounded-2xl bg-[var(--conversion)] px-5 py-3.5 text-sm font-bold text-white shadow-lg shadow-orange-950/25 transition hover:bg-[var(--conversion-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
-                  >
-                    Start Developer preparation
-                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                  </a>
+                  <NotOpenYetCta tone="dark" />
                 </div>
               </div>
 
@@ -1219,12 +1210,9 @@ function DeveloperPreparationLandingPage({
                 Private drafts stay private. Any later publication remains subject to the existing
                 organisation, project-review, and commercial activation requirements.
               </p>
-              <a
-                href={DEVELOPER_ACCOUNT_START_HREF}
-                className="mt-7 inline-flex items-center gap-2 rounded-2xl bg-[var(--conversion)] px-5 py-3.5 text-sm font-bold text-white shadow-lg shadow-orange-900/15 transition hover:bg-[var(--conversion-hover)]"
-              >
-                Start Developer preparation <ArrowRight className="h-4 w-4" aria-hidden="true" />
-              </a>
+              <div className="mt-7">
+                <NotOpenYetCta tone="light" />
+              </div>
             </div>
           </div>
         </section>

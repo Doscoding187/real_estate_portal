@@ -9,7 +9,9 @@ const marketplaceLinks = [
     ? [{ label: 'Developments', href: '/new-developments' }]
     : []),
   { label: 'Agents', href: '/agents' },
-  { label: 'Developers', href: '/developers' },
+  ...(isHomepageHeroJourneyEnabled('developments')
+    ? [{ label: 'Developers', href: '/developers' }]
+    : []),
   { label: 'Advertise / List Property', href: '/advertise' },
 ];
 

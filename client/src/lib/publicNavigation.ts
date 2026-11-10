@@ -142,6 +142,21 @@ export const LAUNCH_HELD_JOURNEYS: readonly string[] = [
   'commercial',
 ];
 
+/**
+ * A held-role sign-up entry must not carry its onboarding destination into a
+ * buyer or agent account. Other entries keep their `next` untouched.
+ */
+export function stripHeldRoleNextPath(
+  next: string | null | undefined,
+  heldRoleRequested: boolean,
+): string | null {
+  if (!next) return null;
+  if (heldRoleRequested && /^\/(agency\/setup|developer\/setup|service\/profile)(?:[/?#]|$)/.test(next)) {
+    return null;
+  }
+  return next;
+}
+
 export function isLaunchHeldJourney(key: string): boolean {
   return LAUNCH_HELD_JOURNEYS.includes(key);
 }
@@ -677,6 +692,7 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
             owner: 'developer-directory',
             capability: 'LAUNCH_READY',
             activeHref: '/developers',
+            journey: 'developments',
           }),
         ],
       },
@@ -754,6 +770,7 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
             owner: 'developer-directory',
             capability: 'LAUNCH_READY',
             activeHref: '/developers',
+            journey: 'developments',
           }),
           destination({
             id: 'professionals-services',

@@ -160,16 +160,26 @@ export const SegmentationLayer: React.FC<SegmentationLayerProps> = () => {
                   ))}
                 </ul>
 
-                <a
-                  href={segment.ctaLink}
-                  className={`mt-8 inline-flex items-center justify-center rounded-xl px-5 py-4 text-base font-bold text-white shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${segment.accent.button}`}
-                >
-                  {segment.ctaText}
-                  <ArrowRight
-                    className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1"
-                    aria-hidden="true"
-                  />
-                </a>
+                {segment.id === 'agent' ? (
+                  <a
+                    href={segment.ctaLink}
+                    className={`mt-8 inline-flex items-center justify-center rounded-xl px-5 py-4 text-base font-bold text-white shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${segment.accent.button}`}
+                  >
+                    {segment.ctaText}
+                    <ArrowRight
+                      className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1"
+                      aria-hidden="true"
+                    />
+                  </a>
+                ) : (
+                  // Held at launch: agent first. Not a link.
+                  <span
+                    data-testid="audience-gateway-coming-soon"
+                    className="mt-8 inline-flex items-center justify-center rounded-xl bg-slate-100 px-5 py-4 text-base font-bold text-slate-600"
+                  >
+                    Coming soon
+                  </span>
+                )}
               </article>
             );
           })}

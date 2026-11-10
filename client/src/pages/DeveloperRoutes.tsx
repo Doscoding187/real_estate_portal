@@ -18,6 +18,7 @@ import CreateDevelopment from '@/pages/CreateDevelopment';
 import DeveloperPlans from '@/pages/DeveloperPlans';
 import DeveloperPublisherPage from '@/pages/DeveloperPublisherPage';
 import DevelopmentHome from '@/pages/developer/DevelopmentHome';
+import { HeldJourneyGate } from '@/pages/JourneyHeldPage';
 import { isPublicDeveloperProfilePath } from '@/lib/developerRouteBoundary';
 
 // Lazy load drafts page if needed, or import directly
@@ -59,7 +60,12 @@ export function DeveloperRouteBoundary() {
   const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
 
   if (isPublicDeveloperProfilePath(pathname)) {
-    return <DeveloperPublisherPage />;
+    // The public profile is held with the developments journey; dashboard paths stay open.
+    return (
+      <HeldJourneyGate journey="developments">
+        <DeveloperPublisherPage />
+      </HeldJourneyGate>
+    );
   }
 
   return <DeveloperRoutes />;
