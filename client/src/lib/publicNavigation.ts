@@ -131,6 +131,21 @@ const BASELINE_RELEASED_PUBLIC_JOURNEYS: readonly PublicHeroJourneyKey[] = [
   'find_agent',
 ];
 
+/**
+ * Journeys held back for the public soft launch. A held journey is NOT released
+ * even when VITE_PUBLIC_JOURNEY_RELEASES lists it. Remove a key to release it.
+ */
+export const LAUNCH_HELD_JOURNEYS: readonly string[] = [
+  'developments',
+  'shared_living',
+  'plot_land',
+  'commercial',
+];
+
+export function isLaunchHeldJourney(key: string): boolean {
+  return LAUNCH_HELD_JOURNEYS.includes(key);
+}
+
 function parseSupplementalPublicJourneyReleases(value: unknown): readonly string[] {
   return Array.from(
     new Set(
@@ -163,10 +178,21 @@ export function resolvePublicJourneyReleaseContext(
 
 const RUNTIME_PUBLIC_JOURNEY_RELEASE_CONTEXT = resolvePublicJourneyReleaseContext();
 
+/** True when direct routes for this journey must show the held page in the running build. */
+export function isJourneyRouteHeld(
+  key: string,
+  releaseContext: PublicJourneyReleaseContext = RUNTIME_PUBLIC_JOURNEY_RELEASE_CONTEXT,
+): boolean {
+  return releaseContext.hostedReleaseControlled && isLaunchHeldJourney(key);
+}
+
 export function isPublicHeroJourneyReleased(
   key: PublicHeroJourneyKey,
   releaseContext: PublicJourneyReleaseContext = RUNTIME_PUBLIC_JOURNEY_RELEASE_CONTEXT,
 ): boolean {
+  // Hosted builds (including production) hold these journeys regardless of the manifest;
+  // local development keeps previewing completed product capability.
+  if (releaseContext.hostedReleaseControlled && isLaunchHeldJourney(key)) return false;
   return (
     !releaseContext.hostedReleaseControlled ||
     BASELINE_RELEASED_PUBLIC_JOURNEYS.includes(key) ||

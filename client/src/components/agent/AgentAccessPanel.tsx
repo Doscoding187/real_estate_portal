@@ -1,6 +1,7 @@
 import { Check, Copy, TriangleAlert } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { PAYMENT_PANEL_CANCELLATION_NOTICE } from '@shared/legalPlaceholders';
 import type { AgentBankDetails, AgentInvoice } from '@/hooks/useAgentLaunchInvoiceRequest';
 
 export function formatAccessAmount(amountMinor: number | null | undefined): string {
@@ -179,6 +180,13 @@ export function AgentAccessPanel({
           {bankDetails?.configurationMessage ? (
             <p className="text-xs text-slate-500">{bankDetails.configurationMessage}</p>
           ) : null}
+          <p data-testid="payment-cancellation-notice" className="text-xs text-slate-500">
+            {PAYMENT_PANEL_CANCELLATION_NOTICE}{' '}
+            <a href="/terms" className="underline underline-offset-2">
+              Read our Terms
+            </a>
+            .
+          </p>
           {rejectionMessage ? (
             <div
               role="alert"

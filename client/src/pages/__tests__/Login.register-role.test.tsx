@@ -36,41 +36,30 @@ describe('Login registration audience preselection', () => {
     setLocationMock.mockClear();
   });
 
-  it('preselects the Developer registration dialog for the developer commercial entry', () => {
-    setSearch('?mode=register&role=property_developer&next=%2Fdeveloper%2Fplans');
-    render(<Login />);
+  it.each(['property_developer', 'agency_admin', 'service_provider'])(
+    'ignores a %s preselect and keeps the buyer and agent chooser open',
+    role => {
+      setSearch(`?mode=register&role=${role}&next=%2Fdeveloper%2Fplans`);
+      render(<Login />);
 
-    expect(screen.getByRole('heading', { name: 'Create your account' })).toBeInTheDocument();
-    expect(screen.getAllByText('Developer').length).toBeGreaterThan(0);
-    expect(
-      screen.getByText(
-        'Register your owner account, then continue into company and development onboarding.',
-      ),
-    ).toBeInTheDocument();
-    expect(screen.getByText('Continue to company onboarding')).toBeInTheDocument();
-    expect(screen.getByText('Your name')).toBeInTheDocument();
-  });
+      expect(screen.getByRole('heading', { name: /Choose your role/i })).toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'Create your account' })).not.toBeInTheDocument();
+      expect(screen.getAllByText('Buyer / User').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Real Estate Agent').length).toBeGreaterThan(0);
+    },
+  );
 
-  it('preselects the matching role card for other commercial audiences', () => {
-    setSearch('?mode=register&role=agency_admin');
-    render(<Login />);
-
-    expect(screen.getByRole('heading', { name: 'Create your account' })).toBeInTheDocument();
-    expect(screen.getAllByText('Agency').length).toBeGreaterThan(0);
-    expect(screen.getByText('Owner name')).toBeInTheDocument();
-  });
-
-  it('keeps the neutral role chooser open when no role is requested', () => {
+  it('keeps the neutral role chooser open with only buyer and agent roles', () => {
     setSearch('?mode=register');
     render(<Login />);
 
     expect(screen.getByRole('heading', { name: /Choose your role/i })).toBeInTheDocument();
     expect(screen.getAllByText('Buyer / User').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Real Estate Agent').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Developer').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Service Provider').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Developer')).not.toBeInTheDocument();
+    expect(screen.queryByText('Agency')).not.toBeInTheDocument();
+    expect(screen.queryByText('Service Provider')).not.toBeInTheDocument();
     expect(screen.queryByText('Your name')).not.toBeInTheDocument();
-    expect(screen.queryByText('Continue to company onboarding')).not.toBeInTheDocument();
   });
 
   it('lets a global registration visitor choose their own account path', async () => {
@@ -90,9 +79,8 @@ describe('Login registration audience preselection', () => {
 
     expect(screen.getAllByText('Buyer / User').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Real Estate Agent').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Developer').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Service Provider').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Developer')).not.toBeInTheDocument();
+    expect(screen.queryByText('Service Provider')).not.toBeInTheDocument();
     expect(screen.queryByText('Your name')).not.toBeInTheDocument();
-    expect(screen.queryByText('Continue to company onboarding')).not.toBeInTheDocument();
   });
 });

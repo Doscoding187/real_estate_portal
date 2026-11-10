@@ -13,6 +13,16 @@ import {
 
 const VERIFIED_SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
+/** Roles self-registration accepts at launch. Add a role here to release it. */
+export const REGISTRATION_ALLOWED_ROLES: readonly string[] = ['visitor', 'agent'];
+
+/** Known professional roles that are rejected (HTTP 400) unless listed above. */
+export const HELD_REGISTRATION_ROLES: readonly string[] = [
+  'agency_admin',
+  'property_developer',
+  'service_provider',
+].filter(role => !REGISTRATION_ALLOWED_ROLES.includes(role));
+
 const getRequestId = (req: Request): string => {
   const requestId = (req as any).requestId;
   return typeof requestId === 'string' && requestId.trim().length > 0 ? requestId : 'unknown';
@@ -134,15 +144,11 @@ export function registerAuthRoutes(app: Express) {
       }
 
       // Register user (sends verification email)
-      // Allow specific roles if requested, otherwise default to 'visitor'
-      const allowedRoles = [
-        'agent',
-        'agency_admin',
-        'property_developer',
-        'service_provider',
-        'visitor',
-      ];
-      const requestedRole = allowedRoles.includes(role) ? role : 'visitor';
+      // Held roles are rejected outright; unknown strings default to 'visitor'.
+      if (HELD_REGISTRATION_ROLES.includes(role)) {
+        return res.status(400).json({ error: 'This account type is not available yet.' });
+      }
+      const requestedRole = REGISTRATION_ALLOWED_ROLES.includes(role) ? role : 'visitor';
 
       const { verificationEmailSent } = await authService.register(
         email,

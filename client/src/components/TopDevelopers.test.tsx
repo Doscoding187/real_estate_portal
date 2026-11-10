@@ -6,6 +6,7 @@ const testState = vi.hoisted(() => ({
   refetch: vi.fn(),
   queryInput: undefined as unknown,
   placeId: 'pl-place-01-000000000000000000000001',
+  developmentsEnabled: true,
 }));
 
 vi.stubGlobal(
@@ -58,6 +59,10 @@ vi.mock('wouter', () => ({
   ),
 }));
 
+vi.mock('@/lib/publicNavigation', () => ({
+  isHomepageHeroJourneyEnabled: () => testState.developmentsEnabled,
+}));
+
 import { TopDevelopers } from './TopDevelopers';
 
 describe('TopDevelopers canonical Place scope', () => {
@@ -65,6 +70,7 @@ describe('TopDevelopers canonical Place scope', () => {
     testState.refetch.mockReset();
     testState.refetch.mockResolvedValue(undefined);
     testState.queryInput = undefined;
+    testState.developmentsEnabled = true;
     testState.query = {
       data: undefined,
       isError: false,
@@ -95,13 +101,24 @@ describe('TopDevelopers canonical Place scope', () => {
     expect(testState.refetch).toHaveBeenCalledTimes(1);
   });
 
-  it('uses the catalogue empty state only for a successful empty response', () => {
+  it('renders nothing when the publisher list is empty', () => {
     testState.query = { ...testState.query, data: [] };
 
-    render(<TopDevelopers />);
+    const { container } = render(<TopDevelopers />);
 
-    expect(screen.getByText('No developer profiles are available yet')).toBeInTheDocument();
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it('renders nothing while the developments journey is held', () => {
+    testState.developmentsEnabled = false;
+    testState.query = {
+      ...testState.query,
+      data: [{ id: 1, slug: 'local-builder', brandName: 'Local Builder', developmentCount: 3 }],
+    };
+
+    const { container } = render(<TopDevelopers />);
+
+    expect(container).toBeEmptyDOMElement();
   });
 
   it('filters and carries links by the exact selected Place ID', () => {

@@ -8,7 +8,23 @@ import {
 import { useHomeSearch, type HomeAreaSelection } from '@/contexts/HomeSearchContext';
 import { needsHomeAreaClarification } from '@/lib/homeAreaSelection';
 import useEmblaCarousel from 'embla-carousel-react';
-import { ChevronLeft, ChevronRight, ChevronRight as ChevronRightIcon, MapPin } from 'lucide-react';
+import {
+  Building,
+  Building2,
+  ChevronLeft,
+  ChevronRight,
+  ChevronRight as ChevronRightIcon,
+  Gem,
+  Home,
+  KeyRound,
+  Landmark,
+  LayoutGrid,
+  MapPin,
+  Sparkles,
+  Tag,
+  Trees,
+  type LucideIcon,
+} from 'lucide-react';
 import {
   buildDiscoverBrowseHref,
   buildDiscoverCardHref,
@@ -42,79 +58,41 @@ function DiscoveryAction({
 
 interface PropertyType {
   type: string;
-  image: string;
+  icon: LucideIcon;
+  /** Tailwind classes for the tinted tile and its icon chip. */
+  tint: string;
+  chip: string;
   listingType: 'sale' | 'rent' | 'developments';
 }
 
+const TINT_BLUE = { tint: 'bg-blue-50 border-blue-100', chip: 'bg-blue-100 text-blue-700' };
+const TINT_EMERALD = {
+  tint: 'bg-emerald-50 border-emerald-100',
+  chip: 'bg-emerald-100 text-emerald-700',
+};
+const TINT_AMBER = { tint: 'bg-amber-50 border-amber-100', chip: 'bg-amber-100 text-amber-700' };
+const TINT_VIOLET = {
+  tint: 'bg-violet-50 border-violet-100',
+  chip: 'bg-violet-100 text-violet-700',
+};
+
 const propertyTypes: PropertyType[] = [
   // Sale Properties
-  {
-    type: 'Houses',
-    image: 'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800&h=600&fit=crop',
-    listingType: 'sale',
-  },
-  {
-    type: 'Apartments',
-    image: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&h=600&fit=crop',
-    listingType: 'sale',
-  },
-  {
-    type: 'Townhouses',
-    image: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&h=600&fit=crop',
-    listingType: 'sale',
-  },
-  {
-    type: 'Villas',
-    image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800&h=600&fit=crop',
-    listingType: 'sale',
-  },
-  {
-    type: 'Cluster Homes',
-    image: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&h=600&fit=crop',
-    listingType: 'sale',
-  },
-  {
-    type: 'Farms',
-    image: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800&h=600&fit=crop',
-    listingType: 'sale',
-  },
+  { type: 'Houses', icon: Home, ...TINT_BLUE, listingType: 'sale' },
+  { type: 'Apartments', icon: Building2, ...TINT_EMERALD, listingType: 'sale' },
+  { type: 'Townhouses', icon: Building, ...TINT_AMBER, listingType: 'sale' },
+  { type: 'Villas', icon: Landmark, ...TINT_VIOLET, listingType: 'sale' },
+  { type: 'Cluster Homes', icon: LayoutGrid, ...TINT_BLUE, listingType: 'sale' },
+  { type: 'Farms', icon: Trees, ...TINT_EMERALD, listingType: 'sale' },
   // Rent Properties
-  {
-    type: 'Apartments',
-    image: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&h=600&fit=crop',
-    listingType: 'rent',
-  },
-  {
-    type: 'Houses',
-    image: 'https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=800&h=600&fit=crop',
-    listingType: 'rent',
-  },
-  {
-    type: 'Townhouses',
-    image: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&h=600&fit=crop',
-    listingType: 'rent',
-  },
-  // New Developments
-  {
-    type: 'Ready to Move',
-    image: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800&h=600&fit=crop',
-    listingType: 'developments',
-  },
-  {
-    type: 'New Launch',
-    image: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&h=600&fit=crop',
-    listingType: 'developments',
-  },
-  {
-    type: 'Affordable Housing',
-    image: 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800&h=600&fit=crop',
-    listingType: 'developments',
-  },
-  {
-    type: 'Luxury Projects',
-    image: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&h=600&fit=crop',
-    listingType: 'developments',
-  },
+  { type: 'Apartments', icon: Building2, ...TINT_EMERALD, listingType: 'rent' },
+  { type: 'Houses', icon: Home, ...TINT_BLUE, listingType: 'rent' },
+  { type: 'Townhouses', icon: Building, ...TINT_AMBER, listingType: 'rent' },
+  // New Developments (held at launch; hidden while the developments journey is held)
+  { type: 'Ready to Move', icon: KeyRound, ...TINT_BLUE, listingType: 'developments' },
+  { type: 'New Launch', icon: Sparkles, ...TINT_AMBER, listingType: 'developments' },
+  { type: 'Affordable Housing', icon: Tag, ...TINT_EMERALD, listingType: 'developments' },
+  { type: 'Luxury Projects', icon: Gem, ...TINT_VIOLET, listingType: 'developments' },
 ];
 
 interface DiscoverPropertiesProps {
@@ -531,7 +509,7 @@ export function DiscoverProperties({
                 {filteredProperties.map((property, idx) => (
                   <div
                     key={idx}
-                    className="flex-[0_0_78%] min-w-0 sm:flex-[0_0_48%] lg:flex-[0_0_32%]"
+                    className="flex-[0_0_62%] min-w-0 sm:flex-[0_0_48%] lg:flex-[0_0_32%]"
                   >
                     <DiscoveryAction
                       onChoose={
@@ -546,41 +524,28 @@ export function DiscoverProperties({
                         property.listingType,
                         developmentPlace,
                       )}
-                      className="group relative block h-[272px] overflow-hidden rounded-xl border border-slate-800 bg-slate-900 shadow-md transition-all duration-500 hover:shadow-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2774AE] focus-visible:ring-offset-2 sm:h-[360px]"
+                      className={`group flex h-[168px] flex-col justify-between rounded-xl border p-4 shadow-sm transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2774AE] focus-visible:ring-offset-2 sm:h-[200px] sm:p-5 ${property.tint}`}
                     >
-                      <img
-                        src={property.image}
-                        alt={property.type}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-90 group-hover:opacity-100"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent opacity-80 group-hover:opacity-70 transition-opacity duration-300" />
-
-                      {/* Content Overlay */}
-                      <div className="absolute bottom-0 left-0 right-0 p-4 text-white transform translate-y-1 group-hover:translate-y-0 transition-transform duration-300">
-                        <div className="w-10 h-1 bg-blue-500 mb-3 rounded-full transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-500 delay-100" />
-
-                        <div className="hidden sm:flex items-center gap-2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-75 transform -translate-y-2 group-hover:translate-y-0">
-                          <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">
-                            Explore
-                          </span>
-                        </div>
-
-                        <h3 className="text-lg sm:text-2xl font-bold mb-1.5 text-white group-hover:text-blue-50 transition-colors">
+                      <span
+                        className={`flex h-12 w-12 items-center justify-center rounded-xl ${property.chip}`}
+                      >
+                        <property.icon className="h-6 w-6" aria-hidden="true" />
+                      </span>
+                      <span className="block">
+                        <span className="block text-lg font-bold text-slate-900 sm:text-xl">
                           {property.type}
-                        </h3>
-                        <p className="text-xs sm:text-sm text-slate-300 font-medium flex items-center gap-2">
-                          <span className="bg-white/10 backdrop-blur-md px-2 py-1 rounded text-xs uppercase tracking-wider border border-white/10">
+                        </span>
+                        <span className="mt-1 block text-xs font-medium text-slate-600">
+                          <span className="rounded bg-white/70 px-2 py-0.5 uppercase tracking-wider">
                             {listingType === 'sale'
                               ? 'For Sale'
                               : listingType === 'rent'
                                 ? 'For Rent'
                                 : 'New Development'}
                           </span>
-                          <span className="text-slate-300 opacity-80 group-hover:opacity-100 transition-opacity">
-                            {locationPhrase}
-                          </span>
-                        </p>
-                      </div>
+                          <span className="mt-1 block truncate">{locationPhrase}</span>
+                        </span>
+                      </span>
                     </DiscoveryAction>
                   </div>
                 ))}

@@ -23,6 +23,7 @@ import { isLandPublicDiscoveryAvailable, isLandVerticalAvailable } from '@shared
 
 // Eager Imports (Critical Path)
 import Home from './pages/Home';
+import { HeldJourneyGate } from './pages/JourneyHeldPage';
 import { RequireRole } from '@/components/RequireRole';
 import AgencySetupAccountBoundary from '@/components/AgencySetupAccountBoundary';
 
@@ -404,20 +405,59 @@ function Router() {
           </Route>
           <Route path="/listing-template" component={ListingTemplate} />
           {/* Canonical Developments Root */}
-          <Route path="/new-developments" component={DevelopmentsDemo} />
-          <Route path="/commercial" component={CommercialOffice} />
-          <Route path="/shared-living" component={SharedLiving} />
-          <Route path="/shared-living/list">
-            <RequireRole role={['visitor', 'agent']} unauthenticatedAuthEntry="register">
-              <SharedLivingLister />
-            </RequireRole>
+          {/* Launch-held journeys render JourneyHeldPage; see LAUNCH_HELD_JOURNEYS */}
+          <Route path="/new-developments">
+            <HeldJourneyGate journey="developments">
+              <DevelopmentsDemo />
+            </HeldJourneyGate>
           </Route>
-          <Route path="/shared-living/thread/:token" component={SharedLivingThread} />
-          <Route path="/shared-living/:slug" component={SharedLivingDetail} />
-          <Route path="/commercial/:slug" component={CommercialOfficeDetail} />
-          <Route path="/development/:slug/unit/:unitId" component={DevelopmentUnitDetailPage} />
-          <Route path="/development/:slug/qualification" component={DevelopmentQualificationPage} />
-          <Route path="/development/:slug" component={DevelopmentDetail} />
+          <Route path="/commercial">
+            <HeldJourneyGate journey="commercial">
+              <CommercialOffice />
+            </HeldJourneyGate>
+          </Route>
+          <Route path="/shared-living">
+            <HeldJourneyGate journey="shared_living">
+              <SharedLiving />
+            </HeldJourneyGate>
+          </Route>
+          <Route path="/shared-living/list">
+            <HeldJourneyGate journey="shared_living">
+              <RequireRole role={['visitor', 'agent']} unauthenticatedAuthEntry="register">
+                <SharedLivingLister />
+              </RequireRole>
+            </HeldJourneyGate>
+          </Route>
+          <Route path="/shared-living/thread/:token">
+            <HeldJourneyGate journey="shared_living">
+              <SharedLivingThread />
+            </HeldJourneyGate>
+          </Route>
+          <Route path="/shared-living/:slug">
+            <HeldJourneyGate journey="shared_living">
+              <SharedLivingDetail />
+            </HeldJourneyGate>
+          </Route>
+          <Route path="/commercial/:slug">
+            <HeldJourneyGate journey="commercial">
+              <CommercialOfficeDetail />
+            </HeldJourneyGate>
+          </Route>
+          <Route path="/development/:slug/unit/:unitId">
+            <HeldJourneyGate journey="developments">
+              <DevelopmentUnitDetailPage />
+            </HeldJourneyGate>
+          </Route>
+          <Route path="/development/:slug/qualification">
+            <HeldJourneyGate journey="developments">
+              <DevelopmentQualificationPage />
+            </HeldJourneyGate>
+          </Route>
+          <Route path="/development/:slug">
+            <HeldJourneyGate journey="developments">
+              <DevelopmentDetail />
+            </HeldJourneyGate>
+          </Route>
 
           {/* NOTE: Developer routes moved to section 2A above legacy wildcards */}
 

@@ -5,43 +5,14 @@
  */
 
 import { useLocation } from 'wouter';
-import { Building2, Users, UserCircle, ArrowRight } from 'lucide-react';
+import { UserCircle, ArrowRight } from 'lucide-react';
 import { GradientButton } from '@/components/ui/GradientButton';
 
 export default function RoleSelection() {
   const [, setLocation] = useLocation();
 
   const roles = [
-    {
-      id: 'developer',
-      title: 'Property Developer',
-      description: 'Register your development company and showcase your projects',
-      icon: Building2,
-      gradient: 'from-blue-500 to-indigo-600',
-      bgGradient: 'from-blue-50 to-indigo-50',
-      route: '/developer/setup',
-      features: [
-        'List your developments',
-        'Manage project portfolio',
-        'Capture qualified leads',
-        'Track sales performance',
-      ],
-    },
-    {
-      id: 'agency',
-      title: 'Real Estate Agency',
-      description: 'Register your agency and manage your team of agents',
-      icon: Users,
-      gradient: 'from-green-500 to-emerald-600',
-      bgGradient: 'from-green-50 to-emerald-50',
-      route: '/agency/setup',
-      features: [
-        'Manage your agency profile',
-        'Invite and manage agents',
-        'List properties',
-        'Track team performance',
-      ],
-    },
+    // Launch scope: agent only. Developer and agency entries are held.
     {
       id: 'agent',
       title: 'Real Estate Agent',
@@ -73,7 +44,7 @@ export default function RoleSelection() {
         </div>
 
         {/* Role Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+        <div className="grid grid-cols-1 max-w-md mx-auto gap-8 mb-12">
           {roles.map(role => {
             const Icon = role.icon;
             return (

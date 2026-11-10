@@ -24,7 +24,9 @@ describe('public route convergence', () => {
     const app = readRepoFile('client/src/App.tsx');
 
     expect(app).not.toContain('<Route path="/developments"');
-    expect(app).toContain('<Route path="/new-developments" component={DevelopmentsDemo} />');
+    expect(app).toContain(
+      '<Route path="/new-developments">\n            <HeldJourneyGate journey="developments">\n              <DevelopmentsDemo />',
+    );
   });
   it('hands the stale public activation URL to preparation rather than a false live workspace', () => {
     const app = readRepoFile('client/src/App.tsx');

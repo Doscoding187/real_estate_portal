@@ -1,4 +1,4 @@
-import { ArrowRight, BriefcaseBusiness, Building2, Handshake, UsersRound } from 'lucide-react';
+import { ArrowRight, BriefcaseBusiness } from 'lucide-react';
 import { COMMERCIAL_ACTIVATION_STATE } from '@shared/commercialActivation';
 
 const COMMERCIAL_PROFESSIONAL_PATHS = [
@@ -9,27 +9,6 @@ const COMMERCIAL_PROFESSIONAL_PATHS = [
     cta: 'Explore Agent tools',
     icon: BriefcaseBusiness,
   },
-  {
-    title: 'Agencies',
-    description: 'Bring inventory, team workflow and routed enquiries together.',
-    href: '/advertise/sell/agencies',
-    cta: 'Explore Agency tools',
-    icon: UsersRound,
-  },
-  {
-    title: 'Developers',
-    description: 'Present developments and unit availability, then manage project enquiries.',
-    href: '/advertise/sell/developers',
-    cta: 'Explore Developer tools',
-    icon: Building2,
-  },
-  {
-    title: 'Service businesses',
-    description: 'Introduce your property service to people looking for practical help.',
-    href: '/advertise/services',
-    cta: 'Explore service solutions',
-    icon: Handshake,
-  },
 ] as const;
 
 const PREPARATION_PROFESSIONAL_PATHS = [
@@ -39,27 +18,6 @@ const PREPARATION_PROFESSIONAL_PATHS = [
     href: '/advertise/sell/agents',
     cta: 'Explore Agent preparation',
     icon: BriefcaseBusiness,
-  },
-  {
-    title: 'Agencies',
-    description: 'Establish an Agency identity and prepare private inventory.',
-    href: '/advertise/sell/agencies',
-    cta: 'Explore Agency preparation',
-    icon: UsersRound,
-  },
-  {
-    title: 'Developers',
-    description: 'Establish your organisation for review and prepare private development drafts.',
-    href: '/advertise/sell/developers',
-    cta: 'Explore Developer preparation',
-    icon: Building2,
-  },
-  {
-    title: 'Service businesses',
-    description: 'Introduce your property service to people looking for practical help.',
-    href: '/advertise/services',
-    cta: 'Explore service solutions',
-    icon: Handshake,
   },
 ] as const;
 
@@ -91,7 +49,7 @@ export function ProfessionalEntrySection() {
         </p>
       </div>
 
-      <div className="mt-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-7 grid max-w-md gap-3">
         {professionalPaths.map(({ title, description, href, cta, icon: Icon }) => (
           <a
             key={title}
@@ -109,15 +67,6 @@ export function ProfessionalEntrySection() {
             </span>
           </a>
         ))}
-      </div>
-
-      <div className="mt-6">
-        <a
-          href="/advertise"
-          className="inline-flex items-center gap-2 text-sm font-semibold text-white/80 transition hover:text-white"
-        >
-          Explore all professional solutions <ArrowRight className="h-4 w-4" aria-hidden="true" />
-        </a>
       </div>
     </section>
   );
