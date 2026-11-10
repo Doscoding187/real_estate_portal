@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
+import { isAgentPlanEntitled } from '@/lib/agentJourney';
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 import {
@@ -55,7 +56,7 @@ export function AgentSidebar({ mode = 'desktop' }: SidebarProps) {
   const { user, logout } = useAuth();
   const { status, isLoading: statusLoading } = useAgentOnboardingStatus();
   const operationalDataEnabled =
-    user?.role === 'agent' && !statusLoading && Boolean(status?.fullFeaturesUnlocked);
+    user?.role === 'agent' && !statusLoading && isAgentPlanEntitled(status);
 
   const { data: stats } = trpc.agent.getDashboardStats.useQuery(undefined, {
     enabled: operationalDataEnabled,

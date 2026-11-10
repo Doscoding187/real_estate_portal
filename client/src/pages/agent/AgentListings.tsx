@@ -34,10 +34,15 @@ import {
 import { AgentFeatureLockedState } from '@/components/agent/AgentFeatureLockedState';
 import { AgentJourneyStatusErrorState } from '@/components/agent/AgentJourneyStatusErrorState';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
+import { openPlanGate } from '@/lib/agentPlanGate';
 import {
   getAgentJourneyAction,
   getAgentProfileCompletionDescription,
   isAgentProfileJourneyStep,
+  getPublishBlock,
+  isAgentPaymentBlocked,
+  isAgentPlanEntitled,
+  isAgentWorkspaceOpen,
 } from '@/lib/agentJourney';
 import { calculateListingReadiness } from '@/lib/readiness';
 import {
@@ -105,8 +110,10 @@ export default function AgentListings() {
 
   const isDraftOrPending =
     activeTab === 'draft' || activeTab === 'pending' || activeTab === 'rejected';
-  const dashboardUnlocked = !statusLoading && Boolean(status?.dashboardUnlocked);
-  const operationalDataEnabled = !statusLoading && Boolean(status?.fullFeaturesUnlocked);
+  const workspaceOpen = !statusLoading && isAgentWorkspaceOpen(status);
+  // Listings data is a paid feature: nothing loads for an unpaid agent.
+  const dashboardUnlocked = workspaceOpen && isAgentPlanEntitled(status);
+  const operationalDataEnabled = !statusLoading && isAgentPlanEntitled(status);
 
   const isListingInTab = (status: string | null | undefined, tab: ListingTab) => {
     const normalized = String(status || '').toLowerCase();
@@ -266,7 +273,8 @@ export default function AgentListings() {
       listing.city?.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
-  const listingAccessLocked = !statusLoading && !status?.entitlements?.canPublishListings;
+  const listingAccessLocked = !statusLoading && !isAgentPlanEntitled(status);
+  const publishBlock = !statusLoading ? getPublishBlock(status) : null;
   // The existing APIs return the latest 50 records. Sort and paginate that
   // loaded set explicitly; do not imply an inventory-wide count or search.
   const sortedListings = [...(filteredListings ?? [])];
@@ -288,8 +296,16 @@ export default function AgentListings() {
   const journeyAction = getAgentJourneyAction(status, { agentLaunchAccessAvailable });
   const needsProfileCompletion = isAgentProfileJourneyStep(status);
   const startListing = () => {
-    if (statusLoading || journeyAction.waiting) return;
-    setLocation(listingAccessLocked ? journeyAction.href : '/listings/create');
+    if (statusLoading) return;
+    if (listingAccessLocked) {
+      openPlanGate();
+      return;
+    }
+    if (publishBlock) {
+      setLocation(publishBlock.href);
+      return;
+    }
+    setLocation('/listings/create');
   };
 
   return (
@@ -317,11 +333,13 @@ export default function AgentListings() {
           </Button>
           <Button
             onClick={startListing}
-            disabled={statusLoading || journeyAction.waiting}
+            disabled={statusLoading}
             className={agentPageStyles.primaryButton}
           >
             <Plus className="h-4 w-4 mr-2" />
-            {listingAccessLocked ? journeyAction.label : 'Add New Listing'}
+            {listingAccessLocked
+              ? 'Choose plan to publish'
+              : (publishBlock?.label ?? 'Add New Listing')}
           </Button>
         </div>
       </header>
@@ -337,6 +355,13 @@ export default function AgentListings() {
           />
         ) : statusError ? (
           <AgentJourneyStatusErrorState onRetry={retryStatus} />
+        ) : workspaceOpen && !dashboardUnlocked && !isAgentPaymentBlocked(status) ? (
+          <AgentFeatureLockedState
+            title="Listings unlock with a plan"
+            description="Choose a plan to create, manage and publish listings. Only your profile is open before payment."
+            actionLabel="Get access"
+            onAction={openPlanGate}
+          />
         ) : !dashboardUnlocked ? (
           <div className="space-y-4">
             <AgentFeatureLockedState
@@ -360,26 +385,6 @@ export default function AgentListings() {
         ) : (
           <>
             <AgentServicesReferralPanel className="mb-6" />
-            {listingAccessLocked && isDraftOrPending ? (
-              <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-950">
-                <p className="font-medium">
-                  Your private {activeTab === 'draft' ? 'drafts' : 'submissions'} are still here.
-                </p>
-                <p className="mt-1 text-amber-900/80">
-                  {journeyAction.description} You can review or edit this work while access is being
-                  completed.
-                </p>
-                {!journeyAction.waiting ? (
-                  <Button
-                    variant="outline"
-                    className="mt-3 rounded-full border-amber-300 bg-white"
-                    onClick={() => setLocation(journeyAction.href)}
-                  >
-                    {journeyAction.label}
-                  </Button>
-                ) : null}
-              </div>
-            ) : null}
 
             <div className={cn(agentPageStyles.controls, 'flex flex-wrap items-center gap-3')}>
               <div className="relative min-w-0 flex-1 basis-60">
@@ -586,7 +591,9 @@ export default function AgentListings() {
                           onEdit={
                             editListingId == null
                               ? undefined
-                              : () => setLocation(`/listings/create?id=${editListingId}&edit=true`)
+                              : listingAccessLocked
+                                ? openPlanGate
+                                : () => setLocation(`/listings/create?id=${editListingId}&edit=true`)
                           }
                           onDelete={deleteId == null ? undefined : () => handleDelete(deleteId)}
                           onView={

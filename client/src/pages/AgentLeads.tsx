@@ -8,9 +8,11 @@ import { AgentJourneyStatusErrorState } from '@/components/agent/AgentJourneySta
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
 import {
   getAgentJourneyAction,
-  getAgentProfileCompletionDescription,
-  isAgentProfileJourneyStep,
+  isAgentPaymentBlocked,
+  isAgentPlanEntitled,
+  isAgentWorkspaceOpen,
 } from '@/lib/agentJourney';
+import { openPlanGate } from '@/lib/agentPlanGate';
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -260,21 +262,19 @@ export default function AgentLeads() {
     };
   }, [location]);
 
-  const leadsLocked = !statusLoading && !status?.entitlements?.canAccessExistingLeads;
-  const newEnquiriesPaused =
-    !statusLoading &&
-    Boolean(status?.entitlements?.canAccessExistingLeads) &&
-    !status?.entitlements?.canReceiveLeads;
+  const leadsLocked = !statusLoading && !isAgentPlanEntitled(status);
+  // Leads are paid: no lead, showing or notification query runs for an unpaid agent.
+  const leadsEnabled = !statusLoading && !statusError && isAgentPlanEntitled(status);
+  const newEnquiriesPaused = leadsEnabled && !status?.entitlements?.canReceiveLeads;
   const journeyAction = getAgentJourneyAction(status, { agentLaunchAccessAvailable });
-  const needsProfileCompletion = isAgentProfileJourneyStep(status);
 
   const { data: responseSummary, isLoading: responseSummaryLoading } =
     trpc.agent.getLeadResponseSummary.useQuery(undefined, {
-      enabled: !leadsLocked && !statusLoading,
+      enabled: leadsEnabled,
       refetchOnWindowFocus: false,
     });
   const { data: stats } = trpc.agent.getDashboardStats.useQuery(undefined, {
-    enabled: !leadsLocked && !statusLoading,
+    enabled: leadsEnabled,
     retry: false,
   });
 
@@ -285,7 +285,7 @@ export default function AgentLeads() {
       },
     },
     {
-      enabled: !leadsLocked && !statusLoading,
+      enabled: leadsEnabled,
       retry: false,
     },
   );
@@ -296,7 +296,7 @@ export default function AgentLeads() {
       unreadOnly: false,
     },
     {
-      enabled: !leadsLocked && !statusLoading,
+      enabled: leadsEnabled,
       retry: false,
       refetchOnWindowFocus: false,
     },
@@ -375,22 +375,23 @@ export default function AgentLeads() {
         ) : statusError ? (
           <AgentJourneyStatusErrorState onRetry={retryStatus} />
         ) : leadsLocked ? (
-          <AgentFeatureLockedState
-            title={
-              needsProfileCompletion
-                ? 'Add your contact details before working leads'
-                : journeyAction.title
-            }
-            description={
-              needsProfileCompletion
-                ? getAgentProfileCompletionDescription({ agentLaunchAccessAvailable })
-                : journeyAction.description
-            }
-            actionLabel={journeyAction.waiting ? 'Return to dashboard' : journeyAction.label}
-            onAction={() =>
-              setLocation(journeyAction.waiting ? '/agent/dashboard' : journeyAction.href)
-            }
-          />
+          isAgentWorkspaceOpen(status) && !isAgentPaymentBlocked(status) ? (
+            <AgentFeatureLockedState
+              title="Leads unlock with a plan"
+              description="Choose a plan to receive and work enquiries. Only your profile is open before payment."
+              actionLabel="Get access"
+              onAction={openPlanGate}
+            />
+          ) : (
+            <AgentFeatureLockedState
+              title={journeyAction.title}
+              description={journeyAction.description}
+              actionLabel={journeyAction.waiting ? 'Return to dashboard' : journeyAction.label}
+              onAction={() =>
+                setLocation(journeyAction.waiting ? '/agent/dashboard' : journeyAction.href)
+              }
+            />
+          )
         ) : (
           <>
             {newEnquiriesPaused ? (

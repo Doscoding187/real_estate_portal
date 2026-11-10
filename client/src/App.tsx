@@ -3,6 +3,7 @@ import { lazy, Suspense } from 'react';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/NotFound';
+import { AgentListingAccessGate } from './components/agent/AgentListingAccessGate';
 import { Route, Switch, Redirect } from 'wouter';
 import ErrorBoundary from './components/ErrorBoundary';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -282,22 +283,30 @@ function Router() {
           </Route>
           <Route path="/agent/land/create">
             <RequireRole role="agent" unauthenticatedAuthEntry="signin">
+              <AgentListingAccessGate>
               {isLandVerticalAvailable() ? <LandAuthoringWorkspace /> : <LandDeferred audience="author" />}
+              </AgentListingAccessGate>
             </RequireRole>
           </Route>
           <Route path="/agent/commercial/create">
             <RequireRole role="agent" unauthenticatedAuthEntry="signin">
+              <AgentListingAccessGate>
               <CommercialOfficeAuthoringWorkspace />
+              </AgentListingAccessGate>
             </RequireRole>
           </Route>
           <Route path="/agent/commercial">
             <RequireRole role="agent" unauthenticatedAuthEntry="signin">
+              <AgentListingAccessGate>
               <CommercialInventory />
+              </AgentListingAccessGate>
             </RequireRole>
           </Route>
           <Route path="/agent/commercial/office/create">
             <RequireRole role="agent" unauthenticatedAuthEntry="signin">
+              <AgentListingAccessGate>
               <CommercialOfficeAuthoringWorkspace />
+              </AgentListingAccessGate>
             </RequireRole>
           </Route>
           <Route path="/agency/commercial/create">
@@ -388,7 +397,9 @@ function Router() {
           {/* Route Handlers / Wizards */}
           <Route path="/listings/create">
             <RequireRole role={['agent', 'agency_admin']} unauthenticatedAuthEntry="register">
-              <ListingWizard />
+              <AgentListingAccessGate>
+                <ListingWizard />
+              </AgentListingAccessGate>
             </RequireRole>
           </Route>
           <Route path="/listing-template" component={ListingTemplate} />

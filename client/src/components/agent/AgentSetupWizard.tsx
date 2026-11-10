@@ -13,6 +13,7 @@ import { ArrowLeft, ArrowRight, CheckCircle2, Upload, X } from 'lucide-react';
 import { LocationAutocomplete } from '@/components/location/LocationAutocomplete';
 import type { CanonicalPlaceOption } from '@/components/location/LocationAutocomplete';
 import { apiFetch } from '@/lib/api';
+import { markPlanPromptTrigger } from '@/lib/agentPlanGate';
 import type { AgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
 import { getAgentProfileCompletionDescription } from '@/lib/agentJourney';
 import { useCommercialProductAvailability } from '@/hooks/useCommercialProductAvailability';
@@ -280,11 +281,13 @@ export function AgentSetupWizard() {
 
   const handleSaveStep = async (nextStep?: number) => {
     await saveProfileMutation.mutateAsync(buildPayload());
+    markPlanPromptTrigger();
     if (nextStep) setStep(nextStep);
   };
 
   const handleCompleteSetup = async () => {
     await saveProfileMutation.mutateAsync(buildPayload());
+    markPlanPromptTrigger();
     if (awaitingReconsideration) {
       toast.success(
         'Your corrected profile has been saved. It remains rejected until an authorised reviewer reconsiders it.',

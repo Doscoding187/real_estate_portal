@@ -105,7 +105,7 @@ const invoice = {
 beforeEach(() => {
   vi.clearAllMocks();
   useAuthMock.mockReturnValue({
-    user: { id: 7, role: 'agent' },
+    user: { id: 7, role: 'agent', name: 'Test payer' },
     loading: false,
   });
   catalogMock.mockReturnValue({
@@ -309,7 +309,7 @@ describe('Agent pre-payment preparation', () => {
     fireEvent.click(screen.getByRole('button', { name: /Get Agent Launch Access/i }));
     await waitFor(() =>
       expect(toastModule.toast.error).toHaveBeenCalledWith(
-        'We could not request your invoice. Refresh the page and try again, or contact support@propertylistifysa.co.za.',
+        'We could not create your payment reference. Please try again.',
       ),
     );
     expect(toastModule.toast.info).not.toHaveBeenCalled();
@@ -467,11 +467,9 @@ describe('Agent pre-payment preparation', () => {
     });
     render(<CommercialAgentPackageSelection agentLaunchAccessAvailable />);
     const button = await screen.findByRole('button', { name: 'I’ve paid' });
-    expect(button).toBeDisabled();
-    fireEvent.change(screen.getByLabelText('Payer / account name'), {
-      target: { value: 'Test payer' },
-    });
     expect(button).toBeEnabled();
+    expect(screen.queryByLabelText('Payer / account name')).not.toBeInTheDocument();
+    expect(document.querySelector('input[type="file"]')).toBeNull();
     expect(screen.queryByLabelText('Proof of payment')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Bank reference')).not.toBeInTheDocument();
     fireEvent.click(button);
@@ -482,7 +480,7 @@ describe('Agent pre-payment preparation', () => {
     expect(mutate.mock.calls[0][0]).toEqual({
       invoiceId: invoice.id,
       payerName: 'Test payer',
-      paymentDate: expect.any(String),
+      paymentDate: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
       requestId: expect.any(String),
     });
     expect(screen.getByText(invoice.paymentReference)).toBeInTheDocument();

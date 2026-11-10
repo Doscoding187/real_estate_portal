@@ -49,6 +49,9 @@ vi.mock('./NotificationCenter', () => ({
 }));
 
 import { AgentTopNav } from './AgentTopNav';
+import { closePlanGate, usePlanGateOpen } from '@/lib/agentPlanGate';
+import { renderHook } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -109,5 +112,23 @@ describe('AgentTopNav access handoff', () => {
     );
     expect(screen.getByRole('button', { name: 'Status unavailable' })).toBeDisabled();
     expect(screen.getByTestId('notification-center')).toHaveAttribute('data-enabled', 'false');
+  });
+
+  it('opens the plan dialog instead of navigating when a non-entitled agent adds a listing', async () => {
+    useOnboardingStatusMock.mockReturnValue({
+      status: {
+        fullFeaturesUnlocked: false,
+        recommendedNextStep: 'select_package',
+        subscriptionStatus: 'unassigned',
+        entitlements: { canPublishListings: false },
+      },
+      isLoading: false,
+    });
+    const gate = renderHook(() => usePlanGateOpen());
+    render(<AgentTopNav />);
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Choose plan' }));
+    expect(gate.result.current).toBe(true);
+    expect(setLocationMock).not.toHaveBeenCalled();
+    closePlanGate();
   });
 });

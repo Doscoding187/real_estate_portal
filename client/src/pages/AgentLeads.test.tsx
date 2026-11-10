@@ -54,6 +54,8 @@ vi.mock('@/lib/trpc', () => ({
 }));
 
 import AgentLeads from './AgentLeads';
+import { closePlanGate, usePlanGateOpen } from '@/lib/agentPlanGate';
+import { renderHook } from '@testing-library/react';
 
 const emptyPipeline = {
   new: [],
@@ -85,7 +87,10 @@ function setOnboardingStatus(canAccessExistingLeads: boolean, canReceiveLeads: b
   useOnboardingStatusMock.mockReturnValue({
     status: {
       recommendedNextStep: 'await_agency_activation',
+      fullFeaturesUnlocked: canAccessExistingLeads,
+      subscriptionStatus: canAccessExistingLeads ? 'active' : 'unassigned',
       entitlements: {
+        canPublishListings: canAccessExistingLeads,
         canAccessExistingLeads,
         canReceiveLeads,
       },
@@ -181,5 +186,69 @@ describe('AgentLeads', () => {
     expect(screen.getByText('1 awaiting first outreach')).toBeInTheDocument();
     expect(screen.getByText('3 awaiting connection')).toBeInTheDocument();
     expect(screen.getByText(/An outreach attempt includes calls or messages logged without a reply/)).toBeInTheDocument();
+  });
+
+  it('fires no lead, showing or notification query and mounts no pipeline for an unpaid agent', () => {
+    useOnboardingStatusMock.mockReturnValue({
+      status: {
+        recommendedNextStep: 'select_package',
+        fullFeaturesUnlocked: false,
+        entitlements: { canAccessExistingLeads: true, canReceiveLeads: true, canPublishListings: false },
+      },
+      isLoading: false,
+      error: null,
+      retry: vi.fn(),
+    });
+    render(<AgentLeads />);
+    expect(screen.queryByText('Lead pipeline')).not.toBeInTheDocument();
+    for (const mock of [
+      getLeadResponseSummaryQueryMock,
+      getDashboardStatsQueryMock,
+      getLeadsPipelineQueryMock,
+      getNotificationsQueryMock,
+    ]) {
+      expect(mock).toHaveBeenCalled();
+      for (const call of mock.mock.calls) {
+        expect(call[1]).toEqual(expect.objectContaining({ enabled: false }));
+      }
+    }
+  });
+
+  it('locks leads for a verified, non-entitled agent and opens the plan dialog', async () => {
+    useOnboardingStatusMock.mockReturnValue({
+      status: {
+        recommendedNextStep: 'select_package',
+        fullFeaturesUnlocked: false,
+        entitlements: { canAccessExistingLeads: false, canReceiveLeads: false },
+      },
+      isLoading: false,
+      error: null,
+      retry: vi.fn(),
+    });
+    const gate = renderHook(() => usePlanGateOpen());
+    render(<AgentLeads />);
+    expect(screen.getByText('Leads unlock with a plan')).toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Get access' }));
+    expect(gate.result.current).toBe(true);
+    expect(setLocationMock).not.toHaveBeenCalled();
+    closePlanGate();
+  });
+
+  it('keeps leads open for a paid agent whose profile is below the publish threshold', () => {
+    useOnboardingStatusMock.mockReturnValue({
+      status: {
+        recommendedNextStep: 'dashboard',
+        fullFeaturesUnlocked: true,
+        subscriptionStatus: 'active',
+        profileCompletionScore: 65,
+        entitlements: { canPublishListings: false, canReceiveLeads: true },
+      },
+      isLoading: false,
+      error: null,
+      retry: vi.fn(),
+    });
+    render(<AgentLeads />);
+    expect(screen.getByText('Lead pipeline')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Get access' })).not.toBeInTheDocument();
   });
 });

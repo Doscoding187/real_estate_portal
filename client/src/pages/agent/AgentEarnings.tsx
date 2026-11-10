@@ -5,11 +5,11 @@ import { agentPageStyles } from '@/components/agent/agentPageStyles';
 import { AgentFeatureLockedState } from '@/components/agent/AgentFeatureLockedState';
 import { AgentJourneyStatusErrorState } from '@/components/agent/AgentJourneyStatusErrorState';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
+import { followAgentJourneyHref } from '@/lib/agentPlanGate';
 import {
   getAgentJourneyAction,
   getAgentProfileCompletionDescription,
-  isAgentProfileJourneyStep,
-} from '@/lib/agentJourney';
+  isAgentProfileJourneyStep, isAgentPlanEntitled } from '@/lib/agentJourney';
 
 export default function AgentEarnings() {
   const [, setLocation] = useLocation();
@@ -23,7 +23,7 @@ export default function AgentEarnings() {
     requireDashboardUnlocked: true,
   });
 
-  const journeyLocked = !statusLoading && !status?.fullFeaturesUnlocked;
+  const journeyLocked = !statusLoading && !isAgentPlanEntitled(status);
   const earningsLocked =
     !statusLoading && !journeyLocked && !status?.entitlements?.featureFlags?.hasCommissionTracking;
   const journeyAction = getAgentJourneyAction(status, { agentLaunchAccessAvailable });
@@ -56,7 +56,7 @@ export default function AgentEarnings() {
             }
             actionLabel={journeyAction.waiting ? 'Return to dashboard' : journeyAction.label}
             onAction={() =>
-              setLocation(journeyAction.waiting ? '/agent/dashboard' : journeyAction.href)
+              followAgentJourneyHref(journeyAction.waiting ? '/agent/dashboard' : journeyAction.href, setLocation)
             }
           />
         ) : earningsLocked ? (

@@ -9,11 +9,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
+import { followAgentJourneyHref } from '@/lib/agentPlanGate';
 import {
   getAgentJourneyAction,
   getAgentProfileCompletionDescription,
-  isAgentProfileJourneyStep,
-} from '@/lib/agentJourney';
+  isAgentProfileJourneyStep, isAgentPlanEntitled } from '@/lib/agentJourney';
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 import { ArrowRight, Bell, CalendarDays, CheckCircle, Clock, MapPin } from 'lucide-react';
@@ -162,7 +162,7 @@ export default function AgentProductivity() {
   } = useAgentOnboardingStatus({
     requireDashboardUnlocked: true,
   });
-  const productivityLocked = !statusLoading && !status?.fullFeaturesUnlocked;
+  const productivityLocked = !statusLoading && !isAgentPlanEntitled(status);
   const operationalDataEnabled = !statusLoading && !productivityLocked;
   const journeyAction = getAgentJourneyAction(status, { agentLaunchAccessAvailable });
   const needsProfileCompletion = isAgentProfileJourneyStep(status);
@@ -369,7 +369,7 @@ export default function AgentProductivity() {
             }
             actionLabel={journeyAction.waiting ? 'Return to dashboard' : journeyAction.label}
             onAction={() =>
-              setLocation(journeyAction.waiting ? '/agent/dashboard' : journeyAction.href)
+              followAgentJourneyHref(journeyAction.waiting ? '/agent/dashboard' : journeyAction.href, setLocation)
             }
           />
         ) : (

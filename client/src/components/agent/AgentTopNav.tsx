@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { trpc } from '@/lib/trpc';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
-import { getAgentJourneyAction } from '@/lib/agentJourney';
+import { getAgentJourneyAction, getPublishBlock, isAgentWorkspaceOpen, isAgentPlanEntitled } from '@/lib/agentJourney';
+import { openPlanGate } from '@/lib/agentPlanGate';
 import { Building2, CalendarDays, CalendarPlus, Loader2, Plus, Search, Users } from 'lucide-react';
 import { NotificationCenter } from './NotificationCenter';
 
@@ -85,7 +86,7 @@ export function AgentTopNav() {
   const workspaceUnlocked =
     !onboardingLoading &&
     !workspaceStatusUnavailable &&
-    Boolean(onboardingStatus?.fullFeaturesUnlocked);
+    isAgentPlanEntitled(onboardingStatus);
   const workspaceSearchLocked =
     !onboardingLoading && !workspaceStatusUnavailable && !workspaceUnlocked;
   const workspaceSearchUnavailable =
@@ -94,8 +95,11 @@ export function AgentTopNav() {
   const listingAccessLocked =
     !onboardingLoading &&
     !workspaceStatusUnavailable &&
-    !onboardingStatus?.entitlements?.canPublishListings;
+    !isAgentPlanEntitled(onboardingStatus);
   const journeyAction = getAgentJourneyAction(onboardingStatus, { agentLaunchAccessAvailable });
+  // Paid but cannot publish yet: show the reason, never the plan panel.
+  const publishBlock =
+    !onboardingLoading && !workspaceStatusUnavailable ? getPublishBlock(onboardingStatus) : null;
 
   const dateParts = useMemo(() => {
     const now = new Date();
@@ -243,9 +247,15 @@ export function AgentTopNav() {
   };
 
   const startListing = () => {
-    if (onboardingLoading || workspaceStatusUnavailable || journeyAction.waiting) return;
+    if (onboardingLoading || workspaceStatusUnavailable) return;
     if (listingAccessLocked) {
-      setLocation(journeyAction.href);
+      // Unverified agents have no plan dialog: send them to their journey step.
+      if (isAgentWorkspaceOpen(onboardingStatus)) openPlanGate();
+      else setLocation(journeyAction.href);
+      return;
+    }
+    if (publishBlock) {
+      setLocation(publishBlock.href);
       return;
     }
     setLocation('/listings/create');
@@ -371,7 +381,7 @@ export function AgentTopNav() {
           <Button
             type="button"
             onClick={startListing}
-            disabled={onboardingLoading || workspaceStatusUnavailable || journeyAction.waiting}
+            disabled={onboardingLoading || workspaceStatusUnavailable}
             className="h-[34px] rounded-full bg-[var(--primary)] px-[18px] text-[12.5px] font-medium text-white shadow-[0_8px_28px_rgba(0,92,168,0.24)] hover:bg-[#0b4b81]"
           >
             <Plus className="h-3.5 w-3.5" />
@@ -379,8 +389,10 @@ export function AgentTopNav() {
               {workspaceStatusUnavailable
                 ? 'Status unavailable'
                 : listingAccessLocked
-                  ? journeyAction.label
-                  : 'Add Listing'}
+                  ? isAgentWorkspaceOpen(onboardingStatus)
+                    ? 'Choose plan'
+                    : journeyAction.label
+                  : (publishBlock?.label ?? 'Add Listing')}
             </span>
           </Button>
 

@@ -9,10 +9,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
+import { followAgentJourneyHref, openPlanGate } from '@/lib/agentPlanGate';
 import {
   getAgentJourneyAction,
   getAgentProfileCompletionDescription,
   isAgentProfileJourneyStep,
+  isAgentPlanEntitled,
+  isAgentPaymentBlocked,
+  isAgentWorkspaceOpen,
 } from '@/lib/agentJourney';
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
@@ -84,8 +88,9 @@ export default function AgentTrainingSupport() {
     retry: retryStatus,
     agentLaunchAccessAvailable,
   } = useAgentOnboardingStatus();
-  const trainingLocked = !statusLoading && !status?.dashboardUnlocked;
-  const operationalDataEnabled = !statusLoading && Boolean(status?.fullFeaturesUnlocked);
+  const trainingLocked = !statusLoading && !isAgentPlanEntitled(status);
+  const planPrompt = isAgentWorkspaceOpen(status) && !isAgentPaymentBlocked(status);
+  const operationalDataEnabled = !statusLoading && isAgentPlanEntitled(status);
   const journeyAction = getAgentJourneyAction(status, { agentLaunchAccessAvailable });
   const needsProfileCompletion = isAgentProfileJourneyStep(status);
 
@@ -116,6 +121,13 @@ export default function AgentTrainingSupport() {
           />
         ) : statusError ? (
           <AgentJourneyStatusErrorState onRetry={retryStatus} />
+        ) : trainingLocked && planPrompt ? (
+          <AgentFeatureLockedState
+            title="Training and support unlock with a plan"
+            description="Choose a plan to open guidance and support tools. Only your profile is open before payment."
+            actionLabel="Get access"
+            onAction={openPlanGate}
+          />
         ) : trainingLocked ? (
           <AgentFeatureLockedState
             title={
@@ -130,7 +142,7 @@ export default function AgentTrainingSupport() {
             }
             actionLabel={journeyAction.waiting ? 'Return to dashboard' : journeyAction.label}
             onAction={() =>
-              setLocation(journeyAction.waiting ? '/agent/dashboard' : journeyAction.href)
+              followAgentJourneyHref(journeyAction.waiting ? '/agent/dashboard' : journeyAction.href, setLocation)
             }
           />
         ) : (
@@ -195,7 +207,7 @@ export default function AgentTrainingSupport() {
                       variant="outline"
                       className="mt-4 rounded-full"
                       onClick={() =>
-                        setLocation(journeyAction.waiting ? '/agent/dashboard' : journeyAction.href)
+                        followAgentJourneyHref(journeyAction.waiting ? '/agent/dashboard' : journeyAction.href, setLocation)
                       }
                     >
                       {journeyAction.waiting ? 'View activation status' : journeyAction.label}

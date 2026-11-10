@@ -13,7 +13,10 @@ import {
   getAgentJourneyAction,
   getAgentProfileCompletionDescription,
   isAgentProfileJourneyStep,
+  isAgentPlanEntitled,
 } from '@/lib/agentJourney';
+import { followAgentJourneyHref } from '@/lib/agentPlanGate';
+import { AgentSetupChecklist } from '@/components/agent/AgentSetupChecklist';
 import {
   ArrowRight,
   Bell,
@@ -349,8 +352,8 @@ export function AgentDashboardOverview({
     signature: string;
     dismissedAt: number;
   } | null>(null);
-  const operationalDataEnabled = Boolean(onboardingStatus?.fullFeaturesUnlocked);
-  const authoredListingDataEnabled = Boolean(user && onboardingStatus?.dashboardUnlocked);
+  const operationalDataEnabled = isAgentPlanEntitled(onboardingStatus);
+  const authoredListingDataEnabled = Boolean(user && isAgentPlanEntitled(onboardingStatus));
 
   const { data: stats, isLoading: statsLoading } = trpc.agent.getDashboardStats.useQuery(
     undefined,
@@ -562,11 +565,13 @@ export function AgentDashboardOverview({
   const entitlements = onboardingStatus?.entitlements;
   const profileCompletionScore = onboardingStatus?.profileCompletionScore ?? 0;
   const profileSetupFlags = onboardingStatus?.profileCompletionFlags ?? [];
-  const fullFeaturesUnlocked = onboardingStatus?.fullFeaturesUnlocked ?? false;
+  const fullFeaturesUnlocked = isAgentPlanEntitled(onboardingStatus);
   const needsProfileCompletion = isAgentProfileJourneyStep(onboardingStatus);
   const journeyAction = getAgentJourneyAction(onboardingStatus, { agentLaunchAccessAvailable });
   const dashboardJourney = getAgentDashboardJourneyPresentation(journeyAction);
-  const canPublishListings = entitlements?.canPublishListings ?? false;
+  // Paid is the plan rule; publishing additionally needs the server's canPublishListings.
+  const canPublishListings =
+    isAgentPlanEntitled(onboardingStatus) && Boolean(entitlements?.canPublishListings);
   const setupPriorityFlags = profileSetupFlags.slice(0, 3).map(formatSetupFlag);
   const guidanceMode: DashboardGuidanceMode | null = needsProfileCompletion ? 'setup' : null;
   const guidanceSignature = JSON.stringify({
@@ -823,6 +828,11 @@ export function AgentDashboardOverview({
   return (
     <div className="min-h-screen bg-[#f7f6f3]">
       <main className="mx-auto flex max-w-[1700px] flex-col gap-5 px-4 py-5 md:px-7 md:py-7 xl:px-7 xl:pb-10">
+        <AgentSetupChecklist
+          status={onboardingStatus}
+          hasDraft={hasDraftInventory || hasPendingReviewInventory || hasPublishedInventory}
+          agentLaunchAccessAvailable={agentLaunchAccessAvailable}
+        />
         {showFeatureBanner ? (
           <CardShell className="overflow-hidden border-transparent bg-gradient-to-r from-slate-950 via-slate-900 to-[#0f4c81] text-white shadow-[0_20px_50px_rgba(15,23,42,0.18)]">
             <div className="grid gap-6 px-6 py-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.75fr)] lg:px-7">
@@ -910,7 +920,7 @@ export function AgentDashboardOverview({
                   {workspaceAction.actionHref && workspaceAction.actionLabel ? (
                     <Button
                       type="button"
-                      onClick={() => setLocation(workspaceAction.actionHref!)}
+                      onClick={() => followAgentJourneyHref(workspaceAction.actionHref!, setLocation)}
                       className="h-auto rounded-full bg-white px-4 py-2 text-[12.5px] font-semibold text-[var(--primary)] shadow-none hover:bg-white/92"
                     >
                       {workspaceAction.actionLabel}
@@ -958,7 +968,9 @@ export function AgentDashboardOverview({
           </CardShell>
 
           <div className="flex min-w-0 flex-col gap-4">
-            {onboardingStatus?.approvalStatus === 'approved' && <AgentPresenceProof />}
+            {onboardingStatus?.approvalStatus === 'approved' && operationalDataEnabled && (
+              <AgentPresenceProof />
+            )}
 
             <CardShell className="px-[22px] py-5">
               <div className="flex items-center justify-between gap-3 border-b border-slate-200 pb-4">
@@ -992,7 +1004,7 @@ export function AgentDashboardOverview({
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={() => setLocation(dashboardJourney.href!)}
+                        onClick={() => followAgentJourneyHref(dashboardJourney.href!, setLocation)}
                         className="rounded-full border-amber-300 bg-white text-amber-900 hover:bg-amber-100"
                       >
                         {dashboardJourney.label}
@@ -1400,7 +1412,7 @@ export function AgentDashboardOverview({
                     needsProfileCompletion
                       ? () => setLocation('/agent/setup')
                       : dashboardJourney.href
-                        ? () => setLocation(dashboardJourney.href!)
+                        ? () => followAgentJourneyHref(dashboardJourney.href!, setLocation)
                         : undefined
                   }
                 />

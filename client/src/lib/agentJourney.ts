@@ -90,7 +90,7 @@ export function getAgentJourneyAction(
         label: 'Complete payment',
         title: 'Complete your Launch Access payment',
         description:
-          'Your Launch Access invoice is ready. Pay by EFT and select “I’ve paid” to notify finance. No document is required.',
+          'Your payment reference is ready. Pay by EFT and select “I’ve paid” to notify finance. No document is required.',
       };
     case 'await_payment_review':
       return {
@@ -189,4 +189,104 @@ export function isAgentProfileJourneyStep(
     status?.recommendedNextStep === 'complete_profile_basics' ||
     status?.recommendedNextStep === 'publish_profile'
   );
+}
+
+/**
+ * The Agent workspace is browsable for every agent whose email is verified.
+ * Only the profile is open before payment; every feature action is gated by
+ * isAgentPlanEntitled.
+ */
+export function isAgentWorkspaceOpen(
+  status: { recommendedNextStep?: AgentRecommendedNextStep } | null | undefined,
+) {
+  return Boolean(status) && status?.recommendedNextStep !== 'verify_email';
+}
+
+const PAID_SUBSCRIPTION_STATUSES = ['active', 'grace_period'];
+
+/**
+ * The ONE "paid" rule. Server fields already in the onboarding status payload:
+ * `fullFeaturesUnlocked` (shared/agentJourney.ts deriveAgentJourneyAccessState:
+ * approved agent with trial, active or grace_period) AND `subscriptionStatus`
+ * active or grace_period. A trial also unlocks full features, so the
+ * subscription status is what separates paid from trial. Fail closed.
+ * Whether a paid agent may publish is a separate question: see getPublishBlock.
+ */
+export function isAgentPlanEntitled(
+  status:
+    | {
+        fullFeaturesUnlocked?: boolean;
+        subscriptionStatus?: string | null;
+      }
+    | null
+    | undefined,
+) {
+  return (
+    Boolean(status?.fullFeaturesUnlocked) &&
+    PAID_SUBSCRIPTION_STATUSES.includes(String(status?.subscriptionStatus))
+  );
+}
+
+type PublishStatus = {
+  fullFeaturesUnlocked?: boolean;
+  subscriptionStatus?: string | null;
+  recommendedNextStep?: AgentRecommendedNextStep;
+  profileCompletionScore?: number;
+  entitlements?: { canPublishListings?: boolean } | null;
+};
+
+/**
+ * For a PAID agent who cannot publish yet: the reason (no payment panel).
+ * Null when unpaid (that is the plan panel's job) or when publishing is allowed.
+ */
+export function getPublishBlock(
+  status: PublishStatus | null | undefined,
+): { title: string; description: string; label: string; href: string } | null {
+  if (!status || !isAgentPlanEntitled(status) || status.entitlements?.canPublishListings) {
+    return null;
+  }
+  const score = Math.round(Number(status.profileCompletionScore ?? 0));
+  if (score < 70) {
+    return {
+      title: `Complete your profile (${score}%) to publish`,
+      description: 'Your plan is active. Finish your professional profile to start publishing listings.',
+      label: 'Complete profile',
+      href: '/agent/setup',
+    };
+  }
+  const action = getAgentJourneyAction(status);
+  return {
+    title: action.title,
+    description: action.description,
+    label: action.label,
+    href: action.href,
+  };
+}
+
+/**
+ * Journey states where the workspace stays visible but a plan cannot be bought
+ * here (rejected/suspended -> contact_support, profile under approval, agency
+ * managed access). They get a status banner instead of the preview banner.
+ */
+const PAYMENT_BLOCKED_STEPS: readonly AgentRecommendedNextStep[] = [
+  'contact_support',
+  'await_profile_approval',
+  'await_agency_activation',
+];
+
+export function isAgentPaymentBlocked(
+  status: { recommendedNextStep?: AgentRecommendedNextStep } | null | undefined,
+) {
+  return Boolean(
+    status?.recommendedNextStep && PAYMENT_BLOCKED_STEPS.includes(status.recommendedNextStep),
+  );
+}
+
+/** Existing journey copy for a payment-blocked state, or null. */
+export function getAgentStatusBannerCopy(
+  status: { recommendedNextStep?: AgentRecommendedNextStep } | null | undefined,
+): { title: string; description: string } | null {
+  if (!isAgentPaymentBlocked(status)) return null;
+  const { title, description } = getAgentJourneyAction(status);
+  return { title, description };
 }
