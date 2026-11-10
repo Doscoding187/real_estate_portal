@@ -10,7 +10,9 @@ const {
   legalChoiceMock,
   requestMock,
   toastMock,
+  invoiceResponseMock,
 } = vi.hoisted(() => ({
+  invoiceResponseMock: vi.fn(),
   legalChoiceMock: vi.fn(),
   requestMock: vi.fn(),
   toastMock: { success: vi.fn(), error: vi.fn(), info: vi.fn() },
@@ -32,7 +34,7 @@ vi.mock('@/hooks/useAgentLaunchInvoiceRequest', () => ({
   useAgentLaunchInvoiceRequest: () => ({
     requestInvoice: requestMock,
     isRequestingInvoice: false,
-    invoiceResponse: null,
+    invoiceResponse: invoiceResponseMock(),
     setInvoiceResponse: vi.fn(),
   }),
 }));
@@ -80,6 +82,7 @@ const product = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  invoiceResponseMock.mockReturnValue(null);
   legalChoiceMock.mockReturnValue({ accepted: true });
   workspaceMock.mockReturnValue({ data: undefined, refetch: vi.fn() });
   availabilityMock.mockReturnValue({ isAvailable: true, salesPaused: false, isLoading: false });
@@ -99,7 +102,8 @@ describe('PlanGateDialog', () => {
     expect(screen.getByText(/Once-off, 90 days, no auto-renewal/)).toBeInTheDocument();
     expect(screen.getByText('Publish listings')).toBeInTheDocument();
     expect(screen.getByText('Commitment disclosure')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Get my payment reference' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Next' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Your plan' })).toBeInTheDocument();
     expect(screen.getByRole('listitem', { current: 'step' })).toHaveTextContent('Your plan');
     expect(screen.getAllByRole('listitem').filter(li => li.hasAttribute('data-step'))).toHaveLength(
       3,
@@ -189,9 +193,7 @@ describe('PlanGateDialog', () => {
     availabilityMock.mockReturnValue({ isAvailable: false, salesPaused: true, isLoading: false });
     render(<PlanGateDialog open onOpenChange={vi.fn()} />);
     expect(screen.getByText('Paid plans open soon')).toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: 'Get my payment reference' }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Next' })).not.toBeInTheDocument();
   });
 });
 
@@ -199,12 +201,12 @@ describe('plan gate details', () => {
   it('keeps the payment reference button disabled until the terms are accepted', () => {
     legalChoiceMock.mockReturnValue(null);
     render(<PlanGateDialog open onOpenChange={vi.fn()} />);
-    expect(screen.getByRole('button', { name: 'Get my payment reference' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
   });
 
   it('disables the payment reference button for blocked journey states', () => {
     render(<PlanGateDialog open onOpenChange={vi.fn()} blockedReason="Contact support." />);
-    expect(screen.getByRole('button', { name: 'Get my payment reference' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
     expect(screen.getByText('Contact support.')).toBeInTheDocument();
   });
 
@@ -212,7 +214,7 @@ describe('plan gate details', () => {
     let release: () => void = () => {};
     requestMock.mockImplementation(() => new Promise<void>(r => (release = r)));
     render(<PlanGateDialog open onOpenChange={vi.fn()} />);
-    const button = screen.getByRole('button', { name: 'Get my payment reference' });
+    const button = screen.getByRole('button', { name: 'Next' });
     button.click();
     button.click();
     expect(requestMock).toHaveBeenCalled();
@@ -279,7 +281,7 @@ describe('plan gate details', () => {
       refetch: vi.fn(),
     });
     const { unmount } = render(<PlanGateDialog open onOpenChange={vi.fn()} />);
-    expect(screen.getByRole('button', { name: 'Get my payment reference' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Next' })).toBeInTheDocument();
     unmount();
     workspaceMock.mockReturnValue({
       data: {
@@ -338,6 +340,60 @@ describe('existing payment reference when sales are paused or blocked', () => {
     const notice = screen.getByTestId('payment-cancellation-notice');
     expect(notice).toHaveTextContent('Cancellations and refunds are handled under our Terms.');
     expect(screen.getByRole('link', { name: 'Terms' })).toHaveAttribute('href', '/legal/terms');
+  });
+
+  it('shows the early access title, the agent name and email, and an Edit in profile link', () => {
+    render(<PlanGateDialog open onOpenChange={vi.fn()} />);
+    expect(screen.getByRole('heading', { name: 'Early access' })).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Agent Launch Access is open now. You're one of the first agents on PropertyListify.",
+      ),
+    ).toBeInTheDocument();
+    const account = screen.getByTestId('plan-account');
+    expect(account).toHaveTextContent('Ada Agent');
+    expect(account).toHaveTextContent('ada@example.test');
+    expect(screen.getByRole('link', { name: 'Edit in profile' })).toHaveAttribute(
+      'href',
+      '/agent/settings?tab=profile',
+    );
+    expect(document.body.textContent).not.toMatch(/selected group|waitlist|coming soon|limited/i);
+  });
+
+  it('requests a reference on Next when there is none yet', async () => {
+    requestMock.mockResolvedValue(undefined);
+    render(<PlanGateDialog open onOpenChange={vi.fn()} />);
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Next' }));
+    expect(requestMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('Back returns from step 2 to the plan step and Next shows the reference again', async () => {
+    withInvoice();
+    const user = userEvent.setup();
+    render(<PlanGateDialog open onOpenChange={vi.fn()} />);
+    expect(screen.getByTestId('payment-reference')).toHaveTextContent('PLI-REF-9');
+    await user.click(screen.getByRole('button', { name: 'Back' }));
+    expect(screen.getByRole('heading', { name: 'Your plan' })).toBeInTheDocument();
+    expect(screen.getByTestId('plan-account')).toHaveTextContent('ada@example.test');
+    expect(screen.getByRole('listitem', { current: 'step' })).toHaveTextContent('Your plan');
+    expect(screen.queryByTestId('payment-reference')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    expect(requestMock).not.toHaveBeenCalled();
+    expect(screen.getByTestId('payment-reference')).toHaveTextContent('PLI-REF-9');
+    expect(screen.getByRole('heading', { name: 'Make payment' })).toHaveFocus();
+    expect(screen.getByRole('listitem', { current: 'step' })).toHaveTextContent('Make payment');
+  });
+
+  it('uses a full-height sheet below sm and a 2xl dialog from sm up, with pinned step buttons', () => {
+    render(<PlanGateDialog open onOpenChange={vi.fn()} />);
+    const dialog = screen.getByTestId('early-access-dialog');
+    expect(dialog.className).toContain('h-dvh');
+    expect(dialog.className).toContain('w-full');
+    expect(dialog.className).toContain('sm:max-w-2xl');
+    expect(dialog.className).toContain('flex-col');
+    const next = screen.getByRole('button', { name: 'Next' });
+    expect(next.parentElement?.className).toContain('shrink-0');
+    expect(next.parentElement?.className).toContain('border-t');
   });
 
   it('shows Paid plans open soon only when there is no payment reference', () => {
