@@ -3,11 +3,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const { mockGetDb } = vi.hoisted(() => ({ mockGetDb: vi.fn() }));
 vi.mock('../../db', () => ({ getDb: mockGetDb }));
 
+import { MySqlDialect } from 'drizzle-orm/mysql-core';
 import {
   lookupLaunchInvoiceByReference,
   recordLaunchPaymentByReference,
 } from '../billingFoundationService';
 
+const dialect = new MySqlDialect();
 const finance = { id: 1, role: 'super_admin', email: 'finance@example.com' };
 
 function tableName(table: any): string {
@@ -22,7 +24,8 @@ type Fixture = {
 
 function fakeDb(fixture: Fixture) {
   const inserts: Array<{ table: string; values: any }> = [];
-  const deletes: string[] = [];
+  const deletes: Array<{ table: string; params: unknown[]; sql: string }> = [];
+  const updates: Array<{ table: string; values: any; params: unknown[] }> = [];
   const rowsFor = (name: string, joined: boolean) => {
     if (joined) return [];
     if (name === 'billing_invoices') return fixture.invoice ? [fixture.invoice] : [];
@@ -60,14 +63,28 @@ function fakeDb(fixture: Fixture) {
         return { $returningId: async () => [{ id: 77 }], onDuplicateKeyUpdate: async () => [] };
       },
     }),
+    // Honours the where() predicate: the compiled SQL parameters are recorded so
+    // tests can assert exactly which row id and state were targeted.
     delete: (table: any) => ({
-      where: async () => {
-        deletes.push(tableName(table));
+      where: async (predicate: any) => {
+        const compiled = dialect.sqlToQuery(predicate);
+        deletes.push({ table: tableName(table), params: compiled.params, sql: compiled.sql });
       },
+    }),
+    update: (table: any) => ({
+      set: (values: any) => ({
+        where: async (predicate: any) => {
+          updates.push({
+            table: tableName(table),
+            values,
+            params: dialect.sqlToQuery(predicate).params,
+          });
+        },
+      }),
     }),
     transaction: async (fn: (tx: any) => Promise<unknown>) => fn(db),
   };
-  return { db, inserts, deletes };
+  return { db, inserts, deletes, updates };
 }
 
 const issuedInvoice = {
@@ -224,7 +241,10 @@ describe('billing.recordLaunchPaymentByReference', () => {
       'review refused',
     );
     expect(inserts.filter(row => row.table === 'billing_payments')).toHaveLength(1);
-    expect(deletes).toEqual(['billing_payments']);
+    // Only the newly created row (id 77) and only while still under_review.
+    expect(deletes).toHaveLength(1);
+    expect(deletes[0].table).toBe('billing_payments');
+    expect(deletes[0].params).toEqual([77, 'under_review']);
     expect(inserts.find(row => row.table === 'billing_audit_events')).toBeUndefined();
   });
 
@@ -245,5 +265,44 @@ describe('billing.recordLaunchPaymentByReference', () => {
     });
     await expect(recordLaunchPaymentByReference(input, { review: failing as any })).rejects.toThrow('nope');
     expect(deletes).toEqual([]);
+  });
+
+  it('persists a supplied bank reference on a reused non-notice row', async () => {
+    const { db, updates } = fakeDb({
+      invoice: issuedInvoice,
+      payments: [{ id: 41, invoiceId: 5, state: 'under_review', amount: 49900, metadata: {} }],
+    });
+    mockGetDb.mockResolvedValue(db);
+    const review = vi.fn(async () => approveOk);
+    await recordLaunchPaymentByReference(
+      { ...input, bankReference: ' BANK-9 ' },
+      { review: review as any },
+    );
+    expect(updates).toHaveLength(1);
+    expect(updates[0].table).toBe('billing_payments');
+    expect(updates[0].values).toEqual({ bankReference: 'BANK-9' });
+    expect(updates[0].params).toEqual([41]);
+  });
+
+  it('leaves a reused customer payment notice untouched (review keeps its own rule)', async () => {
+    const { db, updates } = fakeDb({
+      invoice: issuedInvoice,
+      payments: [
+        {
+          id: 41,
+          invoiceId: 5,
+          state: 'under_review',
+          amount: 49900,
+          metadata: { submission_kind: 'payment_notice' },
+        },
+      ],
+    });
+    mockGetDb.mockResolvedValue(db);
+    const review = vi.fn(async () => approveOk);
+    await recordLaunchPaymentByReference(
+      { ...input, bankReference: 'BANK-9' },
+      { review: review as any },
+    );
+    expect(updates).toEqual([]);
   });
 });

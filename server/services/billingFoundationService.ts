@@ -3445,6 +3445,18 @@ export async function recordLaunchPaymentByReference(
     let paymentId: number;
     if (reusable) {
       paymentId = reusable.id;
+      const suppliedBankReference = input.bankReference?.trim();
+      // A customer payment notice keeps its own bank-reference rule in review;
+      // for every other row, persist the reference finance matched to the bank.
+      if (
+        suppliedBankReference &&
+        parseJsonRecord(reusable.metadata).submission_kind !== 'payment_notice'
+      ) {
+        await tx
+          .update(billingPayments)
+          .set({ bankReference: suppliedBankReference })
+          .where(eq(billingPayments.id, reusable.id));
+      }
     } else {
       const ownerName = await resolveInvoiceOwnerDisplay(tx, invoice.ownerType, invoice.ownerId);
       const [insert] = await tx

@@ -10,6 +10,7 @@ vi.mock('../services/agentEntitlementService', () => ({
   getAgentEntitlementsForUserId: mockEntitlements,
 }));
 
+import { MySqlDialect } from 'drizzle-orm/mysql-core';
 import { agentRouter } from '../agentRouter';
 import { AGENT_LEADS_LOCKED_MESSAGE } from '../services/agentLeadAccessGate';
 
@@ -58,39 +59,72 @@ describe('agent lead and showing procedures are gated server-side (D2)', () => {
     });
   });
 
-  // A sentinel DB failure proves the gate OPENED: the handler ran far enough to call getDb
-  // (or input validation ran), so the error is never the lock message and is never FORBIDDEN-locked.
-  async function run(role: string, name: string) {
-    return caller(role)[name]({}).then(
-      () => ({ ok: true as const }),
-      (error: any) => ({ ok: false as const, error }),
-    );
+  // Valid inputs, so input validation passes and the handler body runs. The mocked
+  // downstream database rejects with a sentinel: seeing exactly that sentinel proves
+  // the gate OPENED and the handler reached its first database call.
+  const SENTINEL = 'SENTINEL_HANDLER_REACHED_DB';
+  const VALID_INPUT: Record<string, unknown> = {
+    getLeadsPipeline: {},
+    moveLeadToStage: { leadId: 1, targetStage: 'contacted' },
+    getMyLeads: {},
+    getMyFollowUps: {},
+    setLeadFollowUp: { leadId: 1, nextFollowUp: '2026-12-01' },
+    completeLeadFollowUp: { leadId: 1, note: 'done' },
+    recordLeadContactAttempt: {
+      leadId: 1,
+      channel: 'call',
+      outcome: 'reached',
+      summary: 'spoke',
+      nextAction: 'send info',
+    },
+    updateLeadStatus: { leadId: 1, status: 'contacted' },
+    getLeadOfferReadiness: { leadId: 1 },
+    setLeadOfferReadiness: {
+      leadId: 1,
+      readiness: { viewingCompleted: true, feedbackLogged: true, affordabilityConfirmed: true },
+    },
+    addLeadActivity: { leadId: 1, activityType: 'note', description: 'x' },
+    getLeadActivities: { leadId: 1 },
+    getLeadResponseSummary: undefined,
+    getMyShowings: {},
+    bookShowing: { listingId: 1, scheduledAt: '2026-12-01T10:00:00Z', visitorName: 'Visitor' },
+    updateShowingStatus: { showingId: 1, status: 'completed' },
+    getMyCommissions: {},
+    exportCommissionsCSV: {},
+    getPerformanceAnalytics: {},
+  };
+
+  async function reachesHandler(role: string, name: string) {
+    mockGetDb.mockRejectedValue(new Error(SENTINEL));
+    await expect(caller(role)[name](VALID_INPUT[name])).rejects.toThrow(SENTINEL);
   }
 
-  it.each(GATED)('%s opens for a paid agent (handler or input validation is reached)', async name => {
+  it.each(GATED)('%s opens for a paid agent and reaches the handler', async name => {
     mockEntitlements.mockResolvedValue({ hasCommercialAccess: true, canAccessExistingLeads: true });
-    const result = await run('agent', name);
+    await reachesHandler('agent', name);
     expect(mockEntitlements).toHaveBeenCalledTimes(1);
-    if (!result.ok) {
-      expect(result.error.message).not.toBe(AGENT_LEADS_LOCKED_MESSAGE);
-      // Reached input validation (BAD_REQUEST) or the handler (DB sentinel / profile lookup).
-      expect(
-        result.error.code === 'BAD_REQUEST' || /Database|Cannot read|not found|undefined|null/i.test(result.error.message),
-      ).toBe(true);
-    }
   });
 
   it.each(['agency_admin', 'super_admin'])('%s opens without an entitlement lookup', async role => {
     for (const name of GATED) {
-      const result = await run(role, name);
-      if (!result.ok) {
-        expect(result.error.message).not.toBe(AGENT_LEADS_LOCKED_MESSAGE);
-        expect(
-          result.error.code === 'BAD_REQUEST' || /Database|Cannot read|not found|undefined|null/i.test(result.error.message),
-        ).toBe(true);
-      }
+      await reachesHandler(role, name);
     }
     expect(mockEntitlements).not.toHaveBeenCalled();
+  });
+
+  it('a paid agent actually receives a returned value from getLeadResponseSummary', async () => {
+    mockEntitlements.mockResolvedValue({ hasCommercialAccess: true, canAccessExistingLeads: true });
+    const chain: any = {
+      from: () => chain,
+      where: () => chain,
+      limit: async () => [],
+      then: (resolve: any) => resolve([]),
+    };
+    mockGetDb.mockResolvedValue({ select: () => chain });
+    await expect(caller('agent').getLeadResponseSummary()).resolves.toMatchObject({
+      windowDays: 30,
+      totalLeads: 0,
+    });
   });
 
   it('getDashboardStats stays open and zeroes lead figures for a locked agent with an approved profile', async () => {
@@ -124,4 +158,36 @@ describe('agent lead and showing procedures are gated server-side (D2)', () => {
     expect(stats).toMatchObject(expected);
     expect(stats.activeListings).toBe(3);
   });
+
+  it.each([
+    [false, true],
+    [true, false],
+  ])(
+    'getUnreadNotificationCount (unlocked=%s) excludes gated types: %s',
+    async (unlocked, excludes) => {
+      mockEntitlements.mockResolvedValue({
+        hasCommercialAccess: unlocked,
+        canAccessExistingLeads: true,
+      });
+      let predicate: any = null;
+      mockGetDb.mockResolvedValue({
+        select: () => {
+          const chain: any = {
+            from: () => chain,
+            where: async (p: any) => {
+              predicate = p;
+              return [{ count: 2 }];
+            },
+          };
+          return chain;
+        },
+      });
+      await expect(caller('agent').getUnreadNotificationCount()).resolves.toEqual({ count: 2 });
+      const compiled = new MySqlDialect().sqlToQuery(predicate);
+      expect(compiled.sql.includes('not in')).toBe(excludes);
+      for (const type of ['lead_assigned', 'showing_scheduled', 'offer_received']) {
+        expect(compiled.params.includes(type)).toBe(excludes);
+      }
+    },
+  );
 });
