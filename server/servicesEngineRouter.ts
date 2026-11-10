@@ -713,7 +713,7 @@ export const servicesEngineRouter = router({
 
     .mutation(async ({ ctx, input }) => {
       const user = requireUser(ctx);
-      if (!checkPublicLeadRateLimit(getPublicLeadClientIp(ctx))) {
+      if (!(await checkPublicLeadRateLimit(getPublicLeadClientIp(ctx), ctx.res))) {
         throw new TRPCError({
           code: 'TOO_MANY_REQUESTS',
           message: 'Too many service requests. Please try again in a minute.',

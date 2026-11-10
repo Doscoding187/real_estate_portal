@@ -13,6 +13,8 @@ import {
 import { getLeadRoutingConversionReport } from '../services/leadRoutingConversionReportService';
 import { savedSearchDeliveryHistory } from '../../drizzle/schema';
 import { assessRuntimeDatabaseReadiness } from './databaseAuthority/readiness';
+import { logAudit } from './auditLog';
+import { safeErrorSummary } from './safeError';
 
 const deliveryHistoryFilterSchema = z.enum([
   'all',
@@ -410,8 +412,25 @@ export const systemRouter = router({
         })
         .default({}),
     )
-    .query(async ({ input }) => {
-      return getLeadRoutingAudit(input);
+    .query(async ({ input, ctx }) => {
+      const result = await getLeadRoutingAudit(input);
+      // POPIA accountability: the attention list carries enquirer name/email.
+      // Record counts and inputs only, never lead fields.
+      try {
+        await logAudit({
+          userId: Number(ctx.user.id),
+          action: 'lead_data_viewed',
+          targetType: 'lead_routing_audit',
+          metadata: {
+            count: result.attentionLeads.length,
+            filters: { days: input.days, attentionLimit: input.attentionLimit },
+          },
+          req: ctx.req,
+        });
+      } catch (error) {
+        console.warn('[AuditLog] lead_data_viewed write failed:', safeErrorSummary(error));
+      }
+      return result;
     }),
 
   correctLeadRouting: superAdminProcedure
