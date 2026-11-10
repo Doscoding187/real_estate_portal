@@ -194,7 +194,6 @@ async function insertUser(input: {
   const userId = insertId(result);
   if (!userId) throw new Error(`Could not create ${input.label} test user.`);
   created.userIds.push(userId);
-  refreshFixtureAdmission();
   return userId;
 }
 
@@ -255,7 +254,6 @@ async function insertDeveloper(userId: number, label: string) {
     email: `${label}-${suffix}@example.test`,
   });
   created.developerContexts.push(context);
-  refreshFixtureAdmission();
   return context.organisationId;
 }
 
@@ -276,7 +274,6 @@ async function insertAgency(label: string) {
   const agencyId = insertId(result);
   if (!agencyId) throw new Error(`Could not create ${label} test agency.`);
   created.agencyIds.push(agencyId);
-  refreshFixtureAdmission();
   return agencyId;
 }
 
@@ -446,8 +443,6 @@ async function withPaidMvpProductionRelease<T>(run: () => Promise<T>): Promise<T
     'PAID_MVP_RELEASE_ID',
     'PAID_MVP_APPROVAL_REF',
     'PAID_MVP_SALES_PAUSED',
-    'PAID_MVP_SALES_OPEN_UNTIL',
-    'PAID_MVP_ADMITTED_OWNERS',
   ];
   const previous = new Map(keys.map(key => [key, process.env[key]]));
   try {
@@ -462,20 +457,6 @@ async function withPaidMvpProductionRelease<T>(run: () => Promise<T>): Promise<T
   }
 }
 
-function fixtureOwnerAdmission() {
-  return [
-    ...created.userIds.map(id => `agent:${id}`),
-    ...created.agencyIds.map(id => `agency:${id}`),
-    ...created.developerContexts.map(context => `developer:${context.organisationId}`),
-  ].join(',');
-}
-
-function refreshFixtureAdmission() {
-  if (process.env.NODE_ENV !== 'production') return;
-  process.env.PAID_MVP_ADMITTED_OWNERS = fixtureOwnerAdmission();
-  initializeCommercialActivationPolicy();
-}
-
 function setPaidMvpProductionRelease(salesPaused = false) {
   process.env.NODE_ENV = 'production';
   process.env.APP_ENV = 'production';
@@ -483,11 +464,9 @@ function setPaidMvpProductionRelease(salesPaused = false) {
     'agent_launch_access,agency_launch_access,developer_launch_access';
   process.env.PAID_MVP_RELEASE_ID = 'b03-containment-rc-1';
   process.env.PAID_MVP_APPROVAL_REF = 'b03-review-1';
-  const admission = fixtureOwnerAdmission();
-  if (admission) process.env.PAID_MVP_ADMITTED_OWNERS = admission;
-  else delete process.env.PAID_MVP_ADMITTED_OWNERS;
+  delete process.env.PAID_MVP_ADMITTED_OWNERS;
+  delete process.env.PAID_MVP_SALES_OPEN_UNTIL;
   process.env.PAID_MVP_SALES_PAUSED = String(salesPaused);
-  process.env.PAID_MVP_SALES_OPEN_UNTIL = new Date(Date.now() + 60 * 60 * 1000).toISOString();
   const configuration = initializeCommercialActivationPolicy();
   if (configuration.mode !== 'paid_mvp_release') {
     throw new Error('B03 scenario did not resolve to a paid production release.');
@@ -638,11 +617,6 @@ describeWithDb('S4 paid Launch Access disposable runtime', () => {
     rememberEnvironment('PAID_MVP_RELEASE_ID', 'b03-containment-rc-1');
     rememberEnvironment('PAID_MVP_APPROVAL_REF', 'b03-review-1');
     rememberEnvironment('PAID_MVP_SALES_PAUSED', 'false');
-    originalEnvironment.PAID_MVP_ADMITTED_OWNERS = process.env.PAID_MVP_ADMITTED_OWNERS;
-    rememberEnvironment(
-      'PAID_MVP_SALES_OPEN_UNTIL',
-      new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-    );
     rememberEnvironment('BILLING_PROOF_STORAGE_ADAPTER', 's3');
     rememberEnvironment('BILLING_PROOF_S3_BUCKET', `b03-proof-test-${process.pid}`);
     rememberEnvironment('BILLING_PROOF_S3_REGION', 'af-south-1');
@@ -1669,33 +1643,25 @@ describeWithDb('S4 paid Launch Access disposable runtime', () => {
     });
   }, 60_000);
 
-  it('admits resolved owner pairs and denies forged intake and finance activation without writes', async () => {
+  it('lets any un-listed owner request, pay and be settled once paid mode is on (no allow-list)', async () => {
     const db = await getDb();
     if (!db) throw new Error('Database not available');
-    const agentId = await insertUser({ label: 'admitted-agent', role: 'agent' });
-    const otherAgentId = await insertUser({ label: 'unlisted-agent', role: 'agent' });
-    const agencyId = await insertAgency('admitted-agency');
+    // Legacy variables are present but must be ignored (no allow-list, no sales window).
+    process.env.PAID_MVP_ADMITTED_OWNERS = 'agent:1';
+    process.env.PAID_MVP_SALES_OPEN_UNTIL = '2020-01-01T00:00:00Z';
+    initializeCommercialActivationPolicy();
+    const agentId = await insertUser({ label: 'open-agent', role: 'agent' });
+    const agencyId = await insertAgency('open-agency');
     const agencyUserId = await insertUser({
-      label: 'admitted-agency',
+      label: 'open-agency',
       role: 'agency_admin',
       agencyId,
     });
-    const otherAgencyId = await insertAgency('unlisted-agency');
-    const otherAgencyUserId = await insertUser({
-      label: 'unlisted-agency',
-      role: 'agency_admin',
-      agencyId: otherAgencyId,
-    });
     const developerUserId = await insertUser({
-      label: 'admitted-developer',
+      label: 'open-developer',
       role: 'property_developer',
     });
-    const developerId = await insertDeveloper(developerUserId, 'admitted-developer');
-    const otherDeveloperUserId = await insertUser({
-      label: 'unlisted-developer',
-      role: 'property_developer',
-    });
-    const otherDeveloperId = await insertDeveloper(otherDeveloperUserId, 'unlisted-developer');
+    const developerId = await insertDeveloper(developerUserId, 'open-developer');
     const financeId = await insertUser({ label: 'admission-finance', role: 'super_admin' });
     const owners = [
       {
@@ -1703,66 +1669,26 @@ describeWithDb('S4 paid Launch Access disposable runtime', () => {
         ownerId: agentId,
         userId: agentId,
         role: 'agent',
-        otherId: otherAgentId,
-        otherUserId: otherAgentId,
       },
       {
         ownerType: 'agency' as const,
         ownerId: agencyId,
         userId: agencyUserId,
         role: 'agency_admin',
-        otherId: otherAgencyId,
-        otherUserId: otherAgencyUserId,
       },
       {
         ownerType: 'developer' as const,
         ownerId: developerId,
         userId: developerUserId,
         role: 'property_developer',
-        otherId: otherDeveloperId,
-        otherUserId: otherDeveloperUserId,
       },
     ];
-    // An invoice issued before removal must not be activated using an admitted actor or forged owner.
-    const pending = await requestPaidLaunchAccessInvoice({
-      user: { id: otherAgentId, role: 'agent' },
-    });
-    const pendingProof = await submitPaidLaunchAccessPaymentProof({
-      user: { id: otherAgentId, role: 'agent' },
-      ...proofFor(pending.invoice),
-    });
-    process.env.PAID_MVP_ADMITTED_OWNERS = owners
-      .map(owner => `${owner.ownerType}:${owner.ownerId}`)
-      .join(',');
-    initializeCommercialActivationPolicy();
     for (const owner of owners) {
       const caller = createCallerForFixtureUser({
         id: owner.userId,
         role: owner.role,
         agencyId: owner.ownerType === 'agency' ? owner.ownerId : null,
       });
-      const unlisted = createCallerForFixtureUser({
-        id: owner.otherUserId,
-        role: owner.role,
-        agencyId: owner.ownerType === 'agency' ? owner.otherId : null,
-      });
-      const unlistedOwner = {
-        ownerType: owner.ownerType,
-        ownerId: owner.otherId,
-        userId: owner.otherUserId,
-      };
-      const before = await loadContainmentSnapshot(unlistedOwner);
-      await expect(
-        unlisted.billing.requestLaunchAccessInvoice({
-          ownerType: owner.ownerType,
-          ownerId: owner.ownerId,
-        } as any),
-      ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
-      if (owner.ownerType === 'developer') {
-        await expect(unlisted.billing.requestDeveloperLaunchAccessInvoice()).rejects.toMatchObject({
-          code: 'PRECONDITION_FAILED',
-        });
-      }
       const requested =
         owner.ownerType === 'developer'
           ? await caller.billing.requestDeveloperLaunchAccessInvoice({
@@ -1777,14 +1703,6 @@ describeWithDb('S4 paid Launch Access disposable runtime', () => {
       if (owner.ownerType === 'agency') {
         for (const route of ['startManualEftCheckout', 'createCheckoutSession'] as const) {
           await expect(
-            unlisted.billing[route]({
-              planId: requested.invoice.planId!,
-              billingCycle: 'monthly',
-              ownerType: 'agency',
-              ownerId: agencyId,
-            } as any),
-          ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
-          await expect(
             caller.billing[route]({
               planId: requested.invoice.planId!,
               billingCycle: 'monthly',
@@ -1793,7 +1711,6 @@ describeWithDb('S4 paid Launch Access disposable runtime', () => {
           ).resolves.toMatchObject({ invoice: { id: requested.invoice.id } });
         }
       }
-      expect(await loadContainmentSnapshot(unlistedOwner)).toEqual(before);
       const proof = await caller.billing.submitLaunchAccessPaymentProof(
         proofFor(requested.invoice),
       );
@@ -1809,37 +1726,9 @@ describeWithDb('S4 paid Launch Access disposable runtime', () => {
         'active',
       );
     }
-    const removedOwner = {
-      ownerType: 'agent' as const,
-      ownerId: otherAgentId,
-      userId: otherAgentId,
-    };
-    const before = await loadContainmentSnapshot(removedOwner);
-    const financeCaller = createCallerForFixtureUser({ id: financeId, role: 'super_admin' });
-    await expect(
-      financeCaller.billing.admin.reviewManualPayment({
-        paymentId: pendingProof.paymentId,
-        decision: 'approve',
-        verifiedAmount: pending.invoice.amountDue,
-        ownerType: 'agent',
-        ownerId: agentId,
-      } as any),
-    ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
-    expect(await loadContainmentSnapshot(removedOwner)).toEqual(before);
-    expect(
-      isSubscriptionEntitled(
-        (await getPlanAccessProjectionForUserId(otherAgentId))?.subscription?.status,
-      ),
-    ).toBe(false);
     delete process.env.PAID_MVP_ADMITTED_OWNERS;
+    delete process.env.PAID_MVP_SALES_OPEN_UNTIL;
     initializeCommercialActivationPolicy();
-    expect((await getPlanAccessProjectionForUserId(agentId))?.subscription?.status).toBe('active');
-    await expect(
-      createCallerForFixtureUser({
-        id: agentId,
-        role: 'agent',
-      }).billing.requestLaunchAccessInvoice(),
-    ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
   }, 60_000);
 
   it('preserves existing paid access and blocks new sales while the production release is paused', async () => {

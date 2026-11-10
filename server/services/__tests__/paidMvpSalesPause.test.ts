@@ -31,43 +31,21 @@ describe('founder-only new-sales pause', () => {
     vi.unstubAllEnvs();
   });
 
-  it('automatically pauses hosted sales at the renewed UTC deadline while preserving product access', () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-09-24T09:00:00Z'));
-    const hosted = {
-      ...releaseEnvironment,
-      PAID_MVP_SALES_PAUSED: 'false',
-      PAID_MVP_SALES_OPEN_UNTIL: '2026-09-25T09:00:00Z',
-    };
+  it('sales are open by default in a hosted release and ignore any legacy sales window', () => {
+    const hosted = { ...releaseEnvironment, PAID_MVP_SALES_PAUSED: 'false' };
     expect(getCommercialActivationStatus(hosted).salesPaused).toBe(false);
     expect(() => requirePaidMvpSalesOpen('Invoice requests', hosted)).not.toThrow();
-
-    vi.setSystemTime(new Date('2026-09-25T09:00:00Z'));
-    expect(getCommercialActivationStatus(hosted).salesPaused).toBe(true);
-    expect(() => requirePaidMvpSalesOpen('Invoice requests', hosted)).toThrow(/paused/);
-    expect(isCommercialActivationAvailable(hosted, 'agency_launch_access')).toBe(true);
-  });
-
-  it('fails closed without a hosted sales window and rejects an overlong or invalid deadline', () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-09-24T09:00:00Z'));
-    const hosted = { ...releaseEnvironment, PAID_MVP_SALES_PAUSED: 'false' };
-    expect(getCommercialActivationStatus(hosted).salesPaused).toBe(true);
-    expect(() => requirePaidMvpSalesOpen('Invoice requests', hosted)).toThrow(/paused/);
+    const legacy = { ...hosted, PAID_MVP_SALES_OPEN_UNTIL: '2020-01-01T00:00:00Z' };
+    expect(getCommercialActivationStatus(legacy).salesPaused).toBe(false);
+    expect(() => requirePaidMvpSalesOpen('Invoice requests', legacy)).not.toThrow();
     expect(() => resolveCommercialActivationConfiguration({
       ...hosted,
-      PAID_MVP_SALES_OPEN_UNTIL: '2026-09-25T09:00:01Z',
-    })).toThrow(/next weekday check/);
-    expect(() => resolveCommercialActivationConfiguration({
-      ...hosted,
-      PAID_MVP_SALES_OPEN_UNTIL: '2026-09-31T09:00:00Z',
-    })).toThrow(/valid UTC timestamp/);
-
-    vi.setSystemTime(new Date('2026-09-25T09:00:00Z')); // Friday to Monday
-    expect(() => resolveCommercialActivationConfiguration({
-      ...hosted,
-      PAID_MVP_SALES_OPEN_UNTIL: '2026-09-28T09:00:00Z',
+      PAID_MVP_SALES_OPEN_UNTIL: 'not-a-timestamp',
     })).not.toThrow();
+    const unset = { ...releaseEnvironment } as Record<string, string | undefined>;
+    delete unset.PAID_MVP_SALES_PAUSED;
+    expect(getCommercialActivationStatus(unset).salesPaused).toBe(false);
+    expect(isCommercialActivationAvailable(hosted, 'agency_launch_access')).toBe(true);
   });
 
   it('blocks new invoices while leaving the existing paid product active', () => {
@@ -84,7 +62,6 @@ describe('founder-only new-sales pause', () => {
       requirePaidMvpSalesOpen('Invoice requests', {
         ...releaseEnvironment,
         PAID_MVP_SALES_PAUSED: 'false',
-        PAID_MVP_SALES_OPEN_UNTIL: new Date(Date.now() + 60_000).toISOString(),
       }),
     ).not.toThrow();
     expect(() =>
@@ -114,11 +91,10 @@ describe('founder-only new-sales pause', () => {
     ).rejects.toThrow(/Finance admin privileges required|Database not available/);
   });
 
-  it('D1: settlement admission ignores a closed window or pause but keeps owner admission', () => {
+  it('D1: settlement admission ignores a sales pause; any owner is admitted', () => {
     const env = {
       ...releaseEnvironment,
       PAID_MVP_SALES_PAUSED: 'true',
-      PAID_MVP_ADMITTED_OWNERS: 'agent:11',
     };
     expect(() =>
       requirePaidMvpOwnerAdmission('Activation', { ownerType: 'agent', ownerId: 11 }, env),
@@ -128,7 +104,7 @@ describe('founder-only new-sales pause', () => {
     ).not.toThrow();
     expect(() =>
       requirePaidMvpOwnerAdmissionForSettlement({ ownerType: 'agent', ownerId: 12 }, env),
-    ).toThrow();
+    ).not.toThrow();
     // New invoice requests still require sales to be open.
     expect(() => requirePaidMvpSalesOpen('Invoice requests', env)).toThrow(
       PAID_SALES_PAUSED_MESSAGE,
