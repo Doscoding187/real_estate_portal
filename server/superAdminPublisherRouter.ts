@@ -19,6 +19,34 @@ import { sanitizeDraftData } from './lib/sanitizeDraftData';
 import { getDeveloperOperatingHome } from './services/developerOperatingHome';
 import { assertLandDevelopmentDraftOperationAvailable } from './services/developerEngineContainment';
 import { safeErrorSummary } from './_core/safeError';
+import { logAudit } from './_core/auditLog';
+
+/**
+ * POPIA accountability: record that a super admin read enquirer personal data.
+ * Metadata holds only counts and filter/page inputs, never lead fields. A
+ * failure to write the audit record must not break the read.
+ */
+async function recordLeadDataView(params: {
+  userId: number;
+  targetType: string;
+  targetId?: number;
+  count: number;
+  filters: Record<string, unknown>;
+  req?: Parameters<typeof logAudit>[0]['req'];
+}): Promise<void> {
+  try {
+    await logAudit({
+      userId: params.userId,
+      action: 'lead_data_viewed',
+      targetType: params.targetType,
+      targetId: params.targetId,
+      metadata: { count: params.count, filters: params.filters },
+      req: params.req,
+    });
+  } catch (error) {
+    console.warn('[AuditLog] lead_data_viewed write failed:', safeErrorSummary(error));
+  }
+}
 
 async function requireActivePublisherContext(ctx: EnhancedTRPCContext, cataloguePublisherId: number) {
   const identity = await resolveOperatingIdentity(ctx, {
@@ -699,6 +727,19 @@ export const superAdminPublisherRouter = router({
         .limit(input.limit)
         .offset(input.offset);
 
+      await recordLeadDataView({
+        userId: ctx.user.id,
+        targetType: 'catalogue_publisher',
+        targetId: input.cataloguePublisherId,
+        count: publisherLeads.length,
+        filters: {
+          developmentId: input.developmentId ?? null,
+          limit: input.limit,
+          offset: input.offset,
+        },
+        req: ctx.req,
+      });
+
       return publisherLeads.map(row => ({
         ...row.lead,
         development: row.development,
@@ -717,7 +758,7 @@ export const superAdminPublisherRouter = router({
         offset: z.number().int().min(0).default(0),
       }),
     )
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const dbConn = await db.getDb();
       if (!dbConn) {
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database unavailable' });
@@ -777,6 +818,14 @@ export const superAdminPublisherRouter = router({
         .from(leads)
         .leftJoin(leadDeliveries, eq(leads.id, leadDeliveries.leadId))
         .where(queueConditions);
+
+      await recordLeadDataView({
+        userId: ctx.user.id,
+        targetType: 'platform_managed_queue',
+        count: rows.length,
+        filters: { limit: input.limit, offset: input.offset },
+        req: ctx.req,
+      });
 
       return {
         items: rows,
