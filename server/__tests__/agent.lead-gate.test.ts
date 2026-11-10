@@ -51,12 +51,33 @@ describe('agent lead and showing procedures are gated server-side (D2)', () => {
     mockGetDb.mockResolvedValue(null);
   });
 
-  it.each(GATED)('%s refuses an unpaid agent', async name => {
+  const LIST_ENDPOINTS = [
+    'getLeadsPipeline',
+    'getMyLeads',
+    'getMyFollowUps',
+    'getMyShowings',
+    'getMyCommissions',
+  ] as const;
+  const REFUSING = GATED.filter(name => !(LIST_ENDPOINTS as readonly string[]).includes(name));
+
+  it.each(REFUSING)('%s refuses an unpaid agent', async name => {
     mockEntitlements.mockResolvedValue({ hasCommercialAccess: false, canAccessExistingLeads: true });
     await expect(caller('agent')[name]({})).rejects.toMatchObject({
       code: 'FORBIDDEN',
       message: AGENT_LEADS_LOCKED_MESSAGE,
     });
+  });
+
+  it.each(LIST_ENDPOINTS)('%s returns an empty result (no error, no DB read) for an unpaid agent', async name => {
+    mockEntitlements.mockResolvedValue({ hasCommercialAccess: false, canAccessExistingLeads: true });
+    mockGetDb.mockRejectedValue(new Error('must not reach the database'));
+    const result = await caller('agent')[name]({});
+    if (name === 'getLeadsPipeline') {
+      expect(Object.values(result).every(column => (column as unknown[]).length === 0)).toBe(true);
+      expect(Object.keys(result)).toContain('new');
+    } else {
+      expect(result).toEqual([]);
+    }
   });
 
   // Valid inputs, so input validation passes and the handler body runs. The mocked
