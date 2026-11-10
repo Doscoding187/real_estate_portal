@@ -11,7 +11,9 @@ const {
   requestMock,
   toastMock,
   invoiceResponseMock,
+  authMock,
 } = vi.hoisted(() => ({
+  authMock: vi.fn(),
   invoiceResponseMock: vi.fn(),
   legalChoiceMock: vi.fn(),
   requestMock: vi.fn(),
@@ -42,7 +44,7 @@ vi.mock('@/components/commercial/PaidCommitmentDisclosure', () => ({
   PaidCommitmentDisclosure: () => <div>Commitment disclosure</div>,
 }));
 vi.mock('@/_core/hooks/useAuth', () => ({
-  useAuth: () => ({ user: { id: 1, role: 'agent', name: 'Ada Agent', email: 'ada@example.test' } }),
+  useAuth: () => authMock(),
 }));
 vi.mock('@/components/billing/EftPaymentNoticeForm', () => ({
   usePaymentNoticeRequest: () => ({
@@ -83,6 +85,10 @@ const product = {
 beforeEach(() => {
   vi.clearAllMocks();
   invoiceResponseMock.mockReturnValue(null);
+  authMock.mockReturnValue({
+    loading: false,
+    user: { id: 1, role: 'agent', name: 'Ada Agent', email: 'ada@example.test' },
+  });
   legalChoiceMock.mockReturnValue({ accepted: true });
   workspaceMock.mockReturnValue({ data: undefined, refetch: vi.fn() });
   availabilityMock.mockReturnValue({ isAvailable: true, salesPaused: false, isLoading: false });
@@ -358,6 +364,64 @@ describe('existing payment reference when sales are paused or blocked', () => {
       '/agent/settings?tab=profile',
     );
     expect(document.body.textContent).not.toMatch(/selected group|waitlist|coming soon|limited/i);
+  });
+
+  it('keeps the live Get access header in every closed or unknown state', () => {
+    const expectLiveHeader = () => {
+      expect(screen.getByRole('heading', { name: 'Get access' })).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          'Your profile is open. A plan unlocks listings, publishing and enquiries.',
+        ),
+      ).toBeInTheDocument();
+      expect(document.body.textContent).not.toMatch(/open now|Early access/);
+    };
+    availabilityMock.mockReturnValue({ isAvailable: false, salesPaused: true, isLoading: false });
+    const first = render(<PlanGateDialog open onOpenChange={vi.fn()} />);
+    expectLiveHeader();
+    first.unmount();
+    availabilityMock.mockReturnValue({ isAvailable: true, salesPaused: false, isLoading: true });
+    const second = render(<PlanGateDialog open onOpenChange={vi.fn()} />);
+    expectLiveHeader();
+    second.unmount();
+    availabilityMock.mockReturnValue({ isAvailable: true, salesPaused: false, isLoading: false });
+    render(<PlanGateDialog open onOpenChange={vi.fn()} blockedReason="Contact support." />);
+    expectLiveHeader();
+  });
+
+  it('has no Back button when sales are paused or blocked with a reference', () => {
+    availabilityMock.mockReturnValue({ isAvailable: false, salesPaused: true, isLoading: false });
+    withInvoice();
+    const first = render(<PlanGateDialog open onOpenChange={vi.fn()} />);
+    expect(screen.getByTestId('payment-reference')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Back' })).not.toBeInTheDocument();
+    first.unmount();
+    availabilityMock.mockReturnValue({ isAvailable: true, salesPaused: false, isLoading: false });
+    render(<PlanGateDialog open onOpenChange={vi.fn()} blockedReason="Contact support." />);
+    expect(screen.queryByRole('button', { name: 'Back' })).not.toBeInTheDocument();
+  });
+
+  it('shows Loading... instead of Not set while the account loads', () => {
+    authMock.mockReturnValue({ loading: true, user: null });
+    const first = render(<PlanGateDialog open onOpenChange={vi.fn()} />);
+    expect(screen.getByTestId('plan-account')).toHaveTextContent('Loading...');
+    expect(screen.getByTestId('plan-account')).not.toHaveTextContent('Not set');
+    first.unmount();
+    authMock.mockReturnValue({ loading: false, user: { id: 1, name: '', email: '' } });
+    render(<PlanGateDialog open onOpenChange={vi.fn()} />);
+    expect(screen.getByTestId('plan-account')).toHaveTextContent('Not set');
+  });
+
+  it('renders the plan term from the catalog product when it carries one', () => {
+    catalogMock.mockReturnValue({
+      data: {
+        products: [{ ...product, term: { ...product.term, durationDays: 60, autoRenews: false } }],
+      },
+      isLoading: false,
+      refetch: vi.fn(),
+    });
+    render(<PlanGateDialog open onOpenChange={vi.fn()} />);
+    expect(screen.getByText('Once-off, 60 days, no auto-renewal.')).toBeInTheDocument();
   });
 
   it('requests a reference on Next when there is none yet', async () => {

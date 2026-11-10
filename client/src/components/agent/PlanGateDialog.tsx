@@ -80,7 +80,7 @@ function PlanGateContent({
   });
   const submitNotice = trpc.billing.submitLaunchAccessPaymentNotice.useMutation();
   const { paymentNoticeRequest, resetPaymentNoticeRequest } = usePaymentNoticeRequest();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
   const legal = usePaidLegalAcceptance(
     purchasable && launchProduct ? JSON.stringify(launchProduct) : null,
@@ -155,6 +155,12 @@ function PlanGateContent({
     await requestInvoice();
   };
 
+  const availabilityKnown = !(
+    availability.isLoading ||
+    (availability.isAvailable && catalog.isLoading)
+  );
+  const openPath = availabilityKnown && purchasable && !blockedReason;
+
   const renderBody = () => {
     if (activeInvoice && showPanel) {
       return (
@@ -166,7 +172,7 @@ function PlanGateContent({
           onSubmit={() => void handleNoticeSubmit()}
           isSubmitting={submitNotice.isPending}
           submitDisabledReason={submitClosedReason}
-          onBack={accessStep === 2 ? () => setViewingPlan(true) : undefined}
+          onBack={accessStep === 2 && openPath ? () => setViewingPlan(true) : undefined}
         />
       );
     }
@@ -213,7 +219,13 @@ function PlanGateContent({
                 </span>
               ) : null}
             </p>
-            <p className="mt-1 text-sm text-slate-600">Once-off, 90 days, no auto-renewal.</p>
+            <p className="mt-1 text-sm text-slate-600">
+              {product.term.durationDays
+                ? `Once-off, ${product.term.durationDays} days, ${
+                    product.term.autoRenews ? 'renews automatically' : 'no auto-renewal'
+                  }.`
+                : 'Once-off, 90 days, no auto-renewal.'}
+            </p>
             <ul className="mt-3 space-y-2">
               {product.benefits.map(benefit => (
                 <li key={benefit} className="flex items-start gap-2 text-sm text-slate-700">
@@ -247,12 +259,14 @@ function PlanGateContent({
               <div className="min-w-0">
                 <dt className="text-xs text-slate-500">Name</dt>
                 <dd className="break-words font-medium text-slate-900">
-                  {user?.name || 'Not set'}
+                  {authLoading ? 'Loading...' : user?.name || 'Not set'}
                 </dd>
               </div>
               <div className="min-w-0">
                 <dt className="text-xs text-slate-500">Email</dt>
-                <dd className="break-all font-medium text-slate-900">{user?.email || 'Not set'}</dd>
+                <dd className="break-all font-medium text-slate-900">
+                  {authLoading ? 'Loading...' : user?.email || 'Not set'}
+                </dd>
               </div>
             </dl>
           </div>
@@ -284,9 +298,26 @@ function PlanGateContent({
   };
 
   return (
-    <div ref={containerRef} className="flex min-h-0 flex-1 flex-col">
-      {renderBody()}
-    </div>
+    <>
+      <PlanGateHeader earlyAccess={openPath} />
+      <div ref={containerRef} className="flex min-h-0 flex-1 flex-col">
+        {renderBody()}
+      </div>
+    </>
+  );
+}
+
+/** "Early access" copy only on the open path; every closed or unknown state keeps the live header. */
+function PlanGateHeader({ earlyAccess }: { earlyAccess: boolean }) {
+  return (
+    <DialogHeader className="shrink-0 px-4 pt-4 pr-12 pb-4 sm:px-6 sm:pt-6">
+      <DialogTitle>{earlyAccess ? 'Early access' : 'Get access'}</DialogTitle>
+      <DialogDescription>
+        {earlyAccess
+          ? "Agent Launch Access is open now. You're one of the first agents on PropertyListify."
+          : 'Your profile is open. A plan unlocks listings, publishing and enquiries.'}
+      </DialogDescription>
+    </DialogHeader>
   );
 }
 
@@ -307,15 +338,11 @@ export function PlanGateDialog({
         data-testid="early-access-dialog"
         className="top-0 left-0 flex h-dvh max-h-dvh w-full max-w-full translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-none p-0 sm:top-[50%] sm:left-[50%] sm:h-auto sm:max-h-[90vh] sm:max-w-2xl sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-lg"
       >
-        <DialogHeader className="shrink-0 px-4 pt-4 pr-12 pb-4 sm:px-6 sm:pt-6">
-          <DialogTitle>Early access</DialogTitle>
-          <DialogDescription>
-            Agent Launch Access is open now. You&apos;re one of the first agents on PropertyListify.
-          </DialogDescription>
-        </DialogHeader>
         {open ? (
           <PlanGateContent blockedReason={blockedReason} workspaceEnabled={workspaceEnabled} />
-        ) : null}
+        ) : (
+          <PlanGateHeader earlyAccess={false} />
+        )}
       </DialogContent>
     </Dialog>
   );
