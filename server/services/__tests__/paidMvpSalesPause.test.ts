@@ -3,6 +3,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   getCommercialActivationStatus,
   isCommercialActivationAvailable,
+  requirePaidMvpOwnerAdmission,
+  requirePaidMvpOwnerAdmissionForSettlement,
   requirePaidMvpSalesOpen,
   resolveCommercialActivationConfiguration,
 } from '../commercialActivationPolicy';
@@ -105,8 +107,31 @@ describe('founder-only new-sales pause', () => {
     await expect(
       startAgencyManualCheckout({ user: {} as never, planId: 1, billingCycle: 'monthly' }),
     ).rejects.toThrow(PAID_SALES_PAUSED_MESSAGE);
+    // D1: approving an already-issued invoice is no longer blocked by the pause.
+    // It proceeds to the finance-admin check instead of the sales-paused refusal.
     await expect(
       reviewManualPayment({ actorUser: {} as never, paymentId: 1, decision: 'approve' }),
-    ).rejects.toThrow(PAID_SALES_PAUSED_MESSAGE);
+    ).rejects.toThrow(/Finance admin privileges required|Database not available/);
+  });
+
+  it('D1: settlement admission ignores a closed window or pause but keeps owner admission', () => {
+    const env = {
+      ...releaseEnvironment,
+      PAID_MVP_SALES_PAUSED: 'true',
+      PAID_MVP_ADMITTED_OWNERS: 'agent:11',
+    };
+    expect(() =>
+      requirePaidMvpOwnerAdmission('Activation', { ownerType: 'agent', ownerId: 11 }, env),
+    ).toThrow(PAID_SALES_PAUSED_MESSAGE);
+    expect(() =>
+      requirePaidMvpOwnerAdmissionForSettlement({ ownerType: 'agent', ownerId: 11 }, env),
+    ).not.toThrow();
+    expect(() =>
+      requirePaidMvpOwnerAdmissionForSettlement({ ownerType: 'agent', ownerId: 12 }, env),
+    ).toThrow();
+    // New invoice requests still require sales to be open.
+    expect(() => requirePaidMvpSalesOpen('Invoice requests', env)).toThrow(
+      PAID_SALES_PAUSED_MESSAGE,
+    );
   });
 });

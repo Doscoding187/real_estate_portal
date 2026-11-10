@@ -8,6 +8,7 @@
 import { db } from '../db';
 import { leads } from '../../drizzle/schema';
 import { eq, and, desc, sql } from 'drizzle-orm';
+import { requireAgentCanReceiveAssignedLeads } from './agentLeadAccessGate';
 
 export interface CreateLeadInput {
   developmentId: number;
@@ -321,6 +322,7 @@ export async function updateLeadStatus(
  * Validates: Requirements 5.5, 6.3
  */
 export async function assignLead(leadId: number, userId: number) {
+  await requireAgentCanReceiveAssignedLeads(userId);
   await db
     .update(leads)
     .set({

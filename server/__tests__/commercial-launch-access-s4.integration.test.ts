@@ -1888,24 +1888,29 @@ describeWithDb('S4 paid Launch Access disposable runtime', () => {
       requestPaidLaunchAccessInvoice({ user: ownerUser, planId: plan.id }),
     ).rejects.toThrow(PAID_SALES_PAUSED_MESSAGE);
     expect(await loadContainmentSnapshot(owner)).toEqual(beforePause);
-    await expect(
-      reviewManualPayment({
-        actorUser: { id: financeId, role: 'super_admin' },
-        paymentId: renewalProof.paymentId,
-        decision: 'approve',
-        verifiedAmount: renewalInvoice.invoice.amountDue,
-      }),
-    ).rejects.toThrow(PAID_SALES_PAUSED_MESSAGE);
-    expect(await loadContainmentSnapshot(owner)).toEqual(beforePause);
-
-    setPaidMvpProductionRelease(false);
-    const renewalApproval = await reviewManualPayment({
+    // D1: finance can still settle an invoice that was issued before the pause.
+    const pausedApproval = await reviewManualPayment({
       actorUser: { id: financeId, role: 'super_admin' },
       paymentId: renewalProof.paymentId,
       decision: 'approve',
       verifiedAmount: renewalInvoice.invoice.amountDue,
     });
-    expect(renewalApproval).toMatchObject({ activationOccurred: true, invoiceStatus: 'paid' });
+    expect(pausedApproval).toMatchObject({ activationOccurred: true, invoiceStatus: 'paid' });
+    const afterPausedApproval = await loadContainmentSnapshot(owner);
+
+    // New requests remain blocked, and re-approval is idempotent (no second activation).
+    await expect(
+      requestPaidLaunchAccessInvoice({ user: ownerUser, planId: plan.id }),
+    ).rejects.toThrow(PAID_SALES_PAUSED_MESSAGE);
+    setPaidMvpProductionRelease(false);
+    const repeatApproval = await reviewManualPayment({
+      actorUser: { id: financeId, role: 'super_admin' },
+      paymentId: renewalProof.paymentId,
+      decision: 'approve',
+      verifiedAmount: renewalInvoice.invoice.amountDue,
+    });
+    expect(repeatApproval).toMatchObject({ idempotent: true });
+    expect(await loadContainmentSnapshot(owner)).toEqual(afterPausedApproval);
   }, 60_000);
 
   it.each(['agent', 'agency', 'developer'] as const)(

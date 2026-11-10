@@ -29,6 +29,8 @@ import {
   requestDeveloperLaunchAccessInvoice,
   restoreAgencySubscription,
   reviewManualPayment,
+  recordLaunchPaymentByReference,
+  lookupLaunchInvoiceByReference,
   startAgencyManualCheckout,
   submitAgencyPaymentProof,
   submitPaidLaunchAccessPaymentProof,
@@ -425,6 +427,34 @@ export const billingRouter = {
           verifiedAmount: input.verifiedAmount,
           bankPaymentReference: input.bankPaymentReference,
           overpaymentReconciled: input.overpaymentReconciled,
+        }),
+      ),
+
+    lookupLaunchInvoiceByReference: superAdminProcedure
+      .input(z.object({ paymentReference: z.string().trim().min(1).max(120) }))
+      .query(async ({ ctx, input }) =>
+        lookupLaunchInvoiceByReference({
+          actorUser: requireUser(ctx),
+          paymentReference: input.paymentReference,
+        }),
+      ),
+
+    recordLaunchPaymentByReference: superAdminProcedure
+      .input(
+        z.object({
+          paymentReference: z.string().trim().min(1).max(120),
+          amountReceivedMinor: z.number().int().positive().safe(),
+          paidOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+          bankReference: z.string().trim().min(1).max(120).optional(),
+        }),
+      )
+      .mutation(async ({ ctx, input }) =>
+        recordLaunchPaymentByReference({
+          actorUser: requireUser(ctx),
+          paymentReference: input.paymentReference,
+          amountReceivedMinor: input.amountReceivedMinor,
+          paidOn: input.paidOn,
+          bankReference: input.bankReference,
         }),
       ),
 

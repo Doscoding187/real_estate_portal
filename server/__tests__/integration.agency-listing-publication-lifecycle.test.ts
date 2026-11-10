@@ -1517,10 +1517,37 @@ describeWithDb('agency full operating journey acceptance', () => {
         message: 'This new enquiry must be denied after Agency expiry.',
       }),
     ).rejects.toMatchObject({ data: { code: 'NOT_FOUND' } });
+    // D2: the custody record is kept (asserted below), but while the Agency's
+    // Launch Access is lapsed the member no longer sees or works leads.
     const expiredPipeline = await memberAgentApi.agent.getLeadsPipeline.query({
       filters: { propertyId: Number(property.id) },
     });
-    expect(expiredPipeline.contacted.some(lead => Number(lead.id) === created.leadId)).toBe(true);
+    expect(Object.values(expiredPipeline).every(column => column.length === 0)).toBe(true);
+    await expect(
+      memberAgentApi.agent.addLeadActivity.mutate({
+        leadId: created.leadId,
+        activityType: 'email',
+        description: 'Sent the prospect the available viewing times.',
+      }),
+    ).rejects.toMatchObject({
+      data: { code: 'FORBIDDEN' },
+      message: 'Leads unlock with Launch Access.',
+    });
+    // Renewal restores access to the same custody. The fixture term is restored
+    // here (and again for the membership transitions below) to continue the journey.
+    await db
+      .update(subscriptions)
+      .set({
+        status: 'active',
+        currentPeriodEnd: dbTimestamp(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
+      })
+      .where(
+        and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, created.agencyId)),
+      );
+    const renewedPipeline = await memberAgentApi.agent.getLeadsPipeline.query({
+      filters: { propertyId: Number(property.id) },
+    });
+    expect(renewedPipeline.contacted.some(lead => Number(lead.id) === created.leadId)).toBe(true);
     await expect(
       memberAgentApi.agent.addLeadActivity.mutate({
         leadId: created.leadId,
@@ -1607,6 +1634,24 @@ describeWithDb('agency full operating journey acceptance', () => {
       canAccessExistingLeads: true,
     });
 
+    // Work cannot be reassigned to an agent without current Launch Access, so
+    // the Agency term is renewed for the handover and lapses again afterwards.
+    await expect(
+      ownerApi.agency.setAgentMembershipStatus.mutate({
+        userId: member.id,
+        status: 'suspended',
+        reassignToUserId: replacement.id,
+      }),
+    ).rejects.toMatchObject({ data: { code: 'FORBIDDEN' } });
+    await db
+      .update(subscriptions)
+      .set({
+        status: 'active',
+        currentPeriodEnd: dbTimestamp(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
+      })
+      .where(
+        and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, created.agencyId)),
+      );
     await expect(
       ownerApi.agency.setAgentMembershipStatus.mutate({
         userId: member.id,
@@ -1688,6 +1733,17 @@ describeWithDb('agency full operating journey acceptance', () => {
         description: 'Replacement agent accepted the scheduled follow-up.',
       }),
     ).resolves.toEqual({ success: true });
+    // The Agency term lapses again: the replacement keeps custody of the lead
+    // but, like the former member earlier, cannot see or work it until renewal.
+    await db
+      .update(subscriptions)
+      .set({ currentPeriodEnd: dbTimestamp(new Date(Date.now() - 60_000)) })
+      .where(
+        and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, created.agencyId)),
+      );
+    await expect(
+      replacementApi.agent.getMyLeads.query({ status: 'all', limit: 100 }),
+    ).resolves.toEqual([]);
     const ownerAfterReassignment = await ownerApi.agency.getLeadDetail.query({
       leadId: created.leadId,
     });

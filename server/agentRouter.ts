@@ -62,6 +62,11 @@ import {
 import type { AgentOfferReadinessSummary } from './services/agentLeadOfferReadinessService';
 import { logAudit } from './_core/auditLog';
 import { getAgentEntitlementsForUserId } from './services/agentEntitlementService';
+import {
+  hasAgentLeadAccess,
+  requireAgentLeadAccess,
+  requireAgentLeadListAccess,
+} from './services/agentLeadAccessGate';
 import { loadAgentPresenceSummary } from './services/agentPresenceSummaryService';
 import { agentOnboardingService } from './services/agentOnboardingService';
 import { AgentCoverageAreaValidationError } from './services/agentCoverageAreaService';
@@ -136,6 +141,8 @@ const NOTIFICATION_TYPES = [
   'system_alert',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
+/** Notification types that carry lead or showing detail; hidden while locked. */
+const LEAD_NOTIFICATION_TYPES = ['lead_assigned', 'showing_scheduled', 'offer_received'] as const;
 const LIVE_AGENT_LISTING_STATUSES = ['available', 'published'] as const;
 const TERMINAL_FOLLOW_UP_STATUSES = ['converted', 'closed', 'lost'] as const;
 
@@ -521,6 +528,22 @@ async function listAgentShowings(params: {
 /**
  * Agent Router - Dashboard and CRM functionality for agents
  */
+const EMPTY_PIPELINE = (): Record<PipelineStage, never[]> => ({
+  new: [],
+  contacted: [],
+  viewing: [],
+  offer: [],
+  won: [],
+  closed: [],
+  lost: [],
+});
+
+/** Lead and showing mutations and detail reads: unpaid independent agents are refused server-side. List endpoints return empty instead. */
+const agentLeadProcedure = agentProcedure.use(async ({ ctx, next }) => {
+  await requireAgentLeadAccess(ctx);
+  return next();
+});
+
 export const agentRouter = router({
   list: publicProcedure.query(async () => {
     const db = await getDb();
@@ -647,9 +670,12 @@ export const agentRouter = router({
       const workspace = await resolveAgentWorkspaceProfile(db, userId);
       const agentRecord = workspace.agent?.status === 'approved' ? workspace.agent : null;
       const agentId = agentRecord?.id ?? null;
-      const leadWorkspace = agentRecord
-        ? { agent: agentRecord, currentAgencyId: workspace.currentAgencyId }
-        : null;
+      // Lead-derived figures are zeroed while Launch Access is not current.
+      const leadsUnlocked = await hasAgentLeadAccess(requireUser(ctx));
+      const leadWorkspace =
+        agentRecord && leadsUnlocked
+          ? { agent: agentRecord, currentAgencyId: workspace.currentAgencyId }
+          : null;
 
       const todayDate = new Date();
       todayDate.setHours(0, 0, 0, 0);
@@ -678,7 +704,7 @@ export const agentRouter = router({
           );
       }
 
-      if (agentId) {
+      if (agentId && leadsUnlocked) {
         showingsTodayCount = await countAgentShowingsInRange({
           db,
           agentId,
@@ -708,7 +734,7 @@ export const agentRouter = router({
    * two-way connections are measured separately so an unanswered call does not
    * appear as a connected buyer.
    */
-  getLeadResponseSummary: agentProcedure.query(async ({ ctx }) => {
+  getLeadResponseSummary: agentLeadProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     requireUser(ctx);
 
@@ -957,6 +983,8 @@ export const agentRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
+      // Locked agents see an empty list (not an error); mutations and detail reads still refuse.
+      if (!(await requireAgentLeadListAccess(requireUser(ctx)))) return EMPTY_PIPELINE();
       const db = await getDb();
 
       const workspace = await requireAgentLeadWorkspace(db, requireUser(ctx).id);
@@ -1126,7 +1154,7 @@ export const agentRouter = router({
   /**
    * Move lead to different pipeline stage
    */
-  moveLeadToStage: agentProcedure
+  moveLeadToStage: agentLeadProcedure
     .input(
       z.object({
         leadId: z.number(),
@@ -1632,6 +1660,8 @@ export const agentRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
+      // Locked agents see an empty list (not an error); mutations and detail reads still refuse.
+      if (!(await requireAgentLeadListAccess(requireUser(ctx)))) return [];
       const db = await getDb();
       const workspace = await requireAgentLeadWorkspace(db, requireUser(ctx).id);
 
@@ -1684,6 +1714,8 @@ export const agentRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
+      // Locked agents see an empty list (not an error); mutations and detail reads still refuse.
+      if (!(await requireAgentLeadListAccess(requireUser(ctx)))) return [];
       const db = await getDb();
       const user = requireUser(ctx);
       const workspace = await requireAgentLeadWorkspace(db, user.id);
@@ -1737,7 +1769,7 @@ export const agentRouter = router({
    * Schedule a follow-up on an assigned lead. This mirrors the agency lead
    * operation while retaining the agent's narrower ownership boundary.
    */
-  setLeadFollowUp: agentProcedure
+  setLeadFollowUp: agentLeadProcedure
     .input(
       z.object({
         leadId: z.number().int().positive(),
@@ -1813,7 +1845,7 @@ export const agentRouter = router({
     }),
 
   /** Complete an assigned follow-up and retain the contact/audit trail. */
-  completeLeadFollowUp: agentProcedure
+  completeLeadFollowUp: agentLeadProcedure
     .input(
       z.object({
         leadId: z.number().int().positive(),
@@ -1879,7 +1911,7 @@ export const agentRouter = router({
     }),
 
   /** Record an outreach attempt without changing the lead's sales stage. */
-  recordLeadContactAttempt: agentProcedure
+  recordLeadContactAttempt: agentLeadProcedure
     .input(
       z
         .object({
@@ -1987,7 +2019,7 @@ export const agentRouter = router({
   /**
    * Update lead status
    */
-  updateLeadStatus: agentProcedure
+  updateLeadStatus: agentLeadProcedure
     .input(
       z.object({
         leadId: z.number(),
@@ -2081,7 +2113,7 @@ export const agentRouter = router({
    * latest agent-recorded checklist snapshot with the canonical lead
    * transition requirements, so the client never invents its own gate.
    */
-  getLeadOfferReadiness: agentProcedure
+  getLeadOfferReadiness: agentLeadProcedure
     .input(z.object({ leadId: z.number().int().positive() }))
     .query(async ({ ctx, input }): Promise<AgentOfferReadinessSummary> => {
       const db = await getDb();
@@ -2095,7 +2127,7 @@ export const agentRouter = router({
    * avoids a second schema authority while preserving who recorded the
    * readiness evidence and when it was changed.
    */
-  setLeadOfferReadiness: agentProcedure
+  setLeadOfferReadiness: agentLeadProcedure
     .input(
       z.object({
         leadId: z.number().int().positive(),
@@ -2164,7 +2196,7 @@ export const agentRouter = router({
   /**
    * Add lead activity/note
    */
-  addLeadActivity: agentProcedure
+  addLeadActivity: agentLeadProcedure
     .input(
       z.object({
         leadId: z.number(),
@@ -2228,7 +2260,7 @@ export const agentRouter = router({
   /**
    * Get lead activities
    */
-  getLeadActivities: agentProcedure
+  getLeadActivities: agentLeadProcedure
     .input(
       z.object({
         leadId: z.number(),
@@ -2262,6 +2294,8 @@ export const agentRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
+      // Locked agents see an empty list (not an error); mutations and detail reads still refuse.
+      if (!(await requireAgentLeadListAccess(requireUser(ctx)))) return [];
       const db = await getDb();
       if (!db) {
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
@@ -2277,7 +2311,7 @@ export const agentRouter = router({
       });
     }),
 
-  bookShowing: agentProcedure
+  bookShowing: agentLeadProcedure
     .input(
       z.object({
         listingId: z.number(),
@@ -2490,7 +2524,7 @@ export const agentRouter = router({
   /**
    * Update showing status
    */
-  updateShowingStatus: agentProcedure
+  updateShowingStatus: agentLeadProcedure
     .input(
       z.object({
         showingId: z.number(),
@@ -2546,6 +2580,8 @@ export const agentRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
+      // Locked agents see an empty list (not an error); mutations and detail reads still refuse.
+      if (!(await requireAgentLeadListAccess(requireUser(ctx)))) return [];
       const db = await getDb();
       const workspace = await requireAgentLeadWorkspace(db, requireUser(ctx).id);
       const agentRecord = workspace.agent;
@@ -2590,7 +2626,7 @@ export const agentRouter = router({
   /**
    * Get performance analytics
    */
-  getPerformanceAnalytics: agentProcedure
+  getPerformanceAnalytics: agentLeadProcedure
     .input(
       z.object({
         period: z.enum(['week', 'month', 'quarter', 'year']).optional().default('month'),
@@ -2681,6 +2717,14 @@ export const agentRouter = router({
 
       const conditions = [eq(notifications.userId, requireUser(ctx).id)];
 
+      // Lead PII (names, enquiries) lives in these notification types; hide
+      // them while Launch Access is not current. Rows are kept, not deleted.
+      if (!(await hasAgentLeadAccess(requireUser(ctx)))) {
+        conditions.push(
+          notInArray(notifications.type, [...LEAD_NOTIFICATION_TYPES]),
+        );
+      }
+
       if (input.unreadOnly) {
         conditions.push(eq(notifications.isRead, 0));
       }
@@ -2737,10 +2781,14 @@ export const agentRouter = router({
   getUnreadNotificationCount: agentProcedure.query(async ({ ctx }) => {
     const db = await getDb();
 
+    const conditions = [eq(notifications.userId, requireUser(ctx).id), eq(notifications.isRead, 0)];
+    if (!(await hasAgentLeadAccess(requireUser(ctx)))) {
+      conditions.push(notInArray(notifications.type, [...LEAD_NOTIFICATION_TYPES]));
+    }
     const [result] = await db
       .select({ count: count() })
       .from(notifications)
-      .where(and(eq(notifications.userId, requireUser(ctx).id), eq(notifications.isRead, 0)));
+      .where(and(...conditions));
 
     return { count: result?.count || 0 };
   }),
@@ -2748,7 +2796,7 @@ export const agentRouter = router({
   /**
    * Export commissions to CSV
    */
-  exportCommissionsCSV: agentProcedure
+  exportCommissionsCSV: agentLeadProcedure
     .input(
       z.object({
         status: z.enum(['all', 'pending', 'approved', 'paid', 'cancelled']).optional(),

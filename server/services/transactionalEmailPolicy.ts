@@ -23,6 +23,7 @@ export const BILLING_AUDIT_EMAIL_POLICY: Readonly<Record<string, LaunchEmailPurp
   payment_unmatched: 'payment_rejected',
   payment_duplicate: 'payment_rejected',
   payment_approved_invoice_already_paid: null,
+  payment_recorded_by_finance: null,
   subscription_lifecycle_updated: null,
   subscription_cancellation_requested: null,
   subscription_restored: null,
@@ -79,6 +80,8 @@ export function renderLaunchEmail(input: {
     start: string;
     end: string;
   };
+  paidOn?: string;
+  productName?: string;
 }): { subject: string; text: string; html: string } {
   const terms = LAUNCH_PRODUCT_EMAIL_TERMS[input.product];
   const actionUrl =
@@ -133,16 +136,31 @@ export function renderLaunchEmail(input: {
         ? 'We received your payment notice and its review status has changed. Sign in for the current decision and any next steps. A customer notice alone does not confirm received bank funds or activate access.'
         : 'We received your payment notice. This is a customer notification, not confirmation of received bank funds. Verification is pending. Access begins only after the payment is matched to the bank receipt and approved. Sign in to review it.';
       break;
-    case 'payment_approved':
-      subject = 'Property Listify Launch Access activated';
-      message =
-        'Your bank payment was verified and your fully settled invoice was approved. Your 90-day Launch Access term was activated.';
-      if (input.term)
-        message += `\nPaid term start: ${input.term.start} UTC\nPaid term end: ${input.term.end} UTC`;
-      else message += '\nOpen your account for the recorded start and end dates.';
-      message +=
-        '\nOpen your workspace to create or manage listings. Publication remains subject to moderation. There is no automatic renewal.';
+    case 'payment_approved': {
+      subject = 'Invoice - PAID';
+      const rand = (minor: number, currency: string) =>
+        new Intl.NumberFormat('en-ZA', { style: 'currency', currency }).format(minor / 100);
+      const paidInvoice = input.invoice;
+      const lines = ['Invoice - PAID'];
+      if (paidInvoice) {
+        lines.push(`Invoice number: ${paidInvoice.invoiceNumber}`);
+        lines.push(`Payment reference: ${paidInvoice.paymentReference}`);
+        lines.push(
+          `Amount paid: ${rand(Number(paidInvoice.amountPaid ?? paidInvoice.amountDue), paidInvoice.currency)}`,
+        );
+      }
+      if (input.paidOn) lines.push(`Date paid: ${input.paidOn}`);
+      if (input.productName) lines.push(`Product: ${input.productName}`);
+      if (input.term) lines.push(`Access period: ${input.term.start} UTC to ${input.term.end} UTC`);
+      else lines.push('Open your account for the recorded access start and end dates.');
+      lines.push(
+        'Supplier: Property Listify (Pty) Ltd, registration 2026/702814/07. Not VAT registered, no VAT charged.',
+        'Support: support@propertylistifysa.co.za',
+        'Open your workspace to create or manage listings. Publication remains subject to moderation. There is no automatic renewal.',
+      );
+      message = lines.join('\n');
       break;
+    }
     case 'payment_correction_requested':
     case 'payment_rejected':
       subject = 'Property Listify payment review — action needed';

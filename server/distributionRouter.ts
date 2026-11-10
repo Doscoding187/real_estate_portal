@@ -74,6 +74,7 @@ import {
   getProgramActivationReadiness,
 } from './services/distributionProgramService';
 import { getProgramReadinessByDevelopmentId } from './services/distributionProgramReadinessService';
+import { requireAgentCanReceiveAssignedLeads } from './services/agentLeadAccessGate';
 import {
   acknowledgeDeveloperDealDocument,
   assertDealPayoutReady,
@@ -4942,6 +4943,7 @@ const managerDistributionRouter = router({
               message: 'Choose an active practitioner from the selected team.',
             });
           }
+          await requireAgentCanReceiveAssignedLeads(Number(member.userId));
           const [profileCount] = await tx
             .select({ count: sql<number>`COUNT(*)` })
             .from(agents)

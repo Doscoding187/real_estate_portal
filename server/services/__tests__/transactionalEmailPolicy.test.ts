@@ -18,6 +18,7 @@ describe('Paid MVP transactional email policy', () => {
       'payment_approved',
     );
     expect(requiredBillingEmailPurpose('payment_proof_received')).toBeNull();
+    expect(requiredBillingEmailPurpose('payment_recorded_by_finance')).toBeNull();
     expect(requiredBillingEmailPurpose('payment_approved_invoice_already_paid')).toBeNull();
     expect(requiredBillingEmailPurpose('unrelated_internal_event')).toBeNull();
   });
@@ -76,9 +77,27 @@ describe('Paid MVP transactional email policy', () => {
       product: 'agent_launch_access',
       publicOrigin: 'https://www.propertylistifysa.co.za',
       term: { start: '2026-10-13 10:00:00', end: '2027-01-11 10:00:00' },
+      paidOn: '2026-10-12',
+      productName: 'Independent Agent Launch Access',
+      invoice: {
+        invoiceNumber: 'AN-2026-0001',
+        paymentReference: 'PL-AN-REF123',
+        amountDue: 49900,
+        amountPaid: 49900,
+        currency: 'ZAR',
+      },
     });
-    expect(approved.subject).toContain('Launch Access activated');
-    expect(approved.text).toContain('fully settled invoice');
+    expect(approved.subject).toBe('Invoice - PAID');
+    expect(approved.text).not.toMatch(/tax invoice/i);
+    expect(approved.text).toContain('AN-2026-0001');
+    expect(approved.text).toContain('PL-AN-REF123');
+    expect(approved.text).toMatch(/R\s?499/);
+    expect(approved.text).toContain('Date paid: 2026-10-12');
+    expect(approved.text).toContain('Independent Agent Launch Access');
+    expect(approved.text).toContain('Property Listify (Pty) Ltd, registration 2026/702814/07');
+    expect(approved.text).toContain('Not VAT registered, no VAT charged');
+    expect(approved.text).toContain('support@propertylistifysa.co.za');
+    expect(approved.html).toContain('AN-2026-0001');
     expect(approved.text).toContain('2026-10-13 10:00:00 UTC');
     expect(approved.text).toContain('2027-01-11 10:00:00 UTC');
     expect(approved.text).toContain('Publication remains subject to moderation');

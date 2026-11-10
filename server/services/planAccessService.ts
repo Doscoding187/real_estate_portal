@@ -27,7 +27,7 @@ import {
 import {
   requireAnyPaidMvpLaunchAccessActivation,
   requireCommercialActivation,
-  requirePaidMvpOwnerAdmission,
+  requirePaidMvpOwnerAdmissionForSettlement,
 } from './commercialActivationPolicy';
 
 export type PlanSegment = 'agent' | 'agency' | 'enterprise' | 'developer';
@@ -783,7 +783,8 @@ export async function activatePaidLaunchAccessForOwner(input: {
   db?: any;
 }): Promise<SubscriptionSnapshot | null> {
   requireAnyPaidMvpLaunchAccessActivation('Paid Launch Access activation');
-  requirePaidMvpOwnerAdmission('Paid Launch Access activation', input);
+  // D1: settlement of an issued invoice does not require sales to be open.
+  requirePaidMvpOwnerAdmissionForSettlement(input);
   const db = input.db || (await getDb());
   if (!db) throw new Error('Database not available');
 

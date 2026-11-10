@@ -1054,6 +1054,9 @@ describeWithDb('team operations on canonical membership', () => {
     const agencyId = await insertAgency('AgentHomeWorkspace');
     const ownerUserId = await insertUser('AgentHomeWorkspaceOwner', 'agency_admin');
     await db.update(users).set({ agencyId }).where(eq(users.id, ownerUserId));
+    // The agency holds current Launch Access, so an ACTIVE member legitimately sees
+    // commissions (D2); only the suspension below must remove that authority.
+    await createActiveAgencyInvitationAccess(agencyId, ownerUserId);
 
     const memberUserId = await insertUser('AgentHomeWorkspaceMember', 'agent');
     await db.update(users).set({ agencyId, isSubaccount: 1 }).where(eq(users.id, memberUserId));

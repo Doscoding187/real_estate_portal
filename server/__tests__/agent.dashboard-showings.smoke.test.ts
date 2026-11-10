@@ -4,6 +4,7 @@ import { eq, sql } from 'drizzle-orm';
 import { agentRouter } from '../agentRouter';
 import { getDb } from '../db-connection';
 import { leads, listings, showings } from '../../drizzle/schema';
+import { grantAgentLaunchAccess, removeAgentLaunchAccess } from '../test-utils/paidAgentFixture';
 
 const describeWithDb = process.env.DATABASE_URL
   ? describe
@@ -11,6 +12,7 @@ const describeWithDb = process.env.DATABASE_URL
       describe.skip(`${name} (requires DATABASE_URL test DB)`, fn)) as typeof describe);
 
 describeWithDb('agent dashboard showings smoke', () => {
+  const createdSubscriptionIds: number[] = [];
   let createdUserId: number | null = null;
   let createdAgentId: number | null = null;
   let createdOtherUserId: number | null = null;
@@ -85,6 +87,10 @@ describeWithDb('agent dashboard showings smoke', () => {
       createdOtherAgentId = null;
     }
 
+    for (const subscriptionId of createdSubscriptionIds.splice(0)) {
+      await removeAgentLaunchAccess(db, subscriptionId);
+    }
+
     if (createdBuyerUserId) {
       await db.execute(sql`DELETE FROM users WHERE id = ${createdBuyerUserId}`);
       createdBuyerUserId = null;
@@ -121,6 +127,8 @@ describeWithDb('agent dashboard showings smoke', () => {
       VALUES (${email}, ${`Smoke Agent ${suffix}`}, ${'agent'}, ${1})
     `);
     createdUserId = Number((userInsert as any).insertId);
+    // Both agents hold current Launch Access, so the other agent still proves custody isolation (NOT_FOUND).
+    createdSubscriptionIds.push(await grantAgentLaunchAccess(db, createdUserId));
 
     const [agentInsert] = await db!.execute(sql`
       INSERT INTO agents (
@@ -155,6 +163,7 @@ describeWithDb('agent dashboard showings smoke', () => {
       VALUES (${otherEmail}, ${`Other Smoke Agent ${suffix}`}, ${'agent'}, ${1})
     `);
     createdOtherUserId = Number((otherUserInsert as any).insertId);
+    createdSubscriptionIds.push(await grantAgentLaunchAccess(db, createdOtherUserId));
 
     const [otherAgentInsert] = await db!.execute(sql`
       INSERT INTO agents (

@@ -8,6 +8,14 @@ vi.mock('../db', () => ({
   getDb: mockGetDb,
 }));
 
+vi.mock('../services/agentEntitlementService', () => ({
+  getAgentEntitlementsForUserId: vi.fn(async () => ({
+    hasCommercialAccess: true,
+    canAccessExistingLeads: true,
+    canReceiveLeads: true,
+  })),
+}));
+
 import { agentRouter } from '../agentRouter';
 
 function createAgentCaller() {
