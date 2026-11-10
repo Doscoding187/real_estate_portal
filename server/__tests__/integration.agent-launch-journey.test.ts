@@ -344,7 +344,12 @@ describeWithDb('independent agent launch journey (publish → receive)', () => {
       res: {},
       user: { id: created.userId, role: 'agent' },
     } as any);
-    const retainedLeads = await agentCaller.agent.getMyLeads({ status: 'all', limit: 100 });
-    expect(retainedLeads.some(lead => Number(lead.id) === created.leadId)).toBe(true);
+    // D2: once Launch Access lapses the agent no longer sees leads (the data and
+    // its custody are kept, as asserted above, and reappear on renewal).
+    const hiddenLeads = await agentCaller.agent.getMyLeads({ status: 'all', limit: 100 });
+    expect(hiddenLeads).toEqual([]);
+    await expect(
+      agentCaller.agent.getLeadActivities({ leadId: created.leadId }),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN', message: 'Leads unlock with Launch Access.' });
   }, 60_000);
 });

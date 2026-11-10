@@ -85,6 +85,18 @@ describe('requireAgentCanReceiveAssignedLeads', () => {
     await expect(requireAgentCanReceiveAssignedLeads(5)).resolves.toBeUndefined();
   });
 
+  it('allows an agency-managed member with current access even without a phone number', async () => {
+    // canReceiveLeads is false only because the profile has no phone; commercial
+    // access (agency-managed through a current membership) is what assignment needs.
+    mockGetDb.mockResolvedValue(dbWithRole('agent'));
+    mockEntitlements.mockResolvedValue({
+      hasCommercialAccess: true,
+      canAccessExistingLeads: true,
+      canReceiveLeads: false,
+    });
+    await expect(requireAgentCanReceiveAssignedLeads(5)).resolves.toBeUndefined();
+  });
+
   it('does not govern non-agent assignees', async () => {
     mockGetDb.mockResolvedValue(dbWithRole('property_developer'));
     await expect(requireAgentCanReceiveAssignedLeads(5)).resolves.toBeUndefined();

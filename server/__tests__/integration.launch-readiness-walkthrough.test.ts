@@ -348,29 +348,32 @@ describeWithDb('AGY-S8: full Agency journey walkthrough', () => {
     expect(pendingAccess.workspaceAccess.publishing).toBe(false);
   });
 
-  it('STAGE 4b: Founder sales pause blocks new checkout and approval without changing the pending proof', async () => {
+  it('STAGE 4b: Founder sales pause blocks new checkout but still lets finance settle the already-issued invoice', async () => {
     superAdminCaller = caller({ id: superAdminUserId, role: 'super_admin' });
     const [invoiceBefore] = await db.select().from(billingInvoices)
       .where(eq(billingInvoices.id, invoiceId)).limit(1);
-    const [paymentBefore] = await db.select().from(billingPayments)
-      .where(eq(billingPayments.id, paymentId)).limit(1);
     const previousPause = process.env.PAID_MVP_SALES_PAUSED;
     process.env.PAID_MVP_SALES_PAUSED = 'true';
     try {
       expect((await principalCaller.billing.commercialActivation()).salesPaused).toBe(true);
       await expect(principalCaller.billing.createCheckoutSession({ planId })).rejects.toThrow(/paused/);
-      await expect(superAdminCaller.billing.admin.reviewManualPayment({
+      // D1: approval of an invoice issued before the pause is not a new sale.
+      const approvedWhilePaused = await superAdminCaller.billing.admin.reviewManualPayment({
         paymentId,
         decision: 'approve',
         verifiedAmount: invoiceBefore.amountDue,
-        note: 'This approval must remain paused.',
-      })).rejects.toThrow(/paused/);
+        note: 'Controlled walkthrough payment verified while sales are paused.',
+      });
+      expect(approvedWhilePaused).toMatchObject({
+        success: true,
+        invoiceStatus: 'paid',
+        subscriptionStatus: 'active',
+        activationOccurred: true,
+      });
       const [invoiceAfter] = await db.select().from(billingInvoices)
         .where(eq(billingInvoices.id, invoiceId)).limit(1);
-      const [paymentAfter] = await db.select().from(billingPayments)
-        .where(eq(billingPayments.id, paymentId)).limit(1);
-      expect(invoiceAfter.status).toBe(invoiceBefore.status);
-      expect(paymentAfter.status).toBe(paymentBefore.status);
+      expect(invoiceAfter.status).toBe('paid');
+      // Publication still waits for the agency approval stage.
       expect((await principalCaller.agency.getAccessState()).workspaceAccess.publishing).toBe(false);
     } finally {
       if (previousPause === undefined) delete process.env.PAID_MVP_SALES_PAUSED;
@@ -378,25 +381,30 @@ describeWithDb('AGY-S8: full Agency journey walkthrough', () => {
     }
   });
 
-  it('STAGE 4c: Super Admin verifies payment and subscription activation coherently', async () => {
+  it('STAGE 4c: Payment and subscription activation are coherent, and re-approval does not activate twice', async () => {
+    // Stage 4b already settled the invoice, so a second approval is idempotent.
+    const [subBefore] = await db.select().from(subscriptions).where(
+      and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, agencyId)),
+    ).limit(1);
     const [invoice] = await db.select().from(billingInvoices)
       .where(eq(billingInvoices.id, invoiceId)).limit(1);
-    const approved = await superAdminCaller.billing.admin.reviewManualPayment({
+    expect(invoice.status).toBe('paid');
+    const [payment] = await db.select().from(billingPayments)
+      .where(eq(billingPayments.id, paymentId)).limit(1);
+    expect(payment.state).toBe('verified');
+    const repeated = await superAdminCaller.billing.admin.reviewManualPayment({
       paymentId,
       decision: 'approve',
       verifiedAmount: invoice.amountDue,
-      note: 'Controlled walkthrough payment verified.',
+      note: 'Repeat approval must not activate again.',
     });
-    expect(approved).toMatchObject({
-      success: true,
-      invoiceStatus: 'paid',
-      subscriptionStatus: 'active',
-    });
+    expect(repeated).toMatchObject({ success: true, idempotent: true, invoiceStatus: 'paid' });
 
     const [sub] = await db.select().from(subscriptions).where(
       and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, agencyId)),
     ).limit(1);
     expect(sub.status).toBe('active');
+    expect(sub.currentPeriodEnd).toEqual(subBefore.currentPeriodEnd);
 
     const access = await principalCaller.agency.getAccessState();
     expect(access.billingStatus).toBe('active');

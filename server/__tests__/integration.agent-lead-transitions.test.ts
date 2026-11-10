@@ -8,10 +8,12 @@ const describeWithDb: typeof describe = process.env.DATABASE_URL
       describe.skip(`${name} (requires DATABASE_URL disposable DB)`, fn)) as typeof describe;
 
 import { db } from '../db';
-import { agents, leads, users } from '../../drizzle/schema';
+import { agents, billableAccounts, leads, users } from '../../drizzle/schema';
 import { appRouter } from '../routers';
+import { grantAgentLaunchAccess, removeAgentLaunchAccess } from '../test-utils/paidAgentFixture';
 
 const created = {
+  subscriptionIds: [] as number[],
   userIds: [] as number[],
   agentIds: [] as number[],
   leadIds: [] as number[],
@@ -33,6 +35,8 @@ async function insertAgentUser(label: string) {
     } as any);
   const id = await insertId(result);
   created.userIds.push(id);
+  // These agents work leads, so each holds current Launch Access (the lead gate, D2).
+  created.subscriptionIds.push(await grantAgentLaunchAccess(db, id));
   return id;
 }
 
@@ -48,7 +52,11 @@ afterAll(async () => {
   for (const id of created.agentIds) {
     await db.delete(agents).where(eq(agents.id, id)).catch(() => undefined);
   }
+  for (const id of created.subscriptionIds) {
+    await removeAgentLaunchAccess(db, id);
+  }
   for (const id of created.userIds) {
+    await db.delete(billableAccounts).where(eq(billableAccounts.userId, id)).catch(() => undefined);
     await db.delete(users).where(eq(users.id, id)).catch(() => undefined);
   }
 });

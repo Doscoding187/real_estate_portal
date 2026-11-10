@@ -80,6 +80,17 @@ describe('agent lead and showing procedures are gated server-side (D2)', () => {
     }
   });
 
+  it.each(LIST_ENDPOINTS)(
+    '%s still refuses (not empty) when custody is denied for a non-commercial reason, e.g. a suspended member',
+    async name => {
+      mockEntitlements.mockResolvedValue({ hasCommercialAccess: false, canAccessExistingLeads: false });
+      await expect(caller('agent')[name]({})).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+        message: AGENT_LEADS_LOCKED_MESSAGE,
+      });
+    },
+  );
+
   // Valid inputs, so input validation passes and the handler body runs. The mocked
   // downstream database rejects with a sentinel: seeing exactly that sentinel proves
   // the gate OPENED and the handler reached its first database call.

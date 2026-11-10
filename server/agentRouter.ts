@@ -62,7 +62,11 @@ import {
 import type { AgentOfferReadinessSummary } from './services/agentLeadOfferReadinessService';
 import { logAudit } from './_core/auditLog';
 import { getAgentEntitlementsForUserId } from './services/agentEntitlementService';
-import { hasAgentLeadAccess, requireAgentLeadAccess } from './services/agentLeadAccessGate';
+import {
+  hasAgentLeadAccess,
+  requireAgentLeadAccess,
+  requireAgentLeadListAccess,
+} from './services/agentLeadAccessGate';
 import { loadAgentPresenceSummary } from './services/agentPresenceSummaryService';
 import { agentOnboardingService } from './services/agentOnboardingService';
 import { AgentCoverageAreaValidationError } from './services/agentCoverageAreaService';
@@ -980,7 +984,7 @@ export const agentRouter = router({
     )
     .query(async ({ ctx, input }) => {
       // Locked agents see an empty list (not an error); mutations and detail reads still refuse.
-      if (!(await hasAgentLeadAccess(requireUser(ctx)))) return EMPTY_PIPELINE();
+      if (!(await requireAgentLeadListAccess(requireUser(ctx)))) return EMPTY_PIPELINE();
       const db = await getDb();
 
       const workspace = await requireAgentLeadWorkspace(db, requireUser(ctx).id);
@@ -1657,7 +1661,7 @@ export const agentRouter = router({
     )
     .query(async ({ ctx, input }) => {
       // Locked agents see an empty list (not an error); mutations and detail reads still refuse.
-      if (!(await hasAgentLeadAccess(requireUser(ctx)))) return [];
+      if (!(await requireAgentLeadListAccess(requireUser(ctx)))) return [];
       const db = await getDb();
       const workspace = await requireAgentLeadWorkspace(db, requireUser(ctx).id);
 
@@ -1711,7 +1715,7 @@ export const agentRouter = router({
     )
     .query(async ({ ctx, input }) => {
       // Locked agents see an empty list (not an error); mutations and detail reads still refuse.
-      if (!(await hasAgentLeadAccess(requireUser(ctx)))) return [];
+      if (!(await requireAgentLeadListAccess(requireUser(ctx)))) return [];
       const db = await getDb();
       const user = requireUser(ctx);
       const workspace = await requireAgentLeadWorkspace(db, user.id);
@@ -2291,7 +2295,7 @@ export const agentRouter = router({
     )
     .query(async ({ ctx, input }) => {
       // Locked agents see an empty list (not an error); mutations and detail reads still refuse.
-      if (!(await hasAgentLeadAccess(requireUser(ctx)))) return [];
+      if (!(await requireAgentLeadListAccess(requireUser(ctx)))) return [];
       const db = await getDb();
       if (!db) {
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
@@ -2577,7 +2581,7 @@ export const agentRouter = router({
     )
     .query(async ({ ctx, input }) => {
       // Locked agents see an empty list (not an error); mutations and detail reads still refuse.
-      if (!(await hasAgentLeadAccess(requireUser(ctx)))) return [];
+      if (!(await requireAgentLeadListAccess(requireUser(ctx)))) return [];
       const db = await getDb();
       const workspace = await requireAgentLeadWorkspace(db, requireUser(ctx).id);
       const agentRecord = workspace.agent;
