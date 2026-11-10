@@ -225,7 +225,6 @@ describe('commercial activation containment', () => {
     vi.stubEnv('PAID_MVP_RELEASE_ID', 'b03-containment-rc-1');
     vi.stubEnv('PAID_MVP_APPROVAL_REF', 'b03-review-1');
     vi.stubEnv('PAID_MVP_SALES_PAUSED', 'false');
-    vi.stubEnv('PAID_MVP_SALES_OPEN_UNTIL', new Date(Date.now() + 60 * 60 * 1000).toISOString());
 
     try {
       const configuration = initializeCommercialActivationPolicy();
@@ -308,8 +307,7 @@ describe('commercial activation containment', () => {
       ],
       releaseId: 'paid-mvp-rc-1',
       approvalRef: 'b16-approval-1',
-      salesPaused: true,
-      salesOpenUntil: null,
+      salesPaused: false,
       buildSha: 'candidate-sha-1',
     });
     expect(getCommercialActivationStatus(production)).not.toHaveProperty('releaseId');

@@ -16,9 +16,6 @@ export const PAID_MVP_ENABLED_PRODUCT_KEYS_ENV = 'PAID_MVP_ENABLED_PRODUCT_KEYS'
 export const PAID_MVP_RELEASE_ID_ENV = 'PAID_MVP_RELEASE_ID';
 export const PAID_MVP_APPROVAL_REF_ENV = 'PAID_MVP_APPROVAL_REF';
 export const PAID_MVP_SALES_PAUSED_ENV = 'PAID_MVP_SALES_PAUSED';
-export const PAID_MVP_SALES_OPEN_UNTIL_ENV = 'PAID_MVP_SALES_OPEN_UNTIL';
-export const PAID_MVP_ADMITTED_OWNERS_ENV = 'PAID_MVP_ADMITTED_OWNERS';
-const SALES_WINDOW_DAY_MS = 24 * 60 * 60 * 1000;
 const CONTROLLED_PRODUCT_KEYS_ENV = 'PROPERTY_LISTIFY_GOVERNED_BROWSER_TEST_PRODUCT_KEYS';
 
 export type CommercialActivationConfiguration = {
@@ -28,37 +25,7 @@ export type CommercialActivationConfiguration = {
   releaseId: string | null;
   approvalRef: string | null;
   salesPaused: boolean;
-  salesOpenUntil: string | null;
-  ownerAdmission: OwnerAdmissionConfiguration;
 };
-
-type AdmittedOwner = Readonly<{ ownerType: 'agent' | 'agency' | 'developer'; ownerId: number }>;
-type OwnerAdmissionConfiguration = Readonly<{
-  status: 'closed' | 'invalid' | 'controlled';
-  owners: readonly AdmittedOwner[];
-}>;
-
-function ownerAdmissionConfiguration(value: string | undefined): OwnerAdmissionConfiguration {
-  const denied = (status: 'closed' | 'invalid'): OwnerAdmissionConfiguration =>
-    Object.freeze({ status, owners: Object.freeze([]) });
-  if (value === undefined) return denied('closed');
-  if (!value || value.length > 8192) return denied('invalid');
-  const pairs = value.split(',').map(part => part.trim());
-  if (!pairs.length || pairs.length > 100 || new Set(pairs).size !== pairs.length)
-    return denied('invalid');
-  const owners: AdmittedOwner[] = [];
-  for (const pair of pairs) {
-    const match = /^(agent|agency|developer):([1-9][0-9]*)$/.exec(pair);
-    if (!match || !Number.isSafeInteger(Number(match[2]))) return denied('invalid');
-    owners.push(
-      Object.freeze({
-        ownerType: match[1] as AdmittedOwner['ownerType'],
-        ownerId: Number(match[2]),
-      }),
-    );
-  }
-  return Object.freeze({ status: 'controlled', owners: Object.freeze(owners) });
-}
 
 function isAuthorityWrappedBrowserFixture(environment: RuntimeEnvironment): boolean {
   return (
@@ -116,33 +83,7 @@ function preparationConfiguration(): CommercialActivationConfiguration {
     releaseId: null,
     approvalRef: null,
     salesPaused: false,
-    salesOpenUntil: null,
-    ownerAdmission: ownerAdmissionConfiguration(undefined),
   });
-}
-
-function parseSalesOpenUntil(value: string | undefined): string | null {
-  if (value === undefined) return null;
-  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(value)) {
-    throw new Error(`${PAID_MVP_SALES_OPEN_UNTIL_ENV} must be an exact UTC timestamp.`);
-  }
-  const parsed = new Date(value);
-  const normalized = value.includes('.') ? value : value.replace(/Z$/, '.000Z');
-  if (!Number.isFinite(parsed.getTime()) || parsed.toISOString() !== normalized) {
-    throw new Error(`${PAID_MVP_SALES_OPEN_UNTIL_ENV} is not a valid UTC timestamp.`);
-  }
-  const now = Date.now();
-  const utcDay = new Date(now).getUTCDay();
-  const daysToNextWeekday = utcDay === 5 ? 3 : utcDay === 6 ? 2 : 1;
-  if (parsed.getTime() - now > daysToNextWeekday * SALES_WINDOW_DAY_MS) {
-    throw new Error(`${PAID_MVP_SALES_OPEN_UNTIL_ENV} cannot exceed the next weekday check (72 hours maximum).`);
-  }
-  return value;
-}
-
-function effectiveSalesPause(config: CommercialActivationConfiguration): boolean {
-  return config.salesPaused ||
-    (config.salesOpenUntil !== null && Date.now() >= Date.parse(config.salesOpenUntil));
 }
 
 /**
@@ -172,8 +113,6 @@ export function resolveCommercialActivationConfiguration(
       releaseId: null,
       approvalRef: null,
       salesPaused: rawSalesPause === 'true',
-      salesOpenUntil: parseSalesOpenUntil(environment[PAID_MVP_SALES_OPEN_UNTIL_ENV]),
-      ownerAdmission: ownerAdmissionConfiguration(environment[PAID_MVP_ADMITTED_OWNERS_ENV]),
     });
   }
 
@@ -211,10 +150,9 @@ export function resolveCommercialActivationConfiguration(
     enabledProductKeys: Object.freeze([...keys]),
     releaseId: validateReleaseMetadata(releaseId, PAID_MVP_RELEASE_ID_ENV),
     approvalRef: validateReleaseMetadata(approvalRef, PAID_MVP_APPROVAL_REF_ENV),
-    // A hosted paid release without a renewed window never opens sales by default.
-    salesPaused: rawSalesPause === 'true' || !environment[PAID_MVP_SALES_OPEN_UNTIL_ENV],
-    salesOpenUntil: parseSalesOpenUntil(environment[PAID_MVP_SALES_OPEN_UNTIL_ENV]),
-    ownerAdmission: ownerAdmissionConfiguration(environment[PAID_MVP_ADMITTED_OWNERS_ENV]),
+    // Sales are open unless explicitly paused. Legacy PAID_MVP_SALES_OPEN_UNTIL and
+    // PAID_MVP_ADMITTED_OWNERS variables are no longer read and are ignored if present.
+    salesPaused: rawSalesPause === 'true',
   });
 }
 
@@ -230,11 +168,9 @@ export function initializeCommercialActivationPolicy(
 }
 
 function getConfiguration(environment: RuntimeEnvironment): CommercialActivationConfiguration {
-  const config = environment === process.env && processActivationConfiguration
+  return environment === process.env && processActivationConfiguration
     ? processActivationConfiguration
     : resolveCommercialActivationConfiguration(environment);
-  if (!effectiveSalesPause(config) || config.salesPaused) return config;
-  return Object.freeze({ ...config, salesPaused: true });
 }
 
 export function isCommercialActivationAvailable(
@@ -290,14 +226,13 @@ export function getCommercialActivationOperatorStatus(
     releaseId: config.releaseId,
     approvalRef: config.approvalRef,
     salesPaused: config.salesPaused,
-    salesOpenUntil: config.salesOpenUntil,
     buildSha: buildSha || 'unknown',
   };
 }
 
 /**
  * Suspend NEW invoice requests and checkout without disabling paid access.
- * A pause or closed window does not block finance settlement of invoices that
+ * A pause does not block finance settlement of invoices that
  * were already issued (see requirePaidMvpOwnerAdmissionForSettlement).
  */
 export function requirePaidMvpSalesOpen(
@@ -322,8 +257,8 @@ export function requirePaidMvpOwnerAdmission(
 }
 
 /**
- * Settlement of an already-issued invoice: the owner must still be admitted,
- * but a closed sales window or sales pause does not block finance approval.
+ * Settlement of an already-issued invoice: paid mode must be on, but a sales
+ * pause does not block finance approval.
  */
 export function requirePaidMvpOwnerAdmissionForSettlement(
   owner: { ownerType: string; ownerId: number },
@@ -340,16 +275,8 @@ function requirePaidMvpOwnerAdmitted(
   // Preserve the already-governed disposable fixture contract. A hosted
   // runtime cannot resolve to that mode, even with test selectors present.
   if (config.mode === 'governed_test_fixture') return;
-  if (
-    config.mode === 'paid_mvp_release' &&
-    config.ownerAdmission.status === 'controlled' &&
-    Number.isSafeInteger(owner.ownerId) &&
-    owner.ownerId > 0 &&
-    config.ownerAdmission.owners.some(
-      pair => pair.ownerType === owner.ownerType && pair.ownerId === owner.ownerId,
-    )
-  )
-    return;
+  // Owner admission is open: any owner may buy once paid mode is on.
+  if (config.mode === 'paid_mvp_release') return;
   throw new TRPCError({
     code: 'PRECONDITION_FAILED',
     message: PAID_INTAKE_CLOSED_MESSAGE,
