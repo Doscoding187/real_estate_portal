@@ -94,7 +94,11 @@ describe('proof approval amount in Rand', () => {
     expect(mutate).toHaveBeenCalledWith(expect.objectContaining({ verifiedAmount: cents }));
   });
 
-  it.each(['', '0'])('disables approve for "%s"', value => {
+  it.each(['499.', '1e3', '499.999'])('randToCents rejects %s', value => {
+    expect(randToCents(value)).toBe(0);
+  });
+
+  it.each(['', '0', '499.', '1e3', '499.999'])('disables approve for "%s"', value => {
     const input = openDialog();
     fireEvent.change(input, { target: { value } });
     expect(screen.getByRole('button', { name: 'Confirm finance approval' })).toBeDisabled();

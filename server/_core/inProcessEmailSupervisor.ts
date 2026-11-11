@@ -4,6 +4,7 @@ import {
   runEmailSupervisor,
   runEmailWorkerBatch,
 } from './emailWorkerLoop';
+import { safeErrorSummary } from './safeError';
 import { getDb } from '../db-connection';
 
 type InProcessEmailDependencies = {
@@ -15,8 +16,23 @@ type InProcessEmailDependencies = {
 
 export type InProcessEmailSupervisor = { stop: () => Promise<void> };
 
+const ERROR_LOG_INTERVAL_MS = 60_000;
+
 function summarize(error: unknown): string {
-  return error instanceof Error ? `${error.name}: ${error.message}` : 'unknown error';
+  return JSON.stringify(safeErrorSummary(error));
+}
+
+/** Only batches that did something, or need attention, are worth a log line. */
+function isNotable(value: unknown): boolean {
+  const result = (value as { result?: Record<string, any> } | null)?.result;
+  if (!result) return false;
+  if (result.failed === true) return false;
+  return (
+    Number(result.consumed?.queued) > 0 ||
+    Number(result.consumed?.attention) > 0 ||
+    Number(result.delivery?.claimed) > 0 ||
+    result.backlog?.attention === true
+  );
 }
 
 /**
@@ -37,6 +53,10 @@ export function startInProcessEmailSupervisor(
     log('[EmailSupervisor] in-process disabled: EMAIL_WORKER_IN_PROCESS=false');
     return null;
   }
+  if (env.NODE_ENV !== 'production' && env.EMAIL_WORKER_IN_PROCESS !== 'true') {
+    log('[EmailSupervisor] in-process disabled: not production (set EMAIL_WORKER_IN_PROCESS=true to enable)');
+    return null;
+  }
   if (!(deps.isConfigured ?? (() => isTransactionalEmailConfigured(env)))()) {
     log('[EmailSupervisor] in-process disabled: transactional email not configured');
     return null;
@@ -54,18 +74,25 @@ export function startInProcessEmailSupervisor(
       if (!database) throw new Error('database unavailable');
       return runEmailWorkerBatch(database);
     });
+  let lastErrorLogAt = 0;
   log(`[EmailSupervisor] in-process started pollMs=${pollMs}`);
   const loop = runEmailSupervisor(controller.signal, {
     async batch() {
       try {
         return await batch();
       } catch (error) {
-        log(`[EmailSupervisor] batch failed ${summarize(error)}`);
+        const now = Date.now();
+        if (lastErrorLogAt === 0 || now - lastErrorLogAt >= ERROR_LOG_INTERVAL_MS) {
+          lastErrorLogAt = now;
+          log(`[EmailSupervisor] batch failed ${summarize(error)}`);
+        }
         return { failed: true };
       }
     },
     close: async () => {},
-    log: value => log(JSON.stringify(value)),
+    log: value => {
+      if (isNotable(value)) log(JSON.stringify(value));
+    },
     pollMs,
   }).catch(error => {
     log(`[EmailSupervisor] loop stopped ${summarize(error)}`);

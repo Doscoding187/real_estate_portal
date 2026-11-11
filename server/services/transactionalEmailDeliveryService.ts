@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { and, asc, eq, inArray, lte, ne, sql } from 'drizzle-orm';
+import { and, asc, eq, gte, inArray, lte, ne, sql } from 'drizzle-orm';
 import {
   auditLogs, billableAccounts, billingAuditEvents, billingInvoices, developerOrganisationMemberships,
   invitations, notifications, plans, subscriptions, transactionalEmailAttempts, transactionalEmailDeliveries,
@@ -15,6 +15,8 @@ type Database = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 type Delivery = typeof transactionalEmailDeliveries.$inferSelect;
 const MAX_ATTEMPTS = 3;
 const LEASE_MS = 10 * 60_000;
+/** Billing audit events older than this are skipped (not marked) so a first start cannot mail history. */
+export const LAUNCH_EMAIL_EVENT_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const DUE_EVENT_TYPES = ['invoice_issued', 'payment_request_correction', 'payment_reject',
   'payment_approved_subscription_activated', 'payment_partially_approved',
   'payment_notice_received', 'payment_unmatched', 'payment_duplicate'] as const;
@@ -156,6 +158,7 @@ export async function consumeLaunchEmailEvents(input: { database?: Database; lim
     .innerJoin(billingInvoices, eq(billingAuditEvents.invoiceId, billingInvoices.id))
     .innerJoin(plans, eq(billingInvoices.planId, plans.id))
     .where(and(inArray(billingAuditEvents.eventType, [...DUE_EVENT_TYPES]),
+      gte(billingAuditEvents.createdAt, utc(new Date(Date.now() - LAUNCH_EMAIL_EVENT_MAX_AGE_MS))),
       inArray(plans.name, ['agent_launch_access', 'agency_launch_access', 'developer_launch_access']),
       sql`NOT EXISTS (SELECT 1 FROM transactional_email_deliveries d WHERE d.source_type = 'billing_audit' AND d.source_id = ${billingAuditEvents.id})`))
     .orderBy(asc(billingAuditEvents.id)).limit(limit);
