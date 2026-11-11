@@ -1,6 +1,9 @@
 import { useEffect } from 'react';
 import { useLocation } from 'wouter';
-import { applySeo } from '@/lib/seo';
+import { applySeo, CANONICAL_MARKER_ATTR, CANONICAL_MARKER_VALUE } from '@/lib/seo';
+
+// Number of MetaControl instances currently mounted (page-level plus nested, e.g. LocationSchema).
+let mountedInstances = 0;
 
 type StructuredDataValue = Record<string, unknown>;
 
@@ -89,9 +92,17 @@ export function MetaControl({
   }, [currentCanonical, description, geo, image, isNoIndex, structuredDataItems, title]);
 
   // A route that does not render MetaControl must not inherit the previous route's canonical.
+  // Only remove the canonical written by applySeo (marked), and only once the last instance unmounts.
   useEffect(() => {
+    mountedInstances += 1;
     return () => {
-      document.querySelectorAll('link[rel="canonical"]').forEach(element => element.remove());
+      mountedInstances -= 1;
+      if (mountedInstances > 0) return;
+      document
+        .querySelectorAll(
+          `link[rel="canonical"][${CANONICAL_MARKER_ATTR}="${CANONICAL_MARKER_VALUE}"]`,
+        )
+        .forEach(element => element.remove());
     };
   }, []);
 

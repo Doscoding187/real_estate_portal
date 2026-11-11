@@ -15,6 +15,8 @@ type SeoInput = {
 };
 
 const MANAGED_ATTR = 'data-seo-managed';
+export const CANONICAL_MARKER_ATTR = 'data-route-meta';
+export const CANONICAL_MARKER_VALUE = 'canonical';
 
 function getSingleton(selector: string, create: () => HTMLElement): HTMLElement {
   const matches = Array.from(document.querySelectorAll<HTMLElement>(selector));
@@ -59,7 +61,7 @@ function removeMetaByProperty(property: string) {
   document.querySelectorAll(`meta[property="${property}"]`).forEach(element => element.remove());
 }
 
-function upsertLink(rel: string, href: string) {
+function upsertLink(rel: string, href: string, marker?: { name: string; value: string }) {
   const el = getSingleton(`link[rel="${rel}"]`, () => {
     const created = document.createElement('link');
     created.setAttribute('rel', rel);
@@ -69,6 +71,7 @@ function upsertLink(rel: string, href: string) {
 
   el.setAttribute('href', href);
   el.setAttribute(MANAGED_ATTR, 'true');
+  if (marker) el.setAttribute(marker.name, marker.value);
 }
 
 function upsertStructuredData(structuredData: SeoInput['structuredData']) {
@@ -118,7 +121,10 @@ export function applySeo(input: SeoInput) {
 
   if (input.canonicalPath !== undefined) {
     const canonicalUrl = new URL(input.canonicalPath, window.location.origin).toString();
-    upsertLink('canonical', canonicalUrl);
+    upsertLink('canonical', canonicalUrl, {
+      name: CANONICAL_MARKER_ATTR,
+      value: CANONICAL_MARKER_VALUE,
+    });
     upsertMetaByProperty('og:url', canonicalUrl);
     upsertMetaByName('twitter:url', canonicalUrl);
   }

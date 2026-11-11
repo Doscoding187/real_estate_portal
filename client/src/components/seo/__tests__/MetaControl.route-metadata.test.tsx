@@ -188,6 +188,37 @@ describe('route metadata composition', () => {
     expect(document.querySelectorAll('link[rel="canonical"]')).toHaveLength(0);
   });
 
+  it('does not remove a canonical it did not write', async () => {
+    const view = render(routeMetadata('/property-for-sale'));
+    await waitFor(() =>
+      expect(document.querySelectorAll('link[rel="canonical"]')).toHaveLength(1),
+    );
+    document.querySelectorAll('link[rel="canonical"]').forEach(el => el.remove());
+    const foreign = document.createElement('link');
+    foreign.setAttribute('rel', 'canonical');
+    foreign.setAttribute('href', 'https://example.test/other');
+    document.head.appendChild(foreign);
+
+    view.unmount();
+    expect(document.querySelectorAll('link[rel="canonical"]')).toHaveLength(1);
+    expect(document.querySelector('link[rel="canonical"]')).toBe(foreign);
+  });
+
+  it('keeps the canonical until the last of several MetaControl instances unmounts', async () => {
+    routeState.value = '/property-for-sale';
+    const first = render(<MetaControl canonicalUrl="/property-for-sale" title="A" />);
+    const second = render(<MetaControl canonicalUrl="/property-for-sale" title="A" />);
+    await waitFor(() =>
+      expect(document.querySelectorAll('link[rel="canonical"]')).toHaveLength(1),
+    );
+
+    second.unmount();
+    expect(document.querySelectorAll('link[rel="canonical"]')).toHaveLength(1);
+
+    first.unmount();
+    expect(document.querySelectorAll('link[rel="canonical"]')).toHaveLength(0);
+  });
+
   it('replaces homepage metadata across geography navigation and restores it on return', async () => {
     const view = render(routeMetadata('/'));
 
