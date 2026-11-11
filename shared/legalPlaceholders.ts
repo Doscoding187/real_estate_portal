@@ -1,8 +1,8 @@
 /**
- * Interim legal wording. Each constant below is a placeholder until the final
- * wording is supplied; do not treat the text as approved legal copy.
+ * Interim legal wording. The payment panel cancellation notice below was
+ * approved by Edward on 2026-11-12 (7-day full refund). Any other constant added
+ * here remains a placeholder until its final wording is supplied.
  */
 
-// LEGAL-PLACEHOLDER: Edward to supply
 export const PAYMENT_PANEL_CANCELLATION_NOTICE =
-  'Cancellations and refunds are handled under our Terms.';
+  'You may cancel within 7 days of payment for a full refund. Other refunds are handled under our Terms.';

@@ -85,7 +85,7 @@ describe('registration legal choice', () => {
   }
   it('requires an unchecked choice and links to the precise bundle in a new tab', async () => {
     render(<Login />);
-    const choice = await screen.findByRole('checkbox', { name: /I agree to the Terms/ });
+    const choice = await screen.findByRole('checkbox', { name: /you agree to our Terms/ });
     expect(choice).not.toBeChecked();
     expect(screen.getByRole('button', { name: /Create free account/ })).toBeDisabled();
     const terms = screen.getByRole('link', { name: /Terms of Service/ });
@@ -99,7 +99,7 @@ describe('registration legal choice', () => {
   });
   it('sends an explicit choice and requires a new choice after stale-copy rejection', async () => {
     render(<Login />);
-    const choice = await screen.findByRole('checkbox', { name: /I agree to the Terms/ });
+    const choice = await screen.findByRole('checkbox', { name: /you agree to our Terms/ });
     const user = await fillForm();
     await user.click(choice);
     controls.stale = true;
@@ -110,7 +110,7 @@ describe('registration legal choice', () => {
         '/legal/terms?bundle=test-new',
       ),
     );
-    expect(screen.getByRole('checkbox', { name: /I agree to the Terms/ })).not.toBeChecked();
+    expect(screen.getByRole('checkbox', { name: /you agree to our Terms/ })).not.toBeChecked();
     expect(screen.getByPlaceholderText('Jane Smith')).toHaveValue('Test Person');
     const [, init] = controls.fetch.mock.calls.find(([path]) => path === '/auth/register')!;
     expect(JSON.parse(init.body).legalAcceptance).toEqual({
@@ -132,7 +132,7 @@ describe('registration legal choice', () => {
   });
   it('shows a Check your email state after register, never Welcome back, and resends via the existing endpoint', async () => {
     render(<Login />);
-    const choice = await screen.findByRole('checkbox', { name: /I agree to the Terms/ });
+    const choice = await screen.findByRole('checkbox', { name: /you agree to our Terms/ });
     const user = await fillForm();
     await user.click(choice);
     await user.click(screen.getByRole('button', { name: /Create free account/ }));
@@ -155,7 +155,7 @@ describe('registration legal choice', () => {
   it('says the email could not be sent when verificationEmailSent is false', async () => {
     controls.emailSent = false;
     render(<Login />);
-    const choice = await screen.findByRole('checkbox', { name: /I agree to the Terms/ });
+    const choice = await screen.findByRole('checkbox', { name: /you agree to our Terms/ });
     const user = await fillForm();
     await user.click(choice);
     await user.click(screen.getByRole('button', { name: /Create free account/ }));

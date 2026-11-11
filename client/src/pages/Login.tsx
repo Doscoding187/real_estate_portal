@@ -756,7 +756,7 @@ export default function Login() {
                         }
                       />
                       <label htmlFor="registration-terms" className="text-slate-800 dark:text-slate-100">
-                        I agree to the Terms of Service. I have been shown the Privacy Notice.
+                        By creating an account you agree to our Terms and confirm you have read our Privacy Notice.
                       </label>
                     </div>
                     {registerErrors.termsAccepted ? (

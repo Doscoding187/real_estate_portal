@@ -181,8 +181,8 @@ export function AgentAccessPanel({
               Make payment
             </h3>
             <p className="text-sm text-slate-600">
-              Pay from your banking app using this exact reference. Access starts only after your
-              payment is confirmed.
+              Pay from your banking app. Your access starts when we confirm your payment, normally
+              within 1 business day (Monday to Friday).
             </p>
             <div className="rounded-lg border-2 border-slate-900 bg-white p-4 text-center">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -208,7 +208,8 @@ export function AgentAccessPanel({
                 Copy reference
               </Button>
               <p className="mt-2 text-sm font-medium text-slate-700">
-                Use this exact reference. It identifies your account.
+                Use the reference shown exactly. We match payments by reference; a missing or wrong
+                reference delays activation.
               </p>
             </div>
             <div className="grid gap-2 sm:grid-cols-2">
