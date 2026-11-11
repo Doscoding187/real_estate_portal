@@ -77,6 +77,16 @@ describe('normal browser founder Google identity-proof routes', () => {
     });
   });
 
+  it('redirects the truncated /api/auth/google URL to the start route', async () => {
+    await withServer(async (url, proof) => {
+      const response = await fetch(`${url}/api/auth/google`, { redirect: 'manual' });
+      expect(response.status).toBe(302);
+      expect(response.headers.get('location')).toBe('/api/auth/google/start');
+      expect(response.headers.get('cache-control')).toBe('no-store');
+      expect(proof.start).not.toHaveBeenCalled();
+    });
+  });
+
   it('uses the secure __Host cookie in a proxied HTTPS request', async () => {
     await withServer(
       async url => {

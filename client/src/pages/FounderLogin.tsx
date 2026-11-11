@@ -29,15 +29,26 @@ export default function FounderLogin() {
   }, []);
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-4 px-6 text-slate-900 dark:text-slate-100">
-      <h1 className="text-2xl font-bold">Founder sign-in</h1>
-      {founderLoginAvailable ? (
-        <Button asChild variant="outline" className="h-12 w-full rounded-xl">
-          <a href={getApiUrl('/auth/google/start')}>Founder sign-in with Google</a>
-        </Button>
-      ) : (
-        <p role="status">Founder sign-in is not available.</p>
-      )}
+    <main className="flex min-h-screen items-center justify-center bg-slate-50 px-6 dark:bg-slate-950">
+      <div className="w-full max-w-md space-y-4 rounded-2xl border border-slate-200 bg-white p-8 shadow-lg dark:border-slate-700 dark:bg-slate-900">
+        <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">PropertyListify</p>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50">Founder sign-in</h1>
+        <p className="text-sm text-slate-600 dark:text-slate-400">
+          Admin access for the PropertyListify owner account.
+        </p>
+        {founderLoginAvailable ? (
+          <Button
+            asChild
+            className="h-12 w-full rounded-xl bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
+          >
+            <a href={getApiUrl('/auth/google/start')}>Founder sign-in with Google</a>
+          </Button>
+        ) : (
+          <p role="status" className="text-sm text-slate-700 dark:text-slate-300">
+            Founder sign-in is not available.
+          </p>
+        )}
+      </div>
     </main>
   );
 }

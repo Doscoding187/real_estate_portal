@@ -261,6 +261,7 @@ function Router() {
           {/* ============================================================== */}
 
           {/* Admin review must precede the dynamic public Place route patterns. */}
+          <Route path="/admin/login" component={FounderLogin} />
           <Route path="/admin/review/:id">
             <RequireRole role="super_admin" unauthenticatedAuthEntry="signin">
               <AdminPropertyReview />

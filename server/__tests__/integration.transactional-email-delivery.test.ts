@@ -155,6 +155,22 @@ describeDb('B10 transactional email delivery authority', () => {
     expect(final.attemptCount).toBe(1);
   });
 
+  it('skips billing audit events older than 7 days and queues a recent one', async () => {
+    const stamp = (ms: number) => new Date(Date.now() - ms).toISOString().slice(0, 19).replace('T', ' ');
+    const old = await fixture();
+    const recent = await fixture();
+    await db.update(billingAuditEvents).set({ createdAt: stamp(8 * 24 * 60 * 60_000) })
+      .where(eq(billingAuditEvents.id, old.auditId));
+    await db.update(billingAuditEvents).set({ createdAt: stamp(60 * 60_000) })
+      .where(eq(billingAuditEvents.id, recent.auditId));
+    await consumeLaunchEmailEvents({ database: db });
+    const oldJobs = await db.select().from(transactionalEmailDeliveries)
+      .where(and(eq(transactionalEmailDeliveries.sourceType, 'billing_audit'),
+        eq(transactionalEmailDeliveries.sourceId, old.auditId)));
+    expect(oldJobs).toHaveLength(0);
+    expect((await jobFor(recent.auditId, 'billing_audit')).sourceId).toBe(recent.auditId);
+  });
+
   it('queues a notice acknowledgement once and never labels it bank receipt or activation', async () => {
     const source = await fixture('payment_notice_received');
     await consumeLaunchEmailEvents({ database: db });
