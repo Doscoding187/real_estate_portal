@@ -49,6 +49,22 @@ describe('founder Google sign-in entry', () => {
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
   });
+  it('shows the brand, heading and a filled button with readable contrast classes when available', async () => {
+    apiFetch.mockResolvedValue({ founderLoginAvailable: true });
+    render(<FounderLogin />);
+    const link = await screen.findByRole('link', { name: 'Founder sign-in with Google' });
+    expect(screen.getByRole('heading', { name: 'Founder sign-in' })).toBeInTheDocument();
+    expect(screen.getByText('PropertyListify')).toBeInTheDocument();
+    expect(link.className).toContain('bg-slate-900');
+    expect(link.className).toContain('dark:bg-white');
+  });
+  it('shows readable status text when sign-in is unavailable', async () => {
+    render(<FounderLogin />);
+    const status = await screen.findByRole('status');
+    expect(status).toHaveTextContent('Founder sign-in is not available.');
+    expect(status.className).toContain('text-slate-700');
+    expect(status.className).toContain('dark:text-slate-300');
+  });
   it.each([false, undefined, 'true'])(
     'keeps the entry absent for an unaccepted availability value %s',
     async value => {

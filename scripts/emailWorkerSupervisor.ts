@@ -69,6 +69,20 @@ export async function runEmailSupervisor(
   }
 }
 
+/** One billing email batch (event consumption, delivery, backlog summary) on an existing handle. */
+export async function runEmailWorkerBatch(
+  database: NonNullable<Awaited<ReturnType<typeof getWorkerDb>>>,
+) {
+  const consumed = await consumeLaunchEmailEvents({ database });
+  const delivery = await runTransactionalEmailWorker({ database });
+  const backlog = await transactionalEmailBacklog(database);
+  return { consumed, delivery, backlog: summarizeEmailWorkerBacklog(backlog) };
+}
+
+export function resolveEmailWorkerPollMs(env: NodeJS.ProcessEnv = process.env): number {
+  return Number(env.EMAIL_WORKER_POLL_MS || '10000');
+}
+
 export async function runHostedEmailSupervisor(signal: AbortSignal): Promise<void> {
   assertNoDeployedTestConfiguration();
   assertHostedRuntimeConfiguration();
@@ -78,14 +92,9 @@ export async function runHostedEmailSupervisor(signal: AbortSignal): Promise<voi
   const database = await getWorkerDb();
   if (!database) throw new Error('Transactional email worker database unavailable.');
   await runEmailSupervisor(signal, {
-    async batch() {
-      const consumed = await consumeLaunchEmailEvents({ database });
-      const delivery = await runTransactionalEmailWorker({ database });
-      const backlog = await transactionalEmailBacklog(database);
-      return { consumed, delivery, backlog: summarizeEmailWorkerBacklog(backlog) };
-    },
+    batch: () => runEmailWorkerBatch(database),
     close: shutdownDb,
     log: value => console.log(JSON.stringify(value)),
-    pollMs: Number(process.env.EMAIL_WORKER_POLL_MS || '10000'),
+    pollMs: resolveEmailWorkerPollMs(),
   });
 }

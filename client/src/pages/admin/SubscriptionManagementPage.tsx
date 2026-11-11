@@ -60,6 +60,14 @@ function formatDate(value: string | null | undefined) {
     : 'Not supplied';
 }
 
+/** Rand text (e.g. "499.99") to integer cents; 0 when empty, non-positive or malformed. */
+export function randToCents(value: string): number {
+  const text = value.trim();
+  if (!/^\d+(\.\d{1,2})?$/.test(text)) return 0;
+  const cents = Math.round(Number(text) * 100);
+  return Number.isSafeInteger(cents) && cents > 0 ? cents : 0;
+}
+
 export default function SubscriptionManagementPage({
   initialTab = 'subscriptions',
 }: { initialTab?: string } = {}) {
@@ -74,7 +82,7 @@ export default function SubscriptionManagementPage({
     decision: 'approve' | 'duplicate' | 'reject' | 'unmatched';
     commercialProductKey: string | null;
   } | null>(null);
-  const [verifiedCents, setVerifiedCents] = useState('');
+  const [verifiedRand, setVerifiedRand] = useState('');
   const [financeNote, setFinanceNote] = useState('');
   const [bankPaymentReference, setBankPaymentReference] = useState('');
   const [overpaymentReconciled, setOverpaymentReconciled] = useState(false);
@@ -143,7 +151,7 @@ export default function SubscriptionManagementPage({
     }
     if (status === 'verified') {
       setReviewPayment({ id: paymentId, decision: 'approve', commercialProductKey });
-      setVerifiedCents('');
+      setVerifiedRand('');
       setFinanceNote('');
       setBankPaymentReference('');
       setOverpaymentReconciled(false);
@@ -267,13 +275,13 @@ export default function SubscriptionManagementPage({
           </DialogHeader>
           {reviewPayment?.decision === 'approve' ? (
             <label>
-              Verified amount in cents
+              Verified amount received (R)
               <Input
                 type="number"
-                min="1"
-                step="1"
-                value={verifiedCents}
-                onChange={event => setVerifiedCents(event.target.value)}
+                min="0.01"
+                step="0.01"
+                value={verifiedRand}
+                onChange={event => setVerifiedRand(event.target.value)}
               />
             </label>
           ) : null}
@@ -313,8 +321,7 @@ export default function SubscriptionManagementPage({
                 !canReviewPayment(reviewPayment?.commercialProductKey) ||
                 verifyPaymentMutation.isPending ||
                 (reviewPayment?.decision === 'approve' &&
-                  (!Number.isSafeInteger(Number(verifiedCents)) ||
-                    Number(verifiedCents) <= 0 ||
+                  (randToCents(verifiedRand) <= 0 ||
                     !bankPaymentReference.trim())) ||
                 !financeNote.trim()
               }
@@ -324,7 +331,7 @@ export default function SubscriptionManagementPage({
                   decision: reviewPayment!.decision,
                   ...(reviewPayment?.decision === 'approve'
                     ? {
-                        verifiedAmount: Number(verifiedCents),
+                        verifiedAmount: randToCents(verifiedRand),
                         bankPaymentReference: bankPaymentReference.trim() || undefined,
                         overpaymentReconciled,
                       }

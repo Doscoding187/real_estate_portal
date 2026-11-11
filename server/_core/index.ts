@@ -30,6 +30,7 @@ import { ENV } from './env';
 import { registerLocalMediaRoutes } from './localMediaRoutes';
 import { createAuthRateLimitStore, RedisAuthRateLimitStore } from './authRateLimitStore';
 import { shutdownDb } from '../db-connection';
+import { startInProcessEmailSupervisor } from './inProcessEmailSupervisor';
 import { handleAuthRateLimitStoreUnavailable } from './authRateLimitBoundary';
 import {
   configurePublicLeadRateLimitStore,
@@ -92,6 +93,7 @@ async function mountOptionalRouter(app: express.Express, mountPath: string, impo
 let activeServer: ReturnType<typeof createServer> | null = null;
 let activeAuthStore: RedisAuthRateLimitStore | null = null;
 let stopFounderGoogleIdentityProof: (() => Promise<void>) | null = null;
+let stopInProcessEmailSupervisor: (() => Promise<void>) | null = null;
 let shuttingDown = false;
 const listenerCancellation = new AbortController();
 let startupFailed = false;
@@ -320,6 +322,7 @@ async function startServer() {
     console.log(`Backend running on http://localhost:${port}`);
     console.log(`tRPC endpoint: http://localhost:${port}/api/trpc`);
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    stopInProcessEmailSupervisor = startInProcessEmailSupervisor()?.stop ?? null;
   });
 }
 
@@ -387,6 +390,9 @@ async function shutdown(signal: string): Promise<void> {
     consumersDrained =
       httpStopped && savedStopped && commercialStopped && distributionEvidenceStopped && readinessStopped;
 
+    await attempt('in-process email supervisor', async () => {
+      await stopInProcessEmailSupervisor?.();
+    });
     await attempt('auth rate-limit store', async () => {
       await activeAuthStore?.shutdown();
     });

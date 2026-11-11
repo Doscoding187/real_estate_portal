@@ -68,6 +68,10 @@ export function registerFounderGoogleIdentityRoutes(
     privateResponse(res);
     res.json({ founderLoginAvailable: Boolean(config && loginConfig), identityProofAvailable: Boolean(config) });
   });
+  app.get('/api/auth/google', (_req, res) => {
+    privateResponse(res);
+    res.redirect(302, '/api/auth/google/start');
+  });
   function guard(req: Request, res: Response): boolean {
     privateResponse(res);
     if (!config || !proof) {
