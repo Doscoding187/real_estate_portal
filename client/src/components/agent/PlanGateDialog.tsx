@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { Check } from 'lucide-react';
 import { toast } from 'sonner';
@@ -80,7 +80,7 @@ function PlanGateContent({
   });
   const submitNotice = trpc.billing.submitLaunchAccessPaymentNotice.useMutation();
   const { paymentNoticeRequest, resetPaymentNoticeRequest } = usePaymentNoticeRequest();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
   const legal = usePaidLegalAcceptance(
     purchasable && launchProduct ? JSON.stringify(launchProduct) : null,
@@ -133,82 +133,191 @@ function PlanGateContent({
   const submitClosedReason =
     blockedReason ?? (purchasable ? null : 'Paid plans are not open for new payments right now.');
 
-  if (activeInvoice && getAccessStep(activeInvoice.status, Boolean(rejectionMessage)) !== 1) {
-    return (
-      <AgentAccessPanel
-        invoice={activeInvoice}
-        bankDetails={bankDetails}
-        rejectionMessage={rejectionMessage}
-        onSubmit={() => void handleNoticeSubmit()}
-        isSubmitting={submitNotice.isPending}
-        submitDisabledReason={submitClosedReason}
-      />
-    );
-  }
+  // Back from step 2 returns to the plan step even though a reference already exists.
+  const [viewingPlan, setViewingPlan] = useState(false);
+  const accessStep = activeInvoice
+    ? getAccessStep(activeInvoice.status, Boolean(rejectionMessage))
+    : 1;
+  const showPanel = Boolean(activeInvoice) && accessStep !== 1 && !viewingPlan;
+  const viewKey = showPanel ? String(accessStep) : 'plan';
 
-  if (availability.isLoading || (availability.isAvailable && catalog.isLoading)) {
-    return <p className="text-sm text-slate-500">Loading plan details...</p>;
-  }
+  const containerRef = useRef<HTMLDivElement>(null);
+  const previousViewKey = useRef(viewKey);
+  useEffect(() => {
+    if (previousViewKey.current === viewKey) return;
+    previousViewKey.current = viewKey;
+    containerRef.current?.querySelector<HTMLElement>('[data-step-heading]')?.focus();
+  }, [viewKey]);
 
-  if (!purchasable || !launchProduct) {
+  const handleNext = async () => {
+    setViewingPlan(false);
+    if (activeInvoice && accessStep !== 1) return;
+    await requestInvoice();
+  };
+
+  const availabilityKnown = !(
+    availability.isLoading ||
+    (availability.isAvailable && catalog.isLoading)
+  );
+  const openPath = availabilityKnown && purchasable && !blockedReason;
+
+  const renderBody = () => {
+    if (activeInvoice && showPanel) {
+      return (
+        <AgentAccessPanel
+          layout="sheet"
+          invoice={activeInvoice}
+          bankDetails={bankDetails}
+          rejectionMessage={rejectionMessage}
+          onSubmit={() => void handleNoticeSubmit()}
+          isSubmitting={submitNotice.isPending}
+          submitDisabledReason={submitClosedReason}
+          onBack={accessStep === 2 && openPath ? () => setViewingPlan(true) : undefined}
+        />
+      );
+    }
+
+    if (availability.isLoading || (availability.isAvailable && catalog.isLoading)) {
+      return <p className="px-4 text-sm text-slate-500 sm:px-6">Loading plan details...</p>;
+    }
+
+    if (!purchasable || !launchProduct) {
+      return (
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 pb-4 sm:px-6">
+          <AccessStepper current={1} />
+          <PaidPlansOpenSoon />
+        </div>
+      );
+    }
+
+    return renderPlanStep(launchProduct);
+  };
+
+  const renderPlanStep = (product: NonNullable<typeof launchProduct>) => {
+    const price = getCommercialPricePresentation(product);
+    const limits = getCommercialPresentationLimits(product);
+    const hasReference = Boolean(activeInvoice) && accessStep !== 1;
+
     return (
-      <div className="space-y-4">
-        <AccessStepper current={1} />
-        <PaidPlansOpenSoon />
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 pb-4 sm:px-6">
+          <AccessStepper current={1} />
+          <h3
+            tabIndex={-1}
+            data-step-heading
+            className="text-base font-semibold text-slate-950 focus:outline-none"
+          >
+            Your plan
+          </h3>
+          <div className="rounded-lg border border-blue-200 bg-white p-4">
+            <p className="text-base font-semibold text-slate-950">{product.displayName}</p>
+            <p className="mt-1 font-mono text-3xl font-semibold text-slate-950">
+              {price.label}
+              {price.period ? (
+                <span className="ml-1 text-sm font-semibold text-slate-500">
+                  {price.period.trim()}
+                </span>
+              ) : null}
+            </p>
+            <p className="mt-1 text-sm text-slate-600">
+              {product.term.durationDays
+                ? `Once-off, ${product.term.durationDays} days, ${
+                    product.term.autoRenews ? 'renews automatically' : 'no auto-renewal'
+                  }.`
+                : 'Once-off, 90 days, no auto-renewal.'}
+            </p>
+            <ul className="mt-3 space-y-2">
+              {product.benefits.map(benefit => (
+                <li key={benefit} className="flex items-start gap-2 text-sm text-slate-700">
+                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" aria-hidden="true" />
+                  {benefit}
+                </li>
+              ))}
+              {limits.map(([key, value]) => (
+                <li key={key} className="flex items-start gap-2 text-sm text-slate-700">
+                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" aria-hidden="true" />
+                  {formatCommercialLimitLabel(key)}: {formatCommercialLimitValue(value)}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div
+            data-testid="plan-account"
+            className="rounded-lg border border-slate-200 bg-slate-50 p-4"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-semibold text-slate-950">Your details</p>
+              <a
+                href="/agent/settings?tab=profile"
+                className="text-sm font-medium underline underline-offset-2"
+              >
+                Edit in profile
+              </a>
+            </div>
+            <dl className="mt-2 grid gap-2 text-sm sm:grid-cols-2">
+              <div className="min-w-0">
+                <dt className="text-xs text-slate-500">Name</dt>
+                <dd className="break-words font-medium text-slate-900">
+                  {authLoading ? 'Loading...' : user?.name || 'Not set'}
+                </dd>
+              </div>
+              <div className="min-w-0">
+                <dt className="text-xs text-slate-500">Email</dt>
+                <dd className="break-all font-medium text-slate-900">
+                  {authLoading ? 'Loading...' : user?.email || 'Not set'}
+                </dd>
+              </div>
+            </dl>
+          </div>
+
+          {blockedReason ? (
+            <p
+              role="status"
+              className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950"
+            >
+              {blockedReason}
+            </p>
+          ) : null}
+          <PaidCommitmentDisclosure legal={legal} />
+        </div>
+        <div className="flex shrink-0 gap-2 border-t bg-background px-4 py-3 sm:px-6">
+          <Button
+            type="button"
+            className="flex-1"
+            disabled={
+              isRequestingInvoice || (!hasReference && (!legal.choice || Boolean(blockedReason)))
+            }
+            onClick={() => void handleNext()}
+          >
+            {isRequestingInvoice ? 'Preparing your payment reference...' : 'Next'}
+          </Button>
+        </div>
       </div>
     );
-  }
-
-  const price = getCommercialPricePresentation(launchProduct);
-  const limits = getCommercialPresentationLimits(launchProduct);
+  };
 
   return (
-    <div className="space-y-4">
-      <AccessStepper current={1} />
-      <div className="rounded-lg border border-blue-200 bg-white p-4">
-        <p className="text-base font-semibold text-slate-950">{launchProduct.displayName}</p>
-        <p className="mt-1 font-mono text-3xl font-semibold text-slate-950">
-          {price.label}
-          {price.period ? (
-            <span className="ml-1 text-sm font-semibold text-slate-500">{price.period.trim()}</span>
-          ) : null}
-        </p>
-        <p className="mt-1 text-sm text-slate-600">Once-off, 90 days, no auto-renewal.</p>
-        <ul className="mt-3 space-y-2">
-          {launchProduct.benefits.map(benefit => (
-            <li key={benefit} className="flex items-start gap-2 text-sm text-slate-700">
-              <Check className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" aria-hidden="true" />
-              {benefit}
-            </li>
-          ))}
-          {limits.map(([key, value]) => (
-            <li key={key} className="flex items-start gap-2 text-sm text-slate-700">
-              <Check className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" aria-hidden="true" />
-              {formatCommercialLimitLabel(key)}: {formatCommercialLimitValue(value)}
-            </li>
-          ))}
-        </ul>
+    <>
+      <PlanGateHeader earlyAccess={openPath} />
+      <div ref={containerRef} className="flex min-h-0 flex-1 flex-col">
+        {renderBody()}
       </div>
+    </>
+  );
+}
 
-      {blockedReason ? (
-        <p
-          role="status"
-          className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950"
-        >
-          {blockedReason}
-        </p>
-      ) : null}
-      <PaidCommitmentDisclosure legal={legal} />
-
-      <Button
-        type="button"
-        className="w-full"
-        disabled={isRequestingInvoice || !legal.choice || Boolean(blockedReason)}
-        onClick={() => void requestInvoice()}
-      >
-        {isRequestingInvoice ? 'Preparing your payment reference...' : 'Get my payment reference'}
-      </Button>
-    </div>
+/** "Early access" copy only on the open path; every closed or unknown state keeps the live header. */
+function PlanGateHeader({ earlyAccess }: { earlyAccess: boolean }) {
+  return (
+    <DialogHeader className="shrink-0 px-4 pt-4 pr-12 pb-4 sm:px-6 sm:pt-6">
+      <DialogTitle>{earlyAccess ? 'Early access' : 'Get access'}</DialogTitle>
+      <DialogDescription>
+        {earlyAccess
+          ? "Agent Launch Access is open now. You're one of the first agents on PropertyListify."
+          : 'Your profile is open. A plan unlocks listings, publishing and enquiries.'}
+      </DialogDescription>
+    </DialogHeader>
   );
 }
 
@@ -225,16 +334,15 @@ export function PlanGateDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
-        <DialogHeader>
-          <DialogTitle>Get access</DialogTitle>
-          <DialogDescription>
-            Your profile is open. A plan unlocks listings, publishing and enquiries.
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent
+        data-testid="early-access-dialog"
+        className="top-0 left-0 flex h-dvh max-h-dvh w-full max-w-full translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-none p-0 sm:top-[50%] sm:left-[50%] sm:h-auto sm:max-h-[90vh] sm:max-w-2xl sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-lg"
+      >
         {open ? (
           <PlanGateContent blockedReason={blockedReason} workspaceEnabled={workspaceEnabled} />
-        ) : null}
+        ) : (
+          <PlanGateHeader earlyAccess={false} />
+        )}
       </DialogContent>
     </Dialog>
   );

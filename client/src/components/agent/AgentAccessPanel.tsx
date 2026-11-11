@@ -122,6 +122,8 @@ export function AgentAccessPanel({
   onSubmit,
   isSubmitting,
   submitDisabledReason = null,
+  onBack,
+  layout = 'inline',
 }: {
   invoice: AgentInvoice;
   bankDetails?: AgentBankDetails;
@@ -130,120 +132,178 @@ export function AgentAccessPanel({
   isSubmitting: boolean;
   /** When set (journey blocked or sales paused) the "I've paid" action is hidden. */
   submitDisabledReason?: string | null;
+  /** When set, step 2 shows a Back button that returns to the plan step. */
+  onBack?: () => void;
+  /** 'sheet' scrolls the content and pins the step buttons at the bottom (dialog use). */
+  layout?: 'inline' | 'sheet';
 }) {
   const step = getAccessStep(invoice.status, Boolean(rejectionMessage));
   if (step === 1) return null;
 
-  return (
-    <div className="space-y-4" data-testid="agent-access-panel" data-step={step}>
-      <AccessStepper current={step === 'active' ? 4 : step} />
+  const sheet = layout === 'sheet';
+  const actions =
+    step === 2 ? (
+      <>
+        {onBack ? (
+          <Button type="button" variant="outline" onClick={onBack}>
+            Back
+          </Button>
+        ) : null}
+        {submitDisabledReason ? null : (
+          <Button type="button" className="flex-1" disabled={isSubmitting} onClick={onSubmit}>
+            {isSubmitting ? 'Sending...' : 'I’ve paid'}
+          </Button>
+        )}
+      </>
+    ) : null;
+  const showActions = step === 2 && (Boolean(onBack) || !submitDisabledReason);
 
-      {step === 2 ? (
-        <div className="space-y-3">
-          <h3 className="text-base font-semibold text-slate-950">Make payment</h3>
-          <p className="text-sm text-slate-600">
-            Pay from your banking app using this exact reference. Access starts only after your
-            payment is confirmed.
-          </p>
-          <div className="rounded-lg border-2 border-slate-900 bg-white p-4 text-center">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Payment reference
+  return (
+    <div
+      className={sheet ? 'flex min-h-0 flex-1 flex-col' : 'space-y-4'}
+      data-testid="agent-access-panel"
+      data-step={step}
+    >
+      <div
+        className={
+          sheet ? 'min-h-0 flex-1 space-y-4 overflow-y-auto px-4 pb-4 sm:px-6' : 'space-y-4'
+        }
+      >
+        <AccessStepper current={step === 'active' ? 4 : step} />
+
+        {step === 2 ? (
+          <div className="space-y-3">
+            <h3
+              tabIndex={-1}
+              data-step-heading
+              className="text-base font-semibold text-slate-950 focus:outline-none"
+            >
+              Make payment
+            </h3>
+            <p className="text-sm text-slate-600">
+              Pay from your banking app using this exact reference. Access starts only after your
+              payment is confirmed.
             </p>
-            <p
-              data-testid="payment-reference"
-              className="mt-1 break-all font-mono text-2xl font-bold tracking-wider text-slate-950 sm:text-3xl"
-            >
-              {invoice.paymentReference}
-            </p>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="mt-2"
-              aria-label="Copy payment reference"
-              onClick={() => void copyValue('Payment reference', String(invoice.paymentReference))}
-            >
-              <Copy className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
-              Copy reference
-            </Button>
-            <p className="mt-2 text-sm font-medium text-slate-700">
-              Use this exact reference. It identifies your account.
-            </p>
-          </div>
-          <div className="grid gap-2 sm:grid-cols-2">
-            <CopyRow label="Amount" value={formatAccessAmount(invoice.amountDue)} />
-            <CopyRow label="Bank name" value={bankDetails?.bankName} />
-            <CopyRow label="Account holder" value={bankDetails?.accountName} />
-            <CopyRow label="Account number" value={bankDetails?.accountNumber} />
-            <CopyRow label="Branch code" value={bankDetails?.branchCode} />
-          </div>
-          {bankDetails?.configurationMessage ? (
-            <p className="text-xs text-slate-500">{bankDetails.configurationMessage}</p>
-          ) : null}
-          <p data-testid="payment-cancellation-notice" className="text-xs text-slate-500">
-            {PAYMENT_PANEL_CANCELLATION_NOTICE}{' '}
-            <a href="/legal/terms" className="underline underline-offset-2">
-              Terms
-            </a>
-          </p>
-          {rejectionMessage ? (
-            <div
-              role="alert"
-              className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"
-            >
-              <TriangleAlert
-                className="mt-0.5 h-4 w-4 shrink-0 text-amber-700"
-                aria-hidden="true"
-              />
-              <div>
-                <p className="font-semibold">Finance requested a correction</p>
-                <p className="mt-1 leading-6">{rejectionMessage}</p>
-                <p className="mt-1 text-xs text-amber-800">
-                  Check your payment details, then submit a corrected notice below for a new review.
-                </p>
-              </div>
-            </div>
-          ) : null}
-          {submitDisabledReason ? (
-            <div
-              role="status"
-              data-testid="agent-access-submit-closed"
-              className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950"
-            >
-              <p>{submitDisabledReason}</p>
-              <p className="mt-1 font-medium">
-                Already paid? Finance matches payments by your reference. You don&apos;t need to do
-                anything else.
+            <div className="rounded-lg border-2 border-slate-900 bg-white p-4 text-center">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Payment reference
+              </p>
+              <p
+                data-testid="payment-reference"
+                className="mt-1 break-all font-mono text-2xl font-bold tracking-wider text-slate-950 sm:text-3xl"
+              >
+                {invoice.paymentReference}
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="mt-2"
+                aria-label="Copy payment reference"
+                onClick={() =>
+                  void copyValue('Payment reference', String(invoice.paymentReference))
+                }
+              >
+                <Copy className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
+                Copy reference
+              </Button>
+              <p className="mt-2 text-sm font-medium text-slate-700">
+                Use this exact reference. It identifies your account.
               </p>
             </div>
-          ) : (
-            <Button type="button" className="w-full" disabled={isSubmitting} onClick={onSubmit}>
-              {isSubmitting ? 'Sending...' : 'I’ve paid'}
-            </Button>
-          )}
+            <div className="grid gap-2 sm:grid-cols-2">
+              <CopyRow label="Amount" value={formatAccessAmount(invoice.amountDue)} />
+              <CopyRow label="Bank name" value={bankDetails?.bankName} />
+              <CopyRow label="Account holder" value={bankDetails?.accountName} />
+              <CopyRow label="Account number" value={bankDetails?.accountNumber} />
+              <CopyRow label="Branch code" value={bankDetails?.branchCode} />
+            </div>
+            {bankDetails?.configurationMessage ? (
+              <p className="text-xs text-slate-500">{bankDetails.configurationMessage}</p>
+            ) : null}
+            <p data-testid="payment-cancellation-notice" className="text-xs text-slate-500">
+              {PAYMENT_PANEL_CANCELLATION_NOTICE}{' '}
+              <a href="/legal/terms" className="underline underline-offset-2">
+                Terms
+              </a>
+            </p>
+            {rejectionMessage ? (
+              <div
+                role="alert"
+                className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"
+              >
+                <TriangleAlert
+                  className="mt-0.5 h-4 w-4 shrink-0 text-amber-700"
+                  aria-hidden="true"
+                />
+                <div>
+                  <p className="font-semibold">Finance requested a correction</p>
+                  <p className="mt-1 leading-6">{rejectionMessage}</p>
+                  <p className="mt-1 text-xs text-amber-800">
+                    Check your payment details, then submit a corrected notice below for a new
+                    review.
+                  </p>
+                </div>
+              </div>
+            ) : null}
+            {submitDisabledReason ? (
+              <div
+                role="status"
+                data-testid="agent-access-submit-closed"
+                className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950"
+              >
+                <p>{submitDisabledReason}</p>
+                <p className="mt-1 font-medium">
+                  Already paid? Finance matches payments by your reference. You don&apos;t need to
+                  do anything else.
+                </p>
+              </div>
+            ) : null}
+          </div>
+        ) : step === 'active' ? (
+          <div className="space-y-3" data-testid="agent-access-active">
+            <h3
+              tabIndex={-1}
+              data-step-heading
+              className="text-base font-semibold text-slate-950 focus:outline-none"
+            >
+              Your access is active
+            </h3>
+            <p className="text-sm text-slate-700">
+              Your payment is confirmed. Publishing and enquiries are open.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3" data-testid="agent-access-review">
+            <h3
+              tabIndex={-1}
+              data-step-heading
+              className="text-base font-semibold text-slate-950 focus:outline-none"
+            >
+              Finance review
+            </h3>
+            <p className="text-sm text-slate-700">
+              We&apos;re matching your payment to your reference, usually within 1 business day.
+              When it&apos;s confirmed, your access opens and we email you a paid invoice.
+            </p>
+            <p className="text-sm text-slate-600">
+              Status: <span className="font-semibold text-slate-900">{statusLabel(step)}</span>
+            </p>
+            <p className="text-xs text-slate-500">
+              Reference {invoice.paymentReference} · {formatAccessAmount(invoice.amountDue)}
+            </p>
+          </div>
+        )}
+      </div>
+      {showActions ? (
+        <div
+          className={
+            sheet ? 'flex shrink-0 gap-2 border-t bg-background px-4 py-3 sm:px-6' : 'flex gap-2'
+          }
+        >
+          {actions}
         </div>
-      ) : step === 'active' ? (
-        <div className="space-y-3" data-testid="agent-access-active">
-          <h3 className="text-base font-semibold text-slate-950">Your access is active</h3>
-          <p className="text-sm text-slate-700">
-            Your payment is confirmed. Publishing and enquiries are open.
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-3" data-testid="agent-access-review">
-          <h3 className="text-base font-semibold text-slate-950">Finance review</h3>
-          <p className="text-sm text-slate-700">
-            We&apos;re matching your payment to your reference, usually within 1 business day. When
-            it&apos;s confirmed, your access opens and we email you a paid invoice.
-          </p>
-          <p className="text-sm text-slate-600">
-            Status: <span className="font-semibold text-slate-900">{statusLabel(step)}</span>
-          </p>
-          <p className="text-xs text-slate-500">
-            Reference {invoice.paymentReference} · {formatAccessAmount(invoice.amountDue)}
-          </p>
-        </div>
-      )}
+      ) : null}
     </div>
   );
 }
