@@ -88,5 +88,12 @@ export function MetaControl({
     });
   }, [currentCanonical, description, geo, image, isNoIndex, structuredDataItems, title]);
 
+  // A route that does not render MetaControl must not inherit the previous route's canonical.
+  useEffect(() => {
+    return () => {
+      document.querySelectorAll('link[rel="canonical"]').forEach(element => element.remove());
+    };
+  }, []);
+
   return null;
 }

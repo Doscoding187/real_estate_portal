@@ -163,6 +163,31 @@ describe('route metadata composition', () => {
     });
   });
 
+  it('creates exactly one canonical tag when the document has none', async () => {
+    document.head.innerHTML = '<title>x</title>';
+    expect(document.querySelectorAll('link[rel="canonical"]')).toHaveLength(0);
+
+    render(routeMetadata('/property-for-sale'));
+
+    await waitFor(() => {
+      expect(document.querySelectorAll('link[rel="canonical"]')).toHaveLength(1);
+      expect(document.querySelector('link[rel="canonical"]')).toHaveAttribute(
+        'href',
+        expect.stringContaining('/property-for-sale'),
+      );
+    });
+  });
+
+  it('leaves no canonical tag after MetaControl unmounts', async () => {
+    const view = render(routeMetadata('/property-for-sale'));
+    await waitFor(() =>
+      expect(document.querySelectorAll('link[rel="canonical"]')).toHaveLength(1),
+    );
+
+    view.unmount();
+    expect(document.querySelectorAll('link[rel="canonical"]')).toHaveLength(0);
+  });
+
   it('replaces homepage metadata across geography navigation and restores it on return', async () => {
     const view = render(routeMetadata('/'));
 
