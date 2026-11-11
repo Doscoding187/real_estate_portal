@@ -1,7 +1,19 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { startInProcessEmailSupervisor } from './inProcessEmailSupervisor';
 
 const base = { NODE_ENV: 'production' } as NodeJS.ProcessEnv;
+
+describe('production image boundary', () => {
+  it.each(['inProcessEmailSupervisor.ts', 'emailWorkerLoop.ts'])(
+    '%s does not import from scripts/',
+    file => {
+      const source = readFileSync(path.resolve(__dirname, file), 'utf8');
+      expect(source).not.toMatch(/from\s+['"][^'"]*scripts\//);
+    },
+  );
+});
 
 describe('in-process email supervisor', () => {
   it('starts when configured and logs one start line', async () => {

@@ -3,7 +3,7 @@ import {
   resolveEmailWorkerPollMs,
   runEmailSupervisor,
   runEmailWorkerBatch,
-} from '../../scripts/emailWorkerSupervisor';
+} from './emailWorkerLoop';
 import { getDb } from '../db-connection';
 
 type InProcessEmailDependencies = {
