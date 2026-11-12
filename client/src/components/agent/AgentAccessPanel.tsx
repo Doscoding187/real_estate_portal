@@ -2,6 +2,11 @@ import { Check, Copy, TriangleAlert } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { PAYMENT_PANEL_CANCELLATION_NOTICE } from '@shared/legalPlaceholders';
+import {
+  SUPPORT_EMAIL,
+  SUPPORT_PHONE_DISPLAY,
+  SUPPORT_PHONE_TEL_HREF,
+} from '@shared/supportContact';
 import type { AgentBankDetails, AgentInvoice } from '@/hooks/useAgentLaunchInvoiceRequest';
 
 export function formatAccessAmount(amountMinor: number | null | undefined): string {
@@ -227,6 +232,17 @@ export function AgentAccessPanel({
               <a href="/legal/terms" className="underline underline-offset-2">
                 Terms
               </a>
+            </p>
+            <p data-testid="payment-help" className="text-xs text-slate-500">
+              Payment help: call or WhatsApp{' '}
+              <a href={SUPPORT_PHONE_TEL_HREF} className="underline underline-offset-2">
+                {SUPPORT_PHONE_DISPLAY}
+              </a>
+              , or email{' '}
+              <a href={`mailto:${SUPPORT_EMAIL}`} className="underline underline-offset-2">
+                {SUPPORT_EMAIL}
+              </a>
+              .
             </p>
             {rejectionMessage ? (
               <div

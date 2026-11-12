@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { apiFetch } from '@/lib/api';
 import type { AppRouter } from '../../../server/routers';
 import { PAID_SALES_PAUSED_MESSAGE } from '@shared/paidIntakeCopy';
+import { SUPPORT_CONTACT_LINE } from '@shared/supportContact';
 import { isPaidIntakeClosedError, toastPaidError } from '@/components/commercial/PaidIntakeNotice';
 
 // Exact server phrases for "launch access closed" on the invoice request
@@ -97,7 +98,7 @@ export function useAgentLaunchInvoiceRequest({
           toast.error('We could not create your payment reference. Please try again.');
         } else if (LAUNCH_ACCESS_CLOSED_PATTERN.test(message)) {
           toast.info(
-            'Agent Launch Access purchases are not open for your account yet. We will email you when they open. Questions: support@propertylistifysa.co.za',
+            `Agent Launch Access purchases are not open for your account yet. We will email you when they open. Questions: ${SUPPORT_CONTACT_LINE}`,
             { duration: 15000 },
           );
           void refetchWorkspace();

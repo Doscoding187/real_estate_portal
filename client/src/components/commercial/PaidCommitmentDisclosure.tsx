@@ -1,5 +1,6 @@
 import { useId } from 'react';
 import { Button } from '@/components/ui/button';
+import { SupportContactLinks } from '@/components/SupportContactLinks';
 import type { usePaidLegalAcceptance } from '@/hooks/usePaidLegalAcceptance';
 
 export function PaidCommitmentDisclosure({
@@ -36,10 +37,7 @@ export function PaidCommitmentDisclosure({
         proof alone does not activate access. Property Listify is not VAT registered; no VAT is
         charged. You may cancel within 7 days of payment for a full refund; other refunds are
         handled under the linked Terms. For payment help,{' '}
-        <a className="underline" href="mailto:support@propertylistifysa.co.za">
-          support@propertylistifysa.co.za
-        </a>
-        .
+        <SupportContactLinks />.
       </p>
       <div className="flex items-start gap-3">
         <input
