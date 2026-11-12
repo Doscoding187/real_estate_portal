@@ -11,7 +11,14 @@ import {
 } from '../../drizzle/schema';
 import { assertCataloguePublisherContentMutation } from './cataloguePublisherMutationPolicy';
 import { publicDevelopmentEligibilityConditions } from './publicDevelopmentEligibility';
-import { listDevelopmentIdsForCanonicalPlace } from './developmentPlaceAssignmentService';
+import {
+  listDevelopmentIdsForCanonicalPlace,
+  listDevelopmentIdsForCanonicalPlaces,
+} from './developmentPlaceAssignmentService';
+import {
+  canonicalPlaceSearchMembers,
+  loadCanonicalPlaceSearchProjection,
+} from './canonicalPlaceSearchService';
 import { isPlaceId } from '../../drizzle/schema/placeAuthority';
 import {
   resolveDeveloperActorForUser,
@@ -62,6 +69,11 @@ export interface PublisherFilters {
   authorityKind?: PublisherAuthorityKind;
   search?: string;
   canonicalPlaceId?: string;
+  /**
+   * Province scope: counts developments assigned to the province or any place
+   * inside it. Mutually exclusive with `canonicalPlaceId`.
+   */
+  provincePlaceId?: string;
   limit?: number;
   offset?: number;
 }
@@ -628,6 +640,29 @@ export async function listCataloguePublishers(filters: PublisherFilters = {}) {
   }));
 }
 
+/**
+ * Development IDs assigned to a province or to any place inside it. Membership
+ * comes from the same projection the listing search uses for province scope.
+ */
+async function listDevelopmentIdsForProvince(provincePlaceId: string): Promise<number[]> {
+  if (!isPlaceId(provincePlaceId)) {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'A province Place ID is required.' });
+  }
+  const projection = await loadCanonicalPlaceSearchProjection(undefined, {
+    placeIds: [provincePlaceId],
+    includeProvinceMembers: true,
+  });
+  const selected = projection.executions.get(provincePlaceId);
+  if (!selected || selected.scope !== 'province' || !projection.labels.has(provincePlaceId)) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Choose a province to list developers by province.',
+    });
+  }
+  const memberIds = canonicalPlaceSearchMembers(selected, projection);
+  return listDevelopmentIdsForCanonicalPlaces(memberIds);
+}
+
 export async function listPublicCataloguePublishers(filters: PublisherFilters = {}) {
   const database = await getDb();
   if (!database) throw new Error('Database not available');
@@ -636,11 +671,23 @@ export async function listPublicCataloguePublishers(filters: PublisherFilters = 
     publicPublisherAuthorityCondition(),
   ];
   let placeDevelopmentIds: number[] | undefined;
-  if (filters.canonicalPlaceId !== undefined) {
-    if (!isPlaceId(filters.canonicalPlaceId)) {
-      throw new TRPCError({ code: 'BAD_REQUEST', message: 'A canonical Place ID is required.' });
+  const provinceScope = filters.provincePlaceId !== undefined;
+  if (provinceScope && filters.canonicalPlaceId !== undefined) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Choose either a Place or a province, not both.',
+    });
+  }
+  if (filters.canonicalPlaceId !== undefined || provinceScope) {
+    let developmentIds: number[];
+    if (provinceScope) {
+      developmentIds = await listDevelopmentIdsForProvince(filters.provincePlaceId!);
+    } else {
+      if (!isPlaceId(filters.canonicalPlaceId)) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'A canonical Place ID is required.' });
+      }
+      developmentIds = await listDevelopmentIdsForCanonicalPlace(filters.canonicalPlaceId!);
     }
-    const developmentIds = await listDevelopmentIdsForCanonicalPlace(filters.canonicalPlaceId);
     if (!developmentIds.length) return [];
     placeDevelopmentIds = developmentIds;
     const matchingPublishers = await database
@@ -683,7 +730,7 @@ export async function listPublicCataloguePublishers(filters: PublisherFilters = 
     );
   }
 
-  const rows = await database
+  const orderedPublisherQuery = database
     .select({ publisher: cataloguePublishers })
     .from(cataloguePublishers)
     .leftJoin(
@@ -691,9 +738,11 @@ export async function listPublicCataloguePublishers(filters: PublisherFilters = 
       eq(cataloguePublishers.developerOrganisationId, developerOrganisations.id),
     )
     .where(and(...conditions))
-    .orderBy(desc(cataloguePublishers.createdAt), desc(cataloguePublishers.id))
-    .limit(filters.limit ?? 50)
-    .offset(filters.offset ?? 0);
+    .orderBy(desc(cataloguePublishers.createdAt), desc(cataloguePublishers.id));
+  // Province scope orders by development counts, so paging happens after counting.
+  const rows = provinceScope
+    ? await orderedPublisherQuery
+    : await orderedPublisherQuery.limit(filters.limit ?? 50).offset(filters.offset ?? 0);
   const publishers = rows.map(row => row.publisher);
   if (!publishers.length) return [];
   const ids = publishers.map(publisher => publisher.id);
@@ -705,13 +754,54 @@ export async function listPublicCataloguePublishers(filters: PublisherFilters = 
     developmentCountConditions.push(inArray(developments.id, placeDevelopmentIds));
   }
   const developmentCounts = await database
-    .select({ publisherId: developments.cataloguePublisherId, count: sql<number>`COUNT(*)` })
+    .select({
+      publisherId: developments.cataloguePublisherId,
+      count: sql<number>`COUNT(*)`,
+      sellingNow: sql<number>`SUM(CASE WHEN ${developments.status} = 'selling' THEN 1 ELSE 0 END)`,
+      launchingSoon: sql<number>`SUM(CASE WHEN ${developments.status} = 'launching-soon' THEN 1 ELSE 0 END)`,
+    })
     .from(developments)
     .where(and(...developmentCountConditions))
     .groupBy(developments.cataloguePublisherId);
   const countByPublisher = new Map(
     developmentCounts.map(row => [Number(row.publisherId), Number(row.count)]),
   );
+  if (provinceScope) {
+    const statsByPublisher = new Map<
+      number,
+      { activeDevelopments: number; sellingNow: number; launchingSoon: number }
+    >(
+      developmentCounts.map(row => [
+        Number(row.publisherId),
+        {
+          activeDevelopments: Number(row.count || 0),
+          sellingNow: Number(row.sellingNow || 0),
+          launchingSoon: Number(row.launchingSoon || 0),
+        },
+      ]),
+    );
+    const start = filters.offset ?? 0;
+    return publishers
+      .filter(publisher => (statsByPublisher.get(publisher.id)?.activeDevelopments ?? 0) > 0)
+      .map(publisher => ({
+        ...publisher,
+        brandName: publisher.name,
+        identityType: publisher.publisherType,
+        ownerType: publisher.authorityKind === 'platform_reference' ? 'platform' : 'developer',
+        isSubscriber: publisher.authorityKind === 'developer_first_party' ? 1 : 0,
+        developmentCount: countByPublisher.get(publisher.id) ?? 0,
+        activeDevelopments: statsByPublisher.get(publisher.id)?.activeDevelopments ?? 0,
+        sellingNow: statsByPublisher.get(publisher.id)?.sellingNow ?? 0,
+        launchingSoon: statsByPublisher.get(publisher.id)?.launchingSoon ?? 0,
+      }))
+      .sort(
+        (left, right) =>
+          right.sellingNow - left.sellingNow ||
+          right.activeDevelopments - left.activeDevelopments ||
+          left.name.localeCompare(right.name),
+      )
+      .slice(start, start + (filters.limit ?? 50));
+  }
   return publishers.map(publisher => ({
     ...publisher,
     brandName: publisher.name,

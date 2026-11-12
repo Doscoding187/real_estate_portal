@@ -73,10 +73,19 @@ const listPublishersSchema = z
       .trim()
       .refine(isPlaceId, 'Choose an approved canonical Place')
       .optional(),
+    provincePlaceId: z
+      .string()
+      .trim()
+      .refine(isPlaceId, 'Choose an approved canonical Place')
+      .optional(),
     limit: z.number().int().positive().max(100).optional(),
     offset: z.number().int().min(0).optional(),
   })
   .strict()
+  .refine(
+    input => input.canonicalPlaceId === undefined || input.provincePlaceId === undefined,
+    'Choose either a Place or a province, not both.',
+  )
   .optional();
 
 const listPublishersByPlaceSchema = z.object({
