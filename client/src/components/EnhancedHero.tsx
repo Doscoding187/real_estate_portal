@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { useLocation } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import {
@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
+  ArrowRight,
   BadgeCheck,
   Bath,
   BedDouble,
@@ -300,24 +301,7 @@ const JOURNEY_PRESENTATION: Partial<
     ],
   },
 };
-const PLATFORM_TOOL_ITEMS = [
-  {
-    label: 'Listmate',
-    description: 'Understand a home’s value',
-    icon: Home,
-  },
-  {
-    label: 'Buymate',
-    description: 'Plan what you can comfortably buy',
-    icon: CircleDollarSign,
-  },
-  {
-    label: 'Search by commute',
-    description: 'Find homes within your travel time',
-    icon: MapPin,
-  },
-] as const;
-
+const HERO_LOCATION_INPUT_ID = 'homepage-location-input';
 function formatLocationNames(locations: readonly LocationNode[]) {
   const names = locations.map(location => location.name).filter(Boolean);
   return names.length <= 1 ? names[0] || 'the selected area' : names.join(' and ');
@@ -590,7 +574,7 @@ export function EnhancedHero({
         : resolution.outcome === 'limit-reached'
           ? 'You can search up to five sibling places together for Land.'
           : resolution.outcome === 'invalid'
-            ? 'Choose an admitted Place suggestion to search.'
+            ? 'Choose one of the suggested areas to search.'
             : null,
     );
     if (
@@ -603,7 +587,7 @@ export function EnhancedHero({
         setLocation(location.canonicalPath);
       } else {
         setLocationSelectionNotice(
-          'This broad Place has no canonical destination page yet. Choose an exact suburb or locality.',
+          'This area does not have its own page yet. Choose a suburb or a more specific area.',
         );
       }
     }
@@ -632,7 +616,7 @@ export function EnhancedHero({
       const path = locations[0].canonicalPath;
       if (!path) {
         setLocationSelectionNotice(
-          'This broad Place has no canonical destination page yet. Choose an exact suburb or locality.',
+          'This area does not have its own page yet. Choose a suburb or a more specific area.',
         );
         return;
       }
@@ -704,7 +688,7 @@ export function EnhancedHero({
         const path = locations[0].canonicalPath;
         if (!path) {
           setLocationSelectionNotice(
-            'This broad Place has no canonical destination page yet. Choose an exact suburb or locality.',
+            'This area does not have its own page yet. Choose a suburb or a more specific area.',
           );
           return;
         }
@@ -785,7 +769,16 @@ export function EnhancedHero({
           )}
           <p className="mx-auto mt-5 max-w-3xl text-base font-medium leading-7 text-slate-600 sm:text-lg">
             {subtitle ||
-              'Search homes, discover new developments, explore local insights, and connect with trusted property professionals.'}
+              'Search homes for sale and to rent, explore areas, and connect with trusted property professionals.'}
+          </p>
+          <p className="mt-3">
+            <Link
+              href="/advertise"
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold text-blue-700 underline-offset-4 hover:bg-blue-50 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+            >
+              List with us
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
           </p>
         </header>
         <div
@@ -873,8 +866,13 @@ export function EnhancedHero({
                   />
                 ) : (
                   <>
+                    <label htmlFor={HERO_LOCATION_INPUT_ID} className="sr-only">
+                      Where do you want to look? Search by city, suburb or area
+                    </label>
                     <MapPin className="pointer-events-none absolute left-4 top-1/2 z-10 h-5 w-5 -translate-y-1/2 text-blue-700" />
                     <LocationAutosuggest
+                      inputId={HERO_LOCATION_INPUT_ID}
+                      hasExternalLabel
                       placeholder={presentation.placeholder}
                       className="w-full"
                       inputClassName="h-14 w-full rounded-xl border-slate-200 bg-white pl-11 pr-4 text-base text-slate-800 shadow-[0_2px_5px_rgba(15,23,42,0.06)] transition-all placeholder:text-slate-500 hover:border-blue-200 focus-visible:border-blue-600 focus-visible:ring-2 focus-visible:ring-blue-600/25"
@@ -962,7 +960,7 @@ export function EnhancedHero({
                 </div>
                 {selectedLocations.length > 1 ? (
                   <p className="mt-3 text-xs text-slate-600" role="status">
-                    Buy and Rent searches use one canonical Place. Remove extra Places to continue.
+                    Buy and Rent searches use one area. Remove the extra areas to continue.
                   </p>
                 ) : null}
               </section>
@@ -1050,45 +1048,6 @@ export function EnhancedHero({
             </div>
           )}
         </div>
-        <details
-          style={{ maxWidth: 'var(--plds-home-hero-search-max-width, 1180px)' }}
-          className="group/tools mx-auto mt-5 w-full"
-        >
-          <summary className="mx-auto flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 rounded-lg px-3 text-sm font-medium text-slate-600 hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-700 [&::-webkit-details-marker]:hidden">
-            Upcoming property tools
-            <ChevronDown
-              className="h-4 w-4 transition-transform group-open/tools:rotate-180"
-              aria-hidden="true"
-            />
-          </summary>
-          <div
-            tabIndex={0}
-            role="group"
-            aria-label="Upcoming property tools"
-            className="mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 pr-4 [scrollbar-width:none] focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-700 [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-3 sm:overflow-visible sm:pb-0 sm:pr-0"
-          >
-            {PLATFORM_TOOL_ITEMS.map(item => {
-              const Icon = item.icon;
-              return (
-                <article
-                  key={item.label}
-                  className="flex min-h-24 w-[calc(100%-2rem)] shrink-0 snap-start items-center gap-3 rounded-xl border border-dashed border-slate-300 bg-white/75 px-4 text-left shadow-sm sm:w-auto sm:min-w-0"
-                >
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
-                    <Icon className="h-5 w-5" />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block text-sm font-semibold text-slate-900">{item.label}</span>
-                    <span className="mt-0.5 block text-xs text-slate-500">{item.description}</span>
-                    <span className="mt-2 inline-flex rounded-full border border-blue-100 bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700">
-                      Planned
-                    </span>
-                  </span>
-                </article>
-              );
-            })}
-          </div>
-        </details>
       </div>
       {areaPickerOpen && (journey === 'buy' || journey === 'rent') && (
         <HomeAreaPicker

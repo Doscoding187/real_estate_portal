@@ -15,6 +15,11 @@ const rosebankId = 'pl-place-01-c07bb29f37ad926848934844';
 
 vi.mock('wouter', () => ({
   useLocation: () => ['/', setLocation],
+  Link: ({ href, children, ...props }: any) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
+  ),
 }));
 
 vi.mock('@/components/LocationAutosuggest', () => ({
@@ -235,7 +240,7 @@ describe('EnhancedHero explicit journey selection', () => {
     expect(screen.getByTestId('homepage-location-intent-buy')).toBeDisabled();
     expect(
       screen.getByText(
-        'Buy and Rent searches use one canonical Place. Remove extra Places to continue.',
+        'Buy and Rent searches use one area. Remove the extra areas to continue.',
       ),
     ).toBeInTheDocument();
 
@@ -461,5 +466,16 @@ describe('EnhancedHero explicit journey selection', () => {
 
     expect(rentPanel).not.toContain('Lease Term');
     expect(rentPanel).not.toContain('Furnished Only');
+  });
+
+  it('shows a List with us link to /advertise and labels the location input', () => {
+    render(<EnhancedHero />);
+
+    expect(screen.getByRole('link', { name: /list with us/i })).toHaveAttribute('href', '/advertise');
+    expect(
+      screen.getByText(/where do you want to look\? search by city, suburb or area/i).tagName,
+    ).toBe('LABEL');
+    expect(screen.queryByText(/upcoming property tools/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/new developments, explore local insights/i)).not.toBeInTheDocument();
   });
 });

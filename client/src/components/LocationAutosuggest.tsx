@@ -34,6 +34,8 @@ interface LocationAutosuggestProps {
   renderSelectedLocations?: boolean;
   inputRef?: RefObject<HTMLInputElement | null>;
   inputAriaDescribedBy?: string;
+  /** Set when a visible or sr-only <label htmlFor={inputId}> names the input. */
+  hasExternalLabel?: boolean;
 }
 
 export function LocationAutosuggest({
@@ -51,6 +53,7 @@ export function LocationAutosuggest({
   renderSelectedLocations = true,
   inputRef,
   inputAriaDescribedBy,
+  hasExternalLabel = false,
 }: LocationAutosuggestProps) {
   const [query, setQuery] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -257,7 +260,7 @@ export function LocationAutosuggest({
           type="text"
           autoComplete="off"
           role="combobox"
-          aria-label="Search admitted places"
+          aria-label={hasExternalLabel ? undefined : 'Search places'}
           aria-autocomplete="list"
           aria-controls={listboxId}
           aria-expanded={showSuggestions}
