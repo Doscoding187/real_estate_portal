@@ -61,9 +61,7 @@ describe('public advertise entry', () => {
       '/advertise/sell/developers',
     );
     expect(
-      screen.getByText(
-        /does not start a payment, grant a paid plan, or make anything public/i,
-      ),
+      screen.getByText(/does not start a payment, grant a paid plan, or make anything public/i),
     ).toBeInTheDocument();
     expect(useCommercialCatalog).not.toHaveBeenCalled();
   });

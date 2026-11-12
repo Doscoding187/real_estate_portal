@@ -21,9 +21,7 @@ export function CityDiscoveryMenu({ onNavigate }: CityDiscoveryMenuProps) {
       <div className="public-navbar__city-grid">
         <section aria-label="Find a place" className="public-navbar__city-column">
           <h2 className="public-navbar__section-heading">Find a place</h2>
-          <p className="mb-4 text-sm text-muted-foreground">
-            Search cities, towns and suburbs.
-          </p>
+          <p className="mb-4 text-sm text-muted-foreground">Search cities, towns and suburbs.</p>
           <LocationAutosuggest
             placeholder="Search South African places"
             onSelect={location => onNavigate(locationHref(location))}

@@ -143,7 +143,9 @@ describe('public Agency product landing page', () => {
     expect(screen.getByText('Prepare private inventory')).toBeInTheDocument();
 
     // Held at launch: the sign-up CTA is a non-link "Not open yet" state.
-    expect(screen.queryByRole('link', { name: /Start Agency preparation/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: /Start Agency preparation/i }),
+    ).not.toBeInTheDocument();
     expect(screen.getAllByTestId('cta-not-open-yet')).toHaveLength(2);
     expect(document.querySelector('a[href*="agency%2Fsetup"]')).toBeNull();
 
@@ -159,9 +161,10 @@ describe('public Agency product landing page', () => {
       screen.queryByRole('link', { name: /Request Launch Access invoice/i }),
     ).not.toBeInTheDocument();
     expect(screen.queryByText(/manual EFT/i)).not.toBeInTheDocument();
-    expect(
-      screen.getAllByRole('link', { name: /Contact Property Listify/i })[0],
-    ).toHaveAttribute('href', '/contact');
+    expect(screen.getAllByRole('link', { name: /Contact Property Listify/i })[0]).toHaveAttribute(
+      'href',
+      '/contact',
+    );
   });
 
   it('uses the exact Agency product decision instead of another paid product', () => {

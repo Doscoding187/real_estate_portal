@@ -269,7 +269,11 @@ function Router() {
           </Route>
           <Route path="/admin/land-review">
             <RequireRole role="super_admin">
-              {isLandVerticalAvailable() ? <LandReviewWorkspace /> : <LandDeferred audience="reviewer" />}
+              {isLandVerticalAvailable() ? (
+                <LandReviewWorkspace />
+              ) : (
+                <LandDeferred audience="reviewer" />
+              )}
             </RequireRole>
           </Route>
           <Route path="/admin/shared-living-review">
@@ -294,28 +298,32 @@ function Router() {
           <Route path="/agent/land/create">
             <RequireRole role="agent" unauthenticatedAuthEntry="signin">
               <AgentListingAccessGate>
-              {isLandVerticalAvailable() ? <LandAuthoringWorkspace /> : <LandDeferred audience="author" />}
+                {isLandVerticalAvailable() ? (
+                  <LandAuthoringWorkspace />
+                ) : (
+                  <LandDeferred audience="author" />
+                )}
               </AgentListingAccessGate>
             </RequireRole>
           </Route>
           <Route path="/agent/commercial/create">
             <RequireRole role="agent" unauthenticatedAuthEntry="signin">
               <AgentListingAccessGate>
-              <CommercialOfficeAuthoringWorkspace />
+                <CommercialOfficeAuthoringWorkspace />
               </AgentListingAccessGate>
             </RequireRole>
           </Route>
           <Route path="/agent/commercial">
             <RequireRole role="agent" unauthenticatedAuthEntry="signin">
               <AgentListingAccessGate>
-              <CommercialInventory />
+                <CommercialInventory />
               </AgentListingAccessGate>
             </RequireRole>
           </Route>
           <Route path="/agent/commercial/office/create">
             <RequireRole role="agent" unauthenticatedAuthEntry="signin">
               <AgentListingAccessGate>
-              <CommercialOfficeAuthoringWorkspace />
+                <CommercialOfficeAuthoringWorkspace />
               </AgentListingAccessGate>
             </RequireRole>
           </Route>
@@ -772,13 +780,21 @@ function Router() {
           />
           <Route path="/plots-and-land">
             {isLandPublicDiscoveryAvailable() ? (
-              <LandPublicLayout><PlotsAndLand /></LandPublicLayout>
-            ) : <JourneyComingSoonPage journey="plot_land" />}
+              <LandPublicLayout>
+                <PlotsAndLand />
+              </LandPublicLayout>
+            ) : (
+              <JourneyComingSoonPage journey="plot_land" />
+            )}
           </Route>
           <Route path="/land/:slug">
             {isLandPublicDiscoveryAvailable() ? (
-              <LandPublicLayout><LandDetail /></LandPublicLayout>
-            ) : <JourneyComingSoonPage journey="plot_land" detail />}
+              <LandPublicLayout>
+                <LandDetail />
+              </LandPublicLayout>
+            ) : (
+              <JourneyComingSoonPage journey="plot_land" detail />
+            )}
           </Route>
           <Route path="/property-to-rent" component={SearchResults} />
           <Route path="/farms-and-smallholdings" component={FarmsAndSmallholdings} />

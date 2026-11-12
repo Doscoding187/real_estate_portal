@@ -136,11 +136,7 @@ const BASELINE_RELEASED_PUBLIC_JOURNEYS: readonly PublicHeroJourneyKey[] = [
  * Journeys held back for the public soft launch. A held journey is NOT released
  * even when VITE_PUBLIC_JOURNEY_RELEASES lists it. Remove a key to release it.
  */
-export const LAUNCH_HELD_JOURNEYS: readonly string[] = [
-  'shared_living',
-  'plot_land',
-  'commercial',
-];
+export const LAUNCH_HELD_JOURNEYS: readonly string[] = ['shared_living', 'plot_land', 'commercial'];
 
 /**
  * A held-role sign-up entry must not carry its onboarding destination into a
@@ -151,7 +147,10 @@ export function stripHeldRoleNextPath(
   heldRoleRequested: boolean,
 ): string | null {
   if (!next) return null;
-  if (heldRoleRequested && /^\/(agency\/setup|developer\/setup|service\/profile)(?:[/?#]|$)/.test(next)) {
+  if (
+    heldRoleRequested &&
+    /^\/(agency\/setup|developer\/setup|service\/profile)(?:[/?#]|$)/.test(next)
+  ) {
     return null;
   }
   return next;
@@ -384,8 +383,8 @@ export function getHomepageHeroJourneys(
   releaseContext: PublicJourneyReleaseContext = RUNTIME_PUBLIC_JOURNEY_RELEASE_CONTEXT,
 ): readonly ResolvedPublicHeroJourneyDefinition[] {
   // Tab-only: every product-visible journey gets a tab, released or not.
-  return PUBLIC_HERO_JOURNEYS.filter(journey => isHomepageHeroTabVisible(journey.key)).map(journey =>
-    getPublicHeroJourney(journey.key, releaseContext),
+  return PUBLIC_HERO_JOURNEYS.filter(journey => isHomepageHeroTabVisible(journey.key)).map(
+    journey => getPublicHeroJourney(journey.key, releaseContext),
   );
 }
 

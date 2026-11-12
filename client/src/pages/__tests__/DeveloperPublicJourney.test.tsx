@@ -10,7 +10,13 @@ const state = vi.hoisted(() => ({
   directoryLookup: vi.fn(),
 }));
 vi.mock('@/components/location/CanonicalPlaceSelector', () => ({
-  CanonicalPlaceSelector: ({ label, onChange }: { label: string; onChange: (value: unknown) => void }) => (
+  CanonicalPlaceSelector: ({
+    label,
+    onChange,
+  }: {
+    label: string;
+    onChange: (value: unknown) => void;
+  }) => (
     <button
       type="button"
       onClick={() =>

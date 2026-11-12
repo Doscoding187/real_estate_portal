@@ -1,3 +1,4 @@
+/* global console, process, Buffer, URL */
 // LOCAL PREVIEW ONLY. Never deployed, never imported by client/ or server/.
 // A tiny mock of the Property Listify tRPC API so the homepage data sections render with
 // sample data in the local Vite preview and in screenshots. See scripts/preview/README.md.
@@ -56,7 +57,10 @@ function rejectUnknownKeys(input, keys) {
 }
 
 function expandUnitTypeCard(entry, listingType, placeId, province, fixture) {
-  const image = entry.image === null ? '' : `${fixture.imageBase}${fixture.images[entry.image % fixture.images.length]}`;
+  const image =
+    entry.image === null
+      ? ''
+      : `${fixture.imageBase}${fixture.images[entry.image % fixture.images.length]}`;
   const title = entry.bedrooms !== null ? `${entry.bedrooms}-bed ${entry.label}` : entry.label;
   const id = `${entry.developmentId}:${entry.unitId}`;
   const route = `/development/${entry.slug}`;
@@ -186,7 +190,9 @@ function searchPublicInventory(input) {
     }
   }
   const mixUnitTypes =
-    !LEGACY_API && input?.developmentResultShape === 'unit_type' && input?.listingSource !== 'manual';
+    !LEGACY_API &&
+    input?.developmentResultShape === 'unit_type' &&
+    input?.listingSource !== 'manual';
   const requirePhoto = input?.requirePhoto === true;
 
   let cards = [];
@@ -375,8 +381,7 @@ const server = createServer(async (req, res) => {
     const paths = decodeURIComponent(url.pathname.slice(prefix.length)).split(',');
     const isBatch = url.searchParams.get('batch') === '1';
     let inputs = {};
-    const rawInput =
-      req.method === 'GET' ? url.searchParams.get('input') : await readBody(req);
+    const rawInput = req.method === 'GET' ? url.searchParams.get('input') : await readBody(req);
     if (rawInput) {
       try {
         inputs = JSON.parse(rawInput);

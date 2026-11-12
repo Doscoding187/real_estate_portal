@@ -480,6 +480,8 @@ describe('public navigation authority', () => {
       expect(getLoginRedirectPath({ role: 'agent' }, next)).toBe('/agent/dashboard');
     }
     expect(getLoginRedirectPath({ role: 'agent' }, '/property/x')).toBe('/property/x');
-    expect(getLoginRedirectPath({ role: 'agent' }, 'https://evil.example')).toBe('/agent/dashboard');
+    expect(getLoginRedirectPath({ role: 'agent' }, 'https://evil.example')).toBe(
+      '/agent/dashboard',
+    );
   });
 });

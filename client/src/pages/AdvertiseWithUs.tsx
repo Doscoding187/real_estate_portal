@@ -359,8 +359,7 @@ function PreparationAdvertiseWithUs() {
             </h2>
             <p className="mt-5 text-base leading-8 text-slate-600 md:text-lg">
               Setting up an account, a company or a draft does not start a payment, grant a paid
-              plan, or make anything public. Publishing opens once your plan is active and
-              approved.
+              plan, or make anything public. Publishing opens once your plan is active and approved.
             </p>
           </div>
         </section>

@@ -63,10 +63,7 @@ describe('useTrendingRailQuery', () => {
 
   it('falls back to the previous query on BAD_REQUEST and remembers it for the session', async () => {
     const noPhoto = { ...listing, id: '2', image: '' };
-    answer(
-      { isError: true, error: badRequest },
-      { data: { cards: [listing, noPhoto, unit] } },
-    );
+    answer({ isError: true, error: badRequest }, { data: { cards: [listing, noPhoto, unit] } });
     const { result, unmount } = render();
 
     await waitFor(() => expect(result.current.mode).toBe('legacy'));
@@ -102,7 +99,10 @@ describe('useTrendingRailQuery', () => {
 
   it('reports any other error as an error and does not switch', () => {
     answer(
-      { isError: true, error: Object.assign(new Error('boom'), { data: { code: 'INTERNAL_SERVER_ERROR' } }) },
+      {
+        isError: true,
+        error: Object.assign(new Error('boom'), { data: { code: 'INTERNAL_SERVER_ERROR' } }),
+      },
       {},
     );
     const { result } = render();

@@ -51,8 +51,12 @@ describe('Land public search and retained publication containment', () => {
   });
 
   it('routes authoring, review and public Land pages through the deferred state', () => {
-    expect(app).toContain("const LandAuthoringWorkspace = lazy(() => import('./pages/agent/LandAuthoringWorkspace'));");
-    expect(app).toContain("const LandReviewWorkspace = lazy(() => import('./pages/admin/LandReviewWorkspace'));");
+    expect(app).toContain(
+      "const LandAuthoringWorkspace = lazy(() => import('./pages/agent/LandAuthoringWorkspace'));",
+    );
+    expect(app).toContain(
+      "const LandReviewWorkspace = lazy(() => import('./pages/admin/LandReviewWorkspace'));",
+    );
     expect(app).toContain('<LandDeferred audience="reviewer" />');
     expect(app).toContain('<LandDeferred audience="author" />');
     expect(app).toContain('<JourneyComingSoonPage journey="plot_land" />');

@@ -265,6 +265,8 @@ describe('HomeTrendingSection', () => {
       '/development/sample/unit/u1',
     );
     expect(screen.queryByRole('button', { name: 'Save property' })).not.toBeInTheDocument();
+    // The card's propertyType is a development-level guess, so no type is shown for a unit type.
+    expect(screen.queryByText('House')).not.toBeInTheDocument();
   });
 
   it('keeps a heart on ordinary listings', () => {

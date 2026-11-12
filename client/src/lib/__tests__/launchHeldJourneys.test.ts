@@ -79,7 +79,12 @@ describe('launch-held public journeys', () => {
   });
 
   it('ignores a next path to a held onboarding destination only for held-role entries', () => {
-    for (const path of ['/agency/setup', '/developer/setup', '/service/profile', '/agency/setup?x=1']) {
+    for (const path of [
+      '/agency/setup',
+      '/developer/setup',
+      '/service/profile',
+      '/agency/setup?x=1',
+    ]) {
       expect(stripHeldRoleNextPath(path, true)).toBeNull();
       expect(stripHeldRoleNextPath(path, false)).toBe(path);
     }

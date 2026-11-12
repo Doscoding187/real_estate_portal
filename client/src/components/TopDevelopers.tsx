@@ -37,9 +37,7 @@ function isBadRequestError(error: unknown): boolean {
     data?: { code?: unknown };
     shape?: { data?: { code?: unknown } };
   } | null;
-  return (
-    candidate?.data?.code === 'BAD_REQUEST' || candidate?.shape?.data?.code === 'BAD_REQUEST'
-  );
+  return candidate?.data?.code === 'BAD_REQUEST' || candidate?.shape?.data?.code === 'BAD_REQUEST';
 }
 
 function EmptyDevelopers({ province }: { province?: string }) {
@@ -48,7 +46,9 @@ function EmptyDevelopers({ province }: { province?: string }) {
       <SectionEmptyState
         icon={Building2}
         message={
-          province ? `No developers are listed in ${province} yet.` : 'No developers are listed yet.'
+          province
+            ? `No developers are listed in ${province} yet.`
+            : 'No developers are listed yet.'
         }
         action={{
           label: 'Talk to us about listing your development',
@@ -94,7 +94,8 @@ export function TopDevelopers({ selectedProvince }: { selectedProvince?: string 
     { enabled: !developmentsHeld && !provinceMode },
   );
 
-  const provinceRejected = provinceMode && provinceQuery.isError && isBadRequestError(provinceQuery.error);
+  const provinceRejected =
+    provinceMode && provinceQuery.isError && isBadRequestError(provinceQuery.error);
   useEffect(() => {
     if (provinceRejected) {
       legacyDevelopersApiDetected = true;
@@ -240,14 +241,18 @@ export function TopDevelopers({ selectedProvince }: { selectedProvince?: string 
                             {launchingSoon !== null && (
                               <div className="mb-2 flex items-center justify-between px-1 text-xs text-slate-600">
                                 <span>Launching soon</span>
-                                <span className="font-semibold text-slate-900">{launchingSoon}</span>
+                                <span className="font-semibold text-slate-900">
+                                  {launchingSoon}
+                                </span>
                               </div>
                             )}
                           </>
                         ) : (
                           count !== null && (
                             <div className="mb-3 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
-                              <span className="block text-lg font-bold text-slate-900">{count}</span>
+                              <span className="block text-lg font-bold text-slate-900">
+                                {count}
+                              </span>
                               <span className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
                                 Public {count === 1 ? 'project' : 'projects'}
                               </span>

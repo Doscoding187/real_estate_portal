@@ -1343,9 +1343,9 @@ function AgencyPreparationLandingPage({
               eyebrow="Prepare for participation"
               title="How agency set-up will work once accounts open."
             >
-              These are the steps once agency accounts open. Set-up establishes the business
-              context and lets your Agency organise private inventory. It does not grant marketplace publication, paid commercial access, or
-              active team participation.
+              These are the steps once agency accounts open. Set-up establishes the business context
+              and lets your Agency organise private inventory. It does not grant marketplace
+              publication, paid commercial access, or active team participation.
             </SectionIntro>
             <div className="mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
               {[
@@ -1406,12 +1406,14 @@ function AgencyPreparationLandingPage({
               </p>
               <div className="mt-7">
                 <NotOpenYetCta tone="light" />
-                <div><a
-                  href="/contact"
-                  className="mt-4 inline-flex items-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 py-3.5 text-sm font-bold text-slate-950 transition hover:border-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
-                >
-                  Contact Property Listify <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                </a></div>
+                <div>
+                  <a
+                    href="/contact"
+                    className="mt-4 inline-flex items-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 py-3.5 text-sm font-bold text-slate-950 transition hover:border-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+                  >
+                    Contact Property Listify <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                  </a>
+                </div>
               </div>
             </div>
           </div>

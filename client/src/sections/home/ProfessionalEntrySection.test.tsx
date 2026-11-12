@@ -24,7 +24,9 @@ describe('ProfessionalEntrySection', () => {
     expect(screen.getByRole('heading', { name: 'Agencies' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Developers' })).toBeInTheDocument();
     expect(screen.getByText('List and grow with Property Listify.')).toBeInTheDocument();
-    expect(screen.getAllByText(/publishing opens soon|accounts open soon/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/publishing opens soon|accounts open soon/i).length).toBeGreaterThan(
+      0,
+    );
   });
 
   it('avoids internal wording', () => {

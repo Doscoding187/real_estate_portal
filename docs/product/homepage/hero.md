@@ -10,12 +10,12 @@ The first thing a visitor meets: what are you looking for, and where. One tab pe
 
 Seven tabs on every build, in this order: **Buy · Rent · New Developments · Shared Living · Commercial · Plots & Land · Find an Agent**. Each tab changes the placeholder, the filters and where the search goes. Find an Agent goes straight to `/agents`.
 
-| Tab | Search goes to |
-|---|---|
-| Buy, Rent | the property search results |
-| New Developments | `/new-developments` (public; empty state until developments are listed) |
+| Tab                                     | Search goes to                                                                                                                                                                                                                                  |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Buy, Rent                               | the property search results                                                                                                                                                                                                                     |
+| New Developments                        | `/new-developments` (public; empty state until developments are listed)                                                                                                                                                                         |
 | Shared Living, Commercial, Plots & Land | their own page (`/shared-living`, `/commercial`, `/plots-and-land`), search kept in the web address. Today each shows the designed empty state ("No shared living rooms are listed yet." and so on) with "Contact us" and a link to home search |
-| Find an Agent | `/agents` |
+| Find an Agent                           | `/agents`                                                                                                                                                                                                                                       |
 
 ## 3. States
 
@@ -32,12 +32,12 @@ Seven tabs on every build, in this order: **Buy · Rent · New Developments · S
 
 ## 5. Current implementation status (2026-11-12)
 
-| Rule | Status |
-|---|---|
-| Seven tabs on hosted builds | Built |
-| Empty-state pages for the three held journeys | Built (hosted builds; Plots & Land on every build) |
-| Mobile fade and scroll-into-view | Built |
-| New Developments search wording ("Project Place", "approved Places") | Not changed; shared with other pages |
+| Rule                                                                 | Status                                             |
+| -------------------------------------------------------------------- | -------------------------------------------------- |
+| Seven tabs on hosted builds                                          | Built                                              |
+| Empty-state pages for the three held journeys                        | Built (hosted builds; Plots & Land on every build) |
+| Mobile fade and scroll-into-view                                     | Built                                              |
+| New Developments search wording ("Project Place", "approved Places") | Not changed; shared with other pages               |
 
 ## 6. History
 

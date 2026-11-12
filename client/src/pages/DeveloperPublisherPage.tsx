@@ -82,9 +82,7 @@ export default function DeveloperPublisherPage() {
   const changePlace = (selection: CanonicalPlaceSelection | null) => {
     setPlaceSelection(selection);
     setPage(0);
-    setLocation(
-      developerDiscoveryHref(`/developer/${slug}`, selection?.canonicalPlaceId, true),
-    );
+    setLocation(developerDiscoveryHref(`/developer/${slug}`, selection?.canonicalPlaceId, true));
   };
   if (profileQuery.isLoading)
     return (
@@ -284,8 +282,8 @@ export default function DeveloperPublisherPage() {
             <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-6">
               <h3 className="font-semibold text-slate-900">Choose an area</h3>
               <p className="mt-2 text-sm text-slate-600">
-                This location link is invalid or uses retired text geography. Choose an
-                approved Place above to see matching projects.
+                This location link is invalid or uses retired text geography. Choose an approved
+                Place above to see matching projects.
               </p>
             </div>
           ) : projectsQuery.isError ? (

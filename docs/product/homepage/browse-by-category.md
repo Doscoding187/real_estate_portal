@@ -18,12 +18,12 @@ For visitors who do not know exactly what to search yet. They pick a **city** an
 
 ## 3. Where each card goes
 
-| Card | Destination |
-|---|---|
-| Houses, Apartments, Townhouses, Cluster Homes, Farms | Property search filtered by type (`/property-for-sale?propertyType=…`, or `/property-to-rent`), plus the chosen area |
-| Plots & Land | `/plots-and-land` (land is switched off until there is land inventory; that page must show an honest empty state, not internal wording) |
-| Offices, Shops | Commercial page filtered by use (`/commercial?useTypes=office` / `retail`); commercial is leasing only today |
-| New Developments cards | New developments page, or the chosen area's page |
+| Card                                                 | Destination                                                                                                                             |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Houses, Apartments, Townhouses, Cluster Homes, Farms | Property search filtered by type (`/property-for-sale?propertyType=…`, or `/property-to-rent`), plus the chosen area                    |
+| Plots & Land                                         | `/plots-and-land` (land is switched off until there is land inventory; that page must show an honest empty state, not internal wording) |
+| Offices, Shops                                       | Commercial page filtered by use (`/commercial?useTypes=office` / `retail`); commercial is leasing only today                            |
+| New Developments cards                               | New developments page, or the chosen area's page                                                                                        |
 
 With no area chosen, cards open national results. Zero results show the normal "no results" page, never an error.
 

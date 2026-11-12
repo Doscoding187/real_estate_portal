@@ -2,7 +2,11 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { LAND_VERTICAL_LAUNCH_STATE, isLandPublicDiscoveryAvailable, isLandVerticalAvailable } from '@shared/landLaunchPolicy';
+import {
+  LAND_VERTICAL_LAUNCH_STATE,
+  isLandPublicDiscoveryAvailable,
+  isLandVerticalAvailable,
+} from '@shared/landLaunchPolicy';
 
 const { setLocation, searchDiscoveryQuery } = vi.hoisted(() => ({
   setLocation: vi.fn(),
@@ -239,9 +243,7 @@ describe('EnhancedHero explicit journey selection', () => {
     expect(screen.getByTestId(`selected-location-${rosebankId}`)).toHaveTextContent('Rosebank');
     expect(screen.getByTestId('homepage-location-intent-buy')).toBeDisabled();
     expect(
-      screen.getByText(
-        'Buy and Rent searches use one area. Remove the extra areas to continue.',
-      ),
+      screen.getByText('Buy and Rent searches use one area. Remove the extra areas to continue.'),
     ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Remove Rosebank' }));

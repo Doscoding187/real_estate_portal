@@ -59,9 +59,7 @@ export function isBadRequestError(error: unknown): boolean {
     data?: { code?: unknown };
     shape?: { data?: { code?: unknown } };
   } | null;
-  return (
-    candidate?.data?.code === 'BAD_REQUEST' || candidate?.shape?.data?.code === 'BAD_REQUEST'
-  );
+  return candidate?.data?.code === 'BAD_REQUEST' || candidate?.shape?.data?.code === 'BAD_REQUEST';
 }
 
 type Options = {

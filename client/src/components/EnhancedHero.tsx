@@ -698,7 +698,13 @@ export function EnhancedHero({
         if (place.canonicalPlaceId) search.set('canonicalPlaceId', place.canonicalPlaceId);
         if (place.name) search.set('location', place.name);
       } else if (locations.length > 1) {
-        search.set('location', locations.map(place => place.name).filter(Boolean).join(', '));
+        search.set(
+          'location',
+          locations
+            .map(place => place.name)
+            .filter(Boolean)
+            .join(', '),
+        );
       }
       const extras: Record<string, unknown> =
         journey === 'commercial'
@@ -759,9 +765,7 @@ export function EnhancedHero({
         return;
       }
       if (locations.some(location => location.type !== 'suburb')) {
-        setLocationSelectionNotice(
-          'Choose one broad area to explore, or search specific suburbs.',
-        );
+        setLocationSelectionNotice('Choose one broad area to explore, or search specific suburbs.');
         return;
       }
       setLocation(
@@ -840,49 +844,49 @@ export function EnhancedHero({
           className="mx-auto mt-8 w-full sm:mt-10"
         >
           <div className="relative">
-          <div
-            ref={tabScrollerRef}
-            onScroll={updateTabEdges}
-            className="relative overflow-x-auto px-1 pb-2 [scrollbar-width:none]"
-          >
             <div
-              role="group"
-              aria-label="What are you looking for?"
-              className="flex min-w-max w-fit items-center gap-1 rounded-2xl border border-slate-200/90 bg-white/95 p-1.5 shadow-[0_10px_24px_-18px_rgba(15,23,42,0.45)] backdrop-blur-sm sm:mx-auto"
+              ref={tabScrollerRef}
+              onScroll={updateTabEdges}
+              className="relative overflow-x-auto px-1 pb-2 [scrollbar-width:none]"
             >
-              {categories.map(category => {
-                const Icon = JOURNEY_ICONS[category.key];
-                const selected = journey === category.key;
-                return (
-                  <button
-                    key={category.key}
-                    type="button"
-                    aria-pressed={selected}
-                    onClick={() => selectJourney(category.key)}
-                    onFocus={() => setPriceRangeOpen(false)}
-                    className={`flex min-h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-3 py-2 text-sm font-semibold transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 active:translate-y-px lg:px-4 ${selected ? 'bg-blue-700 text-white shadow-md shadow-blue-700/25' : 'text-slate-700 hover:bg-blue-50 hover:text-blue-700'}`}
-                  >
-                    <Icon className="h-4 w-4" />
-                    {category.label}
-                  </button>
-                );
-              })}
+              <div
+                role="group"
+                aria-label="What are you looking for?"
+                className="flex min-w-max w-fit items-center gap-1 rounded-2xl border border-slate-200/90 bg-white/95 p-1.5 shadow-[0_10px_24px_-18px_rgba(15,23,42,0.45)] backdrop-blur-sm sm:mx-auto"
+              >
+                {categories.map(category => {
+                  const Icon = JOURNEY_ICONS[category.key];
+                  const selected = journey === category.key;
+                  return (
+                    <button
+                      key={category.key}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => selectJourney(category.key)}
+                      onFocus={() => setPriceRangeOpen(false)}
+                      className={`flex min-h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-3 py-2 text-sm font-semibold transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 active:translate-y-px lg:px-4 ${selected ? 'bg-blue-700 text-white shadow-md shadow-blue-700/25' : 'text-slate-700 hover:bg-blue-50 hover:text-blue-700'}`}
+                    >
+                      <Icon className="h-4 w-4" />
+                      {category.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-          {tabEdges.left ? (
-            <span
-              aria-hidden="true"
-              data-testid="hero-tabs-fade-left"
-              className="pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-white to-transparent lg:hidden"
-            />
-          ) : null}
-          {tabEdges.right ? (
-            <span
-              aria-hidden="true"
-              data-testid="hero-tabs-fade-right"
-              className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-white to-transparent lg:hidden"
-            />
-          ) : null}
+            {tabEdges.left ? (
+              <span
+                aria-hidden="true"
+                data-testid="hero-tabs-fade-left"
+                className="pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-white to-transparent lg:hidden"
+              />
+            ) : null}
+            {tabEdges.right ? (
+              <span
+                aria-hidden="true"
+                data-testid="hero-tabs-fade-right"
+                className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-white to-transparent lg:hidden"
+              />
+            ) : null}
           </div>
         </div>
         <div

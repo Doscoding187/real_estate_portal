@@ -1,5 +1,6 @@
+/* global console, process, fetch */
 // Self-test for scripts/preview/mock-api.mjs. LOCAL PREVIEW ONLY.
-// Start the mock on a spare port first, then: MOCK_PORT=5055 node scripts/preview/selftest.mjs
+// Start the mock on a spare port first (PORT=5055 node scripts/preview/mock-api.mjs), then: MOCK_PORT=5055 node scripts/preview/selftest.mjs
 // Exits non-zero on the first failed check.
 const PORT = Number(process.env.MOCK_PORT || 5055);
 const BASE = `http://127.0.0.1:${PORT}`;
@@ -49,12 +50,21 @@ const sale = await fetch(
 const saleBody = await sale.json();
 const saleData = saleBody?.[0]?.result?.data;
 check('batch is an array of 2', Array.isArray(saleBody) && saleBody.length === 2);
-check('gauteng sale has 8 cards', saleData?.json?.cards?.length === 8, JSON.stringify(saleData?.json?.total));
-check('listedDate is marked as a Date in meta', saleData?.meta?.values?.['cards.0.listedDate']?.[0] === 'Date');
+check(
+  'gauteng sale has 8 cards',
+  saleData?.json?.cards?.length === 8,
+  JSON.stringify(saleData?.json?.total),
+);
+check(
+  'listedDate is marked as a Date in meta',
+  saleData?.meta?.values?.['cards.0.listedDate']?.[0] === 'Date',
+);
 check('auth.me is signed out (null)', saleBody?.[1]?.result?.data?.json === null);
-check('cors origin echoed with credentials',
+check(
+  'cors origin echoed with credentials',
   sale.headers.get('access-control-allow-origin') === 'http://localhost:3010' &&
-    sale.headers.get('access-control-allow-credentials') === 'true');
+    sale.headers.get('access-control-allow-credentials') === 'true',
+);
 
 const rent = await (
   await fetch(
@@ -74,7 +84,8 @@ const empty = await (
 ).json();
 check(
   'empty province returns no cards',
-  empty?.[0]?.result?.data?.json?.cards?.length === 0 && empty?.[0]?.result?.data?.json?.total === 0,
+  empty?.[0]?.result?.data?.json?.cards?.length === 0 &&
+    empty?.[0]?.result?.data?.json?.total === 0,
 );
 
 const publishers = await (
@@ -85,7 +96,9 @@ check(
   'listPublishers returns 5 developers with card fields',
   Array.isArray(publisherList) &&
     publisherList.length === 5 &&
-    publisherList.every(item => item.id && item.slug && item.brandName && 'developmentCount' in item),
+    publisherList.every(
+      item => item.id && item.slug && item.brandName && 'developmentCount' in item,
+    ),
 );
 
 // New homepage inputs. Start the mock with the same MOCK_LEGACY_API value you give the self-test:
@@ -147,10 +160,15 @@ if (LEGACY) {
     previousInput?.[0]?.result?.data?.json?.cards?.length === 8,
   );
 } else {
-  const gautengSale = (await call('properties.searchPublicInventory', enhancedInput('sale', GAUTENG)))?.[0]
-    ?.result?.data?.json;
+  const gautengSale = (
+    await call('properties.searchPublicInventory', enhancedInput('sale', GAUTENG))
+  )?.[0]?.result?.data?.json;
   const saleCards = gautengSale?.cards || [];
-  check('unit types: gauteng sale returns pageSize 10 cards', saleCards.length === 10, String(saleCards.length));
+  check(
+    'unit types: gauteng sale returns pageSize 10 cards',
+    saleCards.length === 10,
+    String(saleCards.length),
+  );
   check(
     'unit types: mixed at positions 3, 5 and 8',
     [2, 4, 7].every(index => isUnit(saleCards[index])) && saleCards.filter(isUnit).length === 3,
@@ -196,12 +214,17 @@ if (LEGACY) {
       0: { json: { ...enhancedInput('sale', GAUTENG)[0].json, listingSource: 'manual' } },
     })
   )?.[0]?.result?.data?.json?.cards;
-  check('listingSource manual returns no unit types', manualOnly?.length > 0 && !manualOnly.some(isUnit));
-  const wcRent = (await call('properties.searchPublicInventory', enhancedInput('rent', WESTERN_CAPE)))?.[0]
-    ?.result?.data?.json?.cards;
+  check(
+    'listingSource manual returns no unit types',
+    manualOnly?.length > 0 && !manualOnly.some(isUnit),
+  );
+  const wcRent = (
+    await call('properties.searchPublicInventory', enhancedInput('rent', WESTERN_CAPE))
+  )?.[0]?.result?.data?.json?.cards;
   check('unit types: western cape rent has 2 mixed in', wcRent?.filter(isUnit).length === 2);
-  const kznRent = (await call('properties.searchPublicInventory', enhancedInput('rent', KWAZULU_NATAL)))?.[0]
-    ?.result?.data?.json?.cards;
+  const kznRent = (
+    await call('properties.searchPublicInventory', enhancedInput('rent', KWAZULU_NATAL))
+  )?.[0]?.result?.data?.json?.cards;
   check(
     'unit types: kwazulu-natal rent is only unit types',
     kznRent?.length === 3 && kznRent.every(isUnit),
@@ -214,9 +237,11 @@ if (LEGACY) {
     ['kwazulu-natal', KWAZULU_NATAL],
     ['limpopo', LIMPOPO],
   ]) {
-    const list = (await call('cataloguePublisher.listPublishers', {
-      0: { json: { provincePlaceId: placeId, limit: 12 } },
-    }))?.[0]?.result?.data?.json;
+    const list = (
+      await call('cataloguePublisher.listPublishers', {
+        0: { json: { provincePlaceId: placeId, limit: 12 } },
+      })
+    )?.[0]?.result?.data?.json;
     provinceCounts[name] = list;
   }
   check(
@@ -225,6 +250,16 @@ if (LEGACY) {
       provinceCounts['western cape']?.length === 3 &&
       provinceCounts['kwazulu-natal']?.length === 1 &&
       provinceCounts.limpopo?.length === 0,
+  );
+  check(
+    'province publishers have a head office in their own province',
+    [
+      ['gauteng', 'Gauteng'],
+      ['western cape', 'Western Cape'],
+      ['kwazulu-natal', 'KwaZulu-Natal'],
+    ].every(([name, label]) =>
+      provinceCounts[name].every(item => String(item.headOfficeLocation).endsWith(label)),
+    ),
   );
   check(
     'province publishers carry activeDevelopments, sellingNow and launchingSoon',

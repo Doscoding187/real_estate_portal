@@ -16,6 +16,7 @@ Server: `cataloguePublisher.listPublishers` (`server/cataloguePublisherRouter.ts
 Heading and line: "Developers building in {province}" / "Explore developers with approved, published projects in {province}." Only if the API is one version behind: national wording "Explore real estate developers" / "Explore developer profiles and publicly listed projects across South Africa." (see status).
 
 One card per developer in a carousel (arrows on desktop, swipe on touch, 44 px targets):
+
 - Logo tile (alt "<name> logo"; neutral tile when there is no logo), name, head office or "Developer profile".
 - Stat box: number of public projects. Shown only when the server returns a number; never 0 or a placeholder.
 - Row "View projects" (link to the developer page, projects section) and a dark "View Developer" link.
@@ -26,7 +27,7 @@ In province mode the stat box is replaced by two boxes ("Active in {province}", 
 ## 3. States
 
 1. **Loading:** three skeleton cards sized like the cards.
-2. **Error:** one plain line "Developer profiles could not be loaded." and *Try again*.
+2. **Error:** one plain line "Developer profiles could not be loaded." and _Try again_.
 3. **Nobody listed (or developments held):** the section stays. Empty state "No developers are listed yet." with action "Talk to us about listing your development" (`/contact`) and a text link "See developers across South Africa" (`/developers`).
 4. **Results:** up to 10 cards.
 
@@ -42,14 +43,14 @@ Every card links to the developer page with real `<a href>` links; "Explore All 
 
 ## 6. Status (2026-11-12)
 
-| Rule | Status |
-|---|---|
-| Old card design restored, no area search box | Built |
-| Follows the Trending province | Built in the page (card 58). Server: `listPublishers({ provincePlaceId, limit: 12 })` returns developers with approved, published projects in the province, with `activeDevelopments`, `sellingNow` and `launchingSoon`. Heading "Developers building in {province}", line "Explore developers with approved, published projects in {province}." |
-| Province card stats | Built: boxes "Active in {province}" and "Selling now", rows "Active developments", "Launching soon", "View local projects" (developer page), dark "View Developer". Each stat only when the server returned a number |
-| Empty province | Built: "No developers are listed in {province} yet.", the /contact action and "See developers across South Africa" |
-| Works when the API is one version behind | Built (card 58, `TopDevelopers.tsx`). The web host deploys on merge, the API separately. A tRPC `BAD_REQUEST` on the province query (an older API rejects `provincePlaceId`) switches the section to the national `listPublishers({ limit: 12 })`, heading "Explore real estate developers" and the national card (project count). Remembered in a module variable for the page session. Remove once the API is deployed everywhere |
-| Priority placement | Not started |
+| Rule                                         | Status                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Old card design restored, no area search box | Built                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| Follows the Trending province                | Built in the page (card 58). Server: `listPublishers({ provincePlaceId, limit: 12 })` returns developers with approved, published projects in the province, with `activeDevelopments`, `sellingNow` and `launchingSoon`. Heading "Developers building in {province}", line "Explore developers with approved, published projects in {province}."                                                                                    |
+| Province card stats                          | Built: boxes "Active in {province}" and "Selling now", rows "Active developments", "Launching soon", "View local projects" (developer page), dark "View Developer". Each stat only when the server returned a number                                                                                                                                                                                                                |
+| Empty province                               | Built: "No developers are listed in {province} yet.", the /contact action and "See developers across South Africa"                                                                                                                                                                                                                                                                                                                  |
+| Works when the API is one version behind     | Built (card 58, `TopDevelopers.tsx`). The web host deploys on merge, the API separately. A tRPC `BAD_REQUEST` on the province query (an older API rejects `provincePlaceId`) switches the section to the national `listPublishers({ limit: 12 })`, heading "Explore real estate developers" and the national card (project count). Remembered in a module variable for the page session. Remove once the API is deployed everywhere |
+| Priority placement                           | Not started                                                                                                                                                                                                                                                                                                                                                                                                                         |
 
 ## 7. History
 

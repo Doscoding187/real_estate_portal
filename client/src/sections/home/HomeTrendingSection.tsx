@@ -302,7 +302,9 @@ export function HomeTrendingSection({
                         bedrooms={item.unitType.bedrooms}
                         bathrooms={item.unitType.bathrooms}
                         area={item.unitType.unitSizeM2}
-                        propertyType={item.propertyType}
+                        // The server's propertyType on a unit card is a development-level guess, not the
+                        // unit's own type, so it is not shown (never display a type the data does not state).
+                        propertyType={undefined}
                         listingType={listingType}
                         badgeLabel="New development"
                         secondaryBadgeLabel={listingType === 'rent' ? 'To rent' : 'For sale'}
@@ -311,33 +313,33 @@ export function HomeTrendingSection({
                         }
                       />
                     ) : (
-                    <SimpleHomeListingCard
-                      id={String(item.id)}
-                      title={item.title}
-                      city={item.city || ''}
-                      suburb={item.suburb || ''}
-                      locationLabel={item.locationLabels?.[0]}
-                      image={item.image || ''}
-                      href={item.href}
-                      price={item.price ?? null}
-                      bedrooms={item.bedrooms}
-                      bathrooms={item.bathrooms}
-                      area={item.area}
-                      yardSize={item.yardSize}
-                      parkingCount={Number(item.parking?.compactValue || 0) || null}
-                      propertyType={item.propertyType}
-                      listingType={listingType}
-                      badgeLabel={listingType === 'rent' ? 'To rent' : 'For sale'}
-                      isSaved={savedPropertyIds.has(Number(item.id))}
-                      favoritePending={
-                        setFavoriteMutation.isPending &&
-                        Number(setFavoriteMutation.variables?.propertyId) === Number(item.id)
-                      }
-                      onFavoriteClick={() => handleFavorite(Number(item.id))}
-                      onImageUnavailable={() =>
-                        setFailedImages(previous => new Set(previous).add(item.image as string))
-                      }
-                    />
+                      <SimpleHomeListingCard
+                        id={String(item.id)}
+                        title={item.title}
+                        city={item.city || ''}
+                        suburb={item.suburb || ''}
+                        locationLabel={item.locationLabels?.[0]}
+                        image={item.image || ''}
+                        href={item.href}
+                        price={item.price ?? null}
+                        bedrooms={item.bedrooms}
+                        bathrooms={item.bathrooms}
+                        area={item.area}
+                        yardSize={item.yardSize}
+                        parkingCount={Number(item.parking?.compactValue || 0) || null}
+                        propertyType={item.propertyType}
+                        listingType={listingType}
+                        badgeLabel={listingType === 'rent' ? 'To rent' : 'For sale'}
+                        isSaved={savedPropertyIds.has(Number(item.id))}
+                        favoritePending={
+                          setFavoriteMutation.isPending &&
+                          Number(setFavoriteMutation.variables?.propertyId) === Number(item.id)
+                        }
+                        onFavoriteClick={() => handleFavorite(Number(item.id))}
+                        onImageUnavailable={() =>
+                          setFailedImages(previous => new Set(previous).add(item.image as string))
+                        }
+                      />
                     )}
                   </div>
                 </CarouselItem>

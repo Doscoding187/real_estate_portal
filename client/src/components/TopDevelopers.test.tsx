@@ -278,7 +278,9 @@ describe('TopDevelopers homepage section', () => {
 
       render(<TopDevelopers selectedProvince="Gauteng" />);
 
-      expect(screen.getByRole('alert')).toHaveTextContent('Developer profiles could not be loaded.');
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        'Developer profiles could not be loaded.',
+      );
     });
   });
 });

@@ -33,8 +33,8 @@ export function HomeJourneySection() {
             Make every property move with more context.
           </h2>
           <p className="max-w-3xl text-[13px] leading-5 text-slate-600 md:text-sm md:leading-6">
-            Property Listify brings discovery, decision-making and the people around a property
-            move into one connected experience.
+            Property Listify brings discovery, decision-making and the people around a property move
+            into one connected experience.
           </p>
         </div>
 

@@ -23,11 +23,11 @@ Set `PORT` to move the mock off 5000, and point `VITE_API_URL` at the same port.
 
 ## What it feeds
 
-| Procedure                           | Homepage section                                         |
-| ----------------------------------- | -------------------------------------------------------- |
-| `properties.searchPublicInventory`  | Explore property (Buy and Rent rails, by province)       |
-| `cataloguePublisher.listPublishers` | Explore real estate developers                           |
-| `auth.me`                           | Signed-out visitor (returns `null`)                      |
+| Procedure                           | Homepage section                                             |
+| ----------------------------------- | ------------------------------------------------------------ |
+| `properties.searchPublicInventory`  | Explore property (Buy and Rent rails, by province)           |
+| `cataloguePublisher.listPublishers` | Explore real estate developers                               |
+| `auth.me`                           | Signed-out visitor (returns `null`)                          |
 | `GET /api/readiness`                | Maintenance gate (returns `{ kind: 'readiness', ok: true }`) |
 
 Gauteng and Western Cape have 8 sale and 6 rent listings, KwaZulu-Natal has 3 sale, every other

@@ -69,7 +69,9 @@ describe('public discovery route authority', () => {
   it('fails closed for development browse without a canonical Place ID', () => {
     const missing = parseRelativeUrl(buildDiscoverBrowseHref('developments'));
     const browse = parseRelativeUrl(buildDiscoverBrowseHref('developments', capeTown));
-    const ready = parseRelativeUrl(buildDiscoverCardHref('Ready to Move', 'developments', capeTown));
+    const ready = parseRelativeUrl(
+      buildDiscoverCardHref('Ready to Move', 'developments', capeTown),
+    );
 
     expect(missing.pathname).toBe('/new-developments');
     expect(missing.searchParams.get('searchError')).toBe('canonical-place-required');

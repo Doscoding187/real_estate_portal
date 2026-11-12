@@ -304,7 +304,7 @@ export function LocationAutosuggest({
           ? 'Loading Place suggestions'
           : placeDiscoveryError
             ? 'Canonical Place suggestions are unavailable.'
-          : suggestionCount > 0
+            : suggestionCount > 0
               ? `${suggestionCount} Place suggestions available`
               : debouncedQuery.length >= 2
                 ? 'No locations found'
@@ -322,7 +322,8 @@ export function LocationAutosuggest({
           {/* Canonical Place results from the admitted Place Authority. */}
           {placeSuggestions.map((location, index) => {
             const suggestionIndex = index;
-            const context = location.selectionContextLabel ||
+            const context =
+              location.selectionContextLabel ||
               [location.cityName, location.provinceName].filter(Boolean).join(', ');
             return (
               <div

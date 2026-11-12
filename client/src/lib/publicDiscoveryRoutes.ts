@@ -34,7 +34,11 @@ export function placeFromLocation(location: LocationNode): CanonicalBrowsePlace 
   const canonicalPlaceId = location.canonicalPlaceId;
   if (!isCanonicalPlaceId(canonicalPlaceId)) return null;
   const scope: PlaceSearchScope =
-    location.type === 'province' ? 'province' : location.type === 'city' ? 'metro_city' : 'locality';
+    location.type === 'province'
+      ? 'province'
+      : location.type === 'city'
+        ? 'metro_city'
+        : 'locality';
   return { canonicalPlaceId, scope };
 }
 
@@ -48,15 +52,13 @@ function buildPlaceBrowseHref(
     return `${pathname}?searchError=invalid-place-authority`;
   }
   const journey = listingType === 'rent' ? 'rent' : 'buy';
-  const scope = place
-    ? { kind: place.scope, canonicalPlaceId: place.canonicalPlaceId }
-    : undefined;
+  const scope = place ? { kind: place.scope, canonicalPlaceId: place.canonicalPlaceId } : undefined;
   const href = buildTransactionalGeographyHref({
-      journey,
-      scope,
-      filters: propertyType ? { propertyType } : undefined,
-      resultState: { sort: 'relevance', page: 0 },
-    });
+    journey,
+    scope,
+    filters: propertyType ? { propertyType } : undefined,
+    resultState: { sort: 'relevance', page: 0 },
+  });
   return href || `${pathname}?searchError=invalid-place-authority`;
 }
 
@@ -86,7 +88,11 @@ export function buildDiscoverCardHref(
   if (journeyPage) {
     const params = new URLSearchParams();
     if ('useTypes' in journeyPage) params.set('useTypes', journeyPage.useTypes);
-    if (journeyPage.pathname === '/commercial' && place && isCanonicalPlaceId(place.canonicalPlaceId)) {
+    if (
+      journeyPage.pathname === '/commercial' &&
+      place &&
+      isCanonicalPlaceId(place.canonicalPlaceId)
+    ) {
       params.set('canonicalPlaceId', place.canonicalPlaceId);
     }
     const query = params.toString();
