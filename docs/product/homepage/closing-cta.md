@@ -1,46 +1,34 @@
 # Closing call to action (homepage section 9)
 
 Component: `client/src/sections/home/CTASection.tsx` (test: `CTASection.test.tsx`)
-Used by `HomeDesktopView.tsx` and `HomeMobileView.tsx`; the page passes the "browse" action.
+Used by `HomeDesktopView.tsx` and `HomeMobileView.tsx`; the page may pass an in-app "browse" action (optional).
 
 ## 1. Why this section exists
 
-The last thing on the page. A visitor who has scrolled to the end should have two clear next steps: start looking, or put their own property on the site.
+The last thing on the page. A visitor who has scrolled to the end should have a clear next step whichever side they are on: looking for a home, or having a property to list.
 
 ## 2. What it shows
 
-Blue panel with the label "Start your search", heading "Ready to find your next home?", one line ("Explore homes for sale, compare the details that matter, and contact the people responsible for the property.") and two buttons:
+One h2 "Ready when you are." above a split panel with two equal doors. Side by side from the medium breakpoint, stacked on phones.
 
-| Button                | Goes to                                | Kind      |
-| --------------------- | -------------------------------------- | --------- |
-| Browse homes for sale | the page's browse action (home search) | button    |
-| List with us          | `/advertise`                           | real link |
+| Door                     | Text                                                                                            | Primary                                       | Secondary                            |
+| ------------------------ | ----------------------------------------------------------------------------------------------- | --------------------------------------------- | ------------------------------------ |
+| Looking for a home?      | Search homes for sale and to rent, then contact the agent directly.                             | Browse homes for sale -> `/property-for-sale` | Homes to rent -> `/property-to-rent` |
+| Have a property to list? | Agents, agencies and developers can see how to list. Owners can find an agent to list for them. | List with us -> `/advertise`                  | Find an agent -> `/agents`           |
 
-**Owner decision, 2026-11-12:** "List with us" lives here and not in the hero. It was added to the hero earlier that day (`dc71cd08c`) and moved at the owner's request because it looked awkward there. _Proposal:_ the hero then keeps one clear job, search.
+## 3. Rules
 
-## 3. States
+- Two doors, equal weight. Do not add a third without the owner.
+- Every destination is a real `<a href>`. Browse may call the page's `onBrowse` on a plain click.
+- Left door is light with dark text, right door is dark with white text; both meet AA contrast. Buttons are at least 44px high.
+- No data claims; nothing depends on the database. Statements must be true today (owners cannot list themselves yet).
 
-One state. The buttons sit side by side from the small breakpoint and stack full width on phones.
+## 4. Owner feedback, 2026-11-12
 
-## 4. Rules
+The old closing panel spoke only to buyers ("Ready to find your next home?") and ignored people who want to list. Rebuilt with two doors.
 
-- Exactly two actions, the primary one being Browse. Do not add a third without the owner.
-- "List with us" is a real link, not only a button, so crawlers and people can follow it.
-- Text on the blue panel is white (contrast fix, 2026-11-12).
-- No data claims: nothing here depends on the database.
+## 5. History
 
-## 5. Search engines
-
-"List with us" is an `<a href="/advertise">`. "Browse homes for sale" is a button.
-
-## 6. Current implementation status (2026-11-12)
-
-Built, with a test for both actions.
-
-## 7. History
-
-- **2026-03 and 2026-04:** spacing and mobile alignment fixes (`052669c1a`, `c0370d4e6`, `93f5325bb`, `d001ceb09`).
-- **2026-06-25 (`b1168399f`):** "restore optimized homepage".
-- **2026-08-17 (`54a3129f8`):** buy journey convergence touched the section.
-- **2026-11-12 (`72430ca1e`):** contrast fixes.
-- **2026-11-12 (`f80d25153`):** "List with us" added next to Browse, moved here from the hero at the owner's request.
+- Earlier: one blue panel, "Start your search", two buttons (Browse, List with us).
+- Owner decision, 2026-11-12: "List with us" lives here and not in the hero (moved from `dc71cd08c`).
+- 2026-11-12: split into two doors.

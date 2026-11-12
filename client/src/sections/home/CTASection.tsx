@@ -1,44 +1,78 @@
-import { Button } from '@/components/ui/button';
+// Why this section exists, what it says and its rules: docs/product/homepage/closing-cta.md
+import type { MouseEvent } from 'react';
+import { ArrowRight, Home, KeyRound } from 'lucide-react';
 
 type CTASectionProps = {
-  onBrowse: () => void;
+  onBrowse?: () => void;
 };
 
 export function CTASection({ onBrowse }: CTASectionProps) {
-  return (
-    <section className="home-section bg-white">
-      <div className="relative overflow-hidden rounded-[1.5rem] bg-gradient-to-br from-[#2774AE] via-[#2D68C4] to-[#0F52BA] px-4 py-7 text-center shadow-2xl sm:px-6 sm:py-8 md:rounded-[2rem] md:px-12 md:py-12">
-        <div className="absolute left-0 top-0 hidden h-48 w-48 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/10 blur-3xl sm:block md:h-96 md:w-96" />
-        <div className="absolute bottom-0 right-0 hidden h-48 w-48 translate-x-1/2 translate-y-1/2 rounded-full bg-white/10 blur-3xl sm:block md:h-96 md:w-96" />
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS1vcGFjaXR5PSIwLjA1IiBzdHJva2Utd2lkdGg9IjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')] opacity-30" />
+  const handleBrowse = (event: MouseEvent<HTMLAnchorElement>) => {
+    if (!onBrowse || event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
+    event.preventDefault();
+    onBrowse();
+  };
 
-        <div className="relative z-10 mx-auto max-w-4xl">
-          <div className="mx-auto mb-3 inline-flex items-center rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-white">
-            Start your search
+  return (
+    <section
+      data-testid="home-closing-cta"
+      aria-labelledby="home-closing-heading"
+      className="home-section bg-white"
+    >
+      <h2
+        id="home-closing-heading"
+        className="mb-4 text-center text-2xl font-bold tracking-tight text-slate-900 md:text-3xl"
+      >
+        Ready when you are.
+      </h2>
+      <div className="grid overflow-hidden rounded-[1.5rem] border border-slate-200 shadow-xl md:grid-cols-2 md:rounded-[2rem]">
+        <div className="flex flex-col bg-blue-50 p-6 text-slate-900 sm:p-8 md:p-10">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-[#1f5f94] shadow-sm">
+            <Home className="h-5 w-5" aria-hidden="true" />
           </div>
-          <h2 className="mb-3 text-[1.65rem] font-bold leading-[1.08] tracking-tight text-white sm:mb-4 sm:text-3xl md:mb-6 md:text-5xl">
-            Ready to find your next home?
-          </h2>
-          <p className="mx-auto mb-5 max-w-[30rem] text-[13px] leading-5 text-white sm:text-base md:mb-10 md:text-xl md:leading-relaxed">
-            Explore homes for sale, compare the details that matter, and contact the people
-            responsible for the property.
+          <h3 className="mt-4 text-2xl font-bold md:text-3xl">Looking for a home?</h3>
+          <p className="mt-3 flex-1 text-sm leading-6 text-slate-800 md:text-base md:leading-7">
+            Search homes for sale and to rent, then contact the agent directly.
           </p>
-          <div className="flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
-            <Button
-              size="lg"
-              onClick={onBrowse}
-              className="h-auto w-full rounded-full bg-white px-5 py-3.5 text-sm font-bold text-[#2774AE] shadow-2xl transition-all hover:-translate-y-1 hover:scale-[1.01] hover:bg-blue-50 sm:w-auto sm:px-8 sm:py-5 sm:text-base md:text-lg"
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <a
+              href="/property-for-sale"
+              onClick={handleBrowse}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-[#1f5f94] px-7 text-sm font-bold text-white transition hover:bg-[#174d7b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1f5f94] focus-visible:ring-offset-2 md:text-base"
             >
-              Browse homes for sale
-            </Button>
-            <Button
-              asChild
-              size="lg"
-              variant="outline"
-              className="h-auto min-h-11 w-full rounded-full border-white/70 bg-transparent px-5 py-3.5 text-sm font-bold text-white shadow-none transition-all hover:bg-white/15 hover:text-white sm:w-auto sm:px-8 sm:py-5 sm:text-base md:text-lg"
+              Browse homes for sale <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </a>
+            <a
+              href="/property-to-rent"
+              className="inline-flex min-h-11 items-center justify-center text-sm font-bold text-[#1f5f94] underline underline-offset-4 hover:text-[#174d7b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1f5f94] md:text-base"
             >
-              <a href="/advertise">List with us</a>
-            </Button>
+              Homes to rent
+            </a>
+          </div>
+        </div>
+
+        <div className="flex flex-col bg-gradient-to-br from-slate-950 via-slate-900 to-[#0f4c81] p-6 text-white sm:p-8 md:p-10">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/10 text-white">
+            <KeyRound className="h-5 w-5" aria-hidden="true" />
+          </div>
+          <h3 className="mt-4 text-2xl font-bold md:text-3xl">Have a property to list?</h3>
+          <p className="mt-3 flex-1 text-sm leading-6 text-white md:text-base md:leading-7">
+            Agents, agencies and developers can see how to list. Owners can find an agent to list
+            for them.
+          </p>
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <a
+              href="/advertise"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-white px-7 text-sm font-bold text-slate-900 transition hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 md:text-base"
+            >
+              List with us <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </a>
+            <a
+              href="/agents"
+              className="inline-flex min-h-11 items-center justify-center text-sm font-bold text-white underline underline-offset-4 hover:text-blue-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white md:text-base"
+            >
+              Find an agent
+            </a>
           </div>
         </div>
       </div>

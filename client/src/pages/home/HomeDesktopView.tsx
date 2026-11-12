@@ -4,8 +4,8 @@ import { TopDevelopers } from '@/components/TopDevelopers';
 import { ExploreCities } from '@/components/ExploreCities';
 import { ContentRail } from '@/components/layout/ContentRail';
 import { CTASection } from '@/sections/home/CTASection';
-import { ProfessionalEntrySection } from '@/sections/home/ProfessionalEntrySection';
-import { HomeJourneySection } from '@/sections/home/HomeJourneySection';
+import { ListWithUsSection } from '@/sections/home/ListWithUsSection';
+import { WhyPropertyListifySection } from '@/sections/home/WhyPropertyListifySection';
 import { HomeTrendingSection } from '@/sections/home/HomeTrendingSection';
 import type { HeroTab } from '@/types/hero';
 import { HomeMarketInsightsSection } from '@/sections/home/HomeMarketInsightsSection';
@@ -40,8 +40,8 @@ export function HomeDesktopView({
         <TopDevelopers selectedProvince={selectedProvince} />
         <ExploreCities withinContentRail />
         <HomeMarketInsightsSection />
-        <HomeJourneySection />
-        <ProfessionalEntrySection />
+        <WhyPropertyListifySection />
+        <ListWithUsSection />
         <CTASection onBrowse={onBrowseProperties} />
       </ContentRail>
     </section>
