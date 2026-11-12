@@ -468,10 +468,11 @@ describe('EnhancedHero explicit journey selection', () => {
     expect(rentPanel).not.toContain('Furnished Only');
   });
 
-  it('shows a List with us link to /advertise and labels the location input', () => {
+  it('labels the journey group and location input, with no List with us link or tools panel', () => {
     render(<EnhancedHero />);
 
-    expect(screen.getByRole('link', { name: /list with us/i })).toHaveAttribute('href', '/advertise');
+    expect(screen.getByRole('group', { name: 'What are you looking for?' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /list with us/i })).not.toBeInTheDocument();
     expect(
       screen.getByText(/where do you want to look\? search by city, suburb or area/i).tagName,
     ).toBe('LABEL');

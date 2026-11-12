@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Link, useLocation } from 'wouter';
+import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import {
@@ -10,7 +10,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  ArrowRight,
   BadgeCheck,
   Bath,
   BedDouble,
@@ -771,30 +770,15 @@ export function EnhancedHero({
             {subtitle ||
               'Search homes for sale and to rent, explore areas, and connect with trusted property professionals.'}
           </p>
-          <p className="mt-3">
-            <Link
-              href="/advertise"
-              className="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold text-blue-700 underline-offset-4 hover:bg-blue-50 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
-            >
-              List with us
-              <ArrowRight className="h-4 w-4" aria-hidden="true" />
-            </Link>
-          </p>
         </header>
         <div
           style={{ maxWidth: 'var(--plds-home-hero-search-max-width, 1180px)' }}
           className="mx-auto mt-8 w-full sm:mt-10"
         >
-          <p
-            id="homepage-journey-label"
-            className="mb-3 text-center text-sm font-semibold text-slate-700"
-          >
-            What are you looking for?
-          </p>
           <div className="overflow-x-auto px-1 pb-2 [scrollbar-width:none]">
             <div
               role="group"
-              aria-labelledby="homepage-journey-label"
+              aria-label="What are you looking for?"
               className="flex min-w-max w-fit items-center gap-1 rounded-2xl border border-slate-200/90 bg-white/95 p-1.5 shadow-[0_10px_24px_-18px_rgba(15,23,42,0.45)] backdrop-blur-sm sm:mx-auto"
             >
               {categories.map(category => {

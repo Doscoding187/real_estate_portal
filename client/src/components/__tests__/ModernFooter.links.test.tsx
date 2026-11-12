@@ -23,6 +23,33 @@ describe('ModernFooter explore and professional links', () => {
     );
   });
 
+  it('lists published city pages after the provinces', () => {
+    render(<ModernFooter />);
+    const nav = screen.getByRole('navigation', { name: 'Explore by area footer navigation' });
+    const labels = within(nav)
+      .getAllByRole('link')
+      .map(link => link.textContent);
+
+    expect(labels.slice(0, 3)).toEqual(['Gauteng', 'Western Cape', 'KwaZulu-Natal']);
+    expect(labels.at(-1)).toBe('All areas');
+    expect(within(nav).getByRole('link', { name: 'Johannesburg' })).toHaveAttribute(
+      'href',
+      '/gauteng/johannesburg',
+    );
+    expect(within(nav).getByRole('link', { name: 'Pretoria' })).toHaveAttribute(
+      'href',
+      '/gauteng/pretoria',
+    );
+    expect(within(nav).getByRole('link', { name: 'Cape Town' })).toHaveAttribute(
+      'href',
+      '/western-cape/cape-town',
+    );
+    expect(within(nav).getByRole('link', { name: 'Durban' })).toHaveAttribute(
+      'href',
+      '/kwazulu-natal/durban',
+    );
+  });
+
   it('always links the role pages and referrals', () => {
     render(<ModernFooter />);
     const nav = screen.getByRole('navigation', { name: 'Professionals footer navigation' });

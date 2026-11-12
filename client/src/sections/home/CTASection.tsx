@@ -23,13 +23,21 @@ export function CTASection({ onBrowse }: CTASectionProps) {
             Explore homes for sale, compare the details that matter, and contact the people
             responsible for the property.
           </p>
-          <div className="flex items-center justify-center">
+          <div className="flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
             <Button
               size="lg"
               onClick={onBrowse}
               className="h-auto w-full rounded-full bg-white px-5 py-3.5 text-sm font-bold text-[#2774AE] shadow-2xl transition-all hover:-translate-y-1 hover:scale-[1.01] hover:bg-blue-50 sm:w-auto sm:px-8 sm:py-5 sm:text-base md:text-lg"
             >
               Browse homes for sale
+            </Button>
+            <Button
+              asChild
+              size="lg"
+              variant="outline"
+              className="h-auto min-h-11 w-full rounded-full border-white/70 bg-transparent px-5 py-3.5 text-sm font-bold text-white shadow-none transition-all hover:bg-white/15 hover:text-white sm:w-auto sm:px-8 sm:py-5 sm:text-base md:text-lg"
+            >
+              <a href="/advertise">List with us</a>
             </Button>
           </div>
         </div>

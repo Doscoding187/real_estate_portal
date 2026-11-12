@@ -1,5 +1,6 @@
 import { Link } from 'wouter';
 import { isHomepageHeroJourneyEnabled } from '@/lib/publicNavigation';
+import { CITY_GUIDES } from '@/lib/cityGuides';
 import {
   SUPPORT_EMAIL,
   SUPPORT_PHONE_DISPLAY,
@@ -21,11 +22,28 @@ const marketplaceLinks = [
   { label: 'Advertise / List Property', href: '/advertise' },
 ];
 
-/** Provinces only: each slug is in PROVINCE_SLUGS and served by the /:province route. */
+/**
+ * Provinces (each slug is in PROVINCE_SLUGS and served by the /:province route), then cities
+ * whose public page is published (see CITY_GUIDES), then the national list.
+ */
+const FOOTER_CITY_SLUGS = [
+  'johannesburg',
+  'pretoria',
+  'cape-town',
+  'durban',
+  'sandton',
+  'gqeberha',
+  'bloemfontein',
+  'centurion',
+];
 const areaLinks = [
   { label: 'Gauteng', href: '/gauteng' },
   { label: 'Western Cape', href: '/western-cape' },
   { label: 'KwaZulu-Natal', href: '/kwazulu-natal' },
+  ...FOOTER_CITY_SLUGS.flatMap(slug => {
+    const city = CITY_GUIDES.find(guide => guide.slug === slug);
+    return city ? [{ label: city.name, href: city.href }] : [];
+  }),
   { label: 'All areas', href: '/south-africa' },
 ];
 
