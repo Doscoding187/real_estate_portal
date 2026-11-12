@@ -75,6 +75,31 @@ describe('developmentUnitTypeCards', () => {
     expect(card.unitType.developmentName).toBe('Oak Gardens');
   });
 
+  it('sends yard size, parking and the unit row structural type when present', () => {
+    const item = development({}, [unit({ yardSize: 120, parkingBays: 2, structuralType: 'duplex' })]);
+    const [card] = developmentUnitTypeCards(item, { listingType: 'sale' });
+    expect(card.unitType).toMatchObject({
+      yardSizeM2: 120,
+      parking: 2,
+      structuralType: 'duplex',
+      availableUnits: 4,
+    });
+  });
+
+  it('sends null for yard, parking and structural type when null, zero or absent', () => {
+    const item = development({}, [
+      unit({ id: 'n', yardSize: null, parkingBays: 0, structuralType: null }),
+      unit({ id: 'a' }),
+    ]);
+    const cards = developmentUnitTypeCards(item, { listingType: 'sale' });
+    for (const card of cards) {
+      expect(card.unitType.yardSizeM2).toBeNull();
+      expect(card.unitType.parking).toBeNull();
+      expect(card.unitType.structuralType).toBeNull();
+      expect(card.unitType.availableUnits).toBe(4);
+    }
+  });
+
   it('uses the rent price for rent developments and drops sale developments for a rent request', () => {
     const rent = development({ transactionType: 'for_rent' }, [unit({ priceFrom: 9500 })]);
     expect(developmentUnitTypeCards(rent, { listingType: 'rent' })[0].price).toBe(9500);
