@@ -336,6 +336,9 @@ export class PublicDevelopmentSearchService {
             reservedUnits: unitTypes.reservedUnits,
             displayOrder: unitTypes.displayOrder,
             unitSize: unitTypes.unitSize,
+            yardSize: unitTypes.yardSize,
+            parkingBays: unitTypes.parkingBays,
+            structuralType: unitTypes.structuralType,
           })
           .from(unitTypes)
           .where(and(inArray(unitTypes.developmentId, developmentIds), eq(unitTypes.isActive, 1)))
@@ -363,13 +366,40 @@ export class PublicDevelopmentSearchService {
       )
       .filter((item): item is PublicDevelopmentSearchItem => Boolean(item));
     if (input.includeUnitSize) {
-      const sizeByUnit = new Map<string, number | null>();
-      for (const unit of unitRows) sizeByUnit.set(String(unit.id), finiteNumber(unit.unitSize));
+      const factsByUnit = new Map<
+        string,
+        {
+          unitSize: number | null;
+          yardSize: number | null;
+          parkingBays: number | null;
+          structuralType: string | null;
+        }
+      >();
+      const positive = (value: unknown) => {
+        const parsed = finiteNumber(value);
+        return parsed !== null && parsed > 0 ? parsed : null;
+      };
+      for (const unit of unitRows) {
+        factsByUnit.set(String(unit.id), {
+          unitSize: finiteNumber(unit.unitSize),
+          yardSize: positive(unit.yardSize),
+          // parking_bays defaults to 0, which cannot be told apart from "not
+          // recorded", so only a positive count is sent.
+          parkingBays: positive(unit.parkingBays),
+          structuralType: unit.structuralType ? String(unit.structuralType) : null,
+        });
+      }
       for (const item of items) {
-        item.unitTypes = item.unitTypes.map(unit => ({
-          ...unit,
-          unitSize: sizeByUnit.get(String(unit.id)) ?? null,
-        }));
+        item.unitTypes = item.unitTypes.map(unit => {
+          const facts = factsByUnit.get(String(unit.id));
+          return {
+            ...unit,
+            unitSize: facts?.unitSize ?? null,
+            yardSize: facts?.yardSize ?? null,
+            parkingBays: facts?.parkingBays ?? null,
+            structuralType: facts?.structuralType ?? null,
+          };
+        });
       }
     }
     const developmentFilters = developmentFiltersFromInput(input);

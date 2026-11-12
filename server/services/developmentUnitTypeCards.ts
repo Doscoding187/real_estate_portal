@@ -7,6 +7,9 @@ import type {
 /** A unit type row as returned by the search service when unit sizes are requested. */
 export type PublicDevelopmentSearchUnitWithSize = PublicDevelopmentSearchUnit & {
   unitSize?: number | null;
+  yardSize?: number | null;
+  parkingBays?: number | null;
+  structuralType?: string | null;
 };
 
 /**
@@ -23,6 +26,12 @@ export type DevelopmentUnitTypeCard = SearchCardResult & {
     bedrooms: number | null;
     bathrooms: number | null;
     unitSizeM2: number | null;
+    /** The unit type's own yard/erf size; null when not recorded. */
+    yardSizeM2: number | null;
+    /** Parking bays recorded on the unit type; null when not recorded (0 is treated as not recorded). */
+    parking: number | null;
+    /** The unit row's own structural type (e.g. 'apartment'); null when absent. Not derived from the development. */
+    structuralType: string | null;
     priceFrom: number;
     availableUnits: number | null;
   };
@@ -132,6 +141,9 @@ export function developmentUnitTypeCards(
         bedrooms: unit.bedrooms ?? null,
         bathrooms: unit.bathrooms ?? null,
         unitSizeM2: unitSize,
+        yardSizeM2: finitePositive(unit.yardSize),
+        parking: finitePositive(unit.parkingBays),
+        structuralType: unit.structuralType ? String(unit.structuralType) : null,
         priceFrom: price,
         availableUnits: unit.availableUnits ?? null,
       },
