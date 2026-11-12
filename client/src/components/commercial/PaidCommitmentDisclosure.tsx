@@ -34,7 +34,8 @@ export function PaidCommitmentDisclosure({
         displayed price is payable once by manual EFT for 90 days, with no automatic renewal. Access
         starts after finance matches received funds to the invoice and approves payment; uploading
         proof alone does not activate access. Property Listify is not VAT registered; no VAT is
-        charged. Cancellation and refund terms are in the linked Terms. For payment help,{' '}
+        charged. You may cancel within 7 days of payment for a full refund; other refunds are
+        handled under the linked Terms. For payment help,{' '}
         <a className="underline" href="mailto:support@propertylistifysa.co.za">
           support@propertylistifysa.co.za
         </a>

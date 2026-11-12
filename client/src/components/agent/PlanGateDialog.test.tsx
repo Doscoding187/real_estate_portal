@@ -144,7 +144,9 @@ describe('PlanGateDialog', () => {
     if (step === 2) {
       expect(screen.getByTestId('payment-reference')).toHaveTextContent('PLI-REF-9');
       expect(
-        screen.getByText('Use this exact reference. It identifies your account.'),
+        screen.getByText(
+          'Use the reference shown exactly. We match payments by reference; a missing or wrong reference delays activation.',
+        ),
       ).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Copy payment reference' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Copy account number' })).toBeInTheDocument();
@@ -344,7 +346,9 @@ describe('existing payment reference when sales are paused or blocked', () => {
     withInvoice();
     render(<PlanGateDialog open onOpenChange={vi.fn()} />);
     const notice = screen.getByTestId('payment-cancellation-notice');
-    expect(notice).toHaveTextContent('Cancellations and refunds are handled under our Terms.');
+    expect(notice).toHaveTextContent(
+      'You may cancel within 7 days of payment for a full refund. Other refunds are handled under our Terms.',
+    );
     expect(screen.getByRole('link', { name: 'Terms' })).toHaveAttribute('href', '/legal/terms');
   });
 
