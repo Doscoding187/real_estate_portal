@@ -314,7 +314,7 @@ function PlanGateHeader({ earlyAccess }: { earlyAccess: boolean }) {
       <DialogTitle>{earlyAccess ? 'Early access' : 'Get access'}</DialogTitle>
       <DialogDescription>
         {earlyAccess
-          ? "Agent Launch Access is open now. You're one of the first agents on PropertyListify."
+          ? "Agent Launch Access is open now. You're one of the first agents on Property Listify."
           : 'Your profile is open. A plan unlocks listings, publishing and enquiries.'}
       </DialogDescription>
     </DialogHeader>
