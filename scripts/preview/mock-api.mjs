@@ -273,8 +273,43 @@ function listPublishers(input) {
   return { json: publishers };
 }
 
+const BAND_DEFINITIONS = [
+  { key: 'under_1m', label: 'Under R1m', minPrice: 0, maxPrice: 1_000_000 },
+  { key: '1m_2m', label: 'R1m – R2m', minPrice: 1_000_000, maxPrice: 2_000_000 },
+  { key: '2m_5m', label: 'R2m – R5m', minPrice: 2_000_000, maxPrice: 5_000_000 },
+  { key: '5m_10m', label: 'R5m – R10m', minPrice: 5_000_000, maxPrice: 10_000_000 },
+  { key: 'over_10m', label: 'Over R10m', minPrice: 10_000_000, maxPrice: null },
+];
+
+// MOCK_EMPTY_INSIGHTS=1: no city has enough homes (the server returns an empty list).
+// MOCK_LEGACY_API=1: the procedure does not exist yet on the deployed API (tRPC NOT_FOUND).
+class ProcedureMissing extends Error {}
+
+function getHomepageCityInsights(input) {
+  if (LEGACY_API) throw new ProcedureMissing('homeMarketInsights.getHomepageCityInsights');
+  if (process.env.MOCK_EMPTY_INSIGHTS === '1') return { json: [] };
+  const fixture = loadFixture('getHomepageCityInsights');
+  const computedAt = new Date(Date.now() - 12 * 60 * 1000).toISOString();
+  const cities = fixture.cities
+    .slice(0, Number(input?.limit) || fixture.cities.length)
+    .map(city => {
+      const { bandCounts, ...rest } = city;
+      return {
+        ...rest,
+        askingPriceBands: BAND_DEFINITIONS.map((band, index) => ({
+          ...band,
+          count: bandCounts[index] ?? 0,
+        })),
+        computedAt,
+        sample: true,
+      };
+    });
+  return { json: cities };
+}
+
 // Procedure name -> handler(input) returning a superjson payload { json, meta? }.
 const PROCEDURES = {
+  'homeMarketInsights.getHomepageCityInsights': getHomepageCityInsights,
   'properties.searchPublicInventory': searchPublicInventory,
   'cataloguePublisher.listPublishers': listPublishers,
   // Signed-out visitor: the real auth.me returns null without a session.
@@ -303,6 +338,10 @@ function runProcedure(path, input) {
   try {
     payload = handler(input);
   } catch (error) {
+    if (error instanceof ProcedureMissing) {
+      console.log(`[mock-api] legacy NOT_FOUND for ${path}`);
+      return { status: 404, body: notFoundError(path) };
+    }
     if (!(error instanceof InputRejected)) throw error;
     console.log(`[mock-api] legacy BAD_REQUEST for ${path}`);
     return {

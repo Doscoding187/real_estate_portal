@@ -2,7 +2,7 @@
 // Self-test for scripts/preview/mock-api.mjs. LOCAL PREVIEW ONLY.
 // Start the mock on a spare port first (PORT=5055 node scripts/preview/mock-api.mjs), then: MOCK_PORT=5055 node scripts/preview/selftest.mjs
 // Exits non-zero on the first failed check.
-const PORT = Number(process.env.MOCK_PORT || 5055);
+const PORT = Number(process.env.MOCK_PORT || process.env.PORT || 5055);
 const BASE = `http://127.0.0.1:${PORT}`;
 const GAUTENG = 'pl-place-01-131e3e75ad70424e0f9c869a';
 const LIMPOPO = 'pl-place-01-191d11b42d5b13319fa7fca2';
@@ -270,6 +270,51 @@ if (LEGACY) {
         Number.isInteger(item.launchingSoon),
     ),
   );
+}
+
+// Market insights. Start the mock with the same MOCK_LEGACY_API / MOCK_EMPTY_INSIGHTS values you give
+// the self-test.
+{
+  const response = await fetch(
+    trpcUrl(['homeMarketInsights.getHomepageCityInsights'], { 0: { json: { limit: 8 } } }),
+  );
+  const body = await response.json();
+  const cities = body?.[0]?.result?.data?.json;
+  if (LEGACY) {
+    check(
+      'insights: NOT_FOUND on the older API',
+      response.status === 404 && body?.[0]?.error?.json?.data?.code === 'NOT_FOUND',
+    );
+  } else if (process.env.MOCK_EMPTY_INSIGHTS === '1') {
+    check('insights: empty list', Array.isArray(cities) && cities.length === 0);
+  } else {
+    check(
+      'insights: 4 cities with 5 bands that add up to activeSaleListings',
+      Array.isArray(cities) &&
+        cities.map(city => city.name).join() === 'Johannesburg,Cape Town,Pretoria,Durban' &&
+        cities.every(
+          city =>
+            city.askingPriceBands.length === 5 &&
+            city.askingPriceBands.reduce((sum, band) => sum + band.count, 0) ===
+              city.activeSaleListings &&
+            typeof city.medianAskingPrice === 'number' &&
+            typeof city.computedAt === 'string',
+        ),
+    );
+    check(
+      'insights: one city without per-m2, one locality without href, one city without href',
+      cities?.filter(city => city.typicalPricePerM2 === null).length === 1 &&
+        cities?.filter(city => city.leadingLocality && city.leadingLocality.href === null)
+          .length === 1 &&
+        cities?.filter(city => city.href === null).length === 1,
+    );
+    const limited = await (
+      await fetch(
+        trpcUrl(['homeMarketInsights.getHomepageCityInsights'], { 0: { json: { limit: 2 } } }),
+      )
+    ).json();
+    check('insights: limit is respected', limited?.[0]?.result?.data?.json?.length === 2);
+  }
 }
 
 const unknown = await fetch(trpcUrl(['nope.missing'], { 0: { json: null } }));

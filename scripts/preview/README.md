@@ -23,12 +23,14 @@ Set `PORT` to move the mock off 5000, and point `VITE_API_URL` at the same port.
 
 ## What it feeds
 
-| Procedure                           | Homepage section                                             |
-| ----------------------------------- | ------------------------------------------------------------ |
-| `properties.searchPublicInventory`  | Explore property (Buy and Rent rails, by province)           |
-| `cataloguePublisher.listPublishers` | Explore real estate developers                               |
-| `auth.me`                           | Signed-out visitor (returns `null`)                          |
-| `GET /api/readiness`                | Maintenance gate (returns `{ kind: 'readiness', ok: true }`) |
+| Procedure                                    | Homepage section                                             |
+| -------------------------------------------- | ------------------------------------------------------------ |
+| `properties.searchPublicInventory`           | Explore property (Buy and Rent rails, by province)           |
+| `cataloguePublisher.listPublishers`          | Explore real estate developers                               |
+| `homeMarketInsights.getHomepageCityInsights` | Property price insights (city pills and three cards)         |
+| `homeMarketInsights.getHomepageCityInsights` | Property price insights (city pills, three cards)            |
+| `auth.me`                                    | Signed-out visitor (returns `null`)                          |
+| `GET /api/readiness`                         | Maintenance gate (returns `{ kind: 'readiness', ok: true }`) |
 
 Gauteng and Western Cape have 8 sale and 6 rent listings, KwaZulu-Natal has 3 sale, every other
 province is empty (so the empty state can be reviewed). Any other procedure returns a tRPC
@@ -60,6 +62,18 @@ MOCK_LEGACY_API=1 node scripts/preview/mock-api.mjs
 
 The fallback is remembered per page load, so reload the page after switching the mock.
 
+## Property price insights switches
+
+`homeMarketInsights.getHomepageCityInsights` returns four sample cities (Johannesburg, Cape Town,
+Pretoria, Durban; `fixtures/getHomepageCityInsights.json`). Cape Town has no price per m², its
+leading locality has no page, and Durban has no city page, so the "leave it out" cases are visible.
+
+- `MOCK_LEGACY_API=1` answers this procedure with `NOT_FOUND` (an API that does not have it yet);
+  the section shows its empty state.
+- `MOCK_EMPTY_INSIGHTS=1` returns an empty list; the section shows its empty state.
+
+Restart the mock after changing either switch.
+
 ## Add or change a fixture
 
 Fixtures are JSON files in `scripts/preview/fixtures/`, read on every request (no restart needed).
@@ -78,6 +92,9 @@ Start the mock on a spare port, then run the checks (exits non-zero on failure):
 PORT=5055 node scripts/preview/mock-api.mjs &
 MOCK_PORT=5055 node scripts/preview/selftest.mjs
 ```
+
+The self-test also checks the insights procedure; give it the same `MOCK_LEGACY_API` or
+`MOCK_EMPTY_INSIGHTS` value as the mock. `PORT=5055` works for the self-test as well as `MOCK_PORT`.
 
 Run it a second time against `MOCK_LEGACY_API=1 PORT=5055 node scripts/preview/mock-api.mjs` with
 `MOCK_LEGACY_API=1 MOCK_PORT=5055 node scripts/preview/selftest.mjs` to check the legacy rejections.
