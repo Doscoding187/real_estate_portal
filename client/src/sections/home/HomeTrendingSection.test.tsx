@@ -259,11 +259,11 @@ describe('HomeTrendingSection', () => {
     // One badge only: the transaction is already in the section heading.
     expect(screen.queryByText('For sale')).not.toBeInTheDocument();
     expect(screen.queryByText('To rent')).not.toBeInTheDocument();
-    // No yard or parking sent, so the fourth item is the availability.
+    // No parking or stand size sent, so there is no fourth item (never the available count).
     expect(screen.getByText('64 m²')).toBeInTheDocument();
     expect(screen.getByText('2 Bed')).toBeInTheDocument();
     expect(screen.getByText('1 Bath')).toBeInTheDocument();
-    expect(screen.getByText('3 available')).toBeInTheDocument();
+    expect(screen.queryByText(/available/)).not.toBeInTheDocument();
     expect(screen.getByText('2-bed Apartment')).toBeInTheDocument();
     expect(screen.getByText('Sample Heights · Sandton')).toBeInTheDocument();
     expect(screen.getByText(/^From R/)).toBeInTheDocument();
@@ -276,7 +276,7 @@ describe('HomeTrendingSection', () => {
     expect(screen.queryByText('House')).not.toBeInTheDocument();
   });
 
-  it('picks the fourth unit-type detail as yard, then parking, then availability', () => {
+  it('picks the fourth unit-type detail as parking, then stand size, then nothing', () => {
     const card = (id: string, extra: Record<string, unknown>) => ({
       kind: 'development',
       id,
@@ -301,7 +301,7 @@ describe('HomeTrendingSection', () => {
       data: {
         cards: [
           card('a', { yardSizeM2: 220, parking: 2 }),
-          card('b', { parking: 2 }),
+          card('b', { yardSizeM2: 340 }),
           card('c', { availableUnits: null }),
         ],
       },
@@ -311,9 +311,11 @@ describe('HomeTrendingSection', () => {
     });
     renderSection();
 
-    expect(screen.getByText('220 m² yard')).toBeInTheDocument();
+    // a: parking wins over stand size. b: stand size only. c: neither, so no fourth item.
     expect(screen.getAllByText('2 Parking')).toHaveLength(1);
-    expect(screen.queryByText('3 available')).not.toBeInTheDocument();
+    expect(screen.queryByText('220 m²')).not.toBeInTheDocument();
+    expect(screen.getByText('340 m²')).toBeInTheDocument();
+    expect(screen.queryByText(/available/)).not.toBeInTheDocument();
     expect(screen.getAllByText('64 m²')).toHaveLength(3);
   });
 

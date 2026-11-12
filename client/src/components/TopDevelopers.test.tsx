@@ -214,6 +214,14 @@ describe('TopDevelopers homepage section', () => {
       expect(screen.getByText('4 active · 2 selling now · 1 launching soon')).toBeInTheDocument();
       expect(screen.getAllByText('Selling now')).toHaveLength(1);
       expect(screen.queryByText('Launching soon')).not.toBeInTheDocument();
+      // The chip has its own line under the stat line, and every card reserves that line.
+      const chipLines = screen.getAllByTestId('developer-chip-line');
+      expect(chipLines).toHaveLength(2);
+      expect(within(chipLines[0]).getByText('Selling now')).toBeInTheDocument();
+      expect(chipLines[1]).toBeEmptyDOMElement();
+      expect(chipLines[0].previousElementSibling).toHaveTextContent(
+        '4 active · 2 selling now · 1 launching soon',
+      );
       expect(screen.queryByText(/View local projects/)).not.toBeInTheDocument();
       expect(screen.queryByText(/public project/)).not.toBeInTheDocument();
     });

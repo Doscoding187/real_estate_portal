@@ -173,9 +173,14 @@ function DeveloperCard({
         </span>
       </div>
 
-      {statLine || chip ? (
-        <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1.5">
-          {statLine ? <span className="text-xs text-slate-600">{statLine}</span> : null}
+      {/* The stat line and the status chip each have a fixed line, so a row of cards lines up. The
+          chip line keeps its height when a card has no chip. */}
+      <div className="mt-3">
+        <p className="min-h-[1rem] text-xs leading-4 text-slate-600">{statLine}</p>
+        <div
+          data-testid="developer-chip-line"
+          className="mt-1.5 flex min-h-[1.375rem] items-center"
+        >
           {chip ? (
             <span
               className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
@@ -186,7 +191,7 @@ function DeveloperCard({
             </span>
           ) : null}
         </div>
-      ) : null}
+      </div>
 
       {projectThumbnails}
 

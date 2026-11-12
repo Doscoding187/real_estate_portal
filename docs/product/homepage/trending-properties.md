@@ -31,7 +31,7 @@ The section has **no tabs of its own for journeys**. It follows the **hero journ
 - Price is the unit type's own "from" price (or monthly rent from). Never invent a price; no price, no card.
 - Links to that unit type on the development page.
 
-**New-development card (owner decision, 2026-11-12, card 61):** the same frame, width, radius and border as a listing card. **One badge only: "New development"** (no "For sale" or "To rent"; the section heading already says it). Four details in the bottom row, like a normal card: size, beds, baths, then **one fourth item chosen in this order: yard size, parking, "{n} available"**. Anything the data does not state is left out, so a card may show three details. No property type is shown, because the server's value on a unit card is a development-level guess. No heart for now. The yard and parking fields are optional: an older API does not send them. _Future:_ saving a unit type (needs a decision on how the favourites table is keyed) and project thumbnails on the developer card.
+**New-development card (owner decision, 2026-11-12, card 61):** the same frame, width, radius and border as a listing card. **One badge only: "New development"** (no "For sale" or "To rent"; the section heading already says it). Four details in the bottom row, like a normal card: size, beds, baths, then **one fourth item chosen in this order: parking ("1 Parking"), else stand size (shown like a listing card's erf size, "220 m²"), else nothing** (owner decision 2026-11-12: never the available count). Anything the data does not state is left out, so a card may show three details. No property type is shown, because the server's value on a unit card is a development-level guess. No heart for now. The yard and parking fields are optional: an older API does not send them. _Future:_ saving a unit type (needs a decision on how the favourites table is keyed) and project thumbnails on the developer card.
 
 **Mixing listings and unit types:**
 
@@ -86,5 +86,6 @@ Applied in this order:
 - **Before 2026-10-28:** section existed (`HomeTrendingSection`, fed by `developer.getHomeTrendingFeed`, filtered by province _name_, photo required, newest first).
 - **2026-10-28, PR #693 (`cbff3e7b3`):** removed from the homepage, together with the city cards and market insights, because it depended on the legacy province/city/suburb tables that were dropped (migrations 0175–0178). The reasoning for the section was not recorded anywhere, so it was lost. This file exists to prevent that.
 - **2026-11-12 (card 61):** new-development card reduced to one badge and a fourth detail (yard, parking, availability).
+- **2026-11-12 (owner decision):** the fourth detail is now parking, else stand size, else nothing; the "{n} available" fallback was removed.
 - **2026-11-12 (card 58):** page switched to the server's trending order, photo filter and unit-type cards, with the older-API fallback described in section 6.
 - **2026-11-12:** restored from the owner's screenshot (cards 44 and 44 rework), now addressing provinces by place id through `properties.searchPublicInventory`; owner set the revenue goal and the content rules above.

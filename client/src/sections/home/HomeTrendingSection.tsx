@@ -35,7 +35,7 @@ const positiveNumber = (value: unknown): number | null => {
 
 /**
  * Details row of a new-development card: size, beds, baths, then ONE fourth item, chosen in this
- * order: yard size, parking, "{n} available". Missing values are left out (never invented), so a
+ * order: parking, stand size, otherwise nothing (never the available count). Missing values are left out (never invented), so a
  * card may show fewer than four. The yard and parking fields are optional: an older API omits them.
  */
 function unitTypeDetails(
@@ -58,23 +58,21 @@ function unitTypeDetails(
   if (baths) {
     details.push({ key: 'baths', icon: PROPERTY_FACT_ICONS.bathrooms, label: `${baths} Bath` });
   }
-  const yard = positiveNumber(unitType.yardSizeM2);
   const parking = positiveNumber(unitType.parking);
-  const available = positiveNumber(unitType.availableUnits);
-  if (yard) {
-    details.push({
-      key: 'yard',
-      icon: PROPERTY_FACT_ICONS.landSize,
-      label: `${yard.toLocaleString('en-ZA')} m² yard`,
-    });
-  } else if (parking) {
+  const stand = positiveNumber(unitType.yardSizeM2);
+  if (parking) {
     details.push({
       key: 'parking',
       icon: PROPERTY_FACT_ICONS.parking,
       label: `${parking} Parking`,
     });
-  } else if (available) {
-    details.push({ key: 'available', icon: Building2, label: `${available} available` });
+  } else if (stand) {
+    // Stand (erf) size, shown the same way listing cards show it.
+    details.push({
+      key: 'stand',
+      icon: PROPERTY_FACT_ICONS.landSize,
+      label: `${stand.toLocaleString('en-ZA')} m²`,
+    });
   }
   return details;
 }
