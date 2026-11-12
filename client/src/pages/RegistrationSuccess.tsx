@@ -7,6 +7,7 @@
 import { useLocation } from 'wouter';
 import { CheckCircle, ArrowRight, Home, LayoutDashboard } from 'lucide-react';
 import { GradientButton } from '@/components/ui/GradientButton';
+import { SupportContactLinks } from '@/components/SupportContactLinks';
 
 interface RegistrationSuccessProps {
   role?: 'developer' | 'agency' | 'agent';
@@ -120,12 +121,7 @@ export default function RegistrationSuccess({ role = 'developer' }: Registration
           <div className="mt-8 text-center">
             <p className="text-sm text-gray-600">
               Need help? Contact our support team at{' '}
-              <a
-                href="mailto:support@example.com"
-                className="text-blue-600 hover:text-blue-700 font-medium"
-              >
-                support@example.com
-              </a>
+              <SupportContactLinks className="text-blue-600 hover:text-blue-700 font-medium" />
             </p>
           </div>
         </div>

@@ -115,7 +115,6 @@ const LovableIntegrationHub = lazy(() => import('./pages/LovableIntegrationHub')
 
 // Import the new Listing Wizard
 const ListingWizard = lazy(() => import('./components/listing-wizard/ListingWizard'));
-const ListingTemplate = lazy(() => import('./pages/ListingTemplate'));
 
 const DevelopmentsDemo = lazy(() => import('./pages/DevelopmentsDemo'));
 const DevelopmentDetail = lazy(() => import('./pages/DevelopmentDetail'));
@@ -412,7 +411,6 @@ function Router() {
               </AgentListingAccessGate>
             </RequireRole>
           </Route>
-          <Route path="/listing-template" component={ListingTemplate} />
           {/* Canonical Developments Root */}
           {/* Launch-held journeys render JourneyHeldPage; see LAUNCH_HELD_JOURNEYS */}
           <Route path="/new-developments">
