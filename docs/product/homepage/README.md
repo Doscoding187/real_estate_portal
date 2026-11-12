@@ -13,10 +13,10 @@ Visual reference for the homepage as designed: the owner's screenshot of the int
 | 3     | Browse by city, category and journey         | `client/src/components/DiscoverProperties.tsx`           | [browse-by-category.md](browse-by-category.md)   |
 | 4     | Developers                                   | `client/src/components/TopDevelopers.tsx`                | [developers.md](developers.md)                   |
 | 5     | Explore South Africa by area (compact tiles) | `client/src/components/ExploreCities.tsx`                | [explore-by-area.md](explore-by-area.md)         |
-| 6     | Property market insights                     | `client/src/sections/home/HomeMarketInsightsSection.tsx` | _to write_                                       |
-| 7     | Connected property journey                   | `client/src/sections/home/HomeJourneySection.tsx`        | _to write_                                       |
-| 8     | For property professionals                   | `client/src/sections/home/ProfessionalEntrySection.tsx`  | _to write_                                       |
-| 9     | Closing call to action                       | `client/src/sections/home/CTASection.tsx`                | _to write_                                       |
+| 6     | Property market insights                     | `client/src/sections/home/HomeMarketInsightsSection.tsx` | [market-insights.md](market-insights.md)         |
+| 7     | Connected property journey                   | `client/src/sections/home/HomeJourneySection.tsx`        | [connected-journey.md](connected-journey.md)     |
+| 8     | For property professionals                   | `client/src/sections/home/ProfessionalEntrySection.tsx`  | [professionals.md](professionals.md)             |
+| 9     | Closing call to action                       | `client/src/sections/home/CTASection.tsx`                | [closing-cta.md](closing-cta.md)                 |
 
 Shared rules for every section:
 
