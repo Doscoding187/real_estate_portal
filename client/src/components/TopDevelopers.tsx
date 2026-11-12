@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'wouter';
 import { Building2, ArrowRight } from 'lucide-react';
+import { SectionEmptyState } from '@/components/ui/SectionEmptyState';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -46,11 +47,32 @@ export function TopDevelopers() {
   const selectedPlaceLabel = placeSelection?.label;
   const directoryHref = developerDiscoveryHref('/developers', selectedPlaceId);
   const scopeLabel = selectedPlaceLabel ? ` in ${selectedPlaceLabel}` : ' across South Africa';
-  // Render nothing while developments are held, or when there are no publishers to show
-  // (an unfiltered, successfully loaded empty list). A filtered empty list keeps the
-  // selector so the visitor can change the Place.
-  if (developmentsHeld) return null;
-  if (!isLoading && !isError && !profiles.length && !selectedPlaceId) return null;
+  // While developments are held, or when there are no publishers to show (an unfiltered,
+  // successfully loaded empty list), keep the section with a designed empty state.
+  // A filtered empty list keeps the selector so the visitor can change the area.
+  const showEmptyState =
+    developmentsHeld || (!isLoading && !isError && !profiles.length && !selectedPlaceId);
+  if (showEmptyState) {
+    return (
+      <section className="home-section bg-white">
+        <div className="home-section-content">
+          <div className="home-section-header">
+            <h2 className="home-section-title text-[1.125rem] font-bold text-slate-900 sm:text-xl md:text-[26px]">
+              Explore real estate developers
+            </h2>
+          </div>
+          <SectionEmptyState
+            icon={Building2}
+            message="New developments are launching soon."
+            action={{
+              label: 'Are you a developer? List your development',
+              href: '/advertise/sell/developers',
+            }}
+          />
+        </div>
+      </section>
+    );
+  }
   return (
     <section className="home-section bg-white">
       <div className="home-section-content">
@@ -73,9 +95,9 @@ export function TopDevelopers() {
             value={placeSelection}
             onChange={setPlaceSelection}
             purpose="search"
-            label="Filter projects by canonical Place"
-            placeholder="Search approved Places"
-            hint="Only projects with this exact reviewed Place assignment match."
+            label="Filter projects by area"
+            placeholder="Search areas"
+            hint="Only projects assigned to this exact area match."
           />
         </div>
         {isLoading ? (
@@ -112,7 +134,7 @@ export function TopDevelopers() {
               Developer profiles could not be loaded
             </h3>
             <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-600">
-              Please try again. Your selected Place is still here.
+              Please try again. Your selected area is still here.
             </p>
             <Button
               variant="outline"
@@ -208,7 +230,7 @@ export function TopDevelopers() {
                 : 'No developer profiles are available yet'}
             </h3>
             <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-600">
-              Choose another Place or browse the developer directory.
+              Choose another area or browse the developer directory.
             </p>
           </div>
         )}

@@ -5,6 +5,7 @@ const testState = vi.hoisted(() => ({
   query: {} as Record<string, unknown>,
   refetch: vi.fn(),
   queryInput: undefined as unknown,
+  queryOptions: undefined as unknown,
   placeId: 'pl-place-01-000000000000000000000001',
   developmentsEnabled: true,
 }));
@@ -22,8 +23,9 @@ vi.mock('@/lib/trpc', () => ({
   trpc: {
     cataloguePublisher: {
       listPublishers: {
-        useQuery: (input: unknown) => {
+        useQuery: (input: unknown, options: unknown) => {
           testState.queryInput = input;
+          testState.queryOptions = options;
           return testState.query;
         },
       },
@@ -101,24 +103,31 @@ describe('TopDevelopers canonical Place scope', () => {
     expect(testState.refetch).toHaveBeenCalledTimes(1);
   });
 
-  it('renders nothing when the publisher list is empty', () => {
+  it('shows a designed empty state when the publisher list is empty', () => {
     testState.query = { ...testState.query, data: [] };
 
-    const { container } = render(<TopDevelopers />);
+    render(<TopDevelopers />);
 
-    expect(container).toBeEmptyDOMElement();
+    expect(screen.getByRole('heading', { name: 'Explore real estate developers' })).toBeInTheDocument();
+    expect(screen.getByText('New developments are launching soon.')).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /Are you a developer\? List your development/ }),
+    ).toHaveAttribute('href', '/advertise/sell/developers');
   });
 
-  it('renders nothing while the developments journey is held', () => {
+  it('shows the same empty state, with no developer profiles, while developments are held', () => {
     testState.developmentsEnabled = false;
     testState.query = {
       ...testState.query,
       data: [{ id: 1, slug: 'local-builder', brandName: 'Local Builder', developmentCount: 3 }],
     };
 
-    const { container } = render(<TopDevelopers />);
+    render(<TopDevelopers />);
 
-    expect(container).toBeEmptyDOMElement();
+    expect(screen.getByRole('heading', { name: 'Explore real estate developers' })).toBeInTheDocument();
+    expect(screen.getByText('New developments are launching soon.')).toBeInTheDocument();
+    expect(screen.queryByText('Local Builder')).not.toBeInTheDocument();
+    expect(testState.queryOptions).toEqual({ enabled: false });
   });
 
   it('filters and carries links by the exact selected Place ID', () => {
