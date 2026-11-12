@@ -1,6 +1,7 @@
 import { Building2, Home, Landmark, Trees, type LucideIcon } from 'lucide-react';
 import { Link } from 'wouter';
 
+import { HomeLayout } from '@/layouts/HomeLayout';
 import { MetaControl } from '@/components/seo/MetaControl';
 import { SectionEmptyState } from '@/components/ui/SectionEmptyState';
 
@@ -26,8 +27,7 @@ interface ComingSoonJourneyContent {
 export const COMING_SOON_JOURNEYS: Record<ComingSoonJourneyKey, ComingSoonJourneyContent> = {
   shared_living: {
     heading: 'Shared living rooms',
-    intro:
-      'Find a room, cottage or small place to share, and list yours when you are ready.',
+    intro: 'Find a room, cottage or small place to share, and list yours when you are ready.',
     emptyMessage: 'No shared living rooms are listed yet.',
     actionLabel: 'Contact us',
     actionHref: '/contact',
@@ -77,42 +77,75 @@ export default function JourneyComingSoonPage({
   detail?: boolean;
 }) {
   const content = COMING_SOON_JOURNEYS[journey];
+  const backHref =
+    journey === 'plot_land'
+      ? '/plots-and-land'
+      : journey === 'commercial'
+        ? '/commercial'
+        : '/shared-living';
   return (
-    <main className="mx-auto max-w-3xl space-y-6 px-4 py-10 md:py-14" data-testid="journey-coming-soon">
-      <MetaControl title={content.title} description={content.description} forceNoIndex />
-      {detail ? (
-        <>
-          <h1 className="text-2xl font-bold text-slate-900 md:text-3xl">{content.notFoundHeading}</h1>
-          <p className="text-slate-700">
-            It may have been removed, or the address may be wrong.
-          </p>
-          <Link
-            href={journey === 'plot_land' ? '/plots-and-land' : journey === 'commercial' ? '/commercial' : '/shared-living'}
-            className="inline-flex min-h-11 items-center rounded-lg bg-[#2774AE] px-4 py-2 text-sm font-bold text-white hover:bg-[#1e5d8c]"
-          >
-            Back to {content.heading.toLowerCase()}
-          </Link>
-        </>
-      ) : (
-        <>
-          <h1 className="text-2xl font-bold text-slate-900 md:text-3xl">{content.heading}</h1>
-          <p className="text-base leading-7 text-slate-700">{content.intro}</p>
-          <SectionEmptyState
-            icon={content.icon}
-            message={content.emptyMessage}
-            action={{ label: content.actionLabel, href: content.actionHref }}
-          />
-        </>
-      )}
-      <p>
-        <Link
-          href="/property-for-sale"
-          className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[#2774AE] hover:underline"
-        >
-          <Landmark className="size-4" aria-hidden="true" />
-          Search homes for sale
-        </Link>
-      </p>
-    </main>
+    <HomeLayout>
+      <MetaControl title={content.title} description={content.description} noIndexFollow />
+      <main className="bg-white pt-24" data-testid="journey-coming-soon">
+        <section className="border-b border-slate-200 bg-slate-50">
+          <div className="container py-12 md:py-16">
+            <h1 className="max-w-4xl text-3xl font-semibold tracking-tight text-slate-950 md:text-5xl">
+              {detail ? content.notFoundHeading : content.heading}
+            </h1>
+            <p className="mt-4 max-w-3xl text-base leading-7 text-slate-700 md:text-lg">
+              {detail ? 'It may have been removed, or the address may be wrong.' : content.intro}
+            </p>
+            <div className="mt-8 max-w-3xl">
+              {detail ? (
+                <Link
+                  href={backHref}
+                  className="inline-flex min-h-11 items-center rounded-lg bg-[#2774AE] px-4 py-2 text-sm font-bold text-white hover:bg-[#1e5d8c]"
+                >
+                  Back to {content.heading.toLowerCase()}
+                </Link>
+              ) : (
+                <SectionEmptyState
+                  icon={content.icon}
+                  message={content.emptyMessage}
+                  action={{ label: content.actionLabel, href: content.actionHref }}
+                />
+              )}
+            </div>
+            <p className="mt-6">
+              <Link
+                href="/property-for-sale"
+                className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[#2774AE] hover:underline"
+              >
+                <Landmark className="size-4" aria-hidden="true" />
+                Search homes for sale
+              </Link>
+            </p>
+          </div>
+        </section>
+        <section className="container py-10" aria-labelledby="journey-meanwhile-heading">
+          <h2 id="journey-meanwhile-heading" className="text-lg font-semibold text-slate-950">
+            Meanwhile
+          </h2>
+          <ul className="mt-4 grid gap-3 sm:grid-cols-3">
+            {MEANWHILE_LINKS.map(link => (
+              <li key={link.href}>
+                <Link
+                  href={link.href}
+                  className="flex min-h-11 items-center rounded-lg border border-slate-200 bg-white p-4 text-sm font-semibold text-slate-900 hover:border-[#2774AE] hover:text-[#2774AE]"
+                >
+                  {link.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      </main>
+    </HomeLayout>
   );
 }
+
+const MEANWHILE_LINKS = [
+  { label: 'Homes for sale', href: '/property-for-sale' },
+  { label: 'Homes to rent', href: '/property-to-rent' },
+  { label: 'Find an agent', href: '/agents' },
+];

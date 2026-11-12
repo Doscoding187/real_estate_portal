@@ -464,9 +464,9 @@ export function DiscoverProperties({
               value={developmentPlace}
               onChange={setDevelopmentPlace}
               purpose="search"
-              label="Project Place"
-              placeholder="Search approved Places"
-              hint="Only developments assigned to this exact reviewed Place match."
+              label="Area"
+              placeholder="Search areas"
+              hint="Only developments in this area match."
             />
           </div>
         ) : null}

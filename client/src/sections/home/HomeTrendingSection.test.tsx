@@ -168,8 +168,8 @@ describe('HomeTrendingSection', () => {
     expect(screen.getByRole('heading', { level: 2, name: 'New developments' })).toBeInTheDocument();
     expect(screen.getByText('New developments are launching soon.')).toBeInTheDocument();
     expect(
-      screen.getByRole('link', { name: 'Are you a developer? List your development' }),
-    ).toHaveAttribute('href', '/advertise/sell/developers');
+      screen.getByRole('link', { name: 'Talk to us about listing your development' }),
+    ).toHaveAttribute('href', '/contact');
     expect(screen.queryByRole('button', { name: 'Gauteng' })).not.toBeInTheDocument();
     expect(useQuery.mock.calls.every(call => call[1]?.enabled === false)).toBe(true);
   });

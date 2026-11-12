@@ -65,8 +65,8 @@ export function TopDevelopers() {
             icon={Building2}
             message="New developments are launching soon."
             action={{
-              label: 'Are you a developer? List your development',
-              href: '/advertise/sell/developers',
+              label: 'Talk to us about listing your development',
+              href: '/contact',
             }}
           />
         </div>
@@ -85,7 +85,7 @@ export function TopDevelopers() {
             </h2>
             <p className="max-w-3xl text-xs leading-relaxed text-slate-600 md:text-sm">
               {selectedPlaceLabel
-                ? `Explore developers with publicly listed projects assigned to ${selectedPlaceLabel}.`
+                ? `Explore developers with publicly listed projects in ${selectedPlaceLabel}.`
                 : 'Explore developer profiles and publicly listed projects across South Africa.'}
             </p>
           </div>
@@ -226,7 +226,7 @@ export function TopDevelopers() {
             <Building2 className="mx-auto h-8 w-8 text-slate-400" aria-hidden="true" />
             <h3 className="mt-3 text-sm font-bold text-slate-900">
               {selectedPlaceLabel
-                ? `No developers with publicly listed projects assigned to ${selectedPlaceLabel} yet`
+                ? `No developers with publicly listed projects in ${selectedPlaceLabel} yet`
                 : 'No developer profiles are available yet'}
             </h3>
             <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-600">

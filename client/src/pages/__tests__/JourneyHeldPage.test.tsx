@@ -17,6 +17,9 @@ const hosted = {
 };
 const local = { hostedReleaseControlled: false, supplementalReleasedJourneys: [] };
 
+vi.mock('@/layouts/HomeLayout', () => ({
+  HomeLayout: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+}));
 vi.mock('@/components/seo/MetaControl', () => ({ MetaControl: () => null }));
 
 describe('HeldJourneyGate (guards /shared-living/*, /commercial/*)', () => {
@@ -40,6 +43,7 @@ describe('HeldJourneyGate (guards /shared-living/*, /commercial/*)', () => {
         'href',
         '/property-for-sale',
       );
+      expect(screen.getByRole('link', { name: 'Find an agent' })).toHaveAttribute('href', '/agents');
       expect(screen.queryByText('This section is not available yet')).not.toBeInTheDocument();
       expect(screen.queryByText('real page')).not.toBeInTheDocument();
     },

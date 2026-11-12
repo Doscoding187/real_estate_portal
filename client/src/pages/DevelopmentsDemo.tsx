@@ -203,9 +203,9 @@ export default function DevelopmentsDemo() {
     (hasRetiredGeography ||
     placeIds.length > 1 ||
     (placeIds.length === 1 && !selectedCanonicalPlaceId)
-      ? 'Choose one approved canonical Place. Text and legacy location filters are no longer supported.'
+      ? 'Choose one area from the suggestions to search.'
       : placeQueryUnselected
-        ? 'Select a Place from the results or clear the Place filter before searching.'
+        ? 'Select an area from the results or clear the area filter before searching.'
         : undefined);
   const hasLocationError = Boolean(
     intent.validation ||
@@ -423,9 +423,9 @@ export default function DevelopmentsDemo() {
                 value={placeSelection}
                 onChange={selectPlace}
                 purpose="search"
-                label="Project Place"
-                placeholder="Search approved Places"
-                hint="Only developments assigned to this exact reviewed Place match."
+                label="Area"
+                placeholder="Search areas"
+                hint="Only developments in this area match."
               />
             </div>
             {selectedCanonicalPlaceId ? (
@@ -433,12 +433,12 @@ export default function DevelopmentsDemo() {
                 <span>
                   {placeSelection?.canonicalPlaceId === selectedCanonicalPlaceId
                     ? `Searching ${placeSelection.label}`
-                    : 'Canonical Place filter active'}
+                    : 'Area filter active'}
                 </span>
                 <button
                   type="button"
                   onClick={clearPlace}
-                  aria-label="Clear development Place"
+                  aria-label="Clear area"
                   className="rounded-full p-0.5 hover:bg-blue-100"
                 >
                   <X className="h-4 w-4" />
@@ -448,7 +448,7 @@ export default function DevelopmentsDemo() {
           </div>
           {hasLocationError ? (
             <p className="mt-3 text-sm font-medium text-amber-700" role="status">
-              {locationMessage || 'The selected canonical Place could not be used.'}
+              {locationMessage || 'That area could not be used. Choose another area.'}
             </p>
           ) : null}
         </div>
@@ -538,7 +538,7 @@ export default function DevelopmentsDemo() {
                       )}
                       title={development.name}
                       rating={development.rating ?? undefined}
-                      location={development.locationLabels.join(', ') || 'Place assignment pending'}
+                      location={development.locationLabels.join(', ') || 'Area to be confirmed'}
                       description={development.description}
                       image={development.images[0] || PROPERTY_IMAGE_FALLBACK}
                       unitTypes={development.unitTypes.map(unit => ({
@@ -588,8 +588,8 @@ export default function DevelopmentsDemo() {
                 titleAs="h3"
                 message="No new developments are listed yet. Try another area or change your filters."
                 action={{
-                  label: 'Are you a developer? List your development',
-                  href: '/advertise/sell/developers',
+                  label: 'Talk to us about listing your development',
+                  href: '/contact',
                 }}
               />
             )}

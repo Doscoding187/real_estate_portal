@@ -760,7 +760,7 @@ export function EnhancedHero({
       }
       if (locations.some(location => location.type !== 'suburb')) {
         setLocationSelectionNotice(
-          'Choose one broad Place to explore its areas, or search selected exact localities.',
+          'Choose one broad area to explore, or search specific suburbs.',
         );
         return;
       }
@@ -928,9 +928,9 @@ export function EnhancedHero({
                     value={developmentPlace}
                     onChange={setDevelopmentPlace}
                     purpose="search"
-                    label="Project Place"
-                    placeholder="Search approved Places"
-                    hint="Only developments assigned to this exact reviewed Place match."
+                    label="Area"
+                    placeholder="Search areas"
+                    hint="Only developments in this area match."
                   />
                 ) : (
                   <>

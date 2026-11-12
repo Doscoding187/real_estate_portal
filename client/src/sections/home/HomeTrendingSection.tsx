@@ -165,8 +165,8 @@ export function HomeTrendingSection({
           icon={Building2}
           message="New developments are launching soon."
           action={{
-            label: 'Are you a developer? List your development',
-            href: '/advertise/sell/developers',
+            label: 'Talk to us about listing your development',
+            href: '/contact',
           }}
         />
       </section>

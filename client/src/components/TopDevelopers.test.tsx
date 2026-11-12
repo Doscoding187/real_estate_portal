@@ -111,8 +111,8 @@ describe('TopDevelopers canonical Place scope', () => {
     expect(screen.getByRole('heading', { name: 'Explore real estate developers' })).toBeInTheDocument();
     expect(screen.getByText('New developments are launching soon.')).toBeInTheDocument();
     expect(
-      screen.getByRole('link', { name: /Are you a developer\? List your development/ }),
-    ).toHaveAttribute('href', '/advertise/sell/developers');
+      screen.getByRole('link', { name: /Talk to us about listing your development/ }),
+    ).toHaveAttribute('href', '/contact');
   });
 
   it('shows the same empty state, with no developer profiles, while developments are held', () => {

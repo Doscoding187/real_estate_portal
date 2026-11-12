@@ -10,6 +10,7 @@ type StructuredDataValue = Record<string, unknown>;
 interface MetaControlProps {
   canonicalUrl?: string; // Explicit canonical URL (e.g., from backend or constructed)
   forceNoIndex?: boolean; // Manual override
+  noIndexFollow?: boolean; // "noindex, follow"; ignored when forceNoIndex is set
   title?: string;
   description?: string;
   image?: string;
@@ -25,6 +26,7 @@ interface MetaControlProps {
 export function MetaControl({
   canonicalUrl,
   forceNoIndex = false,
+  noIndexFollow = false,
   title,
   description,
   image,
@@ -63,7 +65,8 @@ export function MetaControl({
     return false;
   };
 
-  const isNoIndex = shouldNoIndex();
+  const useNoIndexFollow = noIndexFollow && !forceNoIndex;
+  const isNoIndex = useNoIndexFollow ? false : shouldNoIndex();
 
   // Construct default canonical if not provided
   // This assumes the current clean path is the canonical unless we are on a shortcut.
@@ -86,10 +89,20 @@ export function MetaControl({
       canonicalPath: currentCanonical,
       image,
       noindex: isNoIndex,
+      noindexFollow: useNoIndexFollow,
       structuredData: structuredDataItems,
       geo,
     });
-  }, [currentCanonical, description, geo, image, isNoIndex, structuredDataItems, title]);
+  }, [
+    currentCanonical,
+    description,
+    geo,
+    image,
+    isNoIndex,
+    useNoIndexFollow,
+    structuredDataItems,
+    title,
+  ]);
 
   // A route that does not render MetaControl must not inherit the previous route's canonical.
   // Only remove the canonical written by applySeo (marked), and only once the last instance unmounts.
