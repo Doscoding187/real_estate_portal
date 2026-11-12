@@ -117,6 +117,9 @@ function expandUnitTypeCard(entry, listingType, placeId, province, fixture) {
       unitSizeM2: entry.unitSize,
       priceFrom: entry.priceFrom,
       availableUnits: entry.availableUnits,
+      // Optional, like the real API: only some sample unit types carry these.
+      ...(entry.yardSizeM2 !== undefined ? { yardSizeM2: entry.yardSizeM2 } : {}),
+      ...(entry.parking !== undefined ? { parking: entry.parking } : {}),
     },
     sample: true,
   };

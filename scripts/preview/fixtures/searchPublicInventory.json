@@ -244,7 +244,8 @@
             "priceFrom": 1250000,
             "availableUnits": 6,
             "area": "Sandton",
-            "image": 13
+            "image": 13,
+            "parking": 2
           },
           {
             "position": 5,
@@ -259,7 +260,8 @@
             "priceFrom": 2890000,
             "availableUnits": 4,
             "area": "Centurion",
-            "image": 5
+            "image": 5,
+            "yardSizeM2": 220
           },
           {
             "position": 8,
@@ -566,7 +568,8 @@
             "priceFrom": 3650000,
             "availableUnits": 7,
             "area": "Stellenbosch",
-            "image": 4
+            "image": 4,
+            "yardSizeM2": 300
           }
         ],
         "rent": [

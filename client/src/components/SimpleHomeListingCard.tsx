@@ -1,5 +1,5 @@
 import { Link } from 'wouter';
-import { Building2, Heart, MapPin } from 'lucide-react';
+import { Building2, Heart, MapPin, type LucideIcon } from 'lucide-react';
 import {
   getCompactPropertyFacts,
   getPropertyCardImage,
@@ -8,6 +8,13 @@ import {
 } from '@/lib/property';
 import { withRentalPeriod } from '@/lib/rentPresentation';
 import { FallbackImage } from './FallbackImage';
+
+/** One fixed detail item for the bottom row (used where the facts are chosen by the caller). */
+export interface SimpleHomeListingCardDetail {
+  key: string;
+  icon: LucideIcon;
+  label: string;
+}
 
 export interface SimpleHomeListingCardProps {
   id: string;
@@ -31,6 +38,8 @@ export interface SimpleHomeListingCardProps {
   badgeLabel?: string;
   /** Optional second chip beside the badge, e.g. the transaction on a development unit type. */
   secondaryBadgeLabel?: string;
+  /** When given, replaces the facts worked out from the property fields. */
+  detailItems?: SimpleHomeListingCardDetail[];
   isSaved?: boolean;
   favoritePending?: boolean;
   onFavoriteClick?: () => void;
@@ -58,6 +67,7 @@ export function SimpleHomeListingCard({
   listingType,
   badgeLabel = 'For sale',
   secondaryBadgeLabel,
+  detailItems,
   isSaved = false,
   favoritePending = false,
   onFavoriteClick,
@@ -81,7 +91,9 @@ export function SimpleHomeListingCard({
   const locationLabel = publicLocationLabel || getPropertyCardLocation(normalizedProperty).label;
   const resolvedImage = image ? getPropertyCardImage(normalizedProperty) : undefined;
   const priceLabel = getPropertyCardPrice(normalizedProperty).label;
-  const specItems = getCompactPropertyFacts(normalizedProperty, 4);
+  const specItems = detailItems
+    ? detailItems.map(item => ({ key: item.key, icon: item.icon, shortValue: item.label }))
+    : getCompactPropertyFacts(normalizedProperty, 4);
 
   return (
     <div className="group relative h-full w-full overflow-hidden rounded-xl border border-slate-200 bg-white transition-all duration-300 hover:shadow-lg">

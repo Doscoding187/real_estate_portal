@@ -36,6 +36,9 @@ export type TrendingRailCard = {
     unitSizeM2: number | null;
     priceFrom: number;
     availableUnits: number | null;
+    /** Optional: newer APIs send these; an older API does not. */
+    yardSizeM2?: number | null;
+    parking?: number | string | null;
   };
 };
 

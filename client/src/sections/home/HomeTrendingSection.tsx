@@ -20,7 +20,64 @@ import { HOME_PROVINCE_OPTIONS as PROVINCES, homeProvincePlaceId } from '@/lib/h
 import { buildTransactionalGeographyHref } from '@/lib/geographySearchHandoff';
 import { trpc } from '@/lib/trpc';
 import type { HeroTab } from '@/types/hero';
-import { TRENDING_RAIL_LIMIT, useTrendingRailQuery } from './useTrendingRailQuery';
+import { PROPERTY_FACT_ICONS } from '@/components/icons/propertyFactIcons';
+import type { SimpleHomeListingCardDetail } from '@/components/SimpleHomeListingCard';
+import {
+  TRENDING_RAIL_LIMIT,
+  useTrendingRailQuery,
+  type TrendingRailCard,
+} from './useTrendingRailQuery';
+
+const positiveNumber = (value: unknown): number | null => {
+  const number = typeof value === 'number' ? value : Number(value);
+  return value !== null && value !== '' && Number.isFinite(number) && number > 0 ? number : null;
+};
+
+/**
+ * Details row of a new-development card: size, beds, baths, then ONE fourth item, chosen in this
+ * order: yard size, parking, "{n} available". Missing values are left out (never invented), so a
+ * card may show fewer than four. The yard and parking fields are optional: an older API omits them.
+ */
+function unitTypeDetails(
+  unitType: NonNullable<TrendingRailCard['unitType']>,
+): SimpleHomeListingCardDetail[] {
+  const details: SimpleHomeListingCardDetail[] = [];
+  const size = positiveNumber(unitType.unitSizeM2);
+  const beds = positiveNumber(unitType.bedrooms);
+  const baths = positiveNumber(unitType.bathrooms);
+  if (size) {
+    details.push({
+      key: 'size',
+      icon: PROPERTY_FACT_ICONS.residentialSize,
+      label: `${size.toLocaleString('en-ZA')} m²`,
+    });
+  }
+  if (beds) {
+    details.push({ key: 'beds', icon: PROPERTY_FACT_ICONS.bedrooms, label: `${beds} Bed` });
+  }
+  if (baths) {
+    details.push({ key: 'baths', icon: PROPERTY_FACT_ICONS.bathrooms, label: `${baths} Bath` });
+  }
+  const yard = positiveNumber(unitType.yardSizeM2);
+  const parking = positiveNumber(unitType.parking);
+  const available = positiveNumber(unitType.availableUnits);
+  if (yard) {
+    details.push({
+      key: 'yard',
+      icon: PROPERTY_FACT_ICONS.landSize,
+      label: `${yard.toLocaleString('en-ZA')} m² yard`,
+    });
+  } else if (parking) {
+    details.push({
+      key: 'parking',
+      icon: PROPERTY_FACT_ICONS.parking,
+      label: `${parking} Parking`,
+    });
+  } else if (available) {
+    details.push({ key: 'available', icon: Building2, label: `${available} available` });
+  }
+  return details;
+}
 
 type HomeTrendingSectionProps = {
   selectedProvince: string;
@@ -299,15 +356,12 @@ export function HomeTrendingSection({
                         href={item.href}
                         price={item.unitType.priceFrom ?? item.price ?? null}
                         pricePrefix="From"
-                        bedrooms={item.unitType.bedrooms}
-                        bathrooms={item.unitType.bathrooms}
-                        area={item.unitType.unitSizeM2}
+                        detailItems={unitTypeDetails(item.unitType)}
                         // The server's propertyType on a unit card is a development-level guess, not the
                         // unit's own type, so it is not shown (never display a type the data does not state).
                         propertyType={undefined}
                         listingType={listingType}
                         badgeLabel="New development"
-                        secondaryBadgeLabel={listingType === 'rent' ? 'To rent' : 'For sale'}
                         onImageUnavailable={() =>
                           setFailedImages(previous => new Set(previous).add(item.image as string))
                         }

@@ -88,7 +88,7 @@ describe('TopDevelopers homepage section', () => {
     const loading = screen.getByTestId('developer-feed-loading');
     const skeletons = within(loading).getAllByTestId('developer-profile-skeleton');
     expect(skeletons).toHaveLength(3);
-    expect(skeletons[0]).toHaveClass('flex-[0_0_78%]');
+    expect(skeletons[0]).toHaveClass('flex-[0_0_77%]');
   });
 
   it('shows a plain error line with Try again', () => {
@@ -164,15 +164,15 @@ describe('TopDevelopers homepage section', () => {
     render(<TopDevelopers />);
 
     expect(screen.getByRole('img', { name: 'Local Builder logo' })).toBeInTheDocument();
-    expect(screen.getByText('3')).toBeInTheDocument();
-    expect(screen.getByText('Public projects')).toBeInTheDocument();
-    expect(screen.getAllByText('Public projects')).toHaveLength(1);
-    const viewDeveloper = screen.getAllByRole('link', { name: /View Developer/ });
-    expect(viewDeveloper[0]).toHaveAttribute('href', '/developer/local-builder');
-    expect(screen.getAllByRole('link', { name: /View projects/ })[0]).toHaveAttribute(
-      'href',
-      '/developer/local-builder#developments',
-    );
+    expect(screen.getByText('3 public projects')).toBeInTheDocument();
+    expect(screen.getAllByText(/public project/)).toHaveLength(1);
+    // The whole card is one link; there is no second "view projects" link or black button.
+    const cardLink = screen.getByRole('link', { name: /Local Builder/ });
+    expect(cardLink).toHaveAttribute('href', '/developer/local-builder');
+    expect(within(cardLink).getByText(/View developer/)).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /View projects/ })).not.toBeInTheDocument();
+    // No logo: initials on a tinted tile, never an invented logo.
+    expect(screen.getByTestId('developer-initials')).toHaveTextContent('NC');
     expect(screen.getByRole('link', { name: /Explore All Developers/ })).toHaveAttribute(
       'href',
       '/developers',
@@ -211,12 +211,33 @@ describe('TopDevelopers homepage section', () => {
       expect(
         screen.getByText('Explore developers with approved, published projects in Gauteng.'),
       ).toBeInTheDocument();
-      expect(screen.getAllByText('Active in Gauteng')).toHaveLength(1);
+      expect(screen.getByText('4 active · 2 selling now · 1 launching soon')).toBeInTheDocument();
       expect(screen.getAllByText('Selling now')).toHaveLength(1);
-      expect(screen.getAllByText('Active developments')).toHaveLength(1);
-      expect(screen.getAllByText('Launching soon')).toHaveLength(1);
-      expect(screen.getAllByRole('link', { name: /View local projects/ })).toHaveLength(2);
-      expect(screen.queryByText('Public projects')).not.toBeInTheDocument();
+      expect(screen.queryByText('Launching soon')).not.toBeInTheDocument();
+      expect(screen.queryByText(/View local projects/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/public project/)).not.toBeInTheDocument();
+    });
+
+    it('shows an amber chip only when nothing is selling and something is launching', () => {
+      testState.provinceQuery = {
+        ...testState.provinceQuery,
+        data: [
+          {
+            id: 3,
+            slug: 'soon',
+            brandName: 'Soon Homes',
+            activeDevelopments: 1,
+            sellingNow: 0,
+            launchingSoon: 2,
+          },
+        ],
+      };
+
+      render(<TopDevelopers selectedProvince="Gauteng" />);
+
+      expect(screen.getByText('1 active · 2 launching soon')).toBeInTheDocument();
+      expect(screen.getByText('Launching soon')).toBeInTheDocument();
+      expect(screen.queryByText('Selling now')).not.toBeInTheDocument();
     });
 
     it('shows the province empty state with the contact action and national link', () => {
@@ -245,7 +266,7 @@ describe('TopDevelopers homepage section', () => {
       expect(
         screen.getByRole('heading', { name: 'Explore real estate developers' }),
       ).toBeInTheDocument();
-      expect(screen.getByText('Public projects')).toBeInTheDocument();
+      expect(screen.getByText('3 public projects')).toBeInTheDocument();
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
       expect(testState.queryInput).toEqual({ limit: 12 });
       expect(testState.queryOptions).toEqual({ enabled: true });

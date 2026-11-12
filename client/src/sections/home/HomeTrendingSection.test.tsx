@@ -256,7 +256,14 @@ describe('HomeTrendingSection', () => {
     renderSection();
 
     expect(screen.getByText('New development')).toBeInTheDocument();
-    expect(screen.getByText('For sale')).toBeInTheDocument();
+    // One badge only: the transaction is already in the section heading.
+    expect(screen.queryByText('For sale')).not.toBeInTheDocument();
+    expect(screen.queryByText('To rent')).not.toBeInTheDocument();
+    // No yard or parking sent, so the fourth item is the availability.
+    expect(screen.getByText('64 m²')).toBeInTheDocument();
+    expect(screen.getByText('2 Bed')).toBeInTheDocument();
+    expect(screen.getByText('1 Bath')).toBeInTheDocument();
+    expect(screen.getByText('3 available')).toBeInTheDocument();
     expect(screen.getByText('2-bed Apartment')).toBeInTheDocument();
     expect(screen.getByText('Sample Heights · Sandton')).toBeInTheDocument();
     expect(screen.getByText(/^From R/)).toBeInTheDocument();
@@ -267,6 +274,47 @@ describe('HomeTrendingSection', () => {
     expect(screen.queryByRole('button', { name: 'Save property' })).not.toBeInTheDocument();
     // The card's propertyType is a development-level guess, so no type is shown for a unit type.
     expect(screen.queryByText('House')).not.toBeInTheDocument();
+  });
+
+  it('picks the fourth unit-type detail as yard, then parking, then availability', () => {
+    const card = (id: string, extra: Record<string, unknown>) => ({
+      kind: 'development',
+      id,
+      title: `Unit ${id}`,
+      image: 'https://cdn.example.com/dev.jpg',
+      href: `/development/sample/unit/${id}`,
+      price: 1250000,
+      unitType: {
+        id,
+        label: 'Apartment',
+        developmentId: 5,
+        developmentName: 'Sample Heights',
+        bedrooms: 2,
+        bathrooms: 1,
+        unitSizeM2: 64,
+        priceFrom: 1250000,
+        availableUnits: 3,
+        ...extra,
+      },
+    });
+    useQuery.mockReturnValue({
+      data: {
+        cards: [
+          card('a', { yardSizeM2: 220, parking: 2 }),
+          card('b', { parking: 2 }),
+          card('c', { availableUnits: null }),
+        ],
+      },
+      isLoading: false,
+      isError: false,
+      refetch,
+    });
+    renderSection();
+
+    expect(screen.getByText('220 m² yard')).toBeInTheDocument();
+    expect(screen.getAllByText('2 Parking')).toHaveLength(1);
+    expect(screen.queryByText('3 available')).not.toBeInTheDocument();
+    expect(screen.getAllByText('64 m²')).toHaveLength(3);
   });
 
   it('keeps a heart on ordinary listings', () => {
