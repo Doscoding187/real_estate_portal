@@ -9,7 +9,7 @@ The last thing on the page. A visitor who has scrolled to the end should have a 
 
 ## 2. What it shows
 
-One h2 "Ready when you are." above a split panel with two equal doors. Side by side from the medium breakpoint, stacked on phones.
+Eyebrow "Start with Property Listify" and one h2 "Ready when you are." above a split panel with two equal doors. Side by side from the medium breakpoint, stacked on phones.
 
 | Door                     | Text                                                                                            | Primary                                       | Secondary                            |
 | ------------------------ | ----------------------------------------------------------------------------------------------- | --------------------------------------------- | ------------------------------------ |
@@ -23,11 +23,19 @@ One h2 "Ready when you are." above a split panel with two equal doors. Side by s
 - Left door is light with dark text, right door is dark with white text; both meet AA contrast. Buttons are at least 44px high.
 - No data claims; nothing depends on the database. Statements must be true today (owners cannot list themselves yet).
 
-## 4. Owner feedback, 2026-11-12
+## 4. Design (2026-11-13)
+
+Bigger headings, a large icon tile and a simple original rooftop outline (inline SVG, decorative) per door, comfortable padding, equal heights, clear focus rings, `mt-14`/`mt-24` separation from the band above.
+
+## 5. Owner feedback
+
+**2026-11-13:** spacing and design lift (above).
+
+**2026-11-12:**
 
 The old closing panel spoke only to buyers ("Ready to find your next home?") and ignored people who want to list. Rebuilt with two doors.
 
-## 5. History
+## 6. History
 
 - Earlier: one blue panel, "Start your search", two buttons (Browse, List with us).
 - Owner decision, 2026-11-12: "List with us" lives here and not in the hero (moved from `dc71cd08c`).

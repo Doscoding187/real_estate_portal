@@ -9,14 +9,15 @@ const PANELS = [
   ['Agents', 'Set up your agent profile', '/advertise/sell/agents'],
   ['Agencies', 'See agency details', '/advertise/sell/agencies'],
   ['Developers', 'See developer details', '/advertise/sell/developers'],
+  ['Service providers', 'See service provider details', '/advertise/services'],
 ] as const;
 
 describe('WhyPropertyListifySection', () => {
-  it('has one h2 and a five-tab audience switch', () => {
+  it('has one h2 and a six-tab audience switch', () => {
     render(<WhyPropertyListifySection />);
     expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(1);
     expect(screen.getByRole('heading', { level: 2, name: /one place for every property move/i }));
-    expect(screen.getAllByRole('tab')).toHaveLength(5);
+    expect(screen.getAllByRole('tab')).toHaveLength(6);
     expect(screen.getByRole('tab', { name: 'Buying or renting' })).toHaveAttribute(
       'aria-selected',
       'true',
@@ -47,11 +48,13 @@ describe('WhyPropertyListifySection', () => {
       'true',
     );
     fireEvent.keyDown(screen.getByRole('tab', { name: 'Selling or letting' }), { key: 'End' });
-    expect(screen.getByRole('tab', { name: 'Developers' })).toHaveAttribute(
+    expect(screen.getByRole('tab', { name: 'Service providers' })).toHaveAttribute(
       'aria-selected',
       'true',
     );
-    fireEvent.keyDown(screen.getByRole('tab', { name: 'Developers' }), { key: 'ArrowRight' });
+    fireEvent.keyDown(screen.getByRole('tab', { name: 'Service providers' }), {
+      key: 'ArrowRight',
+    });
     expect(screen.getByRole('tab', { name: 'Buying or renting' })).toHaveAttribute(
       'aria-selected',
       'true',
@@ -65,5 +68,25 @@ describe('WhyPropertyListifySection', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Developers' }));
     expect(screen.getByText(/developer accounts are not open yet/i)).toBeInTheDocument();
     expect(container.textContent ?? '').not.toMatch(/preparation|activation|canonical/i);
+  });
+
+  it('links services from the home and owner panels and is honest about provider accounts', () => {
+    render(<WhyPropertyListifySection />);
+    expect(
+      within(screen.getByRole('tabpanel')).getByRole('link', { name: 'Property services' }),
+    ).toHaveAttribute('href', '/services');
+    fireEvent.click(screen.getByRole('tab', { name: 'Service providers' }));
+    const panel = screen.getByRole('tabpanel');
+    expect(
+      within(panel).getByText(/service provider accounts are not open yet/i),
+    ).toBeInTheDocument();
+    expect(within(panel).getByRole('link', { name: 'Contact us' })).toHaveAttribute(
+      'href',
+      '/contact?area=other',
+    );
+    expect(within(panel).getByRole('link', { name: 'Browse the directory' })).toHaveAttribute(
+      'href',
+      '/services',
+    );
   });
 });

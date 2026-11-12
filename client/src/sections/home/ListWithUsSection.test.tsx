@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { ListWithUsSection } from './ListWithUsSection';
 
 describe('ListWithUsSection', () => {
-  it('has one h2 "List with Property Listify" and three role cards with real links', () => {
+  it('has one h2 "List with Property Listify" and four role cards with real links', () => {
     const { container } = render(<ListWithUsSection />);
     expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(1);
     expect(
@@ -22,6 +22,16 @@ describe('ListWithUsSection', () => {
       'href',
       '/advertise/sell/developers',
     );
+    expect(screen.getByRole('link', { name: /see service details/i })).toHaveAttribute(
+      'href',
+      '/advertise/services',
+    );
+    expect(screen.getAllByText('Opening soon')).toHaveLength(3);
+    expect(
+      screen.getByText(
+        'Put your properties, your profile and your developments where buyers and renters search.',
+      ),
+    ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /see all options/i })).toHaveAttribute(
       'href',
       '/advertise',
