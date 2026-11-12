@@ -6,7 +6,6 @@ const testState = vi.hoisted(() => ({
   refetch: vi.fn(),
   queryInput: undefined as unknown,
   queryOptions: undefined as unknown,
-  placeId: 'pl-place-01-000000000000000000000001',
   developmentsEnabled: true,
 }));
 
@@ -33,26 +32,6 @@ vi.mock('@/lib/trpc', () => ({
   },
 }));
 
-vi.mock('@/components/location/CanonicalPlaceSelector', () => ({
-  CanonicalPlaceSelector: ({ value, onChange }: any) => (
-    <button
-      type="button"
-      aria-label="Select canonical Place fixture"
-      onClick={() =>
-        onChange({
-          canonicalPlaceId: testState.placeId,
-          label: 'Reviewed Place',
-          placeType: 'locality',
-          scope: { kind: 'locality', canonicalPlaceId: testState.placeId },
-          administrativeContext: null,
-        })
-      }
-    >
-      {value?.label || 'Select canonical Place'}
-    </button>
-  ),
-}));
-
 vi.mock('wouter', () => ({
   Link: ({ href, children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
     <a href={href} {...props}>
@@ -67,11 +46,12 @@ vi.mock('@/lib/publicNavigation', () => ({
 
 import { TopDevelopers } from './TopDevelopers';
 
-describe('TopDevelopers canonical Place scope', () => {
+describe('TopDevelopers homepage section', () => {
   beforeEach(() => {
     testState.refetch.mockReset();
     testState.refetch.mockResolvedValue(undefined);
     testState.queryInput = undefined;
+    testState.queryOptions = undefined;
     testState.developmentsEnabled = true;
     testState.query = {
       data: undefined,
@@ -93,29 +73,34 @@ describe('TopDevelopers canonical Place scope', () => {
     expect(skeletons[0]).toHaveClass('flex-[0_0_78%]');
   });
 
-  it('offers retry when profile retrieval fails', () => {
+  it('shows a plain error line with Try again', () => {
     testState.query = { ...testState.query, isError: true };
 
     render(<TopDevelopers />);
 
-    expect(screen.getByRole('alert')).toHaveTextContent('Developer profiles could not be loaded');
+    expect(screen.getByRole('alert')).toHaveTextContent('Developer profiles could not be loaded.');
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
     expect(testState.refetch).toHaveBeenCalledTimes(1);
   });
 
-  it('shows a designed empty state when the publisher list is empty', () => {
+  it('keeps the section with an honest empty state and two ways forward', () => {
     testState.query = { ...testState.query, data: [] };
 
     render(<TopDevelopers />);
 
-    expect(screen.getByRole('heading', { name: 'Explore real estate developers' })).toBeInTheDocument();
-    expect(screen.getByText('New developments are launching soon.')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Explore real estate developers' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('No developers are listed yet.')).toBeInTheDocument();
     expect(
       screen.getByRole('link', { name: /Talk to us about listing your development/ }),
     ).toHaveAttribute('href', '/contact');
+    expect(
+      screen.getByRole('link', { name: 'See developers across South Africa' }),
+    ).toHaveAttribute('href', '/developers');
   });
 
-  it('shows the same empty state, with no developer profiles, while developments are held', () => {
+  it('shows the same empty state, with no profiles and no query, while developments are held', () => {
     testState.developmentsEnabled = false;
     testState.query = {
       ...testState.query,
@@ -124,13 +109,26 @@ describe('TopDevelopers canonical Place scope', () => {
 
     render(<TopDevelopers />);
 
-    expect(screen.getByRole('heading', { name: 'Explore real estate developers' })).toBeInTheDocument();
-    expect(screen.getByText('New developments are launching soon.')).toBeInTheDocument();
+    expect(screen.getByText('No developers are listed yet.')).toBeInTheDocument();
     expect(screen.queryByText('Local Builder')).not.toBeInTheDocument();
     expect(testState.queryOptions).toEqual({ enabled: false });
   });
 
-  it('filters and carries links by the exact selected Place ID', () => {
+  it('asks for the national list and has no area filter box', () => {
+    testState.query = {
+      ...testState.query,
+      data: [{ id: 1, slug: 'local-builder', brandName: 'Local Builder', developmentCount: 3 }],
+    };
+
+    render(<TopDevelopers />);
+
+    expect(testState.queryInput).toEqual({ limit: 12 });
+    expect(screen.queryByText('Filter projects by area')).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+  });
+
+  it('renders developer cards as real links with a count only when the data has one', () => {
     testState.query = {
       ...testState.query,
       data: [
@@ -138,30 +136,28 @@ describe('TopDevelopers canonical Place scope', () => {
           id: 1,
           slug: 'local-builder',
           brandName: 'Local Builder',
+          logoUrl: 'https://example.test/logo.png',
           developmentCount: 3,
         },
+        { id: 2, slug: 'no-count', brandName: 'No Count Homes', developmentCount: null },
       ],
     };
 
     render(<TopDevelopers />);
-    fireEvent.click(screen.getByRole('button', { name: 'Select canonical Place fixture' }));
 
-    expect(testState.queryInput).toEqual({ canonicalPlaceId: testState.placeId, limit: 12 });
-    expect(
-      screen.getByRole('heading', { name: 'Developers with projects in Reviewed Place' }),
-    ).toBeInTheDocument();
-    expect(screen.getByText('3 public projects')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'View projects' })).toHaveAttribute(
+    expect(screen.getByRole('img', { name: 'Local Builder logo' })).toBeInTheDocument();
+    expect(screen.getByText('3')).toBeInTheDocument();
+    expect(screen.getByText('Public projects')).toBeInTheDocument();
+    expect(screen.getAllByText('Public projects')).toHaveLength(1);
+    const viewDeveloper = screen.getAllByRole('link', { name: /View Developer/ });
+    expect(viewDeveloper[0]).toHaveAttribute('href', '/developer/local-builder');
+    expect(screen.getAllByRole('link', { name: /View projects/ })[0]).toHaveAttribute(
       'href',
-      `/developer/local-builder?canonicalPlaceId=${testState.placeId}#developments`,
+      '/developer/local-builder#developments',
     );
-    expect(screen.getByRole('link', { name: 'Developer profile' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /Explore All Developers/ })).toHaveAttribute(
       'href',
-      `/developer/local-builder?canonicalPlaceId=${testState.placeId}`,
-    );
-    expect(screen.getByRole('link', { name: /Explore developers/ })).toHaveAttribute(
-      'href',
-      `/developers?canonicalPlaceId=${testState.placeId}`,
+      '/developers',
     );
   });
 });
