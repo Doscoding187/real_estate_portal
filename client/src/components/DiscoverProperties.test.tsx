@@ -48,6 +48,18 @@ describe('DiscoverProperties', () => {
     expect(container.innerHTML).not.toContain('unsplash');
   });
 
+  it('keeps every card a 7:10 portrait whose image matches that ratio', () => {
+    render(<DiscoverProperties />);
+
+    for (const card of cardsFor('sale')) {
+      expect(card.className).toContain('aspect-[7/10]');
+      expect(card.className).not.toMatch(/aspect-\[4\/5\]|lg:aspect-auto|lg:h-full/);
+      const img = card.querySelector('img');
+      const ratio = Number(img?.getAttribute('width')) / Number(img?.getAttribute('height'));
+      expect(Math.abs(ratio - 0.7)).toBeLessThan(0.005);
+    }
+  });
+
   it('links each sale card to the supported destination for its category', () => {
     render(<DiscoverProperties />);
     const hrefs = Object.fromEntries(

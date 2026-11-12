@@ -29,12 +29,15 @@ With no area chosen, cards open national results. Zero results show the normal "
 
 ## 4. Layout
 
-- Desktop (≥1024 px): the Sale / Rent / Developments list on the left, photo cards on the right, lined up as **one balanced grid** (same top and bottom edges).
-- Below 1024 px: a Sale / Rent / New Developments switch on top, cards in a swipeable row with the next card peeking.
-- Photos: 4:5 portrait, WebP at up to three widths, lazy-loaded, with alt text such as "Townhouses for sale". Never loaded from other websites.
+- **Card shape rule (owner, 2026-11-12): every card is a tall 7:10 portrait at every screen width.** The owner's reference screenshot shows about 210 x 300 px beside the list and called it perfect. An earlier build let the card height follow the accordion, so cards were 4:5 or squarer (224 x 260) between 1280 and 1536 px. Now the card width is set per breakpoint and the height follows from 7:10; the accordion stretches to the cards' height, never the other way round.
+- Desktop (≥1024 px): the Sale / Rent / Developments list on the left, photo cards on the right, same top and bottom edges. 1024-1279 px: list plus 3 whole cards; 1280 px and up: list plus 4 whole cards; arrows page the rest.
+- Tablet (768-1023 px): a Sale / Rent / New Developments switch on top, 7:10 cards in a swipeable row, three and a peek.
+- Phone (below 768 px): switch on top, 7:10 cards 152 px wide in a snap row, two and a peek.
+- Photos: 7:10 portrait crops, WebP at up to three widths, lazy-loaded, with alt text such as "Townhouses for sale". Never loaded from other websites. Crops are made by `pnpm images:categories`; Apartments and Houses use a fixed left crop to keep their subject.
 
 ## 5. History
 
+- **2026-11-12 (card 53):** card shape fixed at 7:10 (section 4); images regenerated at 7:10.
 - Photo cards existed until **2026-11-10, PR #757 (`7d43a4156`)**, which removed them because they were loaded directly from Unsplash's servers.
 - City pills existed until **2026-10-28, PR #693 (`cbff3e7b3`)**.
 - **2026-11-12 (card 45):** restored with the owner's own photos stored in the repository, city pills back, categories changed as above.

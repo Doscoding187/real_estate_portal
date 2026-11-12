@@ -1,5 +1,5 @@
-/** Card aspect ratio (width / height). Portrait, as in the original homepage design. */
-export const CARD_ASPECT = 4 / 5;
+/** Card aspect ratio (width / height). Tall 7:10 portrait (owner reference, 2026-11-12: about 210 x 300). */
+export const CARD_ASPECT = 7 / 10;
 
 /** Widths the card srcset asks for. */
 export const TARGET_WIDTHS = [320, 480, 720];
@@ -23,7 +23,7 @@ export function selectWidths(
   targets = TARGET_WIDTHS,
   aspect = CARD_ASPECT,
 ) {
-  const cropWidth = Math.floor(Math.min(originalWidth, originalHeight * aspect));
+  const cropWidth = Math.floor(Math.min(originalWidth, originalHeight * aspect) + 1e-9);
   const widths = targets.filter(width => width <= cropWidth);
   const skipped = targets.filter(width => width > cropWidth);
   if (widths.length === 0 && cropWidth > 0) widths.push(cropWidth);

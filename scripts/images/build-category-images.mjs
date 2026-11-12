@@ -4,7 +4,7 @@
  *   pnpm images:categories
  *
  * Reads every original in client/image-originals/categories, writes
- * client/public/images/categories/{name}-{w}.webp (card ratio, attention crop,
+ * client/public/images/categories/{name}-{w}.webp (7:10 card ratio, attention crop,
  * quality 72, metadata stripped) and client/src/lib/categoryImages.generated.ts
  * (the widths that exist, read by the card component). Idempotent: outputs are
  * rewritten from the originals and stale files for a name are removed.
@@ -21,7 +21,7 @@ const outDir = path.join(root, 'client', 'public', 'images', 'categories');
 const manifestPath = path.join(root, 'client', 'src', 'lib', 'categoryImages.generated.ts');
 const QUALITY = 72;
 /** Attention cropping is the default; these originals need a fixed crop to keep the subject. */
-const POSITION_OVERRIDES = { apartments: 'left' };
+const POSITION_OVERRIDES = { apartments: 'left', houses: 'left' };
 
 await mkdir(outDir, { recursive: true });
 const originals = (await readdir(sourceDir))

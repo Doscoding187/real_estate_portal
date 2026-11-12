@@ -10,7 +10,7 @@ describe('category image width selection', () => {
     expect(selectWidths(1920, 1080)).toEqual({
       widths: [320, 480, 720],
       skipped: [],
-      cropWidth: 864,
+      cropWidth: 756,
     });
   });
 
@@ -18,7 +18,7 @@ describe('category image width selection', () => {
     const result = selectWidths(1050, 700);
     expect(result.widths).toEqual([320, 480]);
     expect(result.skipped).toEqual([720]);
-    expect(result.cropWidth).toBe(560);
+    expect(result.cropWidth).toBe(490);
   });
 
   it('never exceeds the original width', () => {
@@ -27,14 +27,15 @@ describe('category image width selection', () => {
 
   it('keeps one output at the crop width when every target is too large', () => {
     expect(selectWidths(598, 334)).toEqual({
-      widths: [267],
+      widths: [233],
       skipped: [320, 480, 720],
-      cropWidth: 267,
+      cropWidth: 233,
     });
   });
 
   it('derives the height from the card ratio', () => {
-    expect(CARD_ASPECT).toBe(0.8);
-    expect(heightForWidth(480)).toBe(600);
+    expect(CARD_ASPECT).toBe(0.7);
+    expect(heightForWidth(480)).toBe(686);
+    expect(heightForWidth(210)).toBe(300);
   });
 });

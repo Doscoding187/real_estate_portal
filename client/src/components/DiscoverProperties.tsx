@@ -85,10 +85,15 @@ const CHIP_LABEL: Record<ListingType, string> = {
 
 /** Matches the card widths set on the rail items below. */
 const CARD_SIZES =
-  '(min-width: 1280px) 195px, (min-width: 1024px) 210px, (min-width: 768px) 24vw, 42vw';
+  '(min-width: 1280px) 225px, (min-width: 1024px) 215px, (min-width: 768px) 24vw, 152px';
 
+/**
+ * Cards are always 7:10 portrait (owner reference, 2026-11-12: about 210 x 300). Width is set per
+ * breakpoint and the height follows from the ratio, so the shape never changes. Phone: 152 px, two
+ * and a peek. Tablet: three and a peek. Desktop: exactly 3 (1024-1279) or 4 (1280+) whole cards.
+ */
 const CARD_WIDTH_CLASS =
-  'w-[calc((100%-0.75rem)/2.3)] md:w-[calc((100%-2rem)/3.3)] lg:w-[calc((100%-2rem)/3)] xl:w-[calc((100%-3rem)/4)]';
+  'w-[9.5rem] md:w-[calc((100%-2rem)/3.3)] lg:w-[calc((100%-2rem)/3)] xl:w-[calc((100%-3rem)/4)]';
 
 function cityToLocation(city: BrowseCity): LocationNode {
   return {
@@ -530,8 +535,8 @@ export function DiscoverProperties({
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(15rem,18.5rem)_minmax(0,1fr)] lg:gap-6">
           {/* Accordion column (1024px and up) */}
-          <div className="hidden lg:block">
-            <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
+          <div className="relative hidden lg:block">
+            <div className="flex flex-col overflow-y-auto overflow-x-hidden absolute inset-0 rounded-2xl border border-slate-200 bg-white shadow-xl">
               {accordionRows
                 .filter(row => row.enabled)
                 .map(row => (
@@ -580,13 +585,13 @@ export function DiscoverProperties({
             </div>
           </div>
 
-          {/* Category cards: one rail from phone to desktop, same height as the accordion at 1024px+ */}
-          <div className="relative min-w-0 lg:h-full lg:min-h-[17rem]">
+          {/* Category cards: one rail from phone to desktop. The cards set the height (7:10); the accordion stretches to it. */}
+          <div className="relative min-w-0">
             <div
               ref={railRef}
               onScroll={updateArrows}
               data-testid="discover-card-rail"
-              className="scrollbar-hide flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain scroll-smooth p-1 md:gap-4 lg:h-full"
+              className="scrollbar-hide flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain scroll-smooth p-1 md:gap-4"
             >
               {filteredProperties.map(property => {
                 const href = cardHref(property);
@@ -599,7 +604,7 @@ export function DiscoverProperties({
                     href={href}
                     onClick={event => onCardClick(event, property, href)}
                     data-card={`${property.listingType}:${property.type}`}
-                    className={`group relative block aspect-[4/5] shrink-0 snap-start overflow-hidden rounded-xl bg-slate-800 shadow-sm transition-shadow hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2774AE] focus-visible:ring-offset-2 lg:aspect-auto lg:h-full ${CARD_WIDTH_CLASS}`}
+                    className={`group relative block aspect-[7/10] shrink-0 snap-start overflow-hidden rounded-xl bg-slate-800 shadow-sm transition-shadow hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2774AE] focus-visible:ring-offset-2 ${CARD_WIDTH_CLASS}`}
                   >
                     {hasPhoto && imageName ? (
                       <CategoryImage
