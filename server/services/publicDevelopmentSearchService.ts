@@ -52,6 +52,8 @@ export interface PublicDevelopmentSearchInput {
   sortOption?: SearchResultSortOption;
   page?: number;
   pageSize?: number;
+  /** Opt-in: attach each unit type's unitSize (m2) to the returned unit types. */
+  includeUnitSize?: boolean;
   /** Legacy offset/limit callers are translated at this boundary only. */
 }
 
@@ -333,6 +335,7 @@ export class PublicDevelopmentSearchService {
             availableUnits: unitTypes.availableUnits,
             reservedUnits: unitTypes.reservedUnits,
             displayOrder: unitTypes.displayOrder,
+            unitSize: unitTypes.unitSize,
           })
           .from(unitTypes)
           .where(and(inArray(unitTypes.developmentId, developmentIds), eq(unitTypes.isActive, 1)))
@@ -359,6 +362,16 @@ export class PublicDevelopmentSearchService {
         ),
       )
       .filter((item): item is PublicDevelopmentSearchItem => Boolean(item));
+    if (input.includeUnitSize) {
+      const sizeByUnit = new Map<string, number | null>();
+      for (const unit of unitRows) sizeByUnit.set(String(unit.id), finiteNumber(unit.unitSize));
+      for (const item of items) {
+        item.unitTypes = item.unitTypes.map(unit => ({
+          ...unit,
+          unitSize: sizeByUnit.get(String(unit.id)) ?? null,
+        }));
+      }
+    }
     const developmentFilters = developmentFiltersFromInput(input);
     const filtered = filterPublicDevelopmentSearchItems(items, developmentFilters);
     const unpricedHiddenCount = countUnpricedHiddenByPriceFilter(items, developmentFilters);

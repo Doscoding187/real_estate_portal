@@ -296,6 +296,7 @@ const appRouterConfig = {
               .enum(['relevance', 'price_asc', 'price_desc', 'date_desc', 'date_asc', 'trending'])
               .default('relevance'),
             requirePhoto: z.boolean().optional(),
+            developmentResultShape: z.enum(['development', 'unit_type']).optional(),
             page: z.number().int().min(0).max(PUBLIC_SEARCH_MAX_PAGE_INDEX).default(0),
             pageSize: z.number().int().min(1).max(50).default(12),
           })

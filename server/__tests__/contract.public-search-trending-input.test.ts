@@ -63,3 +63,35 @@ describe('searchPublicInventory trending and photo input', () => {
     expect(mockSearchInventory).not.toHaveBeenCalled();
   });
 });
+
+describe('searchPublicInventory developmentResultShape input', () => {
+  beforeEach(() => {
+    mockSearchInventory.mockReset();
+    mockSearchInventory.mockResolvedValue({ cards: [], total: 0 });
+  });
+
+  it('accepts unit_type and development and passes them through', async () => {
+    for (const developmentResultShape of ['unit_type', 'development']) {
+      await publicCaller().properties.searchPublicInventory({
+        listingType: 'rent',
+        developmentResultShape,
+      } as any);
+    }
+    expect(mockSearchInventory.mock.calls.map(call => call[0].developmentResultShape)).toEqual([
+      'unit_type',
+      'development',
+    ]);
+  });
+
+  it('leaves the shape absent by default and rejects unknown values', async () => {
+    await publicCaller().properties.searchPublicInventory({ listingType: 'sale' });
+    expect(mockSearchInventory.mock.calls[0][0].developmentResultShape).toBeUndefined();
+    await expect(
+      publicCaller().properties.searchPublicInventory({
+        listingType: 'sale',
+        developmentResultShape: 'units',
+      } as any),
+    ).rejects.toThrow();
+    expect(mockSearchInventory).toHaveBeenCalledTimes(1);
+  });
+});
