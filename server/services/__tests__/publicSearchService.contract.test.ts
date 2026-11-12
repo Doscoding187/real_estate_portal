@@ -225,6 +225,46 @@ describe('publicSearchService canonical Place contract', () => {
     );
   });
 
+  it('threads requirePhoto to the manual source only when requested', async () => {
+    await publicSearchService.searchInventory({ listingType: 'sale', listingSource: 'manual' });
+    expect(mockSearchProperties.mock.calls[0][4]).not.toHaveProperty('requirePhoto');
+
+    mockSearchProperties.mockClear();
+    await publicSearchService.searchInventory({
+      listingType: 'sale',
+      listingSource: 'manual',
+      requirePhoto: true,
+    });
+    expect(mockSearchProperties.mock.calls[0][4]).toMatchObject({
+      publicOnly: true,
+      requirePhoto: true,
+    });
+  });
+
+  it('sends trending to the manual source and date_desc to the development source', async () => {
+    await publicSearchService.searchInventory({
+      canonicalPlaceId: PLACE_ID,
+      listingType: 'sale',
+      sortOption: 'trending',
+    });
+    expect(mockSearchProperties.mock.calls[0][1]).toBe('trending');
+    expect(mockSearchDevelopments).toHaveBeenCalledWith(
+      expect.objectContaining({ sortOption: 'date_desc' }),
+    );
+  });
+
+  it('leaves date_desc unchanged for both sources', async () => {
+    await publicSearchService.searchInventory({
+      canonicalPlaceId: PLACE_ID,
+      listingType: 'sale',
+      sortOption: 'date_desc',
+    });
+    expect(mockSearchProperties.mock.calls[0][1]).toBe('date_desc');
+    expect(mockSearchDevelopments).toHaveBeenCalledWith(
+      expect.objectContaining({ sortOption: 'date_desc' }),
+    );
+  });
+
   it('rejects unsupported and Commercial journeys', async () => {
     await expect(publicSearchService.searchInventory({ listingType: 'shared_living' as never }))
       .rejects.toThrow('Buy or Rent');

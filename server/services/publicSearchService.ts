@@ -14,7 +14,7 @@ import {
   normalizePublicSearchPageIndex,
   normalizePublicSearchPageSize,
 } from '../../shared/publicSearchPagination';
-import type { PropertyFilters, SearchCardResult, SortOption } from '../../shared/types';
+import type { PropertyFilters, SearchCardResult } from '../../shared/types';
 import type { PublicDevelopmentSearchItem } from '../../shared/publicDevelopmentSearch';
 import { isCanonicalPlaceId } from '../../shared/placeAuthority';
 import { validatePublicSearchInput } from '../../shared/publicSearchValidation';
@@ -28,7 +28,10 @@ import {
   isCommercialMarketingPropertyType,
 } from '../../shared/commercial-domain';
 import { publicDevelopmentSearchService } from './publicDevelopmentSearchService';
-import { propertySearchService } from './propertySearchService';
+import { propertySearchService, type ManualPropertySortOption } from './propertySearchService';
+
+/** Public inventory sort values: the shared search sorts plus the homepage rail's trending order. */
+export type PublicInventorySortOption = SearchResultSortOption | 'trending';
 
 export interface PublicSearchInventoryInput {
   canonicalPlaceId?: string;
@@ -53,7 +56,9 @@ export interface PublicSearchInventoryInput {
   maxLat?: number;
   minLng?: number;
   maxLng?: number;
-  sortOption?: SearchResultSortOption;
+  sortOption?: PublicInventorySortOption;
+  /** Manual source only: require an approved photo. Development results ignore it. */
+  requirePhoto?: boolean;
   page?: number;
   pageSize?: number;
 }
@@ -162,7 +167,7 @@ function buildDevelopmentSearchInput(
     maxPrice: input.maxPrice,
     minBedrooms: input.minBedrooms,
     maxBedrooms: input.maxBedrooms,
-    sortOption: input.sortOption,
+    sortOption: input.sortOption === 'trending' ? 'date_desc' : input.sortOption,
     page,
     pageSize,
   };
@@ -285,7 +290,7 @@ function blendSearchSources(
   return mixed;
 }
 
-function sourceSort(sortOption: SearchResultSortOption): SortOption {
+function sourceSort(sortOption: PublicInventorySortOption): ManualPropertySortOption {
   return sortOption === 'relevance' ? 'date_desc' : sortOption;
 }
 
@@ -316,8 +321,9 @@ export class PublicSearchService {
 
     const page = normalizePublicSearchPageIndex(input.page);
     const pageSize = normalizePublicSearchPageSize(input.pageSize);
-    const sortOption: SearchResultSortOption =
+    const sortOption: PublicInventorySortOption =
       input.sortOption === 'relevance' ||
+      input.sortOption === 'trending' ||
       input.sortOption === 'price_asc' ||
       input.sortOption === 'price_desc' ||
       input.sortOption === 'date_desc' ||
@@ -376,6 +382,7 @@ export class PublicSearchService {
               sourcePageSize,
               {
                 publicOnly: true,
+                ...(input.requirePhoto ? { requirePhoto: true } : {}),
                 ...(placeProjection ? { placeProjection } : {}),
                 provincePlaceId,
               },
@@ -410,7 +417,12 @@ export class PublicSearchService {
     const developmentCards = (developmentResults?.items || []).map(developmentCard);
     const blended =
       manualEnabled && developmentEnabled
-        ? blendSearchSources(manualCards, developmentCards, sortOption)
+        ? blendSearchSources(
+            manualCards,
+            developmentCards,
+            // Trending orders the manual source only; keep its order and interleave.
+            sortOption === 'trending' ? 'relevance' : sortOption,
+          )
         : manualEnabled
           ? manualCards
           : developmentCards;
