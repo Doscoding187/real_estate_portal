@@ -43,6 +43,8 @@ export interface SimpleHomeListingCardProps {
   isSaved?: boolean;
   favoritePending?: boolean;
   onFavoriteClick?: () => void;
+  /** Overrides the heart's accessible name (default: Save property / Remove from saved homes). */
+  favoriteLabel?: { save: string; remove: string };
   onOpen?: () => void;
 }
 
@@ -71,6 +73,7 @@ export function SimpleHomeListingCard({
   isSaved = false,
   favoritePending = false,
   onFavoriteClick,
+  favoriteLabel,
   onOpen,
 }: SimpleHomeListingCardProps) {
   const normalizedProperty = {
@@ -182,7 +185,11 @@ export function SimpleHomeListingCard({
               ? 'border-rose-200 bg-white/95 text-rose-600 hover:bg-rose-50'
               : 'border-white/80 bg-white/90 text-slate-600 hover:bg-white hover:text-rose-600'
           }`}
-          aria-label={isSaved ? 'Remove from saved homes' : 'Save property'}
+          aria-label={
+            isSaved
+              ? (favoriteLabel?.remove ?? 'Remove from saved homes')
+              : (favoriteLabel?.save ?? 'Save property')
+          }
           aria-pressed={isSaved}
           disabled={favoritePending}
           onClick={event => {

@@ -211,7 +211,7 @@ function CityCards({ city }: { city: CityInsight }) {
     <div id="home-market-insights-content">
       <div
         data-testid="market-insights-cards"
-        className="scrollbar-hide -mx-4 mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0 lg:grid lg:grid-cols-3 lg:gap-4 lg:overflow-visible lg:pb-0"
+        className="scrollbar-hide -mx-3.5 mt-4 flex snap-x snap-mandatory scroll-px-3.5 gap-3 overflow-x-auto px-3.5 pb-2 sm:mx-0 sm:scroll-px-0 sm:px-0 lg:grid lg:grid-cols-3 lg:gap-4 lg:overflow-visible lg:pb-0"
       >
         <InsightCard
           title="Local supply"
@@ -348,7 +348,7 @@ function CardSkeletons() {
   return (
     <div role="status" aria-label="Loading property price insights">
       <Skeleton className="h-11 w-full max-w-xl rounded-xl" />
-      <div className="mt-4 flex gap-3 overflow-hidden lg:grid lg:grid-cols-3 lg:gap-4">
+      <div className="-mx-3.5 mt-4 flex gap-3 overflow-hidden px-3.5 sm:mx-0 sm:px-0 lg:grid lg:grid-cols-3 lg:gap-4">
         {[0, 1, 2].map(index => (
           <Skeleton
             key={index}

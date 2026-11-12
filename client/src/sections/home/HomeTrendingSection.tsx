@@ -18,6 +18,7 @@ import { SectionEmptyState } from '@/components/ui/SectionEmptyState';
 import { Skeleton } from '@/components/ui/skeleton';
 import { HOME_PROVINCE_OPTIONS as PROVINCES, homeProvincePlaceId } from '@/lib/homeProvinceOptions';
 import { buildTransactionalGeographyHref } from '@/lib/geographySearchHandoff';
+import { useSavedUnitTypes } from '@/lib/savedUnitTypes';
 import { trpc } from '@/lib/trpc';
 import type { HeroTab } from '@/types/hero';
 import { PROPERTY_FACT_ICONS } from '@/components/icons/propertyFactIcons';
@@ -133,6 +134,7 @@ const HEADING_CLASS =
 const SUBTITLE_CLASS =
   'max-w-[21rem] text-[13px] leading-5 text-slate-600 sm:max-w-2xl sm:text-sm sm:leading-6 md:max-w-2xl md:text-sm md:leading-6';
 const RAIL_LIMIT = TRENDING_RAIL_LIMIT;
+const DEVICE_SAVE_NOTICE = 'Saved on this device. Sign-in sync for new developments is coming.';
 
 export function HomeTrendingSection({
   selectedProvince,
@@ -143,6 +145,7 @@ export function HomeTrendingSection({
   const [savePromptOpen, setSavePromptOpen] = useState(false);
   const [failedImages, setFailedImages] = useState<Set<string>>(() => new Set());
   const [saveTrigger, setSaveTrigger] = useState<HTMLElement | null>(null);
+  const savedUnitTypes = useSavedUnitTypes();
   const utils = trpc.useUtils();
   const { data: favorites = [] } = trpc.properties.getFavorites.useQuery(undefined, {
     enabled: isAuthenticated,
@@ -341,8 +344,9 @@ export function HomeTrendingSection({
                 >
                   <div className="relative h-full">
                     {item.unitType ? (
-                      // Development unit type: same card frame as a listing. There is no saved-homes
-                      // call for a unit type (setFavorite takes a property id), so no heart.
+                      // Development unit type: same card frame and heart as a listing. There is no
+                      // server call for a unit type (setFavorite takes a property id), so the heart
+                      // saves on this device only (owner decision 2026-11-12), with no sign-in prompt.
                       <SimpleHomeListingCard
                         id={String(item.id)}
                         title={item.title}
@@ -360,6 +364,24 @@ export function HomeTrendingSection({
                         propertyType={undefined}
                         listingType={listingType}
                         badgeLabel="New development"
+                        isSaved={savedUnitTypes.isSaved(String(item.unitType.id))}
+                        favoriteLabel={{
+                          save: `Save ${item.title} at ${item.unitType.developmentName}`,
+                          remove: `Remove ${item.title} at ${item.unitType.developmentName} from saved`,
+                        }}
+                        onFavoriteClick={() => {
+                          const unitType = item.unitType;
+                          if (!unitType) return;
+                          const nowSaved = savedUnitTypes.toggle({
+                            unitTypeId: String(unitType.id),
+                            developmentId: String(unitType.developmentId),
+                            href: item.href,
+                            title: item.title,
+                            developmentName: unitType.developmentName,
+                          });
+                          if (nowSaved) toast.success(DEVICE_SAVE_NOTICE);
+                          else toast.success('Removed from saved');
+                        }}
                         onImageUnavailable={() =>
                           setFailedImages(previous => new Set(previous).add(item.image as string))
                         }

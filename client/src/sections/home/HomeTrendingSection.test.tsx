@@ -222,7 +222,7 @@ describe('HomeTrendingSection', () => {
     expect(screen.getByRole('button', { name: 'Free State' })).toBeInTheDocument();
   });
 
-  it('trusts the server for photos and shows development unit types as cards without a heart', () => {
+  it('trusts the server for photos and shows development unit types as cards with a device-save heart', () => {
     useQuery.mockReturnValue({
       data: {
         cards: [
@@ -272,6 +272,9 @@ describe('HomeTrendingSection', () => {
       '/development/sample/unit/u1',
     );
     expect(screen.queryByRole('button', { name: 'Save property' })).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Save 2-bed Apartment at Sample Heights' }),
+    ).toBeInTheDocument();
     // The card's propertyType is a development-level guess, so no type is shown for a unit type.
     expect(screen.queryByText('House')).not.toBeInTheDocument();
   });
