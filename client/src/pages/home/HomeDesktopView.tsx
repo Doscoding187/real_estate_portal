@@ -7,15 +7,22 @@ import { CTASection } from '@/sections/home/CTASection';
 import { ProfessionalEntrySection } from '@/sections/home/ProfessionalEntrySection';
 import { HomeJourneySection } from '@/sections/home/HomeJourneySection';
 import { HomeTrendingSection } from '@/sections/home/HomeTrendingSection';
+import type { HeroTab } from '@/types/hero';
 import { HomeMarketInsightsSection } from '@/sections/home/HomeMarketInsightsSection';
 
 type HomeDesktopViewProps = {
+  activeHeroTab: HeroTab;
+  selectedProvince: string;
+  onProvinceChange: (province: string) => void;
   heroTabValue?: string;
   onBrowseProperties: () => void;
   onTabChange: (tab: string) => void;
 };
 
 export function HomeDesktopView({
+  activeHeroTab,
+  selectedProvince,
+  onProvinceChange,
   heroTabValue,
   onBrowseProperties,
   onTabChange,
@@ -24,7 +31,11 @@ export function HomeDesktopView({
     <section data-home-viewport="desktop">
       <EnhancedHero activeTab={heroTabValue} onTabChange={onTabChange} />
       <ContentRail>
-        <HomeTrendingSection />
+        <HomeTrendingSection
+          selectedProvince={selectedProvince}
+          onProvinceChange={onProvinceChange}
+          activeHeroTab={activeHeroTab}
+        />
         <DiscoverProperties withinContentRail />
         <TopDevelopers />
         <ExploreCities withinContentRail />

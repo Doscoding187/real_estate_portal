@@ -2,11 +2,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { useQuery, refetch, homeSearch } = vi.hoisted(() => ({
-  useQuery: vi.fn(),
-  refetch: vi.fn(),
-  homeSearch: { current: null as unknown },
-}));
+const { useQuery, refetch } = vi.hoisted(() => ({ useQuery: vi.fn(), refetch: vi.fn() }));
 
 vi.mock('@/lib/trpc', () => ({
   trpc: {
@@ -19,11 +15,7 @@ vi.mock('@/lib/trpc', () => ({
   },
 }));
 vi.mock('@/_core/hooks/useAuth', () => ({ useAuth: () => ({ isAuthenticated: false }) }));
-vi.mock('@/contexts/HomeSearchContext', () => ({ useHomeSearch: () => homeSearch.current }));
 vi.mock('@/components/SavePropertyPrompt', () => ({ SavePropertyPrompt: () => null }));
-vi.mock('@/components/HomeAreaPicker', () => ({
-  HomeAreaPicker: () => <div data-testid="area-picker" />,
-}));
 vi.mock('@/components/ui/carousel', () => ({
   Carousel: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   CarouselContent: ({ children }: { children: ReactNode }) => <div>{children}</div>,
@@ -33,6 +25,8 @@ vi.mock('@/components/ui/carousel', () => ({
 }));
 
 import { HomeTrendingSection } from './HomeTrendingSection';
+import { HOME_PROVINCES } from '@/lib/homeProvinceOptions';
+import type { HeroTab } from '@/types/hero';
 
 const card = {
   kind: 'property',
@@ -45,14 +39,20 @@ const card = {
   price: 2500000,
 };
 
-function makeHomeSearch(overrides: Record<string, unknown> = {}) {
-  return {
-    journey: '',
-    locations: [],
-    setLocations: vi.fn(),
-    setConfirmedBroadPlaceId: vi.fn(),
-    ...overrides,
-  };
+function renderSection(
+  props: {
+    activeHeroTab?: HeroTab;
+    selectedProvince?: string;
+    onProvinceChange?: (p: string) => void;
+  } = {},
+) {
+  return render(
+    <HomeTrendingSection
+      activeHeroTab={props.activeHeroTab ?? 'buy'}
+      selectedProvince={props.selectedProvince ?? 'Gauteng'}
+      onProvinceChange={props.onProvinceChange ?? vi.fn()}
+    />,
+  );
 }
 
 describe('HomeTrendingSection', () => {
@@ -65,124 +65,112 @@ describe('HomeTrendingSection', () => {
       isError: false,
       refetch,
     });
-    homeSearch.current = makeHomeSearch();
   });
 
-  it('has one h2, six tabs in order, and Buy selected by default', () => {
-    render(<HomeTrendingSection />);
+  it('shows the Buy heading, eyebrow and nine province pills with the selected one pressed', () => {
+    renderSection();
 
-    expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(1);
+    expect(screen.getByText('Explore property')).toBeInTheDocument();
     expect(
-      screen.getByRole('heading', { level: 2, name: 'Trending properties' }),
+      screen.getByRole('heading', { level: 2, name: 'Homes for sale in Gauteng' }),
     ).toBeInTheDocument();
-    const tabs = within(screen.getByRole('tablist')).getAllByRole('tab');
-    expect(tabs.map(tab => tab.textContent)).toEqual([
-      'Buy',
-      'Rent',
-      'New Developments',
-      'Shared Living',
-      'Commercial',
-      'Plots & Land',
+    expect(
+      screen.getByText('Discover standout homes for sale across South Africa.'),
+    ).toBeInTheDocument();
+    const pills = within(screen.getByRole('group', { name: 'Province' })).getAllByRole('button');
+    expect(pills.map(pill => pill.textContent)).toEqual([
+      'Gauteng',
+      'Western Cape',
+      'KwaZulu-Natal',
+      'Eastern Cape',
+      'Mpumalanga',
+      'Limpopo',
+      'North West',
+      'Free State',
+      'Northern Cape',
     ]);
-    expect(screen.getByRole('tab', { name: 'Buy' })).toHaveAttribute('aria-selected', 'true');
-    expect(useQuery).toHaveBeenCalledWith(
-      expect.objectContaining({ listingType: 'sale' }),
-      expect.anything(),
+    expect(screen.getByRole('button', { name: 'Gauteng' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Free State' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
     );
-  });
-
-  it('starts on the hero journey when it matches a tab', () => {
-    homeSearch.current = makeHomeSearch({ journey: 'rent' });
-    render(<HomeTrendingSection />);
-
-    expect(screen.getByRole('tab', { name: 'Rent' })).toHaveAttribute('aria-selected', 'true');
-    expect(useQuery).toHaveBeenCalledWith(
-      expect.objectContaining({ listingType: 'rent' }),
-      expect.anything(),
-    );
-  });
-
-  it('shows real listings from the national feed when no area is chosen', () => {
-    render(<HomeTrendingSection />);
-
     expect(screen.getByText('Sunny family home')).toBeInTheDocument();
-    const input = useQuery.mock.calls[0][0];
-    expect(input).not.toHaveProperty('canonicalPlaceId');
-    expect(screen.getByRole('button', { name: 'Choose an area' })).toBeInTheDocument();
   });
 
-  it('scopes the feed to the area chosen in the homepage picker', () => {
-    homeSearch.current = makeHomeSearch({
-      locations: [{ canonicalPlaceId: 'pl-place-01-abc', name: 'Durban' }],
+  it('queries sale listings for the selected province and reports province changes', () => {
+    const onProvinceChange = vi.fn();
+    const { rerender } = renderSection({ onProvinceChange });
+    expect(useQuery.mock.calls[0][0]).toMatchObject({
+      listingType: 'sale',
+      canonicalPlaceId: HOME_PROVINCES[0].placeId,
     });
-    render(<HomeTrendingSection />);
 
-    expect(useQuery.mock.calls[0][0]).toMatchObject({ canonicalPlaceId: 'pl-place-01-abc' });
-    expect(screen.getByText('Homes in Durban')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Choose another area' }));
-    expect(screen.getByTestId('area-picker')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Western Cape' }));
+    expect(onProvinceChange).toHaveBeenCalledWith('Western Cape');
+
+    rerender(
+      <HomeTrendingSection
+        activeHeroTab="buy"
+        selectedProvince="Western Cape"
+        onProvinceChange={onProvinceChange}
+      />,
+    );
+    expect(
+      screen.getByRole('heading', { level: 2, name: 'Homes for sale in Western Cape' }),
+    ).toBeInTheDocument();
+    expect(useQuery.mock.calls.at(-1)?.[0]).toMatchObject({
+      canonicalPlaceId: HOME_PROVINCES[1].placeId,
+    });
   });
 
-  it('switches tab content when a tab is clicked', () => {
-    render(<HomeTrendingSection />);
+  it('maps Northern Cape and North West to their own province ids', () => {
+    renderSection({ selectedProvince: 'Northern Cape' });
+    expect(useQuery.mock.calls[0][0].canonicalPlaceId).toBe('pl-place-01-e7be97ff5aaae9fa7ff7d28f');
+  });
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Shared Living' }));
+  it('follows the hero: Rent changes heading, query and card badge', () => {
+    renderSection({ activeHeroTab: 'rent' });
 
-    expect(screen.getByRole('tab', { name: 'Shared Living' })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    );
-    expect(screen.queryByText('Sunny family home')).not.toBeInTheDocument();
-    expect(screen.getByText('Shared living rooms are coming soon.')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { level: 2, name: 'Rental properties in Gauteng' }),
+    ).toBeInTheDocument();
+    expect(useQuery.mock.calls[0][0]).toMatchObject({ listingType: 'rent' });
+    expect(screen.getByText('To rent')).toBeInTheDocument();
+  });
+
+  it('shows the unit-type empty state on Developments with no query enabled', () => {
+    renderSection({ activeHeroTab: 'developments' });
+
+    expect(screen.getByRole('heading', { level: 2, name: 'New developments' })).toBeInTheDocument();
+    expect(screen.getByText('New developments are launching soon.')).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: 'Are you a developer? List your development' }),
+    ).toHaveAttribute('href', '/advertise/sell/developers');
+    expect(screen.queryByRole('button', { name: 'Gauteng' })).not.toBeInTheDocument();
+    expect(useQuery.mock.calls.every(call => call[1]?.enabled === false)).toBe(true);
   });
 
   it.each([
-    [
-      'New Developments',
-      'New developments are launching soon.',
-      'Are you a developer? List your development',
-      '/advertise/sell/developers',
-    ],
-    ['Shared Living', 'Shared living rooms are coming soon.', 'List with us', '/advertise'],
-    ['Commercial', 'Commercial space is coming soon.', 'List with us', '/advertise'],
-    ['Plots & Land', 'Plots and land are coming soon.', 'List with us', '/advertise'],
-  ])('%s shows its empty state with one action', (tab, message, label, href) => {
-    render(<HomeTrendingSection />);
-    useQuery.mockClear();
+    ['commercial', 'Commercial space to lease', '/commercial'],
+    ['shared_living', 'Shared living opportunities', '/shared-living'],
+    ['plot_land', 'Land and plots to explore', '/plots-and-land'],
+  ] as const)('%s hands off to its own page and runs no query', (tab, heading, href) => {
+    renderSection({ activeHeroTab: tab });
 
-    fireEvent.click(screen.getByRole('tab', { name: tab }));
-
-    expect(screen.getByText(message)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: label })).toHaveAttribute('href', href);
-    expect(useQuery).not.toHaveBeenCalled();
+    expect(screen.getByRole('heading', { level: 2, name: heading })).toBeInTheDocument();
+    expect(document.querySelector(`a[href="${href}"]`)).not.toBeNull();
+    expect(useQuery.mock.calls.every(call => call[1]?.enabled === false)).toBe(true);
   });
 
-  it('supports arrow, Home and End keys on the tab row', () => {
-    render(<HomeTrendingSection />);
-    const buy = screen.getByRole('tab', { name: 'Buy' });
-
-    fireEvent.keyDown(buy, { key: 'ArrowRight' });
-    expect(screen.getByRole('tab', { name: 'Rent' })).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('tab', { name: 'Rent' })).toHaveFocus();
-    fireEvent.keyDown(screen.getByRole('tab', { name: 'Rent' }), { key: 'End' });
-    expect(screen.getByRole('tab', { name: 'Plots & Land' })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    );
-    fireEvent.keyDown(screen.getByRole('tab', { name: 'Plots & Land' }), { key: 'Home' });
-    expect(screen.getByRole('tab', { name: 'Buy' })).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('tab', { name: 'Buy' })).toHaveAttribute('tabindex', '0');
-    expect(screen.getByRole('tab', { name: 'Rent' })).toHaveAttribute('tabindex', '-1');
-  });
-
-  it('shows skeleton cards while loading', () => {
+  it('shows skeleton cards while loading and keeps the pills', () => {
     useQuery.mockReturnValue({ data: undefined, isLoading: true, isError: false, refetch });
-    render(<HomeTrendingSection />);
+    renderSection();
 
-    expect(screen.getAllByTestId('home-property-skeleton').length).toBeGreaterThan(0);
+    expect(screen.getAllByTestId('home-property-skeleton')).toHaveLength(4);
+    expect(screen.getByRole('button', { name: 'Gauteng' })).toBeInTheDocument();
   });
 
-  it('shows one line and Try again on error', () => {
+  it('shows a plain message and Try again on error', () => {
     useQuery.mockReturnValue({
       data: undefined,
       isLoading: false,
@@ -190,35 +178,19 @@ describe('HomeTrendingSection', () => {
       isFetching: false,
       refetch,
     });
-    render(<HomeTrendingSection />);
+    renderSection();
 
-    expect(screen.getByRole('alert')).toHaveTextContent('We could not load homes just now.');
+    expect(screen.getByRole('alert')).toHaveTextContent('Property could not be loaded');
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 
-  it('offers List with us when nothing is listed and no area is chosen', () => {
+  it('shows the empty copy inside the frame and keeps the pills', () => {
     useQuery.mockReturnValue({ data: { cards: [] }, isLoading: false, isError: false, refetch });
-    render(<HomeTrendingSection />);
+    renderSection({ selectedProvince: 'Limpopo' });
 
-    expect(screen.getByText('No homes listed here yet.')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /list with us/i })).toHaveAttribute(
-      'href',
-      '/advertise',
-    );
-  });
-
-  it('offers another area when nothing is listed in the chosen area', () => {
-    homeSearch.current = makeHomeSearch({
-      locations: [{ canonicalPlaceId: 'pl-place-01-abc', name: 'Durban' }],
-    });
-    useQuery.mockReturnValue({ data: { cards: [] }, isLoading: false, isError: false, refetch });
-    render(<HomeTrendingSection />);
-
-    expect(screen.getByText('No homes listed here yet.')).toBeInTheDocument();
-    const empty = screen.getByTestId('section-empty-state');
-    fireEvent.click(within(empty).getByRole('button', { name: /choose another area/i }));
-    expect(screen.getByTestId('area-picker')).toBeInTheDocument();
+    expect(screen.getByText('No published matches in Limpopo yet')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Free State' })).toBeInTheDocument();
   });
 
   it('drops listings without a real photo and developments', () => {
@@ -233,10 +205,10 @@ describe('HomeTrendingSection', () => {
       isError: false,
       refetch,
     });
-    render(<HomeTrendingSection />);
+    renderSection();
 
     expect(screen.queryByText('No photo')).not.toBeInTheDocument();
     expect(screen.queryByText('A development')).not.toBeInTheDocument();
-    expect(screen.getByText('No homes listed here yet.')).toBeInTheDocument();
+    expect(screen.getByText('No published matches in Gauteng yet')).toBeInTheDocument();
   });
 });

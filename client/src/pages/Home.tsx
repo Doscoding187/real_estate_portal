@@ -1,8 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation, useSearch } from 'wouter';
 import { HomeSearchProvider } from '@/contexts/HomeSearchContext';
 import { HomeLayout } from '@/layouts/HomeLayout';
-import { normalizeHeroUiTab } from '@/types/hero';
+import { normalizeHeroUiTab, type HeroTab } from '@/types/hero';
 import {
   buildHomepageJourneyUrl,
   isHomepageHeroJourneyEnabled,
@@ -28,6 +28,7 @@ export default function Home() {
   const [, setLocation] = useLocation();
   const search = useSearch();
   const isMobile = useIsMobile();
+  const [selectedProvince, setSelectedProvince] = useState('Gauteng');
   const queryString = search;
   const rawIntent = new URLSearchParams(queryString).get('intent');
   const requestedJourney = normalizePublicHeroJourney(rawIntent);
@@ -63,7 +64,12 @@ export default function Home() {
     setLocation(nextLocation);
   };
 
-  const heroTabValue = activeJourney && isHomepageHeroJourneyEnabled(activeJourney) ? activeJourney : '';
+  const effectiveHeroTab: HeroTab =
+    activeJourney && isHomepageHeroJourneyEnabled(activeJourney) && activeJourney !== 'find_agent'
+      ? (activeJourney as HeroTab)
+      : 'buy';
+  const heroTabValue =
+    activeJourney && isHomepageHeroJourneyEnabled(activeJourney) ? activeJourney : '';
   const homeCanonicalUrl = toAbsoluteUrl('/');
   const homeDescription =
     'Search South African property listings, explore new developments, compare areas, and connect with agents and developers on Property Listify.';
@@ -93,12 +99,18 @@ export default function Home() {
         <PageFrame contained={false}>
           {isMobile ? (
             <HomeMobileView
+              activeHeroTab={effectiveHeroTab}
+              selectedProvince={selectedProvince}
+              onProvinceChange={setSelectedProvince}
               heroTabValue={heroTabValue}
               onBrowseProperties={() => setLocation('/property-for-sale')}
               onTabChange={handleTabChange}
             />
           ) : (
             <HomeDesktopView
+              activeHeroTab={effectiveHeroTab}
+              selectedProvince={selectedProvince}
+              onProvinceChange={setSelectedProvince}
               heroTabValue={heroTabValue}
               onBrowseProperties={() => setLocation('/property-for-sale')}
               onTabChange={handleTabChange}
