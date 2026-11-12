@@ -7,10 +7,10 @@ interface ExploreCitiesProps {
   withinContentRail?: boolean;
 }
 
-/** Public place discovery always starts from the national Place catalogue. */
+/** Public place discovery starts from the national list of places. */
 export function ExploreCities({
-  title = 'Explore canonical places',
-  description = 'Find an admitted province, city, town, suburb, or locality in the national Place catalogue.',
+  title = 'Explore South Africa by area',
+  description = 'Find a province, city, town or suburb and see what is happening there.',
   withinContentRail = false,
 }: ExploreCitiesProps = {}) {
   return (

@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest';
 
 import { ExploreCities } from './ExploreCities';
 
-describe('canonical Place catalogue entry', () => {
-  it('sends discovery to the national Place catalogue', () => {
+describe('area discovery entry', () => {
+  it('sends discovery to the national places page', () => {
     render(<ExploreCities />);
 
     expect(screen.getByRole('link', { name: /browse locations/i })).toHaveAttribute(
@@ -18,7 +18,7 @@ describe('canonical Place catalogue entry', () => {
     render(<ExploreCities withinContentRail />);
 
     expect(
-      screen.getByRole('heading', { name: 'Explore canonical places' }).closest('.home-section-content'),
+      screen.getByRole('heading', { name: 'Explore South Africa by area' }).closest('.home-section-content'),
     ).toBeInTheDocument();
   });
 });

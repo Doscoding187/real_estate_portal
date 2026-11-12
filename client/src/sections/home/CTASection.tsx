@@ -13,13 +13,13 @@ export function CTASection({ onBrowse }: CTASectionProps) {
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS1vcGFjaXR5PSIwLjA1IiBzdHJva2Utd2lkdGg9IjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')] opacity-30" />
 
         <div className="relative z-10 mx-auto max-w-4xl">
-          <div className="mx-auto mb-3 inline-flex items-center rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-50">
+          <div className="mx-auto mb-3 inline-flex items-center rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-white">
             Start your search
           </div>
           <h2 className="mb-3 text-[1.65rem] font-bold leading-[1.08] tracking-tight text-white sm:mb-4 sm:text-3xl md:mb-6 md:text-5xl">
             Ready to find your next home?
           </h2>
-          <p className="mx-auto mb-5 max-w-[30rem] text-[13px] leading-5 text-blue-50 sm:text-base md:mb-10 md:text-xl md:leading-relaxed">
+          <p className="mx-auto mb-5 max-w-[30rem] text-[13px] leading-5 text-white sm:text-base md:mb-10 md:text-xl md:leading-relaxed">
             Explore homes for sale, compare the details that matter, and contact the people
             responsible for the property.
           </p>

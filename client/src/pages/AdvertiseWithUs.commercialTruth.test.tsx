@@ -43,26 +43,26 @@ describe('public advertise entry', () => {
     expect(screen.getByTestId('advertise-preparation-page')).toBeInTheDocument();
     expect(
       screen.getByRole('heading', {
-        name: 'Prepare your Property Listify workspace before commercial activation.',
+        name: 'Set up your Property Listify workspace now. Publishing opens soon.',
         level: 1,
       }),
     ).toBeInTheDocument();
     expect(screen.getByText('Preparation-only onboarding')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Start Agent preparation' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Set up your agent profile' })).toHaveAttribute(
       'href',
       '/advertise/sell/agents',
     );
-    expect(screen.getByRole('link', { name: 'Start Agency preparation' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'See agency details' })).toHaveAttribute(
       'href',
       '/advertise/sell/agencies',
     );
-    expect(screen.getByRole('link', { name: 'Start Developer preparation' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'See developer details' })).toHaveAttribute(
       'href',
       '/advertise/sell/developers',
     );
     expect(
       screen.getByText(
-        /does not activate payment, grant a commercial entitlement, or make inventory public/i,
+        /does not start a payment, grant a paid plan, or make anything public/i,
       ),
     ).toBeInTheDocument();
     expect(useCommercialCatalog).not.toHaveBeenCalled();
