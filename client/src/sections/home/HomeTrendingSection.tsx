@@ -1,3 +1,5 @@
+// Why this section exists, its content and ranking rules, and its history:
+// docs/product/homepage/trending-properties.md — update that file with any change here.
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Building2 } from 'lucide-react';

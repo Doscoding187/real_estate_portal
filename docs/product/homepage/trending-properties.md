@@ -1,0 +1,82 @@
+# Trending properties (homepage section 2)
+
+Component: `client/src/sections/home/HomeTrendingSection.tsx` · Province ids: `client/src/lib/homeProvinceOptions.ts`
+Server: `properties.searchPublicInventory` (`server/routers.ts`) → `server/services/publicSearchService.ts` → `server/services/propertySearchService.ts` (listings) and `server/services/publicDevelopmentSearchService.ts` (developments and their unit types).
+
+## 1. Why this section exists
+
+**Today:** show a visitor, straight under the search, real homes they can act on in a province they care about, so the homepage never feels empty or generic.
+
+**End goal (owner, 2026-11-12): a revenue-generating placement.** This rail is paid exposure, a marketing product sold to agents, agencies and developers. It is deliberately *not* called "Featured": every portal has "featured properties" and the word has lost its meaning. Principles:
+- A **small, scarce** space: about **10 cards per province per journey** (for example 10 homes for sale in Gauteng).
+- Sold through its **own billing**, separate from subscriptions. It is additional revenue and additional marketing exposure, not a subscription perk. *(Infrastructure not built yet; keep this section's code ready for it.)*
+- Until paid placement exists, the rail is filled by an **organic algorithm** (section 4). When placements exist, they come first and the algorithm fills the rest.
+
+## 2. What it shows (content rules)
+
+The section has **no tabs of its own for journeys**. It follows the **hero journey tabs** at the top of the page. Its own control is a row of **province pills**: Gauteng (default), Western Cape, KwaZulu-Natal, Eastern Cape, Mpumalanga, Limpopo, North West, Free State, Northern Cape.
+
+| Hero tab | Heading | What the cards are |
+|---|---|---|
+| Buy | "Homes for sale in {province}" | Individual listings for sale **plus development unit types for sale**, mixed (rules below) |
+| Rent | "Homes to rent in {province}" | Individual rental listings **plus development unit types for rent**, mixed |
+| New Developments | development wording | **Developments themselves** (one card per development). Someone choosing Developments is specifically looking for new or existing developments in the area |
+| Shared Living, Commercial, Plots & Land | journey wording | A link card to that journey's page (no listings until those journeys have inventory) |
+| Find an Agent | — | The hero sends the visitor to `/agents`; the section shows Buy |
+
+**Why unit types appear under Buy and Rent:** a unit in a development is still something for sale (or to rent). The transaction type decides where it belongs, not the fact that it comes from a development. In Buy and Rent we show the **unit type** (for example "2-bed apartment · Harbour View · from R1 250 000"), **never the whole development as one card**. Rules for unit-type cards:
+- Only unit types with units still available; transaction type must match the hero tab (for sale under Buy, for rent under Rent; rent cards use the monthly rent).
+- Price is the unit type's own "from" price (or monthly rent from). Never invent a price; no price, no card.
+- Links to that unit type on the development page.
+
+**Mixing listings and unit types:**
+- No individual listings in the province → the rail may be **all unit types**.
+- No unit types → all listings.
+- Both → mix them in one ranked list using the same ordering as section 4. *Proposal (to confirm with the owner):* at most 2 unit types from the same development, and unit types at most 4 of the 10 cards when at least 6 listings exist, so one development cannot fill the rail and private sellers and agents keep visibility. Paid placements, once they exist, are exempt from the cap.
+
+## 3. States (what the visitor sees, in order)
+
+1. **First load:** hero tab = Buy, province = Gauteng. Show 4 skeleton cards while loading.
+2. **Hero tab changes** (Buy ↔ Rent ↔ Developments …): heading, wording and cards switch to that journey; province selection is kept.
+3. **Province pill clicked:** cards reload for that province; heading updates; the previous province's results stay cached for 5 minutes (client query cache) so switching back is instant.
+4. **Results:** up to 10 cards in a horizontal rail with arrows on desktop and swipe on touch screens. Under the cards, a real link "View all homes for sale in {province}" (or "to rent") to the full search for that province.
+5. **No results in that province:** keep the heading and the pills; show the empty state "No published matches in {province} yet" with an action. Never hide the section.
+6. **Error:** "Property could not be loaded", with *Try again* and *Open property search*.
+
+## 4. Choosing what appears (ordering)
+
+Applied in this order:
+1. **Paid placements** for that province and journey *(future; separate billing; clearly labelled to visitors as promoted; the label wording and pricing are the owner's decision)*.
+2. **Organic ranking ("trending")**, when there is enough activity: a score computed on the server from signals already stored on each listing:
+   `score = (enquiries × 5 + min(views, 500) ÷ 50 + 1) ÷ (age in days + 2)^1.3`
+   - Enquiries weigh most: strongest sign of real interest.
+   - Views count but are capped at 500 because views are not de-duplicated today (every public page load adds one).
+   - Age decay lets new listings surface instead of old ones holding the space forever.
+   - Planned additions: saves/likes (favourites table) once the production database user can read it; de-duplicated views.
+   Implemented on the server as `sortOption: 'trending'` (card 47, `buildTrendingScoreExpression` in `propertySearchService.ts`).
+3. **Fallback when there is no activity:** newest first. (With no enquiries or views the score above already reduces to newest first.)
+4. **Quality gate for every card:** must have a photo (`requirePhoto`), a price and a title; unit types must have units available.
+
+## 5. Search engines
+
+- Province pills are buttons (they switch the rail in place). Each province gets a real link "View all homes … in {province}" so crawlers can follow it.
+- Listing cards are real links to listing pages.
+- *Planned:* structured data (`ItemList` with `RealEstateListing` items) for the rail; the homepage is currently rendered in the browser only, so crawlers see little of it until prerendering (card 39).
+
+## 6. Current implementation status (2026-11-12)
+
+| Rule | Status |
+|---|---|
+| Follows hero tabs, province pills, headings, states 1–6 | Built (branch `feat/home-38a-clarity`) |
+| Listings only (`listingSource: 'manual'`) | Built. Temporary: until unit-type cards exist, development results are not requested (the server used to send whole-development cards that the page then discarded) |
+| Photo filter on the server, trending order | Server change built (card 47, not deployed). Page switches to them after deployment |
+| Unit types mixed into Buy and Rent | Not built. Server already reads unit types (bedrooms, bathrooms, price and rent ranges, units available) in `publicDevelopmentSearchService.ts`; needs a unit-type result shape and the mixing rule |
+| Developments tab shows developments | Not built (shows the "launching soon" empty state; developments journey still held) |
+| Paid placements and their billing | Not started (future revenue product) |
+| Caching on the server, database index for this query | Not started |
+
+## 7. History
+
+- **Before 2026-10-28:** section existed (`HomeTrendingSection`, fed by `developer.getHomeTrendingFeed`, filtered by province *name*, photo required, newest first).
+- **2026-10-28, PR #693 (`cbff3e7b3`):** removed from the homepage, together with the city cards and market insights, because it depended on the legacy province/city/suburb tables that were dropped (migrations 0175–0178). The reasoning for the section was not recorded anywhere, so it was lost. This file exists to prevent that.
+- **2026-11-12:** restored from the owner's screenshot (cards 44 and 44 rework), now addressing provinces by place id through `properties.searchPublicInventory`; owner set the revenue goal and the content rules above.

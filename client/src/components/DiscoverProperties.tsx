@@ -1,3 +1,5 @@
+// Why this section exists, its categories, destinations and history:
+// docs/product/homepage/browse-by-category.md — update that file with any change here.
 import { useState, useCallback, useEffect, useRef, type MouseEvent, type ReactNode } from 'react';
 import { useLocation } from 'wouter';
 import { HomeAreaPicker } from '@/components/HomeAreaPicker';
