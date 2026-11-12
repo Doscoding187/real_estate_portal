@@ -1,5 +1,5 @@
 /**
- * Cities shown in the homepage "Explore South Africa by area" cards and the footer.
+ * Published cities: the pool for the homepage "Explore South Africa by area" tiles, and the footer.
  *
  * A city is listed only when its public page is published by the same rule the server
  * uses for sitemap and place pages (server/services/canonicalPlaceUrlService.ts,
@@ -106,6 +106,55 @@ export const CITY_GUIDES: readonly CityGuide[] = [
   { slug: 'alberton', name: 'Alberton', province: 'Gauteng', href: '/gauteng/alberton' },
 ];
 
+/**
+ * Cities shown as tiles in the homepage "Explore South Africa by area" section, in display order.
+ * Curated today (owner, 2026-11-12); planned to be chosen by an algorithm. See
+ * docs/product/homepage/explore-by-area.md. Every slug must be a published city above.
+ */
+export const POPULAR_CITY_SLUGS: readonly string[] = [
+  'johannesburg',
+  'cape-town',
+  'durban',
+  'pretoria',
+  'sandton',
+  'gqeberha',
+  'bloemfontein',
+  'centurion',
+  'stellenbosch',
+  'mbombela',
+  'polokwane',
+  'kimberley',
+];
+
+export function popularCityGuides(): CityGuide[] {
+  return POPULAR_CITY_SLUGS.flatMap(slug => CITY_GUIDES.find(city => city.slug === slug) ?? []);
+}
+
+export interface ProvinceTile {
+  code: string;
+  name: string;
+  href: string;
+}
+
+/**
+ * The nine provinces, each linking to its published province page. Paths are the entries with
+ * place_type "province", publication_eligible and lifecycle_status "active" in
+ * data/place-url-projection-national-v0.1.json (checked 2026-11-12). Northern Cape is published
+ * under the segment "noord-kaap"; the link is kept as published.
+ */
+export const PROVINCE_TILES: readonly ProvinceTile[] = [
+  { code: 'GP', name: 'Gauteng', href: '/gauteng' },
+  { code: 'WC', name: 'Western Cape', href: '/western-cape' },
+  { code: 'KZN', name: 'KwaZulu-Natal', href: '/kwazulu-natal' },
+  { code: 'EC', name: 'Eastern Cape', href: '/eastern-cape' },
+  { code: 'FS', name: 'Free State', href: '/free-state' },
+  { code: 'LP', name: 'Limpopo', href: '/limpopo' },
+  { code: 'MP', name: 'Mpumalanga', href: '/mpumalanga' },
+  { code: 'NW', name: 'North West', href: '/north-west' },
+  { code: 'NC', name: 'Northern Cape', href: '/noord-kaap' },
+];
+
+/** City photos stay in the repo for city guide pages; the homepage tiles no longer use them. */
 export function cityGuideImage(slug: string) {
   const base = `/images/city-guides-v1/${slug}`;
   return {

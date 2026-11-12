@@ -12,7 +12,7 @@ Visual reference for the homepage as designed: the owner's screenshot of the int
 | 2 | Trending properties | `client/src/sections/home/HomeTrendingSection.tsx` | [trending-properties.md](trending-properties.md) |
 | 3 | Browse by city, category and journey | `client/src/components/DiscoverProperties.tsx` | [browse-by-category.md](browse-by-category.md) |
 | 4 | Developers | `client/src/components/TopDevelopers.tsx` | *to write* |
-| 5 | Explore South Africa by area (city cards) | `client/src/components/ExploreCities.tsx` | *to write* |
+| 5 | Explore South Africa by area (compact tiles) | `client/src/components/ExploreCities.tsx` | [explore-by-area.md](explore-by-area.md) |
 | 6 | Property market insights | `client/src/sections/home/HomeMarketInsightsSection.tsx` | *to write* |
 | 7 | Connected property journey | `client/src/sections/home/HomeJourneySection.tsx` | *to write* |
 | 8 | For property professionals | `client/src/sections/home/ProfessionalEntrySection.tsx` | *to write* |
