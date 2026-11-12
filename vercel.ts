@@ -42,6 +42,11 @@ export const config = {
     // The national entry gets a static document. Every geographic path below it resolves
     // through the canonical Place URL projection in the application.
     { src: '/south-africa/?', dest: '/south-africa/index.html' },
+    // Build-time HTML for the homepage, published place pages and fixed-content pages lives at
+    // <path>/index.html (see docs/product/seo-prerender.md). Vercel's routes format runs every
+    // route above this handler first and then checks the filesystem; only a path with no file
+    // reaches the application shell below. Keep this handler directly before the catch-all.
+    { handle: 'filesystem' },
     { src: '/(.*)', dest: '/index.html' },
   ],
 };
