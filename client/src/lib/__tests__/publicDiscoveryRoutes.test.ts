@@ -98,11 +98,13 @@ describe('public discovery route authority', () => {
 
     expect(source).toContain('buildDiscoverBrowseHref');
     expect(source).toContain('buildDiscoverCardHref');
-    expect(source).toMatch(/href=\{buildDiscoverCardHref\(/);
+    expect(source).toMatch(/buildDiscoverCardHref\(property\.type/);
+    expect(source).toMatch(/href=\{href\}/);
     expect(source).not.toContain('CITY_PROVINCE_MAP');
     expect(source).not.toContain('setSelectedCity');
     expect(source).not.toContain("type: 'Office Spaces'");
-    expect(source).not.toContain("type: 'Shops'");
+    // Shops and Offices are owner-approved cards that link to the Commercial journey page.
+    expect(source).toContain("type: 'Shops'");
     expect(source).not.toContain("type: 'Penthouses'");
   });
 });

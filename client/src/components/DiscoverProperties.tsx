@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, type ReactNode } from 'react';
+import { useState, useCallback, useEffect, useRef, type MouseEvent, type ReactNode } from 'react';
 import { useLocation } from 'wouter';
 import { HomeAreaPicker } from '@/components/HomeAreaPicker';
 import {
@@ -7,32 +7,21 @@ import {
 } from '@/components/location/CanonicalPlaceSelector';
 import { useHomeSearch, type HomeAreaSelection } from '@/contexts/HomeSearchContext';
 import { needsHomeAreaClarification } from '@/lib/homeAreaSelection';
-import useEmblaCarousel from 'embla-carousel-react';
-import {
-  Building,
-  Building2,
-  ChevronLeft,
-  ChevronRight,
-  ChevronRight as ChevronRightIcon,
-  Gem,
-  Home,
-  KeyRound,
-  Landmark,
-  LayoutGrid,
-  MapPin,
-  Sparkles,
-  Tag,
-  Trees,
-  type LucideIcon,
-} from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronRight as ChevronRightIcon, MapPin } from 'lucide-react';
 import {
   buildDiscoverBrowseHref,
   buildDiscoverCardHref,
   buildSelectedDiscoverHref,
+  placeFromLocation,
 } from '@/lib/publicDiscoveryRoutes';
 import { isHomepageHeroJourneyEnabled } from '@/lib/publicNavigation';
 import { Button } from '@/components/ui/button';
 import { buildDevelopmentsSearchUrl } from '@/lib/heroJourneySearch';
+import { HOME_BROWSE_CITIES, type BrowseCity } from '@/lib/cityGuides';
+import { CATEGORY_IMAGES } from '@/lib/categoryImages.generated';
+import type { LocationNode } from '@/types/location';
+
+type ListingType = 'sale' | 'rent' | 'developments';
 
 function DiscoveryAction({
   href,
@@ -58,42 +47,78 @@ function DiscoveryAction({
 
 interface PropertyType {
   type: string;
-  icon: LucideIcon;
-  /** Tailwind classes for the tinted tile and its icon chip. */
-  tint: string;
-  chip: string;
-  listingType: 'sale' | 'rent' | 'developments';
+  /** Base name of the generated photo in /images/categories; absent means no photo supplied. */
+  image?: string;
+  listingType: ListingType;
 }
 
-const TINT_BLUE = { tint: 'bg-blue-50 border-blue-100', chip: 'bg-blue-100 text-blue-700' };
-const TINT_EMERALD = {
-  tint: 'bg-emerald-50 border-emerald-100',
-  chip: 'bg-emerald-100 text-emerald-700',
-};
-const TINT_AMBER = { tint: 'bg-amber-50 border-amber-100', chip: 'bg-amber-100 text-amber-700' };
-const TINT_VIOLET = {
-  tint: 'bg-violet-50 border-violet-100',
-  chip: 'bg-violet-100 text-violet-700',
+const propertyTypes: PropertyType[] = [
+  // Sale
+  { type: 'Houses', image: 'houses', listingType: 'sale' },
+  { type: 'Apartments', image: 'apartments', listingType: 'sale' },
+  { type: 'Townhouses', image: 'townhouses', listingType: 'sale' },
+  { type: 'Cluster Homes', image: 'cluster-homes', listingType: 'sale' },
+  { type: 'Farms', image: 'farms', listingType: 'sale' },
+  { type: 'Plots & Land', image: 'plots-and-land', listingType: 'sale' },
+  { type: 'Offices', image: 'offices', listingType: 'sale' },
+  { type: 'Shops', image: 'shops', listingType: 'sale' },
+  // Rent
+  { type: 'Apartments', image: 'apartments', listingType: 'rent' },
+  { type: 'Houses', image: 'houses', listingType: 'rent' },
+  { type: 'Townhouses', image: 'townhouses', listingType: 'rent' },
+  { type: 'Offices', image: 'offices', listingType: 'rent' },
+  { type: 'Shops', image: 'shops', listingType: 'rent' },
+  // New Developments (no photos supplied yet; held at launch)
+  { type: 'Ready to Move', listingType: 'developments' },
+  { type: 'New Launch', listingType: 'developments' },
+  { type: 'Affordable Housing', listingType: 'developments' },
+  { type: 'Luxury Projects', listingType: 'developments' },
+];
+
+const CHIP_LABEL: Record<ListingType, string> = {
+  sale: 'For sale',
+  rent: 'To rent',
+  developments: 'New development',
 };
 
-const propertyTypes: PropertyType[] = [
-  // Sale Properties
-  { type: 'Houses', icon: Home, ...TINT_BLUE, listingType: 'sale' },
-  { type: 'Apartments', icon: Building2, ...TINT_EMERALD, listingType: 'sale' },
-  { type: 'Townhouses', icon: Building, ...TINT_AMBER, listingType: 'sale' },
-  { type: 'Villas', icon: Landmark, ...TINT_VIOLET, listingType: 'sale' },
-  { type: 'Cluster Homes', icon: LayoutGrid, ...TINT_BLUE, listingType: 'sale' },
-  { type: 'Farms', icon: Trees, ...TINT_EMERALD, listingType: 'sale' },
-  // Rent Properties
-  { type: 'Apartments', icon: Building2, ...TINT_EMERALD, listingType: 'rent' },
-  { type: 'Houses', icon: Home, ...TINT_BLUE, listingType: 'rent' },
-  { type: 'Townhouses', icon: Building, ...TINT_AMBER, listingType: 'rent' },
-  // New Developments (held at launch; hidden while the developments journey is held)
-  { type: 'Ready to Move', icon: KeyRound, ...TINT_BLUE, listingType: 'developments' },
-  { type: 'New Launch', icon: Sparkles, ...TINT_AMBER, listingType: 'developments' },
-  { type: 'Affordable Housing', icon: Tag, ...TINT_EMERALD, listingType: 'developments' },
-  { type: 'Luxury Projects', icon: Gem, ...TINT_VIOLET, listingType: 'developments' },
-];
+/** Matches the card widths set on the rail items below. */
+const CARD_SIZES =
+  '(min-width: 1280px) 195px, (min-width: 1024px) 210px, (min-width: 768px) 24vw, 42vw';
+
+const CARD_WIDTH_CLASS =
+  'w-[calc((100%-0.75rem)/2.3)] md:w-[calc((100%-2rem)/3.3)] lg:w-[calc((100%-2rem)/3)] xl:w-[calc((100%-3rem)/4)]';
+
+function cityToLocation(city: BrowseCity): LocationNode {
+  return {
+    canonicalPlaceId: city.canonicalPlaceId,
+    factualType: 'city',
+    slug: city.slug,
+    name: city.name,
+    type: 'city',
+    provinceSlug: city.provinceSlug,
+    citySlug: city.slug,
+    canonicalPath: city.canonicalPath,
+  };
+}
+
+function CategoryImage({ name, alt }: { name: string; alt: string }) {
+  const image = CATEGORY_IMAGES[name];
+  if (!image) return null;
+  const base = `/images/categories/${name}`;
+  return (
+    <img
+      src={`${base}-${image.width}.webp`}
+      srcSet={image.widths.map(width => `${base}-${width}.webp ${width}w`).join(', ')}
+      sizes={CARD_SIZES}
+      width={image.width}
+      height={image.height}
+      loading="lazy"
+      decoding="async"
+      alt={alt}
+      className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+    />
+  );
+}
 
 interface DiscoverPropertiesProps {
   title?: string;
@@ -112,7 +137,7 @@ export function DiscoverProperties({
   const homeSearch = useHomeSearch();
   const [, setLocation] = useLocation();
   const [picker, setPicker] = useState<{
-    type: 'sale' | 'rent' | 'developments';
+    type: ListingType;
     category?: string;
     id: number;
     edit?: boolean;
@@ -133,8 +158,10 @@ export function DiscoverProperties({
   const displaySubtitle = subtitle || defaultSubtitle;
 
   const [developmentPlace, setDevelopmentPlace] = useState<CanonicalPlaceSelection | null>(null);
+  // Without the homepage search context (other pages) the city pills keep their own selection.
+  const [localLocations, setLocalLocations] = useState<LocationNode[]>([]);
 
-  const [listingType, setListingType] = useState<'sale' | 'rent' | 'developments'>('sale');
+  const [listingType, setListingType] = useState<ListingType>('sale');
   const [saleExpanded, setSaleExpanded] = useState(true);
   const [rentExpanded, setRentExpanded] = useState(false);
   const [developmentsExpanded, setDevelopmentsExpanded] = useState(false);
@@ -152,18 +179,25 @@ export function DiscoverProperties({
     setRentExpanded(next === 'rent');
     setDevelopmentsExpanded(next === 'developments');
   }, [sharedJourney]);
-  const selection: HomeAreaSelection = {
-    locations: homeSearch?.locations || [],
-  };
-  const areaLabel = homeSearch
-    ? selection.locations.map(location => location.name).join(' + ')
-    : '';
+
+  const locations = homeSearch ? homeSearch.locations : localLocations;
+  const selection: HomeAreaSelection = { locations };
+  const areaLabel = locations.map(location => location.name).join(' + ');
+  const singleLocation = locations.length === 1 ? locations[0] : null;
+  const cardPlace = singleLocation ? placeFromLocation(singleLocation) : null;
   const locationPhrase = areaLabel ? `in ${areaLabel}` : 'in your chosen area';
-  const broadConfirmed =
-    needsHomeAreaClarification(selection) &&
-    Boolean(selection.locations[0]) &&
-    homeSearch?.confirmedBroadPlaceId === selection.locations[0]?.canonicalPlaceId;
-  const chooseCategory = (type: 'sale' | 'rent' | 'developments', category?: string) => {
+  const chooseCity = (city: BrowseCity) => {
+    const selected = singleLocation?.canonicalPlaceId === city.canonicalPlaceId;
+    const next = selected ? [] : [cityToLocation(city)];
+    if (homeSearch) {
+      homeSearch.setLocations(next);
+      // Picking a city pill is the explicit choice of that city.
+      homeSearch.setConfirmedBroadPlaceId(selected ? null : city.canonicalPlaceId);
+    } else {
+      setLocalLocations(next);
+    }
+  };
+  const chooseCategory = (type: ListingType, category?: string) => {
     if (type === 'developments') {
       if (developmentPlace) {
         setLocation(
@@ -187,19 +221,27 @@ export function DiscoverProperties({
     setPicker({ type, category, id: Date.now() });
   };
 
-  const [emblaRef, emblaApi] = useEmblaCarousel({
-    align: 'start',
-    slidesToScroll: 1,
-    containScroll: 'trimSnaps',
-  });
-
-  const scrollPrev = useCallback(() => {
-    if (emblaApi) emblaApi.scrollPrev();
-  }, [emblaApi]);
-
-  const scrollNext = useCallback(() => {
-    if (emblaApi) emblaApi.scrollNext();
-  }, [emblaApi]);
+  // Native scroll-snap rail; the arrows page it on larger screens.
+  const railRef = useRef<HTMLDivElement | null>(null);
+  const [canPrev, setCanPrev] = useState(false);
+  const [canNext, setCanNext] = useState(false);
+  const updateArrows = useCallback(() => {
+    const rail = railRef.current;
+    if (!rail) return;
+    setCanPrev(rail.scrollLeft > 4);
+    setCanNext(rail.scrollLeft + rail.clientWidth < rail.scrollWidth - 4);
+  }, []);
+  const pageRail = (direction: 1 | -1) => {
+    const rail = railRef.current;
+    if (!rail) return;
+    rail.scrollBy({ left: direction * rail.clientWidth * 0.8, behavior: 'smooth' });
+  };
+  useEffect(() => {
+    if (railRef.current) railRef.current.scrollLeft = 0;
+    updateArrows();
+    window.addEventListener('resize', updateArrows);
+    return () => window.removeEventListener('resize', updateArrows);
+  }, [listingType, updateArrows]);
 
   const filteredProperties = propertyTypes.filter(
     p =>
@@ -207,7 +249,7 @@ export function DiscoverProperties({
       (p.listingType !== 'developments' || developmentsJourneyEnabled),
   );
   const mobileSectionCopy: Record<
-    'sale' | 'rent' | 'developments',
+    ListingType,
     { title: string; description: string; cta: string }
   > = {
     sale: {
@@ -231,8 +273,16 @@ export function DiscoverProperties({
   const mobileActiveHref =
     listingType === 'developments'
       ? developmentBrowseHref
-      : buildDiscoverBrowseHref(listingType);
+      : buildDiscoverBrowseHref(listingType, cardPlace);
   const browseDevelopment = () => chooseCategory('developments');
+
+  const selectJourney = (next: ListingType) => {
+    homeSearch?.onJourneyChange(next === 'sale' ? 'buy' : next);
+    setListingType(next);
+    setSaleExpanded(next === 'sale');
+    setRentExpanded(next === 'rent');
+    setDevelopmentsExpanded(next === 'developments');
+  };
 
   const handleSaleClick = () => {
     homeSearch?.onJourneyChange('buy');
@@ -266,6 +316,82 @@ export function DiscoverProperties({
     }
   };
 
+  const cardHref = (property: PropertyType) =>
+    property.listingType === 'developments'
+      ? developmentPlace
+        ? buildDiscoverCardHref(property.type, 'developments', developmentPlace)
+        : '/new-developments'
+      : buildDiscoverCardHref(property.type, property.listingType, cardPlace);
+
+  const onCardClick = (
+    event: MouseEvent<HTMLAnchorElement>,
+    property: PropertyType,
+    href: string,
+  ) => {
+    if (
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      return;
+    }
+    event.preventDefault();
+    if (property.listingType === 'developments' && !developmentPlace) {
+      browseDevelopment();
+      return;
+    }
+    setLocation(href);
+  };
+
+  const accordionRows: Array<{
+    id: ListingType;
+    label: string;
+    expanded: boolean;
+    onToggle: () => void;
+    description: ReactNode;
+    cta: string;
+    href: string;
+    onChoose?: () => void;
+    enabled: boolean;
+  }> = [
+    {
+      id: 'sale',
+      label: 'Properties for Sale',
+      expanded: saleExpanded,
+      onToggle: handleSaleClick,
+      description: `Explore apartments, houses, and townhomes for sale ${locationPhrase}.`,
+      cta: 'View Sale Listings',
+      href: buildDiscoverBrowseHref('sale'),
+      onChoose: homeSearch ? () => chooseCategory('sale') : undefined,
+      enabled: true,
+    },
+    {
+      id: 'rent',
+      label: 'Properties for Rent',
+      expanded: rentExpanded,
+      onToggle: handleRentClick,
+      description: `Browse apartments, cottages, and flexible rentals now available ${locationPhrase}.`,
+      cta: 'View Rental Listings',
+      href: buildDiscoverBrowseHref('rent'),
+      onChoose: homeSearch ? () => chooseCategory('rent') : undefined,
+      enabled: rentJourneyEnabled,
+    },
+    {
+      id: 'developments',
+      label: 'New Developments',
+      expanded: developmentsExpanded,
+      onToggle: handleDevelopmentsClick,
+      description: `See the newest off-plan and ready-to-move developments ${locationPhrase}.`,
+      cta: 'View Developments',
+      href: developmentBrowseHref,
+      onChoose: browseDevelopment,
+      enabled: developmentsJourneyEnabled,
+    },
+  ];
+
   return (
     <div className="home-section bg-gradient-to-b from-white to-muted/20">
       <div className={withinContentRail ? 'home-section-content' : 'container'}>
@@ -276,6 +402,36 @@ export function DiscoverProperties({
           <p className="text-muted-foreground text-xs md:text-sm max-w-2xl">{displaySubtitle}</p>
         </div>
 
+        {/* City pills are only for the property journeys. */}
+        {listingType !== 'developments' ? (
+          <div className="home-section-tabs scrollbar-hide -mx-4 flex justify-start overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0">
+            <div
+              role="group"
+              aria-label="City"
+              className="inline-flex h-auto flex-nowrap justify-start gap-1.5 rounded-xl border border-slate-200 bg-slate-50 p-1.5"
+            >
+              {HOME_BROWSE_CITIES.map(city => {
+                const active = singleLocation?.canonicalPlaceId === city.canonicalPlaceId;
+                return (
+                  <button
+                    key={city.canonicalPlaceId}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => chooseCity(city)}
+                    className={`min-h-11 shrink-0 whitespace-nowrap rounded-lg border border-transparent px-3 py-2 text-[13px] font-semibold transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 md:px-4 md:text-sm ${
+                      active
+                        ? 'bg-[#2774AE] text-white shadow-sm'
+                        : 'bg-transparent text-slate-600 hover:bg-white hover:text-[#2774AE]'
+                    }`}
+                  >
+                    {city.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
+
         {homeSearch && listingType !== 'developments' && (
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-100 bg-blue-50/40 px-4 py-3">
             <div className="flex min-w-0 items-center gap-2">
@@ -283,12 +439,11 @@ export function DiscoverProperties({
               <div>
                 <p className="text-sm font-semibold text-slate-900">
                   {areaLabel || 'Where would you like to look?'}
-                  {broadConfirmed ? ' · All areas' : ''}
                 </p>
                 <p className="mt-0.5 text-xs text-slate-600">
-                  {needsHomeAreaClarification(selection) && !broadConfirmed
-                    ? 'Choose an area before opening property results.'
-                    : 'Your selected area carries through to the category you choose.'}
+                  {areaLabel
+                    ? 'Your selected area carries through to the category you choose.'
+                    : 'Pick a city above or choose an area. Without one, categories open results for all of South Africa.'}
                 </p>
               </div>
             </div>
@@ -313,13 +468,19 @@ export function DiscoverProperties({
             />
           </div>
         ) : null}
+
+        {/* Below 1024px the accordion becomes a segmented control. */}
         <div className="mb-4 lg:hidden">
-          <div className="flex items-center gap-6 border-b border-slate-200">
+          <div
+            role="group"
+            aria-label="Property journey"
+            className="grid auto-cols-fr grid-flow-col gap-1 rounded-xl border border-slate-200 bg-slate-100 p-1"
+          >
             {(
               [
-                { id: 'sale', label: 'Buy' },
+                { id: 'sale', label: 'Sale' },
                 { id: 'rent', label: 'Rent' },
-                { id: 'developments', label: 'Developments' },
+                { id: 'developments', label: 'New Developments' },
               ] as const
             )
               .filter(
@@ -332,27 +493,22 @@ export function DiscoverProperties({
                 return (
                   <button
                     key={tab.id}
-                    onClick={() => {
-                      setListingType(tab.id);
-                      homeSearch?.onJourneyChange(tab.id === 'sale' ? 'buy' : tab.id);
-                      setSaleExpanded(tab.id === 'sale');
-                      setRentExpanded(tab.id === 'rent');
-                      setDevelopmentsExpanded(tab.id === 'developments');
-                    }}
-                    className={`relative pb-3 text-sm font-semibold transition-colors ${
-                      isActive ? 'text-slate-900' : 'text-slate-500'
+                    type="button"
+                    aria-pressed={isActive}
+                    onClick={() => selectJourney(tab.id)}
+                    className={`min-h-11 rounded-lg px-2 text-[13px] font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 sm:text-sm ${
+                      isActive
+                        ? 'bg-white text-[#1d5a8e] shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
                     {tab.label}
-                    {isActive ? (
-                      <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-slate-900" />
-                    ) : null}
                   </button>
                 );
               })}
           </div>
-          <div className="pt-4">
-            <p className="text-sm text-slate-600 leading-relaxed">{mobileActiveCopy.description}</p>
+          <div className="pt-3">
+            <p className="text-sm leading-relaxed text-slate-600">{mobileActiveCopy.description}</p>
             <DiscoveryAction
               href={mobileActiveHref}
               onChoose={
@@ -362,7 +518,7 @@ export function DiscoverProperties({
                     ? () => chooseCategory(listingType)
                     : undefined
               }
-              className="mt-3 inline-flex items-center gap-1 text-sm font-bold text-blue-600 hover:text-blue-800 transition-colors group"
+              className="group mt-2 inline-flex min-h-11 items-center gap-1 text-sm font-bold text-blue-700 transition-colors hover:text-blue-900"
             >
               {mobileActiveCopy.cta}
               <ChevronRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -370,205 +526,134 @@ export function DiscoverProperties({
           </div>
         </div>
 
-        <div className="home-card-grid grid grid-cols-1 lg:grid-cols-12">
-          {/* Left Sidebar - Listing Type Toggle */}
-          <div className="hidden lg:block lg:col-span-3">
-            <div className="rounded-2xl border border-slate-200 shadow-xl bg-white overflow-hidden h-full flex flex-col">
-              {/* Properties for Sale */}
-              <div className="border-b border-slate-100">
-                <button
-                  onClick={handleSaleClick}
-                  className={`w-full p-3.5 sm:p-4 flex items-center justify-between transition-all duration-300 ${
-                    saleExpanded
-                      ? 'bg-blue-50/80 text-blue-700'
-                      : 'hover:bg-slate-50 text-slate-700'
-                  }`}
-                >
-                  <span className="font-bold text-base">Properties for Sale</span>
-                  <div
-                    className={`rounded-full p-1 transition-colors ${saleExpanded ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200'}`}
-                  >
-                    <ChevronRightIcon
-                      className={`h-4 w-4 transition-transform duration-300 ${saleExpanded ? 'rotate-90' : ''}`}
-                    />
-                  </div>
-                </button>
-                <div
-                  className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                    saleExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-                  }`}
-                >
-                  <div className="px-5 pb-5 pt-2 bg-blue-50/30">
-                    <p className="text-sm text-slate-600 leading-relaxed mb-5">
-                      Explore apartments, houses, and townhomes for sale {locationPhrase}.
-                    </p>
-                    <DiscoveryAction
-                      href={buildDiscoverBrowseHref('sale')}
-                      onChoose={homeSearch ? () => chooseCategory('sale') : undefined}
-                      className="text-sm font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors group"
-                    >
-                      View Sale Listings
-                      <ChevronRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                    </DiscoveryAction>
-                  </div>
-                </div>
-              </div>
-
-              {rentJourneyEnabled ? (
-                <div className="border-b border-slate-100">
-                  <button
-                    onClick={handleRentClick}
-                    className={`w-full p-3.5 sm:p-4 flex items-center justify-between transition-all duration-300 ${
-                      rentExpanded
-                        ? 'bg-blue-50/80 text-blue-700'
-                        : 'hover:bg-slate-50 text-slate-700'
-                    }`}
-                  >
-                    <span className="font-bold text-base">Properties for Rent</span>
-                    <div
-                      className={`rounded-full p-1 transition-colors ${rentExpanded ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200'}`}
-                    >
-                      <ChevronRightIcon
-                        className={`h-4 w-4 transition-transform duration-300 ${rentExpanded ? 'rotate-90' : ''}`}
-                      />
-                    </div>
-                  </button>
-                  <div
-                    className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                      rentExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-                    }`}
-                  >
-                    <div className="px-5 pb-5 pt-2 bg-blue-50/30">
-                      <p className="text-sm text-slate-600 leading-relaxed mb-5">
-                        Browse apartments, cottages, and flexible rentals now available in{' '}
-                        {areaLabel || 'your chosen area'}.
-                      </p>
-                      <DiscoveryAction
-                        href={buildDiscoverBrowseHref('rent')}
-                        onChoose={homeSearch ? () => chooseCategory('rent') : undefined}
-                        className="text-sm font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors group"
-                      >
-                        View Rental Listings
-                        <ChevronRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                      </DiscoveryAction>
-                    </div>
-                  </div>
-                </div>
-              ) : null}
-
-              {developmentsJourneyEnabled ? (
-                <>
-                  {/* New Developments */}
-                  <div>
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(15rem,18.5rem)_minmax(0,1fr)] lg:gap-6">
+          {/* Accordion column (1024px and up) */}
+          <div className="hidden lg:block">
+            <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
+              {accordionRows
+                .filter(row => row.enabled)
+                .map(row => (
+                  <div key={row.id} className="border-b border-slate-100 last:border-b-0">
                     <button
-                      onClick={handleDevelopmentsClick}
-                      className={`w-full p-3.5 sm:p-4 flex items-center justify-between transition-all duration-300 ${
-                        developmentsExpanded
+                      type="button"
+                      onClick={row.onToggle}
+                      aria-expanded={row.expanded}
+                      className={`flex min-h-12 w-full items-center justify-between p-3.5 transition-all duration-300 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-700 sm:p-4 ${
+                        row.expanded
                           ? 'bg-blue-50/80 text-blue-700'
-                          : 'hover:bg-slate-50 text-slate-700'
+                          : 'text-slate-700 hover:bg-slate-50'
                       }`}
                     >
-                      <span className="font-bold text-base">New Developments</span>
-                      <div
-                        className={`rounded-full p-1 transition-colors ${developmentsExpanded ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200'}`}
+                      <span className="text-base font-bold">{row.label}</span>
+                      <span
+                        className={`rounded-full p-1 transition-colors ${row.expanded ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'}`}
                       >
                         <ChevronRightIcon
-                          className={`h-4 w-4 transition-transform duration-300 ${developmentsExpanded ? 'rotate-90' : ''}`}
+                          className={`h-4 w-4 transition-transform duration-300 ${row.expanded ? 'rotate-90' : ''}`}
+                          aria-hidden="true"
                         />
-                      </div>
+                      </span>
                     </button>
                     <div
                       className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                        developmentsExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                        row.expanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
                       }`}
                     >
-                      <div className="px-5 pb-5 pt-2 bg-blue-50/30">
-                        <p className="text-sm text-slate-600 leading-relaxed mb-5">
-                          See the newest off-plan and ready-to-move developments {locationPhrase}.
+                      <div className="bg-blue-50/30 px-5 pb-5 pt-2">
+                        <p className="mb-4 text-sm leading-relaxed text-slate-600">
+                          {row.description}
                         </p>
                         <DiscoveryAction
-                          href={developmentBrowseHref}
-                          onChoose={browseDevelopment}
-                          className="text-sm font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors group"
+                          href={row.href}
+                          onChoose={row.onChoose}
+                          className="group flex items-center gap-1 text-sm font-bold text-blue-700 transition-colors hover:text-blue-900"
                         >
-                          View Developments
+                          {row.cta}
                           <ChevronRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                         </DiscoveryAction>
                       </div>
                     </div>
                   </div>
-                </>
-              ) : null}
+                ))}
             </div>
           </div>
 
-          {/* Right Side - Property Carousel */}
-          <div className="lg:col-span-9 relative group/carousel">
-            <div className="overflow-hidden rounded-2xl" ref={emblaRef}>
-              <div className="home-card-grid flex py-0.5">
-                {filteredProperties.map((property, idx) => (
-                  <div
-                    key={idx}
-                    className="flex-[0_0_62%] min-w-0 sm:flex-[0_0_48%] lg:flex-[0_0_32%]"
+          {/* Category cards: one rail from phone to desktop, same height as the accordion at 1024px+ */}
+          <div className="relative min-w-0 lg:h-full lg:min-h-[17rem]">
+            <div
+              ref={railRef}
+              onScroll={updateArrows}
+              data-testid="discover-card-rail"
+              className="scrollbar-hide flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain scroll-smooth p-1 md:gap-4 lg:h-full"
+            >
+              {filteredProperties.map(property => {
+                const href = cardHref(property);
+                const imageName = property.image;
+                const hasPhoto = Boolean(imageName && CATEGORY_IMAGES[imageName]);
+                const chipArea = singleLocation && property.listingType !== 'developments';
+                return (
+                  <a
+                    key={`${property.listingType}-${property.type}`}
+                    href={href}
+                    onClick={event => onCardClick(event, property, href)}
+                    data-card={`${property.listingType}:${property.type}`}
+                    className={`group relative block aspect-[4/5] shrink-0 snap-start overflow-hidden rounded-xl bg-slate-800 shadow-sm transition-shadow hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2774AE] focus-visible:ring-offset-2 lg:aspect-auto lg:h-full ${CARD_WIDTH_CLASS}`}
                   >
-                    <DiscoveryAction
-                      onChoose={
-                        property.listingType === 'developments'
-                          ? browseDevelopment
-                          : homeSearch
-                            ? () => chooseCategory(property.listingType, property.type)
-                            : undefined
-                      }
-                      href={buildDiscoverCardHref(
-                        property.type,
-                        property.listingType,
-                        developmentPlace,
-                      )}
-                      className={`group flex h-[168px] flex-col justify-between rounded-xl border p-4 shadow-sm transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2774AE] focus-visible:ring-offset-2 sm:h-[200px] sm:p-5 ${property.tint}`}
-                    >
+                    {hasPhoto && imageName ? (
+                      <CategoryImage
+                        name={imageName}
+                        alt={`${property.type} ${property.listingType === 'rent' ? 'to rent' : 'for sale'}`}
+                      />
+                    ) : (
                       <span
-                        className={`flex h-12 w-12 items-center justify-center rounded-xl ${property.chip}`}
-                      >
-                        <property.icon className="h-6 w-6" aria-hidden="true" />
+                        aria-hidden="true"
+                        className="absolute inset-0 bg-gradient-to-br from-[#2774AE] via-[#1d5a8e] to-[#0f2f4d]"
+                      />
+                    )}
+                    <span
+                      aria-hidden="true"
+                      className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 via-40% to-transparent"
+                    />
+                    <span className="absolute inset-x-0 bottom-0 flex flex-col items-start gap-1.5 p-3 sm:p-4">
+                      <span className="text-lg font-bold leading-tight text-white sm:text-xl">
+                        {property.type}
                       </span>
-                      <span className="block">
-                        <span className="block text-lg font-bold text-slate-900 sm:text-xl">
-                          {property.type}
+                      <span className="flex max-w-full flex-wrap items-center gap-x-2 gap-y-1 text-xs font-medium text-white">
+                        <span className="rounded bg-black/50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider ring-1 ring-white/30">
+                          {CHIP_LABEL[property.listingType]}
                         </span>
-                        <span className="mt-1 block text-xs font-medium text-slate-600">
-                          <span className="rounded bg-white/70 px-2 py-0.5 uppercase tracking-wider">
-                            {listingType === 'sale'
-                              ? 'For Sale'
-                              : listingType === 'rent'
-                                ? 'For Rent'
-                                : 'New Development'}
-                          </span>
-                          <span className="mt-1 block truncate">{locationPhrase}</span>
-                        </span>
+                        {chipArea ? (
+                          <span className="max-w-full truncate">in {singleLocation.name}</span>
+                        ) : null}
                       </span>
-                    </DiscoveryAction>
-                  </div>
-                ))}
-              </div>
+                    </span>
+                  </a>
+                );
+              })}
             </div>
 
-            {/* Navigation Buttons - Visible on large screens or hover */}
-            <Button
-              variant="secondary"
-              size="icon"
-              className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full h-12 w-12 shadow-xl z-20 opacity-0 group-hover/carousel:opacity-100 transition-all duration-300 hover:scale-110 bg-white/90 hover:bg-white text-slate-900 hover:text-blue-600 border border-slate-200 hidden md:flex"
-              onClick={scrollPrev}
-            >
-              <ChevronLeft className="h-6 w-6" />
-            </Button>
-            <Button
-              variant="secondary"
-              size="icon"
-              className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full h-12 w-12 shadow-xl z-20 opacity-0 group-hover/carousel:opacity-100 transition-all duration-300 hover:scale-110 bg-white/90 hover:bg-white text-slate-900 hover:text-blue-600 border border-slate-200 hidden md:flex"
-              onClick={scrollNext}
-            >
-              <ChevronRight className="h-6 w-6" />
-            </Button>
+            {canPrev ? (
+              <Button
+                variant="secondary"
+                size="icon"
+                aria-label="Previous categories"
+                className="absolute left-2 top-1/2 z-20 hidden h-11 w-11 -translate-y-1/2 rounded-full border border-slate-200 bg-white/95 text-slate-900 shadow-xl hover:bg-white hover:text-blue-700 md:flex"
+                onClick={() => pageRail(-1)}
+              >
+                <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+              </Button>
+            ) : null}
+            {canNext ? (
+              <Button
+                variant="secondary"
+                size="icon"
+                aria-label="Next categories"
+                className="absolute right-2 top-1/2 z-20 hidden h-11 w-11 -translate-y-1/2 rounded-full border border-slate-200 bg-white/95 text-slate-900 shadow-xl hover:bg-white hover:text-blue-700 md:flex"
+                onClick={() => pageRail(1)}
+              >
+                <ChevronRight className="h-5 w-5" aria-hidden="true" />
+              </Button>
+            ) : null}
           </div>
         </div>
         {homeSearch && picker && (

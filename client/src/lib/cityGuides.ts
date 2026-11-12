@@ -115,3 +115,81 @@ export function cityGuideImage(slug: string) {
     height: 270,
   };
 }
+
+/**
+ * Full canonical place ids for the entries above, copied from the same projection entries
+ * (matched by path, checked 2026-11-12). Every entry is a city (search_scope metro_city) except
+ * Sandton (locality).
+ */
+export const CITY_GUIDE_PLACE_IDS: Readonly<Record<string, string>> = {
+  johannesburg: 'pl-place-01-21f154cd5d0954c29ec7525f',
+  'cape-town': 'pl-place-01-13ed41eeb1c2f1c0f9dd45b3',
+  durban: 'pl-place-01-64b4aab651d573698cb257be',
+  pretoria: 'pl-place-01-d0401eba0f556a60bb02e528',
+  sandton: 'pl-place-01-dee61758ef3bda7cd1a258ad',
+  gqeberha: 'pl-place-01-ac826ee0a4e6b23f974d0b7a',
+  bloemfontein: 'pl-place-01-f027383082fe13c5407c3a3e',
+  centurion: 'pl-place-01-1a30ae4d635ef747d6c987df',
+  midrand: 'pl-place-01-0614f47352b29b431aee83fd',
+  randburg: 'pl-place-01-7e92e438655b8d2b97c1a395',
+  soweto: 'pl-place-01-99b91be60755ea1f09bf6349',
+  stellenbosch: 'pl-place-01-60511c8e98656bb21a7b3f50',
+  mbombela: 'pl-place-01-0fee11726d524e50b89fb39d',
+  polokwane: 'pl-place-01-2fb67dcdf3f294d903c60f2e',
+  kimberley: 'pl-place-01-bd85870dd1c2331ba1900510',
+  roodepoort: 'pl-place-01-de64523ea374afb6295fcdc6',
+  benoni: 'pl-place-01-a883dbe0691336eb38a8ee14',
+  boksburg: 'pl-place-01-f32a20dcdd9bda610b044611',
+  'kempton-park': 'pl-place-01-80841bed32edb0281e35ed86',
+  alberton: 'pl-place-01-17dec3188c1a55debd727832',
+};
+
+export interface BrowseCity {
+  name: string;
+  slug: string;
+  provinceSlug: string;
+  canonicalPlaceId: string;
+  canonicalPath: string;
+}
+
+function browseCity(slug: string): BrowseCity {
+  const guide = CITY_GUIDES.find(item => item.slug === slug);
+  const canonicalPlaceId = CITY_GUIDE_PLACE_IDS[slug];
+  if (!guide || !canonicalPlaceId) throw new Error(`Unknown browse city ${slug}`);
+  return {
+    name: guide.name,
+    slug,
+    provinceSlug: guide.href.split('/')[1],
+    canonicalPlaceId,
+    canonicalPath: guide.href,
+  };
+}
+
+/**
+ * City pills in the homepage "Browse by city, category, and property journey" block.
+ *
+ * Mahikeng is the current official name of Mafikeng. The projection (origin/main, checked
+ * 2026-11-12) publishes it as "Mafikeng": place_type city, search_scope metro_city, verified,
+ * publication_eligible, active, path /north-west/mafikeng, place id
+ * pl-place-01-30239f30c13e9f470ac582a0. The pill shows "Mahikeng" and uses that entry. The
+ * projection itself has no alias record for "Mahikeng", so the equivalence is general
+ * knowledge, not data; delete that pill if it is not wanted.
+ */
+export const HOME_BROWSE_CITIES: readonly BrowseCity[] = [
+  browseCity('cape-town'),
+  browseCity('johannesburg'),
+  browseCity('pretoria'),
+  browseCity('durban'),
+  browseCity('bloemfontein'),
+  browseCity('gqeberha'),
+  browseCity('polokwane'),
+  browseCity('kimberley'),
+  browseCity('mbombela'),
+  {
+    name: 'Mahikeng',
+    slug: 'mafikeng',
+    provinceSlug: 'north-west',
+    canonicalPlaceId: 'pl-place-01-30239f30c13e9f470ac582a0',
+    canonicalPath: '/north-west/mafikeng',
+  },
+];
