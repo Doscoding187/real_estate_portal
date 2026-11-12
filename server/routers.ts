@@ -104,6 +104,7 @@ import { monetizationRouter } from './monetizationRouter';
 import { partnerRouter } from './partnerRouter';
 import { cataloguePublisherRouter } from './cataloguePublisherRouter';
 import { homeMarketInsightsRouter } from './homeMarketInsightsRouter';
+import { homeAreasRouter } from './homeAreasRouter';
 import { superAdminPublisherRouter } from './superAdminPublisherRouter';
 import { reviewsRouter } from './reviewsRouter';
 import { leadsRouter } from './leadsRouter';
@@ -159,6 +160,7 @@ const appRouterConfig = {
   cache: cacheRouter,
   cataloguePublisher: cataloguePublisherRouter,
   homeMarketInsights: homeMarketInsightsRouter,
+  homeAreas: homeAreasRouter,
   superAdminPublisher: superAdminPublisherRouter,
   reviews: reviewsRouter,
   leads: leadsRouter,

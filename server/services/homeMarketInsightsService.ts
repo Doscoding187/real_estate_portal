@@ -1,9 +1,13 @@
-import { and, eq, gt, or, sql, type SQL } from 'drizzle-orm';
+import { and, eq, gt, inArray, or, sql, type SQL } from 'drizzle-orm';
 
 import { properties } from '../../drizzle/schema';
 import { getDb } from '../db';
 import { canonicalPlaceUrlByPlaceId } from './canonicalPlaceUrlService';
-import { loadCanonicalPlaceSearchProjection } from './canonicalPlaceSearchService';
+import {
+  loadCanonicalPlaceSearchProjection,
+  type CanonicalPlaceSearchProjection,
+} from './canonicalPlaceSearchService';
+import { loadHomeProvinceScope } from './homeProvinceScopeService';
 import { excludeLandFromGenericPublicProjection } from './landLaunchContainmentService';
 import { resolvePublicPropertyEligibilities } from './publicPropertyEligibilityService';
 
@@ -78,7 +82,7 @@ export function median(values: readonly number[]): number | null {
     : sorted[middle];
 }
 
-function publishedPath(placeId: string): string | null {
+export function publishedPath(placeId: string): string | null {
   const entry = canonicalPlaceUrlByPlaceId(placeId);
   return entry && entry.publication_eligible && entry.lifecycle_status === 'active'
     ? entry.path
@@ -132,49 +136,42 @@ function summariseCity(listings: readonly QualifyingListing[], computedAt: strin
 }
 
 /**
- * Candidate predicate: the same base conditions public property search applies
+ * Base predicate: the same conditions public property search applies
  * (published/available, not commercial, source-listing backed, assigned to a
- * canonical Place, Land excluded) restricted to sale listings with a price.
- * Final eligibility is decided by resolvePublicPropertyEligibilities below.
+ * canonical Place, Land excluded). Final eligibility is decided by
+ * resolvePublicPropertyEligibilities.
  */
-function candidateConditions(): SQL[] {
+export function publicListingBaseConditions(): SQL[] {
   return [
     or(eq(properties.status, 'available'), eq(properties.status, 'published'))!,
     sql`${properties.propertyType} <> 'commercial'`,
-    eq(properties.listingType, 'sale'),
-    gt(properties.price, 0),
     sql`${properties.sourceListingId} IS NOT NULL`,
     sql`${properties.canonicalPlaceId} IS NOT NULL`,
     excludeLandFromGenericPublicProjection(),
   ];
 }
 
-async function computeCityInsights(limit: number): Promise<HomeMarketCityInsight[]> {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
+/** Base predicate restricted to sale listings with a price. */
+function candidateConditions(): SQL[] {
+  return [
+    ...publicListingBaseConditions(),
+    eq(properties.listingType, 'sale'),
+    gt(properties.price, 0),
+  ];
+}
 
-  // Query 1: the only properties read. Floor size follows the listing cards:
-  // COALESCE(internal_area_m2, area).
-  const candidates = await db
-    .select({
-      id: properties.id,
-      price: properties.price,
-      sizeM2: sql<string | number | null>`CAST(COALESCE(${properties.internalAreaM2}, ${properties.area}) AS DECIMAL(14,2))`,
-      canonicalPlaceId: properties.canonicalPlaceId,
-    })
-    .from(properties)
-    .where(and(...candidateConditions()));
-  if (!candidates.length) return [];
+type Candidate = {
+  id: unknown;
+  price: unknown;
+  sizeM2: unknown;
+  canonicalPlaceId: string | null;
+};
 
-  const projection = await loadCanonicalPlaceSearchProjection(undefined, {
-    placeIds: Array.from(
-      new Set<string>(
-        candidates.flatMap(row => (row.canonicalPlaceId ? [String(row.canonicalPlaceId)] : [])),
-      ),
-    ),
-  });
-  const eligible = await resolvePublicPropertyEligibilities(candidates.map(row => Number(row.id)));
-
+function groupByCity(
+  candidates: readonly Candidate[],
+  eligible: ReadonlyMap<number, unknown>,
+  projection: CanonicalPlaceSearchProjection,
+): Map<string, QualifyingListing[]> {
   const byCity = new Map<string, QualifyingListing[]>();
   for (const row of candidates) {
     const price = positiveNumber(row.price);
@@ -201,22 +198,117 @@ async function computeCityInsights(limit: number): Promise<HomeMarketCityInsight
     });
     byCity.set(cityPlaceId, list);
   }
+  return byCity;
+}
 
-  const computedAt = new Date().toISOString();
+function citySummaries(
+  byCity: ReadonlyMap<string, QualifyingListing[]>,
+  computedAt: string,
+): HomeMarketCityInsight[] {
   return Array.from(byCity.values())
     .filter(listings => listings.length >= MINIMUM_CITY_SAMPLE)
     .map(listings => summariseCity(listings, computedAt))
     .sort(
       (left, right) =>
         right.activeSaleListings - left.activeSaleListings || left.name.localeCompare(right.name),
-    )
-    .slice(0, limit);
+    );
+}
+
+// Floor size follows the listing cards: COALESCE(internal_area_m2, area).
+const candidateSelection = {
+  id: properties.id,
+  price: properties.price,
+  sizeM2: sql<string | number | null>`CAST(COALESCE(${properties.internalAreaM2}, ${properties.area}) AS DECIMAL(14,2))`,
+  canonicalPlaceId: properties.canonicalPlaceId,
+};
+
+async function computeCityInsights(limit: number): Promise<HomeMarketCityInsight[]> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  // Query 1: the only properties read.
+  const candidates = await db
+    .select(candidateSelection)
+    .from(properties)
+    .where(and(...candidateConditions()));
+  if (!candidates.length) return [];
+
+  const projection = await loadCanonicalPlaceSearchProjection(undefined, {
+    placeIds: Array.from(
+      new Set<string>(
+        candidates.flatMap(row => (row.canonicalPlaceId ? [String(row.canonicalPlaceId)] : [])),
+      ),
+    ),
+  });
+  const eligible = await resolvePublicPropertyEligibilities(candidates.map(row => Number(row.id)));
+
+  const computedAt = new Date().toISOString();
+  return citySummaries(groupByCity(candidates, eligible, projection), computedAt).slice(0, limit);
+}
+
+export const MAX_PROVINCE_CITY_INSIGHTS = 8;
+
+export type HomeProvinceInsights = {
+  /**
+   * Whole-province figures; null when fewer than 3 qualifying listings.
+   * leadingLocality is the CITY with the most qualifying listings.
+   */
+  province: HomeMarketCityInsight | null;
+  cities: HomeMarketCityInsight[];
+};
+
+async function computeProvinceInsights(provincePlaceId: string): Promise<HomeProvinceInsights> {
+  const scope = await loadHomeProvinceScope(provincePlaceId);
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  // Query 1: the only properties read, limited to the province's places.
+  const candidates = scope.memberPlaceIds.length
+    ? await db
+        .select(candidateSelection)
+        .from(properties)
+        .where(
+          and(...candidateConditions(), inArray(properties.canonicalPlaceId, scope.memberPlaceIds)),
+        )
+    : [];
+  const computedAt = new Date().toISOString();
+  if (!candidates.length) return { province: null, cities: [] };
+
+  const eligible = await resolvePublicPropertyEligibilities(candidates.map(row => Number(row.id)));
+  const byCity = groupByCity(candidates, eligible, scope.projection);
+  const all = Array.from(byCity.values()).flat();
+  let province: HomeMarketCityInsight | null = null;
+  if (all.length >= MINIMUM_CITY_SAMPLE) {
+    const leadingCity = Array.from(byCity.values()).sort(
+      (left, right) =>
+        right.length - left.length || left[0].cityName.localeCompare(right[0].cityName),
+    )[0];
+    const summary = summariseCity(all, computedAt);
+    province = {
+      ...summary,
+      placeId: scope.province.placeId,
+      name: scope.province.name,
+      provinceName: scope.province.name,
+      href: publishedPath(scope.province.placeId),
+      leadingLocality: {
+        name: leadingCity[0].cityName,
+        listingCount: leadingCity.length,
+        href: publishedPath(leadingCity[0].cityPlaceId),
+      },
+    };
+  }
+  return {
+    province,
+    cities: citySummaries(byCity, computedAt).slice(0, MAX_PROVINCE_CITY_INSIGHTS),
+  };
 }
 
 const cache = new Map<string, { at: number; value: HomeMarketCityInsight[] }>();
+const provinceCache = new Map<string, { at: number; value: HomeProvinceInsights }>();
 
 export function resetHomeMarketInsightsCache(): void {
   cache.clear();
+  provinceCache.clear();
 }
 
 /**
@@ -236,6 +328,20 @@ export const homeMarketInsightsService = {
     if (hit && Date.now() - hit.at < HOME_MARKET_INSIGHTS_TTL_MS) return hit.value;
     const value = await computeCityInsights(boundedLimit);
     cache.set(key, { at: Date.now(), value });
+    return value;
+  },
+
+  /** Province-level figures plus the province's cities with enough listings. */
+  async getProvinceInsights({
+    provincePlaceId,
+  }: {
+    provincePlaceId: string;
+  }): Promise<HomeProvinceInsights> {
+    const key = JSON.stringify({ provincePlaceId });
+    const hit = provinceCache.get(key);
+    if (hit && Date.now() - hit.at < HOME_MARKET_INSIGHTS_TTL_MS) return hit.value;
+    const value = await computeProvinceInsights(provincePlaceId);
+    provinceCache.set(key, { at: Date.now(), value });
     return value;
   },
 };
