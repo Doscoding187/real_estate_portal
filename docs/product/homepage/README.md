@@ -8,7 +8,7 @@ Visual reference for the homepage as designed: the owner's screenshot of the int
 
 | Order | Section | Component | Logic file |
 |---|---|---|---|
-| 1 | Hero and journey tabs | `client/src/components/EnhancedHero.tsx` | *to write* |
+| 1 | Hero and journey tabs | `client/src/components/EnhancedHero.tsx` | [hero.md](hero.md) |
 | 2 | Trending properties | `client/src/sections/home/HomeTrendingSection.tsx` | [trending-properties.md](trending-properties.md) |
 | 3 | Browse by city, category and journey | `client/src/components/DiscoverProperties.tsx` | [browse-by-category.md](browse-by-category.md) |
 | 4 | Developers | `client/src/components/TopDevelopers.tsx` | *to write* |

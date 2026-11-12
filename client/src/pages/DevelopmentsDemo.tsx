@@ -1,3 +1,4 @@
+import { SectionEmptyState } from '@/components/ui/SectionEmptyState';
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useSearch } from 'wouter';
 import { Building2, ChevronLeft, ChevronRight, List, Loader2, X } from 'lucide-react';
@@ -581,13 +582,16 @@ export default function DevelopmentsDemo() {
                 </div>
               </>
             ) : (
-              <div className="flex flex-col items-center justify-center py-20 text-center">
-                <Building2 className="mb-4 h-16 w-16 text-slate-300" />
-                <h2 className="mb-2 text-lg font-semibold text-slate-700">No developments found</h2>
-                <p className="max-w-md text-slate-500">
-                  Try another canonical location or adjust the development refinements.
-                </p>
-              </div>
+              <SectionEmptyState
+                icon={Building2}
+                title="No developments found"
+                titleAs="h3"
+                message="No new developments are listed yet. Try another area or change your filters."
+                action={{
+                  label: 'Are you a developer? List your development',
+                  href: '/advertise/sell/developers',
+                }}
+              />
             )}
           </main>
         </div>

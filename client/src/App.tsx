@@ -24,6 +24,7 @@ import { isLandPublicDiscoveryAvailable, isLandVerticalAvailable } from '@shared
 // Eager Imports (Critical Path)
 import Home from './pages/Home';
 import { HeldJourneyGate } from './pages/JourneyHeldPage';
+import JourneyComingSoonPage from './pages/JourneyComingSoonPage';
 import { RequireRole } from '@/components/RequireRole';
 import AgencySetupAccountBoundary from '@/components/AgencySetupAccountBoundary';
 
@@ -429,24 +430,24 @@ function Router() {
             </HeldJourneyGate>
           </Route>
           <Route path="/shared-living/list">
-            <HeldJourneyGate journey="shared_living">
+            <HeldJourneyGate journey="shared_living" detail>
               <RequireRole role={['visitor', 'agent']} unauthenticatedAuthEntry="register">
                 <SharedLivingLister />
               </RequireRole>
             </HeldJourneyGate>
           </Route>
           <Route path="/shared-living/thread/:token">
-            <HeldJourneyGate journey="shared_living">
+            <HeldJourneyGate journey="shared_living" detail>
               <SharedLivingThread />
             </HeldJourneyGate>
           </Route>
           <Route path="/shared-living/:slug">
-            <HeldJourneyGate journey="shared_living">
+            <HeldJourneyGate journey="shared_living" detail>
               <SharedLivingDetail />
             </HeldJourneyGate>
           </Route>
           <Route path="/commercial/:slug">
-            <HeldJourneyGate journey="commercial">
+            <HeldJourneyGate journey="commercial" detail>
               <CommercialOfficeDetail />
             </HeldJourneyGate>
           </Route>
@@ -772,12 +773,12 @@ function Router() {
           <Route path="/plots-and-land">
             {isLandPublicDiscoveryAvailable() ? (
               <LandPublicLayout><PlotsAndLand /></LandPublicLayout>
-            ) : <LandDeferred audience="public" />}
+            ) : <JourneyComingSoonPage journey="plot_land" />}
           </Route>
           <Route path="/land/:slug">
             {isLandPublicDiscoveryAvailable() ? (
               <LandPublicLayout><LandDetail /></LandPublicLayout>
-            ) : <LandDeferred audience="public" />}
+            ) : <JourneyComingSoonPage journey="plot_land" detail />}
           </Route>
           <Route path="/property-to-rent" component={SearchResults} />
           <Route path="/farms-and-smallholdings" component={FarmsAndSmallholdings} />

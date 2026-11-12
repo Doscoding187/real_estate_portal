@@ -44,7 +44,8 @@ import { LocationAutosuggest } from './LocationAutosuggest';
 import {
   getHomepageHeroJourneys,
   getPublicHeroJourney,
-  isHomepageHeroJourneyEnabled,
+  isHomepageHeroTabEnabled,
+  isJourneyComingSoon,
   normalizePublicHeroJourney,
   type PublicHeroJourneyKey,
 } from '@/lib/publicNavigation';
@@ -57,6 +58,7 @@ import {
   resolveCanonicalLocationSelection,
 } from '@/lib/heroJourneySearch';
 import { RENT_PUBLIC_PROPERTY_TYPES } from '@shared/property-taxonomy';
+import { isLandPublicDiscoveryAvailable } from '@shared/landLaunchPolicy';
 import { buildLocationDiscoveryPath, hasCanonicalPlaceIdentity } from '@/lib/locationDiscovery';
 import {
   buildConsumerJourneyUrl,
@@ -505,10 +507,21 @@ export function EnhancedHero({
   const filters = homeSearch?.filters ?? localFilters;
   const setFilters = homeSearch?.setFilters ?? setLocalFilters;
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const tabScrollerRef = useRef<HTMLDivElement | null>(null);
+  const [tabEdges, setTabEdges] = useState({ left: false, right: false });
   const activeTab = controlledTab || internalTab;
   const requestedJourney = activeTab ? normalizePublicHeroJourney(activeTab) : null;
   const journey =
-    requestedJourney && isHomepageHeroJourneyEnabled(requestedJourney) ? requestedJourney : '';
+    requestedJourney && isHomepageHeroTabEnabled(requestedJourney) ? requestedJourney : '';
+  // Shared Living, Commercial and Plots & Land lead to their own "not listed yet"
+  // pages while held (and Land while its public discovery is off). The search
+  // text travels in the URL so nothing is lost and nobody meets an error.
+  const journeyPageIsComingSoon =
+    journey === 'plot_land'
+      ? !isLandPublicDiscoveryAvailable() || isJourneyComingSoon(journey)
+      : journey === 'shared_living' || journey === 'commercial'
+        ? isJourneyComingSoon(journey)
+        : false;
   const presentation =
     JOURNEY_PRESENTATION[journey as PublicHeroJourneyKey] || JOURNEY_PRESENTATION.buy!;
   const priceRangeError = getPriceRangeError(filters.priceMin, filters.priceMax) || null;
@@ -545,6 +558,27 @@ export function EnhancedHero({
       document.removeEventListener('keydown', closeOnEscape, true);
     };
   }, [priceRangeOpen]);
+  const updateTabEdges = () => {
+    const scroller = tabScrollerRef.current;
+    if (!scroller) return;
+    const left = scroller.scrollLeft > 4;
+    const right = scroller.scrollLeft + scroller.clientWidth < scroller.scrollWidth - 4;
+    setTabEdges(current =>
+      current.left === left && current.right === right ? current : { left, right },
+    );
+  };
+  useEffect(() => {
+    // Keep the chosen tab in view on phones; show a fade where more tabs exist.
+    const scroller = tabScrollerRef.current;
+    const selectedTab = scroller?.querySelector<HTMLElement>('[aria-pressed="true"]');
+    if (scroller && selectedTab) {
+      const target = selectedTab.offsetLeft - (scroller.clientWidth - selectedTab.offsetWidth) / 2;
+      scroller.scrollTo?.({ left: Math.max(0, target), behavior: 'smooth' });
+    }
+    updateTabEdges();
+    window.addEventListener('resize', updateTabEdges);
+    return () => window.removeEventListener('resize', updateTabEdges);
+  }, [journey]);
   useEffect(() => {
     if (journey === 'buy') inputRef.current?.focus();
   }, [journey]);
@@ -578,6 +612,7 @@ export function EnhancedHero({
     );
     if (
       journey === 'plot_land' &&
+      !journeyPageIsComingSoon &&
       location.type !== 'suburb' &&
       resolution.outcome !== 'invalid' &&
       resolution.outcome !== 'limit-reached'
@@ -654,6 +689,35 @@ export function EnhancedHero({
           maxPrice: filters.budgetMax,
         }),
       );
+      return;
+    }
+    if (journeyPageIsComingSoon && journey) {
+      const search = new URLSearchParams();
+      if (locations.length === 1) {
+        const place = locations[0];
+        if (place.canonicalPlaceId) search.set('canonicalPlaceId', place.canonicalPlaceId);
+        if (place.name) search.set('location', place.name);
+      } else if (locations.length > 1) {
+        search.set('location', locations.map(place => place.name).filter(Boolean).join(', '));
+      }
+      const extras: Record<string, unknown> =
+        journey === 'commercial'
+          ? {
+              minAreaM2: filters.commercialMinAreaM2,
+              maxMonthlyBudget: filters.commercialMaxMonthlyBudget,
+              availability: filters.commercialAvailability,
+              minParkingBays: filters.commercialMinParkingBays,
+            }
+          : journey === 'plot_land'
+            ? { classification: filters.classification, maxPrice: filters.maxPrice }
+            : { market: filters.market, maxPrice: filters.maxPrice };
+      for (const [key, value] of Object.entries(extras)) {
+        if (value !== undefined && value !== null && String(value) !== '') {
+          search.set(key, String(value));
+        }
+      }
+      const destination = getPublicHeroJourney(journey).destination;
+      setLocation(search.toString() ? `${destination}?${search.toString()}` : destination);
       return;
     }
     if (journey === 'commercial') {
@@ -775,7 +839,12 @@ export function EnhancedHero({
           style={{ maxWidth: 'var(--plds-home-hero-search-max-width, 1180px)' }}
           className="mx-auto mt-8 w-full sm:mt-10"
         >
-          <div className="overflow-x-auto px-1 pb-2 [scrollbar-width:none]">
+          <div className="relative">
+          <div
+            ref={tabScrollerRef}
+            onScroll={updateTabEdges}
+            className="relative overflow-x-auto px-1 pb-2 [scrollbar-width:none]"
+          >
             <div
               role="group"
               aria-label="What are you looking for?"
@@ -799,6 +868,21 @@ export function EnhancedHero({
                 );
               })}
             </div>
+          </div>
+          {tabEdges.left ? (
+            <span
+              aria-hidden="true"
+              data-testid="hero-tabs-fade-left"
+              className="pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-white to-transparent lg:hidden"
+            />
+          ) : null}
+          {tabEdges.right ? (
+            <span
+              aria-hidden="true"
+              data-testid="hero-tabs-fade-right"
+              className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-white to-transparent lg:hidden"
+            />
+          ) : null}
           </div>
         </div>
         <div

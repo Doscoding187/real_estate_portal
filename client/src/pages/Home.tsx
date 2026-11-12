@@ -5,7 +5,7 @@ import { HomeLayout } from '@/layouts/HomeLayout';
 import { normalizeHeroUiTab, type HeroTab } from '@/types/hero';
 import {
   buildHomepageJourneyUrl,
-  isHomepageHeroJourneyEnabled,
+  isHomepageHeroTabEnabled,
   normalizePublicHeroJourney,
   parseHomepageJourney,
 } from '@/lib/publicNavigation';
@@ -48,7 +48,7 @@ export default function Home() {
 
     if (
       requestedJourney === null ||
-      !isHomepageHeroJourneyEnabled(requestedJourney) ||
+      !isHomepageHeroTabEnabled(requestedJourney) ||
       rawIntent.trim().toLowerCase() !== requestedJourney
     ) {
       setLocation('/', { replace: true });
@@ -65,11 +65,11 @@ export default function Home() {
   };
 
   const effectiveHeroTab: HeroTab =
-    activeJourney && isHomepageHeroJourneyEnabled(activeJourney) && activeJourney !== 'find_agent'
+    activeJourney && isHomepageHeroTabEnabled(activeJourney) && activeJourney !== 'find_agent'
       ? (activeJourney as HeroTab)
       : 'buy';
   const heroTabValue =
-    activeJourney && isHomepageHeroJourneyEnabled(activeJourney) ? activeJourney : '';
+    activeJourney && isHomepageHeroTabEnabled(activeJourney) ? activeJourney : '';
   const homeCanonicalUrl = toAbsoluteUrl('/');
   const homeDescription =
     'Search South African property listings, explore new developments, compare areas, and connect with agents and developers on Property Listify.';

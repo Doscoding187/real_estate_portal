@@ -35,7 +35,8 @@ describe('Land public search and retained publication containment', () => {
       homepageVisible: false,
       homepageEnabled: false,
     });
-    expect(getHomepageHeroJourneys().map(journey => journey.key)).not.toContain('plot_land');
+    // Tab-only: the hero shows the Plots & Land tab, but it releases nothing elsewhere.
+    expect(getHomepageHeroJourneys().map(journey => journey.key)).toContain('plot_land');
     const noHostedRelease = resolvePublicJourneyReleaseContext({
       PROD: true,
       VITE_DEPLOY_ENV: 'production',
@@ -54,7 +55,9 @@ describe('Land public search and retained publication containment', () => {
     expect(app).toContain("const LandReviewWorkspace = lazy(() => import('./pages/admin/LandReviewWorkspace'));");
     expect(app).toContain('<LandDeferred audience="reviewer" />');
     expect(app).toContain('<LandDeferred audience="author" />');
-    expect(app).toContain('<LandDeferred audience="public" />');
+    expect(app).toContain('<JourneyComingSoonPage journey="plot_land" />');
+    expect(app).toContain('<JourneyComingSoonPage journey="plot_land" detail />');
+    expect(app).not.toContain('<LandDeferred audience="public" />');
     expect(app).toContain('isLandVerticalAvailable() ? <LandReviewWorkspace />');
     expect(app).toContain('isLandVerticalAvailable() ? <LandAuthoringWorkspace />');
     expect(app).toContain('isLandPublicDiscoveryAvailable() ?');

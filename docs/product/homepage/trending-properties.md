@@ -71,7 +71,7 @@ Applied in this order:
 | Listings only (`listingSource: 'manual'`) | Built. Temporary: until unit-type cards exist, development results are not requested (the server used to send whole-development cards that the page then discarded) |
 | Photo filter on the server, trending order | Server change built (card 47, not deployed). Page switches to them after deployment |
 | Unit types mixed into Buy and Rent | Not built. Server already reads unit types (bedrooms, bathrooms, price and rent ranges, units available) in `publicDevelopmentSearchService.ts`; needs a unit-type result shape and the mixing rule |
-| Developments tab shows developments | Not built (shows the "launching soon" empty state; developments journey still held) |
+| Developments tab shows developments | Not built (shows the "launching soon" empty state; developments is now public; unit types come from the server later) |
 | Paid placements and their billing | Not started (future revenue product) |
 | Caching on the server, database index for this query | Not started |
 

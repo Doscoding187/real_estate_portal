@@ -138,9 +138,10 @@ describe('public navigation authority', () => {
       homepageVisible: true,
       homepageEnabled: true,
     });
+    // Developments is public at launch: released on hosted builds too.
     expect(getPublicHeroJourney('developments', containedProductionRelease)).toMatchObject({
-      homepageVisible: false,
-      homepageEnabled: false,
+      homepageVisible: true,
+      homepageEnabled: true,
     });
     for (const surface of ['desktop', 'mobile'] as const) {
       const localItems = getVisiblePublicNavigationGroups(
@@ -157,7 +158,7 @@ describe('public navigation authority', () => {
       expect(localItems).toEqual(
         expect.arrayContaining([expect.objectContaining({ id: 'buyers-developments' })]),
       );
-      expect(productionItems).not.toEqual(
+      expect(productionItems).toEqual(
         expect.arrayContaining([expect.objectContaining({ id: 'buyers-developments' })]),
       );
     }
