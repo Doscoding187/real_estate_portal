@@ -21,6 +21,9 @@ import {
 } from '@/lib/seo/structuredData';
 import { VITE_APP_LOGO } from '@/const';
 
+/** Same image as the static og:image/twitter:image tags in client/index.html. */
+const HOME_SHARE_IMAGE_PATH = '/og-image.png';
+
 export default function Home() {
   const [, setLocation] = useLocation();
   const search = useSearch();
@@ -83,7 +86,7 @@ export default function Home() {
         canonicalUrl={homeCanonicalUrl}
         title="Property Listify | South African Property Search and New Developments"
         description={homeDescription}
-        image={toAbsoluteUrl(VITE_APP_LOGO)}
+        image={toAbsoluteUrl(HOME_SHARE_IMAGE_PATH)}
         structuredData={homeStructuredData}
       />
       <HomeSearchProvider journey={heroTabValue} onJourneyChange={handleTabChange}>

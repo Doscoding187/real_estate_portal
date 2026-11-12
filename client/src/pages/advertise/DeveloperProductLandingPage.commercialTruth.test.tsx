@@ -141,8 +141,8 @@ describe('public Developer product landing page', () => {
     ).not.toBeInTheDocument();
     expect(screen.queryByText(/manual EFT/i)).not.toBeInTheDocument();
     expect(
-      screen.queryByRole('link', { name: /Contact Property Listify/i }),
-    ).not.toBeInTheDocument();
+      screen.getAllByRole('link', { name: /Contact Property Listify/i })[0],
+    ).toHaveAttribute('href', '/contact');
   });
 
   it('mounts the paid surface only for the exact Developer Launch Access product', () => {

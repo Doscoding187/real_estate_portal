@@ -160,8 +160,8 @@ describe('public Agency product landing page', () => {
     ).not.toBeInTheDocument();
     expect(screen.queryByText(/manual EFT/i)).not.toBeInTheDocument();
     expect(
-      screen.queryByRole('link', { name: /Contact Property Listify/i }),
-    ).not.toBeInTheDocument();
+      screen.getAllByRole('link', { name: /Contact Property Listify/i })[0],
+    ).toHaveAttribute('href', '/contact');
   });
 
   it('uses the exact Agency product decision instead of another paid product', () => {
