@@ -1,0 +1,11 @@
+{
+  "sample": true,
+  "procedure": "cataloguePublisher.listPublishers",
+  "publishers": [
+    { "id": 9001, "slug": "sample-highveld-developments", "brandName": "Sample Highveld Developments", "headOfficeLocation": "Sandton, Gauteng", "developmentCount": 6, "brandTier": "national", "logoUrl": null },
+    { "id": 9002, "slug": "sample-cape-coastal-projects", "brandName": "Sample Cape Coastal Projects", "headOfficeLocation": "Cape Town, Western Cape", "developmentCount": 4, "brandTier": "national", "logoUrl": null },
+    { "id": 9003, "slug": "sample-kzn-lifestyle-estates", "brandName": "Sample KZN Lifestyle Estates", "headOfficeLocation": "Umhlanga, KwaZulu-Natal", "developmentCount": 3, "brandTier": "regional", "logoUrl": null },
+    { "id": 9004, "slug": "sample-karoo-homes-group", "brandName": "Sample Karoo Homes Group", "headOfficeLocation": "Bloemfontein, Free State", "developmentCount": 1, "brandTier": "boutique", "logoUrl": null },
+    { "id": 9005, "slug": "sample-lowveld-property-partners", "brandName": "Sample Lowveld Property Partners", "headOfficeLocation": "Mbombela, Mpumalanga", "developmentCount": 2, "brandTier": "regional", "logoUrl": null }
+  ]
+}
