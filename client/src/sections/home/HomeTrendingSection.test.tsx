@@ -102,8 +102,10 @@ describe('HomeTrendingSection', () => {
     const { rerender } = renderSection({ onProvinceChange });
     expect(useQuery.mock.calls[0][0]).toMatchObject({
       listingType: 'sale',
+      listingSource: 'manual',
       canonicalPlaceId: HOME_PROVINCES[0].placeId,
     });
+    expect(useQuery.mock.calls[0][0]).not.toHaveProperty('requirePhoto');
 
     fireEvent.click(screen.getByRole('button', { name: 'Western Cape' }));
     expect(onProvinceChange).toHaveBeenCalledWith('Western Cape');
@@ -121,6 +123,28 @@ describe('HomeTrendingSection', () => {
     expect(useQuery.mock.calls.at(-1)?.[0]).toMatchObject({
       canonicalPlaceId: HOME_PROVINCES[1].placeId,
     });
+  });
+
+  it('links to the province results for sale and rent, one followable link per province', () => {
+    const { rerender } = renderSection({ selectedProvince: 'Western Cape' });
+    const sale = screen.getByRole('link', { name: 'View all homes for sale in Western Cape' });
+    const saleUrl = new URL(sale.getAttribute('href') as string, 'https://x.test');
+    expect(saleUrl.pathname).toBe('/property-for-sale');
+    expect(saleUrl.searchParams.get('canonicalPlaceId')).toBe(HOME_PROVINCES[1].placeId);
+
+    rerender(
+      <HomeTrendingSection
+        activeHeroTab="rent"
+        selectedProvince="Free State"
+        onProvinceChange={vi.fn()}
+      />,
+    );
+    const rent = screen.getByRole('link', { name: 'View all homes to rent in Free State' });
+    const rentUrl = new URL(rent.getAttribute('href') as string, 'https://x.test');
+    expect(rentUrl.pathname).toBe('/property-to-rent');
+    expect(rentUrl.searchParams.get('canonicalPlaceId')).toBe(
+      HOME_PROVINCES.find(province => province.name === 'Free State')?.placeId,
+    );
   });
 
   it('maps Northern Cape and North West to their own province ids', () => {

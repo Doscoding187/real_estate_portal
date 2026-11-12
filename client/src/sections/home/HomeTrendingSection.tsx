@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { SectionEmptyState } from '@/components/ui/SectionEmptyState';
 import { Skeleton } from '@/components/ui/skeleton';
 import { HOME_PROVINCE_OPTIONS as PROVINCES, homeProvincePlaceId } from '@/lib/homeProvinceOptions';
+import { buildTransactionalGeographyHref } from '@/lib/geographySearchHandoff';
 import { trpc } from '@/lib/trpc';
 import type { HeroTab } from '@/types/hero';
 import { hasHomePropertyPhoto } from '@shared/homePropertyPhoto';
@@ -138,6 +139,9 @@ export function HomeTrendingSection({
   } = trpc.properties.searchPublicInventory.useQuery(
     {
       listingType: activeHeroTab === 'rent' ? 'rent' : 'sale',
+      // Manual listings only: a province id would otherwise also run the development search,
+      // whose results this rail discards.
+      listingSource: 'manual',
       canonicalPlaceId: homeProvincePlaceId(selectedProvince),
       sortOption: 'date_desc',
       page: 0,
@@ -193,6 +197,14 @@ export function HomeTrendingSection({
     )
     .slice(0, RAIL_LIMIT);
   const listingType = activeHeroTab === 'rent' ? 'rent' : 'sale';
+  const provincePlaceId = homeProvincePlaceId(selectedProvince);
+  const viewAllHref = provincePlaceId
+    ? buildTransactionalGeographyHref({
+        journey: listingType === 'rent' ? 'rent' : 'buy',
+        scope: { kind: 'province', canonicalPlaceId: provincePlaceId },
+        resultState: { sort: 'relevance', page: 0 },
+      })
+    : undefined;
   const handleFavorite = (propertyId: number) => {
     if (!isAuthenticated) {
       setSaveTrigger(document.activeElement instanceof HTMLElement ? document.activeElement : null);
@@ -351,6 +363,14 @@ export function HomeTrendingSection({
           </a>
         </div>
       )}
+      {viewAllHref && !isLoading && !isError ? (
+        <a
+          href={viewAllHref}
+          className="mt-3 inline-flex min-h-11 items-center gap-1 text-sm font-bold text-blue-700 hover:text-blue-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+        >
+          {`View all homes ${listingType === 'rent' ? 'to rent' : 'for sale'} in ${selectedProvince}`}
+        </a>
+      ) : null}
       <SavePropertyPrompt
         open={savePromptOpen}
         onOpenChange={setSavePromptOpen}
