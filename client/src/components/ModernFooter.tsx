@@ -21,6 +21,22 @@ const marketplaceLinks = [
   { label: 'Advertise / List Property', href: '/advertise' },
 ];
 
+/** Provinces only: each slug is in PROVINCE_SLUGS and served by the /:province route. */
+const areaLinks = [
+  { label: 'Gauteng', href: '/gauteng' },
+  { label: 'Western Cape', href: '/western-cape' },
+  { label: 'KwaZulu-Natal', href: '/kwazulu-natal' },
+  { label: 'All areas', href: '/south-africa' },
+];
+
+/** Role entry pages. For Developers is never hidden by the developments hold. */
+const professionalLinks = [
+  { label: 'For Agents', href: '/advertise/sell/agents' },
+  { label: 'For Agencies', href: '/advertise/sell/agencies' },
+  { label: 'For Developers', href: '/advertise/sell/developers' },
+  { label: 'Referrals', href: '/distribution-network' },
+];
+
 const legalLinks = [
   { label: 'Privacy', href: '/legal/privacy' },
   { label: 'Terms', href: '/legal/terms' },
@@ -35,7 +51,7 @@ export function ModernFooter() {
   return (
     <footer className="border-t border-slate-800 bg-slate-950 text-slate-300">
       <div className="container mx-auto px-4 py-10 md:py-12">
-        <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
+        <div className="flex flex-col gap-8 md:flex-row md:flex-wrap md:items-start md:justify-between">
           <div className="max-w-md">
             <Link href="/" className="text-xl font-bold tracking-tight text-white">
               Property Listify
@@ -47,8 +63,38 @@ export function ModernFooter() {
 
           <nav aria-label="Marketplace footer navigation">
             <h2 className="mb-3 text-sm font-semibold text-white">Marketplace</h2>
-            <ul className="grid grid-cols-2 gap-x-8 gap-y-2 sm:grid-cols-3">
+            <ul className="grid grid-cols-1 gap-x-8 gap-y-2 sm:grid-cols-2">
               {marketplaceLinks.map(link => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    className="text-sm text-slate-300 transition-colors hover:text-blue-400"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+          <nav aria-label="Explore by area footer navigation">
+            <h2 className="mb-3 text-sm font-semibold text-white">Explore by area</h2>
+            <ul className="grid grid-cols-1 gap-x-8 gap-y-2">
+              {areaLinks.map(link => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    className="text-sm text-slate-300 transition-colors hover:text-blue-400"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+          <nav aria-label="Professionals footer navigation">
+            <h2 className="mb-3 text-sm font-semibold text-white">For professionals</h2>
+            <ul className="grid grid-cols-1 gap-x-8 gap-y-2">
+              {professionalLinks.map(link => (
                 <li key={link.href}>
                   <Link
                     href={link.href}
