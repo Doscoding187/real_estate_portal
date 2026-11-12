@@ -13,7 +13,7 @@ Server: `cataloguePublisher.listPublishers` (`server/cataloguePublisherRouter.ts
 
 ## 2. What it shows
 
-Heading and line today: "Explore real estate developers" / "Explore developer profiles and publicly listed projects across South Africa." (see status: the province wording is waiting on a server change.)
+Heading and line: "Developers building in {province}" / "Explore developers with approved, published projects in {province}." Only if the API is one version behind: national wording "Explore real estate developers" / "Explore developer profiles and publicly listed projects across South Africa." (see status).
 
 One card per developer in a carousel (arrows on desktop, swipe on touch, 44 px targets):
 - Logo tile (alt "<name> logo"; neutral tile when there is no logo), name, head office or "Developer profile".
@@ -21,7 +21,7 @@ One card per developer in a carousel (arrows on desktop, swipe on touch, 44 px t
 - Row "View projects" (link to the developer page, projects section) and a dark "View Developer" link.
 - Under the row, a real link button "Explore All Developers" to `/developers`.
 
-Stats in the original design that are **not shown** because the national list does not return them: "Active in {province}", "Selling now", "Launching soon". They return when the province query exists (section 6).
+In province mode the stat box is replaced by two boxes ("Active in {province}", "Selling now") plus rows "Active developments" and "Launching soon", and "View projects" reads "View local projects". The national fallback keeps the project-count box.
 
 ## 3. States
 
@@ -45,12 +45,15 @@ Every card links to the developer page with real `<a href>` links; "Explore All 
 | Rule | Status |
 |---|---|
 | Old card design restored, no area search box | Built |
-| Follows the Trending province | **Blocked, needs a server change.** `listPublishers` scopes only by `canonicalPlaceId`, matched exactly against reviewed development site assignments (`listDevelopmentIdsForCanonicalPlace`, `developmentPlaceAssignmentService.ts:306`). A province id matches only developments assigned to the province itself, not those in its cities and suburbs. Needed: a province-scope option on the publisher listing (as `searchPublicInventory` does for listings via `provincePlaceId`) that also returns active, selling and launching counts per province |
-| Selling now and Launching soon stats | Waiting on the same server change |
+| Follows the Trending province | Built in the page (card 58). Server: `listPublishers({ provincePlaceId, limit: 12 })` returns developers with approved, published projects in the province, with `activeDevelopments`, `sellingNow` and `launchingSoon`. Heading "Developers building in {province}", line "Explore developers with approved, published projects in {province}." |
+| Province card stats | Built: boxes "Active in {province}" and "Selling now", rows "Active developments", "Launching soon", "View local projects" (developer page), dark "View Developer". Each stat only when the server returned a number |
+| Empty province | Built: "No developers are listed in {province} yet.", the /contact action and "See developers across South Africa" |
+| Works when the API is one version behind | Built (card 58, `TopDevelopers.tsx`). The web host deploys on merge, the API separately. A tRPC `BAD_REQUEST` on the province query (an older API rejects `provincePlaceId`) switches the section to the national `listPublishers({ limit: 12 })`, heading "Explore real estate developers" and the national card (project count). Remembered in a module variable for the page session. Remove once the API is deployed everywhere |
 | Priority placement | Not started |
 
 ## 7. History
 
 - **Before 2026-10-27:** developers by province: province-name query, cards with "Active in {province}", "Selling now", "Launching soon".
 - **2026-10-27, `9c1c72050`:** removed the province props when developments moved to reviewed canonical Places; a Place search box replaced the province link.
-- **2026-11-12:** card 55a removed the search box and restored the card design; province following is blocked as above.
+- **2026-11-12:** card 55a removed the search box and restored the card design; province following was blocked on the server.
+- **2026-11-12 (card 58):** province mode built against the new server support (cards 47/48/56), with the older-API national fallback.

@@ -25,6 +25,7 @@ vi.mock('@/components/ui/carousel', () => ({
 }));
 
 import { HomeTrendingSection } from './HomeTrendingSection';
+import { resetTrendingRailLegacyMode } from './useTrendingRailQuery';
 import { HOME_PROVINCES } from '@/lib/homeProvinceOptions';
 import type { HeroTab } from '@/types/hero';
 
@@ -57,6 +58,7 @@ function renderSection(
 
 describe('HomeTrendingSection', () => {
   beforeEach(() => {
+    resetTrendingRailLegacyMode();
     useQuery.mockReset();
     refetch.mockReset();
     useQuery.mockReturnValue({
@@ -102,10 +104,13 @@ describe('HomeTrendingSection', () => {
     const { rerender } = renderSection({ onProvinceChange });
     expect(useQuery.mock.calls[0][0]).toMatchObject({
       listingType: 'sale',
-      listingSource: 'manual',
       canonicalPlaceId: HOME_PROVINCES[0].placeId,
+      sortOption: 'trending',
+      requirePhoto: true,
+      developmentResultShape: 'unit_type',
+      pageSize: 10,
     });
-    expect(useQuery.mock.calls[0][0]).not.toHaveProperty('requirePhoto');
+    expect(useQuery.mock.calls[0][0]).not.toHaveProperty('listingSource');
 
     fireEvent.click(screen.getByRole('button', { name: 'Western Cape' }));
     expect(onProvinceChange).toHaveBeenCalledWith('Western Cape');
@@ -217,12 +222,31 @@ describe('HomeTrendingSection', () => {
     expect(screen.getByRole('button', { name: 'Free State' })).toBeInTheDocument();
   });
 
-  it('drops listings without a real photo and developments', () => {
+  it('trusts the server for photos and shows development unit types as cards without a heart', () => {
     useQuery.mockReturnValue({
       data: {
         cards: [
-          { ...card, id: '8', title: 'No photo', image: '' },
-          { ...card, id: '9', title: 'A development', kind: 'development' },
+          {
+            kind: 'development',
+            id: '5:u1',
+            title: '2-bed Apartment',
+            image: 'https://cdn.example.com/dev.jpg',
+            href: '/development/sample/unit/u1',
+            price: 1250000,
+            locationLabels: ['Sandton'],
+            propertyType: 'house',
+            unitType: {
+              id: 'u1',
+              label: 'Apartment',
+              developmentId: 5,
+              developmentName: 'Sample Heights',
+              bedrooms: 2,
+              bathrooms: 1,
+              unitSizeM2: 64,
+              priceFrom: 1250000,
+              availableUnits: 3,
+            },
+          },
         ],
       },
       isLoading: false,
@@ -231,8 +255,20 @@ describe('HomeTrendingSection', () => {
     });
     renderSection();
 
-    expect(screen.queryByText('No photo')).not.toBeInTheDocument();
-    expect(screen.queryByText('A development')).not.toBeInTheDocument();
-    expect(screen.getByText('No published matches in Gauteng yet')).toBeInTheDocument();
+    expect(screen.getByText('New development')).toBeInTheDocument();
+    expect(screen.getByText('For sale')).toBeInTheDocument();
+    expect(screen.getByText('2-bed Apartment')).toBeInTheDocument();
+    expect(screen.getByText('Sample Heights · Sandton')).toBeInTheDocument();
+    expect(screen.getByText(/^From R/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /2-bed Apartment/ })).toHaveAttribute(
+      'href',
+      '/development/sample/unit/u1',
+    );
+    expect(screen.queryByRole('button', { name: 'Save property' })).not.toBeInTheDocument();
+  });
+
+  it('keeps a heart on ordinary listings', () => {
+    renderSection();
+    expect(screen.getByRole('button', { name: 'Save property' })).toBeInTheDocument();
   });
 });

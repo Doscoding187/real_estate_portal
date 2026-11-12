@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'wouter';
+import { homeProvincePlaceId } from '@/lib/homeProvinceOptions';
 import { Building2, ArrowRight, ChevronRight } from 'lucide-react';
 import { SectionEmptyState } from '@/components/ui/SectionEmptyState';
 import { Card, CardContent } from '@/components/ui/card';
@@ -22,12 +24,32 @@ const projectCount = (value: unknown) => {
 
 const DIRECTORY_HREF = '/developers';
 
-function EmptyDevelopers() {
+/** Session flag: set once an older API has rejected `provincePlaceId` (tRPC BAD_REQUEST). */
+let legacyDevelopersApiDetected = false;
+
+/** Test helper: clears the remembered national-only mode. */
+export function resetDevelopersLegacyMode(): void {
+  legacyDevelopersApiDetected = false;
+}
+
+function isBadRequestError(error: unknown): boolean {
+  const candidate = error as {
+    data?: { code?: unknown };
+    shape?: { data?: { code?: unknown } };
+  } | null;
+  return (
+    candidate?.data?.code === 'BAD_REQUEST' || candidate?.shape?.data?.code === 'BAD_REQUEST'
+  );
+}
+
+function EmptyDevelopers({ province }: { province?: string }) {
   return (
     <>
       <SectionEmptyState
         icon={Building2}
-        message="No developers are listed yet."
+        message={
+          province ? `No developers are listed in ${province} yet.` : 'No developers are listed yet.'
+        }
         action={{
           label: 'Talk to us about listing your development',
           href: '/contact',
@@ -45,39 +67,66 @@ function EmptyDevelopers() {
   );
 }
 
+type ProvinceStats = {
+  activeDevelopments?: unknown;
+  sellingNow?: unknown;
+  launchingSoon?: unknown;
+};
+
 /**
- * Homepage developers section. The query is national: the public publisher list can only be
- * scoped by an exact reviewed Place, which a province is not, so it cannot follow the province
- * pills yet. See docs/product/homepage/developers.md.
+ * Homepage developers section. It follows the province pills: developers with approved,
+ * published projects in the selected province, with per-province counts. If the API is one
+ * version behind and rejects `provincePlaceId` (tRPC BAD_REQUEST), it falls back to the national
+ * list for the rest of the session. See docs/product/homepage/developers.md.
  */
-export function TopDevelopers() {
+export function TopDevelopers({ selectedProvince }: { selectedProvince?: string } = {}) {
   const developmentsHeld = !isHomepageHeroJourneyEnabled('developments');
-  const {
-    data: developers,
-    isError,
-    isFetching,
-    isLoading,
-    refetch,
-  } = trpc.cataloguePublisher.listPublishers.useQuery(
-    { limit: 12 },
-    { enabled: !developmentsHeld },
+  const provincePlaceId = selectedProvince ? homeProvincePlaceId(selectedProvince) : undefined;
+  const [legacy, setLegacy] = useState(legacyDevelopersApiDetected);
+  const provinceMode = Boolean(provincePlaceId) && !legacy;
+
+  const provinceQuery = trpc.cataloguePublisher.listPublishers.useQuery(
+    { provincePlaceId, limit: 12 },
+    { enabled: !developmentsHeld && provinceMode, retry: false },
   );
+  const nationalQuery = trpc.cataloguePublisher.listPublishers.useQuery(
+    { limit: 12 },
+    { enabled: !developmentsHeld && !provinceMode },
+  );
+
+  const provinceRejected = provinceMode && provinceQuery.isError && isBadRequestError(provinceQuery.error);
+  useEffect(() => {
+    if (provinceRejected) {
+      legacyDevelopersApiDetected = true;
+      setLegacy(true);
+    }
+  }, [provinceRejected]);
+
+  const active = provinceMode ? provinceQuery : nationalQuery;
+  const { data: developers, isFetching, refetch } = active;
+  const isError = active.isError && !provinceRejected;
+  const isLoading = active.isLoading || provinceRejected;
   const profiles = developers?.slice(0, 10) ?? [];
   const showEmptyState = developmentsHeld || (!isLoading && !isError && !profiles.length);
+  const provinceName = provinceMode ? selectedProvince : undefined;
 
   return (
     <section className="home-section bg-white">
       <div className="home-section-content">
         <div className="home-section-header">
           <h2 className="home-section-title text-[1.125rem] font-bold text-slate-900 sm:text-xl md:text-[26px]">
-            Explore real estate developers
+            {provinceName
+              ? `Developers building in ${provinceName}`
+              : 'Explore real estate developers'}
           </h2>
           <p className="max-w-3xl text-xs leading-relaxed text-slate-600 md:text-sm">
-            Explore developer profiles and publicly listed projects across South Africa.
+            {provinceName
+              ? `Explore developers with approved, published projects in ${provinceName}.`
+              : 'Explore developer profiles and publicly listed projects across South Africa.'}
           </p>
         </div>
         {showEmptyState ? (
-          <EmptyDevelopers />
+          <EmptyDevelopers province={provinceName} />
         ) : isLoading ? (
           <div
             data-testid="developer-feed-loading"
@@ -120,6 +169,10 @@ export function TopDevelopers() {
             <CarouselContent className="-ml-2 touch-pan-y">
               {profiles.map(developer => {
                 const count = projectCount(developer.developmentCount);
+                const stats = developer as ProvinceStats;
+                const activeIn = provinceName ? projectCount(stats.activeDevelopments) : null;
+                const sellingNow = provinceName ? projectCount(stats.sellingNow) : null;
+                const launchingSoon = provinceName ? projectCount(stats.launchingSoon) : null;
                 const profilePath = `/developer/${developer.slug}`;
                 return (
                   <CarouselItem
@@ -152,19 +205,62 @@ export function TopDevelopers() {
                             </span>
                           </span>
                         </Link>
-                        {count !== null && (
-                          <div className="mb-3 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
-                            <span className="block text-lg font-bold text-slate-900">{count}</span>
-                            <span className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
-                              Public {count === 1 ? 'project' : 'projects'}
-                            </span>
-                          </div>
+                        {provinceName ? (
+                          <>
+                            {(activeIn !== null || sellingNow !== null) && (
+                              <div className="mb-3 grid grid-cols-2 gap-2">
+                                {activeIn !== null && (
+                                  <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
+                                    <span className="block text-lg font-bold text-slate-900">
+                                      {activeIn}
+                                    </span>
+                                    <span className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
+                                      Active in {provinceName}
+                                    </span>
+                                  </div>
+                                )}
+                                {sellingNow !== null && (
+                                  <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
+                                    <span className="block text-lg font-bold text-slate-900">
+                                      {sellingNow}
+                                    </span>
+                                    <span className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
+                                      Selling now
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            {activeIn !== null && (
+                              <div className="mb-1 flex items-center justify-between px-1 text-xs text-slate-600">
+                                <span>Active developments</span>
+                                <span className="font-semibold text-slate-900">{activeIn}</span>
+                              </div>
+                            )}
+                            {launchingSoon !== null && (
+                              <div className="mb-2 flex items-center justify-between px-1 text-xs text-slate-600">
+                                <span>Launching soon</span>
+                                <span className="font-semibold text-slate-900">{launchingSoon}</span>
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          count !== null && (
+                            <div className="mb-3 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
+                              <span className="block text-lg font-bold text-slate-900">{count}</span>
+                              <span className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
+                                Public {count === 1 ? 'project' : 'projects'}
+                              </span>
+                            </div>
+                          )
                         )}
                         <Link
                           href={`${profilePath}#developments`}
                           className="flex min-h-[44px] w-full items-center justify-between rounded-lg border border-slate-100 p-2 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline focus-visible:outline-2"
                         >
-                          <span className="truncate">View projects</span>
+                          <span className="truncate">
+                            {provinceName ? 'View local projects' : 'View projects'}
+                          </span>
                           <ChevronRight className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
                         </Link>
                         <div className="mt-auto pt-3">

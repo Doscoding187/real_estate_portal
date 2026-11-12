@@ -34,6 +34,32 @@ Gauteng and Western Cape have 8 sale and 6 rent listings, KwaZulu-Natal has 3 sa
 province is empty (so the empty state can be reviewed). Any other procedure returns a tRPC
 `NOT_FOUND` error and logs `[mock-api] NOT_FOUND procedure: <name>` so missing fixtures are obvious.
 
+## Newer API features, and the "older API" switch
+
+The mock answers the newer homepage inputs the way the merged server does:
+
+- `searchPublicInventory` with `developmentResultShape: 'unit_type'` mixes sample development
+  unit-type cards (the server's `DevelopmentUnitTypeCard` shape, href `/development/<slug>/unit/<id>`)
+  into Gauteng and Western Cape sale and rent results at slots 3, 5 and 8 (`unitTypes` in the
+  fixture), respecting `pageSize`. `requirePhoto: true` drops cards without an image (one Gauteng
+  sale unit type has none, to show it). `listingSource: 'manual'` returns no unit types.
+  KwaZulu-Natal rent has only unit types (the "all unit types" case).
+- `listPublishers` with `provincePlaceId` returns that province's developers with
+  `activeDevelopments`, `sellingNow` and `launchingSoon` (Gauteng 4, Western Cape 3, KwaZulu-Natal 1,
+  every other province empty). Without it, the national list as before.
+
+**`MOCK_LEGACY_API=1`** makes the mock behave like the currently deployed API: it rejects the new
+inputs (`sortOption: 'trending'`, `requirePhoto`, `developmentResultShape`, `provincePlaceId`) with
+HTTP 400 and a tRPC `BAD_REQUEST` envelope shaped like a strict zod input failure. Use it to watch
+the homepage fall back to the previous behaviour (date order, manual listings, national
+developers):
+
+```
+MOCK_LEGACY_API=1 node scripts/preview/mock-api.mjs
+```
+
+The fallback is remembered per page load, so reload the page after switching the mock.
+
 ## Add or change a fixture
 
 Fixtures are JSON files in `scripts/preview/fixtures/`, read on every request (no restart needed).
@@ -52,3 +78,6 @@ Start the mock on a spare port, then run the checks (exits non-zero on failure):
 PORT=5055 node scripts/preview/mock-api.mjs &
 MOCK_PORT=5055 node scripts/preview/selftest.mjs
 ```
+
+Run it a second time against `MOCK_LEGACY_API=1 PORT=5055 node scripts/preview/mock-api.mjs` with
+`MOCK_LEGACY_API=1 MOCK_PORT=5055 node scripts/preview/selftest.mjs` to check the legacy rejections.

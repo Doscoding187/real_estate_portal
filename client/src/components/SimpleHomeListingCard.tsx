@@ -29,6 +29,8 @@ export interface SimpleHomeListingCardProps {
   propertyType?: string | null;
   listingType?: 'sale' | 'rent';
   badgeLabel?: string;
+  /** Optional second chip beside the badge, e.g. the transaction on a development unit type. */
+  secondaryBadgeLabel?: string;
   isSaved?: boolean;
   favoritePending?: boolean;
   onFavoriteClick?: () => void;
@@ -55,6 +57,7 @@ export function SimpleHomeListingCard({
   propertyType,
   listingType,
   badgeLabel = 'For sale',
+  secondaryBadgeLabel,
   isSaved = false,
   favoritePending = false,
   onFavoriteClick,
@@ -112,10 +115,15 @@ export function SimpleHomeListingCard({
               />
             ))}
 
-          <div className="absolute left-2.5 top-2.5 z-20">
+          <div className="absolute left-2.5 top-2.5 z-20 flex max-w-[calc(100%-1.25rem)] flex-wrap gap-1">
             <span className="rounded-full bg-white/95 px-2.5 py-1 text-[9px] font-semibold text-slate-700 shadow-sm">
               {badgeLabel}
             </span>
+            {secondaryBadgeLabel ? (
+              <span className="rounded-full bg-slate-900/80 px-2.5 py-1 text-[9px] font-semibold text-white shadow-sm">
+                {secondaryBadgeLabel}
+              </span>
+            ) : null}
           </div>
         </div>
 

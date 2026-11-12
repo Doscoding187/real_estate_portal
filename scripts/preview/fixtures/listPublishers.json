@@ -7,5 +7,21 @@
     { "id": 9003, "slug": "sample-kzn-lifestyle-estates", "brandName": "Sample KZN Lifestyle Estates", "headOfficeLocation": "Umhlanga, KwaZulu-Natal", "developmentCount": 3, "brandTier": "regional", "logoUrl": null },
     { "id": 9004, "slug": "sample-karoo-homes-group", "brandName": "Sample Karoo Homes Group", "headOfficeLocation": "Bloemfontein, Free State", "developmentCount": 1, "brandTier": "boutique", "logoUrl": null },
     { "id": 9005, "slug": "sample-lowveld-property-partners", "brandName": "Sample Lowveld Property Partners", "headOfficeLocation": "Mbombela, Mpumalanga", "developmentCount": 2, "brandTier": "regional", "logoUrl": null }
-  ]
+  ],
+  "provincePublishers": {
+    "pl-place-01-131e3e75ad70424e0f9c869a": [
+      { "id": 9001, "slug": "sample-highveld-developments", "brandName": "Sample Highveld Developments", "headOfficeLocation": "Sandton, Gauteng", "developmentCount": 6, "brandTier": "national", "logoUrl": null, "activeDevelopments": 5, "sellingNow": 3, "launchingSoon": 1 },
+      { "id": 9006, "slug": "sample-jozi-urban-living", "brandName": "Sample Jozi Urban Living", "headOfficeLocation": "Johannesburg, Gauteng", "developmentCount": 3, "brandTier": "regional", "logoUrl": null, "activeDevelopments": 3, "sellingNow": 2, "launchingSoon": 0 },
+      { "id": 9007, "slug": "sample-tshwane-estates", "brandName": "Sample Tshwane Estates", "headOfficeLocation": "Pretoria, Gauteng", "developmentCount": 2, "brandTier": "regional", "logoUrl": null, "activeDevelopments": 2, "sellingNow": 1, "launchingSoon": 1 },
+      { "id": 9004, "slug": "sample-karoo-homes-group", "brandName": "Sample Karoo Homes Group", "headOfficeLocation": "Bloemfontein, Free State", "developmentCount": 1, "brandTier": "boutique", "logoUrl": null, "activeDevelopments": 1, "sellingNow": 0, "launchingSoon": 1 }
+    ],
+    "pl-place-01-203f5f71cb3565521db4718f": [
+      { "id": 9002, "slug": "sample-cape-coastal-projects", "brandName": "Sample Cape Coastal Projects", "headOfficeLocation": "Cape Town, Western Cape", "developmentCount": 4, "brandTier": "national", "logoUrl": null, "activeDevelopments": 4, "sellingNow": 3, "launchingSoon": 1 },
+      { "id": 9008, "slug": "sample-winelands-living", "brandName": "Sample Winelands Living", "headOfficeLocation": "Stellenbosch, Western Cape", "developmentCount": 2, "brandTier": "regional", "logoUrl": null, "activeDevelopments": 2, "sellingNow": 1, "launchingSoon": 0 },
+      { "id": 9001, "slug": "sample-highveld-developments", "brandName": "Sample Highveld Developments", "headOfficeLocation": "Sandton, Gauteng", "developmentCount": 6, "brandTier": "national", "logoUrl": null, "activeDevelopments": 1, "sellingNow": 1, "launchingSoon": 0 }
+    ],
+    "pl-place-01-153d9daaed02608619c762aa": [
+      { "id": 9003, "slug": "sample-kzn-lifestyle-estates", "brandName": "Sample KZN Lifestyle Estates", "headOfficeLocation": "Umhlanga, KwaZulu-Natal", "developmentCount": 3, "brandTier": "regional", "logoUrl": null, "activeDevelopments": 3, "sellingNow": 2, "launchingSoon": 1 }
+    ]
+  }
 }

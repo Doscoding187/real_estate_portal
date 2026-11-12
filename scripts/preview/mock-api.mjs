@@ -29,6 +29,95 @@ function loadFixture(name) {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+// MOCK_LEGACY_API=1 makes the mock behave like the currently deployed API, which does not know the
+// newer input fields and rejects them with a tRPC BAD_REQUEST (strict zod input), so the
+// homepage's version-skew fallbacks can be seen in the preview.
+const LEGACY_API = process.env.MOCK_LEGACY_API === '1';
+
+class InputRejected extends Error {
+  constructor(issues) {
+    // Same shape as tRPC's zod error formatter: the message is the JSON-stringified issue list.
+    super(JSON.stringify(issues, null, 2));
+    this.issues = issues;
+  }
+}
+
+function rejectUnknownKeys(input, keys) {
+  const present = keys.filter(key => input && input[key] !== undefined);
+  if (present.length === 0) return;
+  throw new InputRejected([
+    {
+      code: 'unrecognized_keys',
+      keys: present,
+      path: [],
+      message: `Unrecognized key(s) in object: ${present.map(key => `'${key}'`).join(', ')}`,
+    },
+  ]);
+}
+
+function expandUnitTypeCard(entry, listingType, placeId, province, fixture) {
+  const image = entry.image === null ? '' : `${fixture.imageBase}${fixture.images[entry.image % fixture.images.length]}`;
+  const title = entry.bedrooms !== null ? `${entry.bedrooms}-bed ${entry.label}` : entry.label;
+  const id = `${entry.developmentId}:${entry.unitId}`;
+  const route = `/development/${entry.slug}`;
+  return {
+    kind: 'development',
+    id,
+    href: `${route}/unit/${encodeURIComponent(entry.unitId)}`,
+    title,
+    location: `${entry.area}, ${province}`,
+    city: '',
+    suburb: '',
+    province: '',
+    canonicalPlaceId: placeId,
+    locationLabels: [entry.area],
+    price: entry.priceFrom,
+    image,
+    images: image ? [{ url: image }] : [],
+    bedrooms: entry.bedrooms,
+    bathrooms: entry.bathrooms,
+    area: entry.unitSize,
+    internalAreaM2: entry.unitSize,
+    propertyType: 'house',
+    listingType,
+    listingSource: 'development',
+    contactRole: 'developer',
+    identity: {
+      role: 'developer',
+      provenance: 'developer',
+      name: `${entry.developmentName} Developer`,
+      organizationName: `${entry.developmentName} Developer`,
+      cataloguePublisherId: 9000 + (entry.developmentId % 100),
+    },
+    development: { id: entry.developmentId, name: entry.developmentName, slug: entry.slug },
+    developerBrand: {
+      id: 9000 + (entry.developmentId % 100),
+      brandName: `${entry.developmentName} Developer`,
+      slug: `${entry.slug}-developer`,
+    },
+    highlights: [],
+    badges: ['selling'],
+    imageCount: image ? 1 : 0,
+    transactionType: listingType === 'rent' ? 'for_rent' : 'for_sale',
+    listedDate: new Date(Date.now() - 2 * DAY_MS).toISOString(),
+    developmentId: entry.developmentId,
+    unitTypeId: entry.unitId,
+    availableUnits: entry.availableUnits,
+    unitType: {
+      id: entry.unitId,
+      label: entry.label,
+      developmentId: entry.developmentId,
+      developmentName: entry.developmentName,
+      bedrooms: entry.bedrooms,
+      bathrooms: entry.bathrooms,
+      unitSizeM2: entry.unitSize,
+      priceFrom: entry.priceFrom,
+      availableUnits: entry.availableUnits,
+    },
+    sample: true,
+  };
+}
+
 function expandCard(entry, listingType, placeId, province, fixture) {
   const imageName = fixture.images[entry.image % fixture.images.length];
   const image = `${fixture.imageBase}${imageName}`;
@@ -81,19 +170,56 @@ function searchPublicInventory(input) {
   const requestedPage = Math.max(Number(input?.page) || 0, 0);
   const sortOption = input?.sortOption || 'relevance';
 
+  if (LEGACY_API) {
+    rejectUnknownKeys(input, ['requirePhoto', 'developmentResultShape']);
+    if (sortOption === 'trending') {
+      throw new InputRejected([
+        {
+          received: 'trending',
+          code: 'invalid_enum_value',
+          options: ['relevance', 'price_asc', 'price_desc', 'date_desc', 'date_asc'],
+          path: ['sortOption'],
+          message:
+            "Invalid enum value. Expected 'relevance' | 'price_asc' | 'price_desc' | 'date_desc' | 'date_asc', received 'trending'",
+        },
+      ]);
+    }
+  }
+  const mixUnitTypes =
+    !LEGACY_API && input?.developmentResultShape === 'unit_type' && input?.listingSource !== 'manual';
+  const requirePhoto = input?.requirePhoto === true;
+
   let cards = [];
+  const unitTypeCards = [];
   for (const [placeId, province] of Object.entries(fixture.provinces)) {
     if (input?.canonicalPlaceId && input.canonicalPlaceId !== placeId) continue;
     for (const entry of province[listingType] || []) {
       cards.push(expandCard(entry, listingType, placeId, province.province, fixture));
     }
+    if (mixUnitTypes) {
+      for (const entry of province.unitTypes?.[listingType] || []) {
+        if (requirePhoto && entry.image === null) continue;
+        unitTypeCards.push({
+          position: entry.position,
+          card: expandUnitTypeCard(entry, listingType, placeId, province.province, fixture),
+        });
+      }
+    }
   }
+  if (requirePhoto) cards = cards.filter(card => Boolean(card.image));
   if (sortOption === 'price_asc') cards.sort((a, b) => a.price - b.price);
   if (sortOption === 'price_desc') cards.sort((a, b) => b.price - a.price);
   if (sortOption === 'date_asc') cards.sort((a, b) => a.listedDate.localeCompare(b.listedDate));
   if (sortOption === 'date_desc' || sortOption === 'relevance') {
     cards.sort((a, b) => b.listedDate.localeCompare(a.listedDate));
   }
+
+  // Unit types are spliced in at their 1-based slot (clamped to the end), like the server's even spread.
+  unitTypeCards
+    .sort((a, b) => a.position - b.position)
+    .forEach(({ position, card }) => {
+      cards.splice(Math.min(Math.max(position - 1, 0), cards.length), 0, card);
+    });
 
   const total = cards.length;
   const lastPage = Math.max(Math.ceil(total / pageSize) - 1, 0);
@@ -104,6 +230,7 @@ function searchPublicInventory(input) {
   cards.forEach((_, index) => {
     meta.values[`cards.${index}.listedDate`] = ['Date'];
   });
+  const developmentCount = cards.filter(card => card.kind === 'development').length;
 
   return {
     json: {
@@ -113,7 +240,7 @@ function searchPublicInventory(input) {
       pageSize,
       hasMore: (page + 1) * pageSize < total,
       locationState: input?.canonicalPlaceId ? 'resolved' : 'not_requested',
-      sourceCounts: { manual: total, development: 0 },
+      sourceCounts: { manual: total - developmentCount, development: developmentCount },
     },
     meta: cards.length ? meta : undefined,
   };
@@ -121,8 +248,14 @@ function searchPublicInventory(input) {
 
 function listPublishers(input) {
   const fixture = loadFixture('listPublishers');
+  if (LEGACY_API) rejectUnknownKeys(input, ['provincePlaceId']);
   const limit = Number(input?.limit) || fixture.publishers.length;
-  const publishers = fixture.publishers.slice(0, limit).map(publisher => ({
+  // With provincePlaceId: only that province's developers, carrying the three per-province counts.
+  // Provinces without a fixture entry are empty.
+  const source = input?.provincePlaceId
+    ? fixture.provincePublishers[input.provincePlaceId] || []
+    : fixture.publishers;
+  const publishers = source.slice(0, limit).map(publisher => ({
     ...publisher,
     name: publisher.brandName,
     cataloguePublisherId: publisher.id,
@@ -157,7 +290,25 @@ function runProcedure(path, input) {
     console.log(`[mock-api] NOT_FOUND procedure: ${path}`);
     return { status: 404, body: notFoundError(path) };
   }
-  const payload = handler(input);
+  let payload;
+  try {
+    payload = handler(input);
+  } catch (error) {
+    if (!(error instanceof InputRejected)) throw error;
+    console.log(`[mock-api] legacy BAD_REQUEST for ${path}`);
+    return {
+      status: 400,
+      body: {
+        error: {
+          json: {
+            message: error.message,
+            code: -32600,
+            data: { code: 'BAD_REQUEST', httpStatus: 400, path },
+          },
+        },
+      },
+    };
+  }
   const data = payload.meta ? { json: payload.json, meta: payload.meta } : { json: payload.json };
   return { status: 200, body: { result: { data } } };
 }
@@ -253,5 +404,6 @@ server.listen(PORT, HOST, () => {
   console.log(` Listening on http://${HOST}:${PORT}`);
   console.log(` Allowed origins: ${[...ALLOWED_ORIGINS].join(', ')}`);
   console.log(` Procedures: ${Object.keys(PROCEDURES).join(', ')}`);
+  if (LEGACY_API) console.log(' MOCK_LEGACY_API=1: behaving like the currently deployed API.');
   console.log('==============================================================');
 });

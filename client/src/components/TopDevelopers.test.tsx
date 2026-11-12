@@ -7,6 +7,9 @@ const testState = vi.hoisted(() => ({
   queryInput: undefined as unknown,
   queryOptions: undefined as unknown,
   developmentsEnabled: true,
+  provinceQuery: {} as Record<string, unknown>,
+  inputs: [] as unknown[],
+  provinceOptions: undefined as unknown,
 }));
 
 vi.stubGlobal(
@@ -22,7 +25,12 @@ vi.mock('@/lib/trpc', () => ({
   trpc: {
     cataloguePublisher: {
       listPublishers: {
-        useQuery: (input: unknown, options: unknown) => {
+        useQuery: (input: { provincePlaceId?: string }, options: unknown) => {
+          testState.inputs.push(input);
+          if (input.provincePlaceId) {
+            testState.provinceOptions = options;
+            return testState.provinceQuery;
+          }
           testState.queryInput = input;
           testState.queryOptions = options;
           return testState.query;
@@ -44,10 +52,20 @@ vi.mock('@/lib/publicNavigation', () => ({
   isHomepageHeroJourneyEnabled: () => testState.developmentsEnabled,
 }));
 
-import { TopDevelopers } from './TopDevelopers';
+import { TopDevelopers, resetDevelopersLegacyMode } from './TopDevelopers';
+import { HOME_PROVINCES } from '@/lib/homeProvinceOptions';
 
 describe('TopDevelopers homepage section', () => {
   beforeEach(() => {
+    resetDevelopersLegacyMode();
+    testState.inputs = [];
+    testState.provinceQuery = {
+      data: undefined,
+      isError: false,
+      isFetching: false,
+      isLoading: false,
+      refetch: testState.refetch,
+    };
     testState.refetch.mockReset();
     testState.refetch.mockResolvedValue(undefined);
     testState.queryInput = undefined;
@@ -159,5 +177,108 @@ describe('TopDevelopers homepage section', () => {
       'href',
       '/developers',
     );
+  });
+
+  describe('province mode', () => {
+    const gauteng = HOME_PROVINCES[0].placeId;
+    const badRequest = Object.assign(new Error('Unrecognized key'), {
+      data: { code: 'BAD_REQUEST' },
+    });
+
+    it('asks for the selected province and shows the province heading, stats and rows', () => {
+      testState.provinceQuery = {
+        ...testState.provinceQuery,
+        data: [
+          {
+            id: 1,
+            slug: 'local-builder',
+            brandName: 'Local Builder',
+            developmentCount: 9,
+            activeDevelopments: 4,
+            sellingNow: 2,
+            launchingSoon: 1,
+          },
+          { id: 2, slug: 'bare', brandName: 'Bare Homes' },
+        ],
+      };
+
+      render(<TopDevelopers selectedProvince="Gauteng" />);
+
+      expect(testState.inputs).toContainEqual({ provincePlaceId: gauteng, limit: 12 });
+      expect(
+        screen.getByRole('heading', { name: 'Developers building in Gauteng' }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText('Explore developers with approved, published projects in Gauteng.'),
+      ).toBeInTheDocument();
+      expect(screen.getAllByText('Active in Gauteng')).toHaveLength(1);
+      expect(screen.getAllByText('Selling now')).toHaveLength(1);
+      expect(screen.getAllByText('Active developments')).toHaveLength(1);
+      expect(screen.getAllByText('Launching soon')).toHaveLength(1);
+      expect(screen.getAllByRole('link', { name: /View local projects/ })).toHaveLength(2);
+      expect(screen.queryByText('Public projects')).not.toBeInTheDocument();
+    });
+
+    it('shows the province empty state with the contact action and national link', () => {
+      testState.provinceQuery = { ...testState.provinceQuery, data: [] };
+
+      render(<TopDevelopers selectedProvince="Limpopo" />);
+
+      expect(screen.getByText('No developers are listed in Limpopo yet.')).toBeInTheDocument();
+      expect(
+        screen.getByRole('link', { name: /Talk to us about listing your development/ }),
+      ).toHaveAttribute('href', '/contact');
+      expect(
+        screen.getByRole('link', { name: 'See developers across South Africa' }),
+      ).toHaveAttribute('href', '/developers');
+    });
+
+    it('falls back to the national list when an older API rejects provincePlaceId', () => {
+      testState.provinceQuery = { ...testState.provinceQuery, isError: true, error: badRequest };
+      testState.query = {
+        ...testState.query,
+        data: [{ id: 1, slug: 'local-builder', brandName: 'Local Builder', developmentCount: 3 }],
+      };
+
+      render(<TopDevelopers selectedProvince="Gauteng" />);
+
+      expect(
+        screen.getByRole('heading', { name: 'Explore real estate developers' }),
+      ).toBeInTheDocument();
+      expect(screen.getByText('Public projects')).toBeInTheDocument();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      expect(testState.queryInput).toEqual({ limit: 12 });
+      expect(testState.queryOptions).toEqual({ enabled: true });
+    });
+
+    it('remembers the fallback so a later province does not ask the province query again', () => {
+      testState.provinceQuery = { ...testState.provinceQuery, isError: true, error: badRequest };
+      testState.query = {
+        ...testState.query,
+        data: [{ id: 1, slug: 'local-builder', brandName: 'Local Builder', developmentCount: 3 }],
+      };
+      const first = render(<TopDevelopers selectedProvince="Gauteng" />);
+      first.unmount();
+      testState.inputs = [];
+
+      render(<TopDevelopers selectedProvince="Western Cape" />);
+
+      expect(
+        screen.getByRole('heading', { name: 'Explore real estate developers' }),
+      ).toBeInTheDocument();
+      expect(testState.provinceOptions).toEqual({ enabled: false, retry: false });
+    });
+
+    it('shows the error line for any other province error', () => {
+      testState.provinceQuery = {
+        ...testState.provinceQuery,
+        isError: true,
+        error: Object.assign(new Error('boom'), { data: { code: 'INTERNAL_SERVER_ERROR' } }),
+      };
+
+      render(<TopDevelopers selectedProvince="Gauteng" />);
+
+      expect(screen.getByRole('alert')).toHaveTextContent('Developer profiles could not be loaded.');
+    });
   });
 });

@@ -69,7 +69,10 @@ export function ModernFooter() {
   return (
     <footer className="border-t border-slate-800 bg-slate-950 text-slate-300">
       <div className="container mx-auto px-4 py-10 md:py-12">
-        <div className="flex flex-col gap-8 md:flex-row md:flex-wrap md:items-start md:justify-between">
+        <div
+          data-testid="footer-columns"
+          className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(0,1fr))] lg:items-start"
+        >
           <div className="max-w-md">
             <Link href="/" className="text-xl font-bold tracking-tight text-white">
               Property Listify
@@ -81,7 +84,7 @@ export function ModernFooter() {
 
           <nav aria-label="Marketplace footer navigation">
             <h2 className="mb-3 text-sm font-semibold text-white">Marketplace</h2>
-            <ul className="grid grid-cols-1 gap-x-8 gap-y-2 sm:grid-cols-2">
+            <ul className="grid grid-cols-1 gap-x-8 gap-y-2 sm:grid-cols-2 lg:grid-cols-1">
               {marketplaceLinks.map(link => (
                 <li key={link.href}>
                   <Link

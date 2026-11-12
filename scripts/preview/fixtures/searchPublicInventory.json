@@ -38,7 +38,19 @@
         { "id": "91004", "title": "Secure Townhouse Near Shops", "suburb": "Fourways", "city": "Sandton", "price": 16500, "bedrooms": 3, "bathrooms": 2, "area": 150, "yardSize": 180, "parking": 2, "propertyType": "townhouse", "image": 8, "daysAgo": 7 },
         { "id": "91005", "title": "Compact Studio, Fibre Ready", "suburb": "Braamfontein", "city": "Johannesburg", "price": 6500, "bedrooms": 1, "bathrooms": 1, "area": 32, "parking": 0, "propertyType": "apartment", "image": 12, "daysAgo": 9 },
         { "id": "91006", "title": "Renovated 4 Bedroom House", "suburb": "Boksburg North", "city": "Ekurhuleni", "price": 21000, "bedrooms": 4, "bathrooms": 2, "area": 260, "yardSize": 1000, "parking": 3, "propertyType": "house", "image": 6, "daysAgo": 11 }
-      ]
+      ],
+      "unitTypes": {
+        "sale": [
+          { "position": 3, "developmentId": 7101, "developmentName": "Sample Heights", "slug": "sample-heights", "unitId": "2bed-apartment", "label": "Apartment", "bedrooms": 2, "bathrooms": 2, "unitSize": 68, "priceFrom": 1250000, "availableUnits": 6, "area": "Sandton", "image": 13 },
+          { "position": 5, "developmentId": 7102, "developmentName": "Sample Gardens Estate", "slug": "sample-gardens-estate", "unitId": "3bed-townhouse", "label": "Townhouse", "bedrooms": 3, "bathrooms": 2, "unitSize": 142, "priceFrom": 2890000, "availableUnits": 4, "area": "Centurion", "image": 5 },
+          { "position": 8, "developmentId": 7103, "developmentName": "Sample Studios", "slug": "sample-studios", "unitId": "studio", "label": "Studio", "bedrooms": 0, "bathrooms": 1, "unitSize": 31, "priceFrom": 895000, "availableUnits": 12, "area": "Hatfield, Pretoria", "image": 12 },
+          { "position": 9, "developmentId": 7104, "developmentName": "Sample Unphotographed Court", "slug": "sample-unphotographed-court", "unitId": "1bed", "label": "Apartment", "bedrooms": 1, "bathrooms": 1, "unitSize": 44, "priceFrom": 990000, "availableUnits": 2, "area": "Midrand", "image": null }
+        ],
+        "rent": [
+          { "position": 3, "developmentId": 7101, "developmentName": "Sample Heights", "slug": "sample-heights", "unitId": "2bed-apartment", "label": "Apartment", "bedrooms": 2, "bathrooms": 2, "unitSize": 68, "priceFrom": 15500, "availableUnits": 6, "area": "Sandton", "image": 13 },
+          { "position": 5, "developmentId": 7105, "developmentName": "Sample Rentals Park", "slug": "sample-rentals-park", "unitId": "1bed-flat", "label": "Flat", "bedrooms": 1, "bathrooms": 1, "unitSize": 46, "priceFrom": 9500, "availableUnits": 9, "area": "Rosebank, Johannesburg", "image": 10 }
+        ]
+      }
     },
     "pl-place-01-203f5f71cb3565521db4718f": {
       "province": "Western Cape",
@@ -59,7 +71,17 @@
         { "id": "93004", "title": "Student-friendly 2 Bedroom Flat", "suburb": "Stellenbosch Central", "city": "Stellenbosch", "price": 12500, "bedrooms": 2, "bathrooms": 1, "area": 70, "parking": 1, "propertyType": "apartment", "image": 5, "daysAgo": 6 },
         { "id": "93005", "title": "Light-filled Garden Cottage", "suburb": "Kenilworth", "city": "Cape Town", "price": 16000, "bedrooms": 2, "bathrooms": 1, "area": 85, "yardSize": 300, "parking": 1, "propertyType": "house", "image": 6, "daysAgo": 8 },
         { "id": "93006", "title": "Sea-breeze Apartment with Balcony", "suburb": "Muizenberg", "city": "Cape Town", "price": 13800, "bedrooms": 2, "bathrooms": 1, "area": 78, "parking": 1, "propertyType": "apartment", "image": 10, "daysAgo": 12 }
-      ]
+      ],
+      "unitTypes": {
+        "sale": [
+          { "position": 3, "developmentId": 7201, "developmentName": "Sample Bay Residences", "slug": "sample-bay-residences", "unitId": "2bed-apartment", "label": "Apartment", "bedrooms": 2, "bathrooms": 2, "unitSize": 74, "priceFrom": 2350000, "availableUnits": 5, "area": "Bloubergstrand, Cape Town", "image": 8 },
+          { "position": 5, "developmentId": 7202, "developmentName": "Sample Vines Village", "slug": "sample-vines-village", "unitId": "3bed-house", "label": "House", "bedrooms": 3, "bathrooms": 2, "unitSize": 150, "priceFrom": 3650000, "availableUnits": 7, "area": "Stellenbosch", "image": 4 }
+        ],
+        "rent": [
+          { "position": 3, "developmentId": 7203, "developmentName": "Sample City Lofts", "slug": "sample-city-lofts", "unitId": "1bed-loft", "label": "Loft", "bedrooms": 1, "bathrooms": 1, "unitSize": 52, "priceFrom": 14200, "availableUnits": 3, "area": "Gardens, Cape Town", "image": 13 },
+          { "position": 5, "developmentId": 7204, "developmentName": "Sample Southside Flats", "slug": "sample-southside-flats", "unitId": "2bed-flat", "label": "Flat", "bedrooms": 2, "bathrooms": 1, "unitSize": 63, "priceFrom": 11800, "availableUnits": 8, "area": "Muizenberg, Cape Town", "image": 10 }
+        ]
+      }
     },
     "pl-place-01-153d9daaed02608619c762aa": {
       "province": "KwaZulu-Natal",
@@ -68,7 +90,15 @@
         { "id": "94002", "title": "Coastal Family Home in Secure Estate", "suburb": "Ballito Hills", "city": "Ballito", "price": 4600000, "bedrooms": 4, "bathrooms": 3, "area": 290, "yardSize": 650, "parking": 2, "propertyType": "house", "image": 1, "daysAgo": 5 },
         { "id": "94003", "title": "Neat 3 Bedroom Home with Garden", "suburb": "Durban North", "city": "Durban", "price": 2450000, "bedrooms": 3, "bathrooms": 2, "area": 175, "yardSize": 760, "parking": 2, "propertyType": "house", "image": 7, "daysAgo": 8 }
       ],
-      "rent": []
+      "rent": [],
+      "unitTypes": {
+        "sale": [],
+        "rent": [
+          { "position": 1, "developmentId": 7301, "developmentName": "Sample Ridge Rentals", "slug": "sample-ridge-rentals", "unitId": "2bed-apartment", "label": "Apartment", "bedrooms": 2, "bathrooms": 2, "unitSize": 70, "priceFrom": 13900, "availableUnits": 10, "area": "Umhlanga", "image": 9 },
+          { "position": 2, "developmentId": 7301, "developmentName": "Sample Ridge Rentals", "slug": "sample-ridge-rentals", "unitId": "1bed-apartment", "label": "Apartment", "bedrooms": 1, "bathrooms": 1, "unitSize": 48, "priceFrom": 9900, "availableUnits": 14, "area": "Umhlanga", "image": 9 },
+          { "position": 3, "developmentId": 7302, "developmentName": "Sample Coastal Flats", "slug": "sample-coastal-flats", "unitId": "studio", "label": "Studio", "bedrooms": 0, "bathrooms": 1, "unitSize": 33, "priceFrom": 7800, "availableUnits": 5, "area": "Ballito", "image": 12 }
+        ]
+      }
     }
   }
 }

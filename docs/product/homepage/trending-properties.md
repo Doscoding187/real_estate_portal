@@ -68,9 +68,9 @@ Applied in this order:
 | Rule | Status |
 |---|---|
 | Follows hero tabs, province pills, headings, states 1–6 | Built (branch `feat/home-38a-clarity`) |
-| Listings only (`listingSource: 'manual'`) | Built. Temporary: until unit-type cards exist, development results are not requested (the server used to send whole-development cards that the page then discarded) |
-| Photo filter on the server, trending order | Server change built (card 47, not deployed). Page switches to them after deployment |
-| Unit types mixed into Buy and Rent | Not built. Server already reads unit types (bedrooms, bathrooms, price and rent ranges, units available) in `publicDevelopmentSearchService.ts`; needs a unit-type result shape and the mixing rule |
+| Trending order and server photo filter in use | Built in the page (card 58): the rail asks for `sortOption: 'trending'`, `requirePhoto: true` and no `listingSource`. The server side is card 47/48/56 (merged on this branch; the API deploy is separate) |
+| Unit types mixed into Buy and Rent | Built in the page (card 58): `developmentResultShape: 'unit_type'`. A unit-type card uses the listing card frame: development photo, chips "New development" and the transaction, "From R x" (rent "From R x pm"), title "2-bed Apartment", second line "{development} · {area}", beds / baths / size, link to the unit page. **No heart** on unit-type cards: saving takes a property id and a unit type has none (nothing faked) |
+| Page works when the API is one version behind | Built (card 58, `useTrendingRailQuery.ts`). The web host deploys on merge and the API is a separate manual step, so the page can go live first. If the new request fails with a tRPC `BAD_REQUEST` (an older API rejects the unknown input), the page runs the previous request instead (`listingSource: 'manual'`, `sortOption: 'date_desc'`, client photo filter, no unit types) and shows that. Any other error shows the normal error state. Remembered in a module variable for the page session, so later province clicks do not probe again. Remove once the API is deployed everywhere |
 | Developments tab shows developments | Not built (shows the "launching soon" empty state; developments is now public; unit types come from the server later) |
 | Paid placements and their billing | Not started (future revenue product) |
 | Caching on the server, database index for this query | Not started |
@@ -79,4 +79,5 @@ Applied in this order:
 
 - **Before 2026-10-28:** section existed (`HomeTrendingSection`, fed by `developer.getHomeTrendingFeed`, filtered by province *name*, photo required, newest first).
 - **2026-10-28, PR #693 (`cbff3e7b3`):** removed from the homepage, together with the city cards and market insights, because it depended on the legacy province/city/suburb tables that were dropped (migrations 0175–0178). The reasoning for the section was not recorded anywhere, so it was lost. This file exists to prevent that.
+- **2026-11-12 (card 58):** page switched to the server's trending order, photo filter and unit-type cards, with the older-API fallback described in section 6.
 - **2026-11-12:** restored from the owner's screenshot (cards 44 and 44 rework), now addressing provinces by place id through `properties.searchPublicInventory`; owner set the revenue goal and the content rules above.

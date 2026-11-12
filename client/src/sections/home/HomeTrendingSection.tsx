@@ -20,30 +20,12 @@ import { HOME_PROVINCE_OPTIONS as PROVINCES, homeProvincePlaceId } from '@/lib/h
 import { buildTransactionalGeographyHref } from '@/lib/geographySearchHandoff';
 import { trpc } from '@/lib/trpc';
 import type { HeroTab } from '@/types/hero';
-import { hasHomePropertyPhoto } from '@shared/homePropertyPhoto';
+import { TRENDING_RAIL_LIMIT, useTrendingRailQuery } from './useTrendingRailQuery';
 
 type HomeTrendingSectionProps = {
   selectedProvince: string;
   onProvinceChange: (province: string) => void;
   activeHeroTab: HeroTab;
-};
-
-type TrendingCard = {
-  kind?: string;
-  id: string | number;
-  title: string;
-  city?: string;
-  suburb?: string;
-  locationLabels?: string[];
-  image?: string;
-  href: string;
-  price: number | null;
-  bedrooms?: number;
-  bathrooms?: number;
-  area?: number;
-  yardSize?: number;
-  parking?: { compactValue?: string | number };
-  propertyType?: string;
 };
 
 const TAB_COPY: Record<HeroTab, { titleBase: string; subtitleBase: string }> = {
@@ -95,7 +77,7 @@ const HEADING_CLASS =
   'home-section-title max-w-[20.5rem] text-[1.125rem] font-bold text-slate-900 sm:max-w-none sm:text-xl md:text-[26px]';
 const SUBTITLE_CLASS =
   'max-w-[21rem] text-[13px] leading-5 text-slate-600 sm:max-w-2xl sm:text-sm sm:leading-6 md:max-w-2xl md:text-sm md:leading-6';
-const RAIL_LIMIT = 10;
+const RAIL_LIMIT = TRENDING_RAIL_LIMIT;
 
 export function HomeTrendingSection({
   selectedProvince,
@@ -133,24 +115,16 @@ export function HomeTrendingSection({
 
   // Only Buy and Rent run a query. Every other journey is a handoff or an empty state.
   const {
-    data: trendingData,
+    cards: railCards,
     isError,
     isFetching,
     isLoading,
     refetch,
-  } = trpc.properties.searchPublicInventory.useQuery(
-    {
-      listingType: activeHeroTab === 'rent' ? 'rent' : 'sale',
-      // Manual listings only: a province id would otherwise also run the development search,
-      // whose results this rail discards.
-      listingSource: 'manual',
-      canonicalPlaceId: homeProvincePlaceId(selectedProvince),
-      sortOption: 'date_desc',
-      page: 0,
-      pageSize: RAIL_LIMIT,
-    },
-    { enabled: isListingTab && Boolean(homeProvincePlaceId(selectedProvince)), retry: false },
-  );
+  } = useTrendingRailQuery({
+    listingType: activeHeroTab === 'rent' ? 'rent' : 'sale',
+    canonicalPlaceId: homeProvincePlaceId(selectedProvince),
+    enabled: isListingTab,
+  });
 
   const handoff = HANDOFF[activeHeroTab];
   if (activeHeroTab === 'developments') {
@@ -190,13 +164,10 @@ export function HomeTrendingSection({
     );
   }
 
-  const trendingItems = ((trendingData?.cards ?? []) as TrendingCard[])
-    .filter(
-      item =>
-        item.kind !== 'development' &&
-        hasHomePropertyPhoto(item.image) &&
-        !failedImages.has(item.image as string),
-    )
+  // The server already orders, photo-filters and mixes unit types; only images that fail to load
+  // in this browser are dropped here.
+  const trendingItems = railCards
+    .filter(item => !failedImages.has(item.image as string))
     .slice(0, RAIL_LIMIT);
   const listingType = activeHeroTab === 'rent' ? 'rent' : 'sale';
   const provincePlaceId = homeProvincePlaceId(selectedProvince);
@@ -314,6 +285,32 @@ export function HomeTrendingSection({
                   className="basis-[77%] pl-3.5 sm:basis-[64%] md:basis-1/2 lg:basis-1/4"
                 >
                   <div className="relative h-full">
+                    {item.unitType ? (
+                      // Development unit type: same card frame as a listing. There is no saved-homes
+                      // call for a unit type (setFavorite takes a property id), so no heart.
+                      <SimpleHomeListingCard
+                        id={String(item.id)}
+                        title={item.title}
+                        city=""
+                        locationLabel={[item.unitType.developmentName, item.locationLabels?.[0]]
+                          .filter(Boolean)
+                          .join(' · ')}
+                        image={item.image || ''}
+                        href={item.href}
+                        price={item.unitType.priceFrom ?? item.price ?? null}
+                        pricePrefix="From"
+                        bedrooms={item.unitType.bedrooms}
+                        bathrooms={item.unitType.bathrooms}
+                        area={item.unitType.unitSizeM2}
+                        propertyType={item.propertyType}
+                        listingType={listingType}
+                        badgeLabel="New development"
+                        secondaryBadgeLabel={listingType === 'rent' ? 'To rent' : 'For sale'}
+                        onImageUnavailable={() =>
+                          setFailedImages(previous => new Set(previous).add(item.image as string))
+                        }
+                      />
+                    ) : (
                     <SimpleHomeListingCard
                       id={String(item.id)}
                       title={item.title}
@@ -341,6 +338,7 @@ export function HomeTrendingSection({
                         setFailedImages(previous => new Set(previous).add(item.image as string))
                       }
                     />
+                    )}
                   </div>
                 </CarouselItem>
               ))}

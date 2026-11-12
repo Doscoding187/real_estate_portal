@@ -37,7 +37,7 @@ export function HomeMobileView({
           activeHeroTab={activeHeroTab}
         />
         <DiscoverProperties withinContentRail />
-        <TopDevelopers />
+        <TopDevelopers selectedProvince={selectedProvince} />
         <ExploreCities withinContentRail />
         <HomeMarketInsightsSection />
         <HomeJourneySection />
