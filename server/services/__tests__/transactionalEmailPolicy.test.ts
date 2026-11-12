@@ -94,9 +94,18 @@ describe('Paid MVP transactional email policy', () => {
     expect(approved.text).toMatch(/R\s?499/);
     expect(approved.text).toContain('Date paid: 2026-10-12');
     expect(approved.text).toContain('Independent Agent Launch Access');
-    expect(approved.text).toContain('Property Listify (Pty) Ltd, registration 2026/702814/07');
-    expect(approved.text).toContain('Not VAT registered, no VAT charged');
-    expect(approved.text).toContain('support@propertylistifysa.co.za');
+    expect(approved.text).toContain(
+      'Supplier: Property Listify (Pty) Ltd, reg. 2026/702814/07, 96 Jorissen Street, Braamfontein. Not VAT registered; no VAT charged.',
+    );
+    expect(approved.text).toContain(
+      'Contact: support@propertylistifysa.co.za, call or WhatsApp 064 020 2541',
+    );
+    expect(approved.text).toContain(
+      'Support and billing: support@propertylistifysa.co.za, call or WhatsApp 064 020 2541',
+    );
+    expect(approved.html).toContain('href="tel:+27640202541"');
+    expect(approved.html).toContain('href="https://wa.me/27640202541"');
+    expect(approved.html).toContain('064 020 2541');
     expect(approved.html).toContain('AN-2026-0001');
     expect(approved.text).toContain('2026-10-13 10:00:00 UTC');
     expect(approved.text).toContain('2027-01-11 10:00:00 UTC');
@@ -114,6 +123,8 @@ describe('Paid MVP transactional email policy', () => {
       expect(message.subject).not.toContain('activated');
       expect(message.text).not.toContain('term was activated');
       expect(message.text).toContain('support@propertylistifysa.co.za');
+      expect(message.text).toContain('064 020 2541');
+      expect(message.html).toContain('tel:+27640202541');
     },
   );
 

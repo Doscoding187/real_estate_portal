@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { HomeLayout } from '@/layouts/HomeLayout';
+import { SupportContactLinks } from '@/components/SupportContactLinks';
 import { apiFetch } from '@/lib/api';
 import { applySeo } from '@/lib/seo';
 import type { RegistrationLegalRelease } from '@/lib/registrationLegal';
@@ -17,8 +18,7 @@ export function LegalDocumentUnavailable({ title }: { title: string }) {
       <main className="mx-auto max-w-4xl px-5 pb-16 pt-28 text-slate-900">
         <h1 className="text-3xl font-semibold">{title}</h1>
         <p role="status" className="my-6">
-          This document is temporarily unavailable. For assistance, contact
-          support@propertylistifysa.co.za.
+          This document is temporarily unavailable. For assistance, contact <SupportContactLinks />.
         </p>
       </main>
     </HomeLayout>
@@ -74,9 +74,14 @@ export default function LegalDocumentPage({ kind }: { kind: 'terms' | 'privacy' 
           </>
         ) : (
           <p role="status" className="my-6">
-            {failed
-              ? 'This document is temporarily unavailable. New account registration is paused. For assistance, contact support@propertylistifysa.co.za.'
-              : 'Loading document…'}
+            {failed ? (
+              <>
+                This document is temporarily unavailable. New account registration is paused. For
+                assistance, contact <SupportContactLinks />.
+              </>
+            ) : (
+              'Loading document…'
+            )}
           </p>
         )}
       </main>

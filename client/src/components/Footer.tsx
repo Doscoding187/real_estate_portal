@@ -12,6 +12,12 @@ import {
   Send,
 } from 'lucide-react';
 import { isHomepageHeroJourneyEnabled } from '@/lib/publicNavigation';
+import {
+  SUPPORT_EMAIL,
+  SUPPORT_PHONE_DISPLAY,
+  SUPPORT_PHONE_TEL_HREF,
+  SUPPORT_WHATSAPP_URL,
+} from '@shared/supportContact';
 
 export function Footer() {
   return (
@@ -47,7 +53,7 @@ export function Footer() {
                 <Twitter className="h-5 w-5" />
               </a>
               <a
-                href="https://wa.link/mh6juy"
+                href={SUPPORT_WHATSAPP_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Property Listify on WhatsApp"
@@ -132,11 +138,27 @@ export function Footer() {
               </li>
               <li className="flex items-center gap-3">
                 <Phone className="h-5 w-5 text-blue-500 flex-shrink-0" />
-                <span>Help centre and safety guidance</span>
+                <span>
+                  <a href={SUPPORT_PHONE_TEL_HREF} className="hover:text-white transition-colors">
+                    {SUPPORT_PHONE_DISPLAY}
+                  </a>{' '}
+                  (call or{' '}
+                  <a
+                    href={SUPPORT_WHATSAPP_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-white transition-colors"
+                  >
+                    WhatsApp
+                  </a>
+                  )
+                </span>
               </li>
               <li className="flex items-center gap-3">
                 <Mail className="h-5 w-5 text-blue-500 flex-shrink-0" />
-                <span>Support via Property Listify</span>
+                <a href={`mailto:${SUPPORT_EMAIL}`} className="hover:text-white transition-colors">
+                  {SUPPORT_EMAIL}
+                </a>
               </li>
             </ul>
 

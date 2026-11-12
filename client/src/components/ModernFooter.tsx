@@ -1,5 +1,11 @@
 import { Link } from 'wouter';
 import { isHomepageHeroJourneyEnabled } from '@/lib/publicNavigation';
+import {
+  SUPPORT_EMAIL,
+  SUPPORT_PHONE_DISPLAY,
+  SUPPORT_PHONE_TEL_HREF,
+  SUPPORT_WHATSAPP_URL,
+} from '@shared/supportContact';
 
 const marketplaceLinks = [
   { label: 'Home', href: '/' },
@@ -56,7 +62,33 @@ export function ModernFooter() {
           </nav>
         </div>
 
-        <div className="mt-8 flex flex-col gap-3 border-t border-slate-800 pt-6 text-sm text-slate-400 sm:flex-row sm:items-center sm:justify-between">
+        <p className="mt-8 border-t border-slate-800 pt-6 text-sm text-slate-400">
+          Support:{' '}
+          <a
+            href={`mailto:${SUPPORT_EMAIL}`}
+            className="text-slate-300 transition-colors hover:text-blue-400"
+          >
+            {SUPPORT_EMAIL}
+          </a>{' '}
+          |{' '}
+          <a
+            href={SUPPORT_PHONE_TEL_HREF}
+            className="text-slate-300 transition-colors hover:text-blue-400"
+          >
+            {SUPPORT_PHONE_DISPLAY}
+          </a>{' '}
+          |{' '}
+          <a
+            href={SUPPORT_WHATSAPP_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-slate-300 transition-colors hover:text-blue-400"
+          >
+            WhatsApp
+          </a>
+        </p>
+
+        <div className="mt-4 flex flex-col gap-3 border-t border-slate-800 pt-6 text-sm text-slate-400 sm:flex-row sm:items-center sm:justify-between">
           <span>© 2026 Property Listify. All rights reserved.</span>
           <div className="flex flex-wrap gap-x-4 gap-y-2">
             {legalLinks.map(link => (
