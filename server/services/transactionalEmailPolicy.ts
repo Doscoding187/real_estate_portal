@@ -1,4 +1,11 @@
 import type { PaidMvpLaunchAccessProductKey } from '../../shared/commercialActivation';
+import {
+  SUPPORT_CONTACT_LINE,
+  SUPPORT_EMAIL,
+  SUPPORT_PHONE_DISPLAY,
+  SUPPORT_PHONE_TEL_HREF,
+  SUPPORT_WHATSAPP_URL,
+} from '../../shared/supportContact';
 
 export type LaunchEmailPurpose =
   | 'invoice_issued'
@@ -154,8 +161,8 @@ export function renderLaunchEmail(input: {
       if (input.term) lines.push(`Access period: ${input.term.start} UTC to ${input.term.end} UTC`);
       else lines.push('Open your account for the recorded access start and end dates.');
       lines.push(
-        'Supplier: Property Listify (Pty) Ltd, registration 2026/702814/07. Not VAT registered, no VAT charged.',
-        'Support: support@propertylistifysa.co.za',
+        'Supplier: Property Listify (Pty) Ltd, reg. 2026/702814/07, 96 Jorissen Street, Braamfontein. Not VAT registered; no VAT charged.',
+        `Contact: ${SUPPORT_CONTACT_LINE}`,
         'Open your workspace to create or manage listings. Publication remains subject to moderation. There is no automatic renewal.',
       );
       message = lines.join('\n');
@@ -188,10 +195,10 @@ export function renderLaunchEmail(input: {
           "'": '&#39;',
         })[char]!,
     );
-  const text = `${message}\n\n${actionUrl}\n\nTerms of Service: ${termsUrl}\nPrivacy Notice: ${privacyUrl}\nSupport and billing: support@propertylistifysa.co.za\n\nProperty Listify (Pty) Ltd is not VAT registered and does not charge VAT.`;
+  const text = `${message}\n\n${actionUrl}\n\nTerms of Service: ${termsUrl}\nPrivacy Notice: ${privacyUrl}\nSupport and billing: ${SUPPORT_EMAIL}, call or WhatsApp ${SUPPORT_PHONE_DISPLAY}\n\nProperty Listify (Pty) Ltd is not VAT registered and does not charge VAT.`;
   return {
     subject,
     text,
-    html: `<p>${escape(message).replace(/\n/g, '<br />')}</p><p><a href="${escape(actionUrl)}">Open Property Listify</a></p><p><a href="${escape(termsUrl)}">Terms of Service</a> · <a href="${escape(privacyUrl)}">Privacy Notice</a></p><p>Support and billing: <a href="mailto:support@propertylistifysa.co.za">support@propertylistifysa.co.za</a></p><p>Property Listify (Pty) Ltd is not VAT registered and does not charge VAT.</p>`,
+    html: `<p>${escape(message).replace(/\n/g, '<br />')}</p><p><a href="${escape(actionUrl)}">Open Property Listify</a></p><p><a href="${escape(termsUrl)}">Terms of Service</a> · <a href="${escape(privacyUrl)}">Privacy Notice</a></p><p>Support and billing: <a href="mailto:${escape(SUPPORT_EMAIL)}">${escape(SUPPORT_EMAIL)}</a>, call or WhatsApp <a href="${escape(SUPPORT_PHONE_TEL_HREF)}">${escape(SUPPORT_PHONE_DISPLAY)}</a> (<a href="${escape(SUPPORT_WHATSAPP_URL)}">WhatsApp</a>)</p><p>Property Listify (Pty) Ltd is not VAT registered and does not charge VAT.</p>`,
   };
 }

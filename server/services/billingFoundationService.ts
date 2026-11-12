@@ -19,6 +19,7 @@ import {
   users,
 } from '../../drizzle/schema';
 import { getDb } from '../db';
+import { SUPPORT_EMAIL } from '../../shared/supportContact';
 import { paidLegalAcceptanceSchema } from './legalAcceptancePolicy';
 import {
   RegistrationLegalError,
@@ -863,7 +864,7 @@ export function getManualEftBankDetails(productKey?: PaidMvpLaunchAccessProductK
         ? `${'*'.repeat(accountNumber.length - 4)}${accountNumber.slice(-4)}`
         : accountNumber,
     accountType: configured ? required.accountType! : 'Local test account',
-    supportEmail: required.supportEmail || 'support@propertylistifysa.co.za',
+    supportEmail: required.supportEmail || SUPPORT_EMAIL,
     missingConfiguration: missing,
     configurationMessage: configured
       ? null
