@@ -1,5 +1,6 @@
 import { Link } from 'wouter';
 import { ArrowRight } from 'lucide-react';
+import { isJourneyRouteHeld } from '@/lib/publicNavigation';
 import {
   getPropertyServiceActions,
   type PropertyServiceAction,
@@ -55,7 +56,8 @@ export function PropertyServiceActions({
     isDevelopmentLinked: Boolean(developmentId),
   });
 
-  if (!propertyId || actions.length === 0) {
+  // Consumer Services directory is held until stocked (LAUNCH_HELD_JOURNEYS).
+  if (isJourneyRouteHeld('services') || !propertyId || actions.length === 0) {
     return null;
   }
 

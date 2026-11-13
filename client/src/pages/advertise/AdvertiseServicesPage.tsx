@@ -2,6 +2,7 @@ import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BadgeCheck, ClipboardCheck, MapPinned } from 'lucide-react';
+import { isJourneyRouteHeld } from '@/lib/publicNavigation';
 
 export default function AdvertiseServicesPage() {
   return (
@@ -24,9 +25,11 @@ export default function AdvertiseServicesPage() {
             <Link href="/login?mode=register&role=service_provider">
               <Button>Apply as a service provider</Button>
             </Link>
-            <Link href="/services">
-              <Button variant="outline">Browse the directory</Button>
-            </Link>
+            {isJourneyRouteHeld('services') ? null : (
+              <Link href="/services">
+                <Button variant="outline">Browse the directory</Button>
+              </Link>
+            )}
           </div>
           <p className="max-w-2xl text-sm leading-6 text-slate-600">
             Register, verify your email, complete your profile and submit it for review. Your

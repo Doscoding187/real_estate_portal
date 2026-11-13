@@ -2,7 +2,10 @@ import { Link } from 'wouter';
 import { Home } from 'lucide-react';
 import { SERVICE_CATEGORIES } from '@/features/services/catalog';
 import { toServiceCategorySlug } from '@/features/services/catalog';
-import { isHomepageHeroJourneyEnabled } from '@/lib/publicNavigation';
+import { isHomepageHeroJourneyEnabled, isJourneyRouteHeld } from '@/lib/publicNavigation';
+
+// The consumer Services directory is held until stocked (LAUNCH_HELD_JOURNEYS).
+const servicesHeld = isJourneyRouteHeld('services');
 
 const platformLinks = [
   { label: 'Buy', href: '/property-for-sale' },
@@ -17,7 +20,7 @@ const platformLinks = [
   ...(isHomepageHeroJourneyEnabled('commercial')
     ? [{ label: 'Commercial', href: '/commercial' }]
     : []),
-  { label: 'Services', href: '/services' },
+  ...(servicesHeld ? [] : [{ label: 'Services', href: '/services' }]),
 ];
 
 const companyLinks = [
@@ -75,7 +78,7 @@ export function ServicesSiteFooter() {
           <nav aria-label="Service category links">
             <h2 className="text-sm font-semibold text-white">Services</h2>
             <ul className="mt-4 space-y-2.5">
-              {SERVICE_CATEGORIES.map(category => (
+              {(servicesHeld ? [] : SERVICE_CATEGORIES).map(category => (
                 <li key={category.value}>
                   <Link
                     href={`/services/${toServiceCategorySlug(category.value)}`}
