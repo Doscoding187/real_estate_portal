@@ -231,7 +231,7 @@ export function isHomepageHeroTabEnabled(key: PublicHeroJourneyKey): boolean {
 }
 
 /**
- * True when a journey's pages show the "coming soon" empty-state page instead
+ * True when a journey's pages show the designed empty-state page instead
  * of the working product in the running build: held journeys on hosted builds.
  */
 export function isJourneyComingSoon(
