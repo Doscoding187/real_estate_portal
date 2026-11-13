@@ -42,7 +42,8 @@ export type PublicNavigationDestination = {
   desktopVisible?: boolean;
   mobileVisible?: boolean;
   activeHref?: string;
-  journey?: PublicHeroJourneyKey;
+  /** A hero journey key, or 'services' (a held consumer journey with no hero tab). */
+  journey?: PublicHeroJourneyKey | 'services';
 };
 
 export type PublicNavigationGroup = {
@@ -136,7 +137,12 @@ const BASELINE_RELEASED_PUBLIC_JOURNEYS: readonly PublicHeroJourneyKey[] = [
  * Journeys held back for the public soft launch. A held journey is NOT released
  * even when VITE_PUBLIC_JOURNEY_RELEASES lists it. Remove a key to release it.
  */
-export const LAUNCH_HELD_JOURNEYS: readonly string[] = ['shared_living', 'plot_land', 'commercial'];
+export const LAUNCH_HELD_JOURNEYS: readonly string[] = [
+  'shared_living',
+  'plot_land',
+  'commercial',
+  'services',
+];
 
 /**
  * A held-role sign-up entry must not carry its onboarding destination into a
@@ -430,6 +436,7 @@ export const SERVICE_CATEGORY_DESTINATIONS = SERVICE_CATEGORIES.map(category =>
     owner: 'services-engine',
     capability: 'LIMITED_BUT_VALID',
     activeHref: '/services',
+    journey: 'services',
   }),
 );
 
@@ -806,6 +813,7 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
             owner: 'services-engine',
             capability: 'LIMITED_BUT_VALID',
             activeHref: '/services',
+            journey: 'services',
           }),
         ],
       },
@@ -973,8 +981,8 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
       href: '/services',
       owner: 'services-engine',
       capability: 'LIMITED_BUT_VALID',
-
       activeHref: '/services',
+      journey: 'services',
     }),
     groups: [
       {
@@ -1114,6 +1122,14 @@ const VISIBLE_CAPABILITIES = new Set<PublicNavigationCapabilityStatus>([
   'LIMITED_BUT_VALID',
 ]);
 
+function isNavigationJourneyEnabled(
+  journey: PublicHeroJourneyKey | 'services',
+  releaseContext: PublicJourneyReleaseContext,
+): boolean {
+  if (journey === 'services') return !isJourneyRouteHeld('services', releaseContext);
+  return isHomepageHeroJourneyEnabled(journey, releaseContext);
+}
+
 export function isPublicNavigationVisible(
   item: PublicNavigationDestination,
   surface: 'desktop' | 'mobile' = 'desktop',
@@ -1121,7 +1137,7 @@ export function isPublicNavigationVisible(
 ) {
   return (
     VISIBLE_CAPABILITIES.has(item.capability) &&
-    (!item.journey || isHomepageHeroJourneyEnabled(item.journey, releaseContext)) &&
+    (!item.journey || isNavigationJourneyEnabled(item.journey, releaseContext)) &&
     (surface === 'desktop' ? item.desktopVisible !== false : item.mobileVisible !== false)
   );
 }

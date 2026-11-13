@@ -24,6 +24,8 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
+import { isJourneyRouteHeld } from '@/lib/publicNavigation';
+
 type Benefit = { title: string; text: string; icon: LucideIcon };
 type PanelLink = { label: string; href: string };
 
@@ -35,6 +37,10 @@ type Audience = {
   summary: string;
   benefits: readonly [Benefit, Benefit, Benefit];
   today: string;
+  /** Replaces `summary` while the Services directory is held. */
+  heldSummary?: string;
+  /** Replaces `today` while the Services directory is held. */
+  heldToday?: string;
   cta: PanelLink;
   secondary?: readonly PanelLink[];
 };
@@ -58,6 +64,7 @@ const WHY_AUDIENCES: readonly Audience[] = [
     ],
     today:
       'Browse every listing without an account. A free account lets you save homes. Moving or need repairs? Browse property services.',
+    heldToday: 'Browse every listing without an account. A free account lets you save homes.',
     cta: { label: 'Browse homes for sale', href: '/property-for-sale' },
     secondary: [
       { label: 'Homes to rent', href: '/property-to-rent' },
@@ -85,6 +92,7 @@ const WHY_AUDIENCES: readonly Audience[] = [
     ],
     today:
       'Find an agent and ask them to list your property. Need repairs or photos first? Browse property services.',
+    heldToday: 'Find an agent and ask them to list your property.',
     cta: { label: 'Find an agent', href: '/agents' },
     secondary: [{ label: 'Property services', href: '/services' }],
   },
@@ -163,6 +171,8 @@ const WHY_AUDIENCES: readonly Audience[] = [
     headline: 'Be found by people who need a property service.',
     summary:
       'Service provider accounts are not open yet. The services directory is live, and you can see how provider access will work.',
+    heldSummary:
+      'Service provider accounts are not open yet. The services directory opens once reviewed providers are listed, and you can see how provider access will work.',
     benefits: [
       {
         title: 'A service profile',
@@ -189,7 +199,12 @@ const WHY_AUDIENCES: readonly Audience[] = [
   },
 ];
 
+function isServicesLink(link: PanelLink): boolean {
+  return link.href === '/services' || link.href.startsWith('/services/');
+}
+
 export function WhyPropertyListifySection() {
+  const servicesHeld = isJourneyRouteHeld('services');
   const [activeId, setActiveId] = useState<string>(WHY_AUDIENCES[0].id);
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const active = WHY_AUDIENCES.find(item => item.id === activeId) ?? WHY_AUDIENCES[0];
@@ -296,6 +311,9 @@ export function WhyPropertyListifySection() {
         <div className="mt-5 lg:grid">
           {WHY_AUDIENCES.map(item => {
             const selected = item.id === active.id;
+            const secondaryLinks = (item.secondary ?? []).filter(
+              link => !(servicesHeld && isServicesLink(link)),
+            );
             return (
               <div
                 key={item.id}
@@ -315,13 +333,15 @@ export function WhyPropertyListifySection() {
                     {item.headline}
                   </h3>
                   <p className="mt-3 text-sm leading-6 text-slate-700 md:text-base md:leading-7">
-                    {item.summary}
+                    {servicesHeld && item.heldSummary ? item.heldSummary : item.summary}
                   </p>
                   <div className="mt-5 rounded-2xl border-l-4 border-amber-400 bg-amber-50 px-4 py-3">
                     <p className="text-xs font-bold uppercase tracking-[0.14em] text-amber-900">
                       What you can do today
                     </p>
-                    <p className="mt-1 text-sm leading-6 text-slate-800">{item.today}</p>
+                    <p className="mt-1 text-sm leading-6 text-slate-800">
+                      {servicesHeld && item.heldToday ? item.heldToday : item.today}
+                    </p>
                   </div>
                   <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-1 xl:mt-auto xl:pt-6">
                     <a
@@ -331,9 +351,9 @@ export function WhyPropertyListifySection() {
                       {item.cta.label}
                       <ArrowRight className="h-4 w-4" aria-hidden="true" />
                     </a>
-                    {item.secondary && item.secondary.length > 0 ? (
+                    {secondaryLinks.length > 0 ? (
                       <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
-                        {item.secondary.map(link => (
+                        {secondaryLinks.map(link => (
                           <a
                             key={link.href}
                             href={link.href}

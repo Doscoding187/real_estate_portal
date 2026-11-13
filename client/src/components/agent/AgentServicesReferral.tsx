@@ -1,6 +1,7 @@
 import { Link } from 'wouter';
 import { ArrowRight, Camera, ClipboardCheck, Truck } from 'lucide-react';
 import { buildServiceCategoryPath } from '@/features/services/catalog';
+import { isJourneyRouteHeld } from '@/lib/publicNavigation';
 
 type AgentServicesReferralProps = {
   /** The private source listing id, when the listing has one. */
@@ -38,6 +39,8 @@ export function AgentServicesReferral({
   label,
   className = '',
 }: AgentServicesReferralProps) {
+  // Consumer Services directory is held until stocked (LAUNCH_HELD_JOURNEYS).
+  if (isJourneyRouteHeld('services')) return null;
   const Icon =
     category === 'inspection_compliance' ? ClipboardCheck : category === 'moving' ? Truck : Camera;
   const actionLabel =
@@ -83,6 +86,7 @@ export function AgentServicesReferralPanel({
 }: Omit<AgentServicesReferralProps, 'category' | 'label' | 'className'> & {
   className?: string;
 }) {
+  if (isJourneyRouteHeld('services')) return null;
   return (
     <section className={`rounded-2xl border border-[#D8EDE7] bg-[#EDF8F6] p-5 ${className}`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
