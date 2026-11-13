@@ -5,7 +5,6 @@ export function MaintenancePage() {
     <>
       <Helmet>
         <title>We’re upgrading Property Listify</title>
-        <meta name="robots" content="noindex, nofollow, noarchive" />
       </Helmet>
       <main
         role="status"

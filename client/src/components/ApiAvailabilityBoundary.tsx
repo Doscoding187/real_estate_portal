@@ -4,6 +4,7 @@ import { MaintenancePage } from './MaintenancePage';
 
 const HEALTHY_RECHECK_MS = 15_000;
 const UNAVAILABLE_RECHECK_MS = 5_000;
+const REQUIRED_CONSECUTIVE_FAILURES = 2;
 const API_BASE_URL = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '';
 
 export interface ApiAvailabilityBoundaryProps {
@@ -26,12 +27,15 @@ export function ApiAvailabilityBoundary({
 
     let disposed = false;
     let timer: number | undefined;
+    let consecutiveFailures = 0;
 
     const check = async () => {
       const ready = await isApiReady(apiBaseUrl);
       if (disposed) return;
 
-      setMaintenance(!ready);
+      consecutiveFailures = ready ? 0 : consecutiveFailures + 1;
+      // A single failed check (blocked, slow or transient) must not replace the page.
+      setMaintenance(consecutiveFailures >= REQUIRED_CONSECUTIVE_FAILURES);
       timer = window.setTimeout(check, ready ? HEALTHY_RECHECK_MS : UNAVAILABLE_RECHECK_MS);
     };
 

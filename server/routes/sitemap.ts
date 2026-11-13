@@ -65,6 +65,23 @@ function isPublicSiteHost(host: string): boolean {
   return /^(www\.)?propertylistifysa\.co\.za$/i.test(host);
 }
 
+function isApiHost(host: string): boolean {
+  return /^api\./i.test(host.trim());
+}
+
+/**
+ * Host the visitor addressed. Vercel proxies www /robots.txt to this API (vercel.ts rewrite) and
+ * sends the original host in X-Forwarded-Host; Host itself is the API host in that case. Direct
+ * requests to the API host carry no X-Forwarded-Host (or the API host itself). Only an effective
+ * host starting with "api." gets the API variant; anything else keeps the www robots.txt.
+ */
+function resolveRequestHost(req: Request): string {
+  const forwardedHost = String(req.headers?.['x-forwarded-host'] || '')
+    .split(',')[0]
+    .trim();
+  return forwardedHost || req.get('host') || '';
+}
+
 function resolveBaseUrl(req: Request): string {
   const fallbackBaseUrl = getFallbackBaseUrl();
   const forwardedProto = String(req.headers['x-forwarded-proto'] || '')
@@ -152,19 +169,33 @@ function sendXml(res: Response, xml: string) {
   res.status(200).send(xml);
 }
 
-router.get('/robots.txt', (_req, res) => {
-  const robots = [
+router.get('/robots.txt', (req, res) => {
+  // The API host must let crawlers fetch the public read endpoints the site needs to render,
+  // otherwise Googlebot cannot call /api/readiness or /api/trpc/* and sees a failed page.
+  // Longest matching rule wins, so the Allow lines beat Disallow: /api/.
+  const apiRobots = [
     'User-agent: *',
-    'Allow: /',
+    'Allow: /api/readiness',
+    'Allow: /api/trpc/',
+    'Disallow: /api/',
     'Disallow: /admin',
     'Disallow: /dashboard',
-    'Disallow: /api/',
     'Disallow: /auth/',
-    '',
-    `Sitemap: ${CANONICAL_PUBLIC_ORIGIN}/sitemap.xml`,
-    '',
-    'Crawl-delay: 1',
   ].join('\n');
+  const robots = isApiHost(resolveRequestHost(req))
+    ? apiRobots
+    : [
+        'User-agent: *',
+        'Allow: /',
+        'Disallow: /admin',
+        'Disallow: /dashboard',
+        'Disallow: /api/',
+        'Disallow: /auth/',
+        '',
+        `Sitemap: ${CANONICAL_PUBLIC_ORIGIN}/sitemap.xml`,
+        '',
+        'Crawl-delay: 1',
+      ].join('\n');
 
   res.setHeader('Content-Type', TEXT_CONTENT_TYPE);
   res.setHeader('Cache-Control', SITEMAP_CACHE_CONTROL);
@@ -267,10 +298,7 @@ router.get('/sitemap-services.xml', async (_req, res, next) => {
       })
       .filter(entry => entry != null);
 
-    sendXml(
-      res,
-      buildUrlSet([...categoryEntries, ...providerEntries, ...providerServiceEntries]),
-    );
+    sendXml(res, buildUrlSet([...categoryEntries, ...providerEntries, ...providerServiceEntries]));
   } catch (error) {
     next(error);
   }
