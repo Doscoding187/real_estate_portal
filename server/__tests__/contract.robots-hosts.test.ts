@@ -28,9 +28,11 @@ function requestRobots(headers: Record<string, string>): string {
   return body;
 }
 
-const WWW_ROBOTS = [
+const ROBOTS = [
   'User-agent: *',
   'Allow: /',
+  'Allow: /api/readiness',
+  'Allow: /api/trpc/',
   'Disallow: /admin',
   'Disallow: /dashboard',
   'Disallow: /api/',
@@ -41,35 +43,30 @@ const WWW_ROBOTS = [
   'Crawl-delay: 1',
 ].join('\n');
 
-describe('robots.txt per host', () => {
-  it('keeps the www robots.txt unchanged when proxied by Vercel (Host=api, X-Forwarded-Host=www)', () => {
+describe('robots.txt', () => {
+  it('is identical for every host, so it never depends on proxy headers', () => {
+    expect(requestRobots({ host: 'www.propertylistifysa.co.za' })).toBe(ROBOTS);
+    expect(requestRobots({ host: 'api.propertylistifysa.co.za' })).toBe(ROBOTS);
     expect(
       requestRobots({
         host: 'api.propertylistifysa.co.za',
         'x-forwarded-host': 'www.propertylistifysa.co.za',
       }),
-    ).toBe(WWW_ROBOTS);
+    ).toBe(ROBOTS);
   });
 
-  it('keeps the www robots.txt for the www host directly', () => {
-    expect(requestRobots({ host: 'www.propertylistifysa.co.za' })).toBe(WWW_ROBOTS);
-  });
-
-  it('lets crawlers fetch readiness and tRPC on the API host', () => {
+  it('lets crawlers fetch the endpoints the site calls while rendering', () => {
     const body = requestRobots({ host: 'api.propertylistifysa.co.za' });
     expect(body).toContain('Allow: /api/readiness');
     expect(body).toContain('Allow: /api/trpc/');
     expect(body).toContain('Disallow: /api/');
-    expect(body).toContain('Disallow: /admin');
-    expect(body).not.toContain('Sitemap:');
-    expect(body).not.toContain('Allow: /\n');
   });
 
-  it('serves the API variant when the forwarded host is the API host', () => {
-    const body = requestRobots({
-      host: 'internal.example',
-      'x-forwarded-host': 'api.propertylistifysa.co.za',
-    });
-    expect(body).toContain('Allow: /api/trpc/');
+  it('keeps the private areas closed and the sitemap listed', () => {
+    const body = requestRobots({ host: 'www.propertylistifysa.co.za' });
+    for (const line of ['Disallow: /admin', 'Disallow: /dashboard', 'Disallow: /auth/']) {
+      expect(body).toContain(line);
+    }
+    expect(body).toContain('Sitemap: https://www.propertylistifysa.co.za/sitemap.xml');
   });
 });
