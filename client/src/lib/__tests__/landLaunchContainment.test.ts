@@ -62,8 +62,10 @@ describe('Land public search and retained publication containment', () => {
     expect(app).toContain('<JourneyComingSoonPage journey="plot_land" />');
     expect(app).toContain('<JourneyComingSoonPage journey="plot_land" detail />');
     expect(app).not.toContain('<LandDeferred audience="public" />');
-    expect(app).toContain('isLandVerticalAvailable() ? <LandReviewWorkspace />');
-    expect(app).toContain('isLandVerticalAvailable() ? <LandAuthoringWorkspace />');
+    // Formatting-independent: the gate may be written on one line or split across lines by prettier.
+    const appCompact = app.replace(/\s+/g, ' ');
+    expect(appCompact).toContain('isLandVerticalAvailable() ? ( <LandReviewWorkspace />');
+    expect(appCompact).toContain('isLandVerticalAvailable() ? ( <LandAuthoringWorkspace />');
     expect(app).toContain('isLandPublicDiscoveryAvailable() ?');
   });
 });
