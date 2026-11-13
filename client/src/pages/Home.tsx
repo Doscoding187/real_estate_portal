@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import { useHomeProvinceState } from '@/lib/useHomeProvince';
 import { useLocation, useSearch } from 'wouter';
 import { HomeSearchProvider } from '@/contexts/HomeSearchContext';
 import { HomeLayout } from '@/layouts/HomeLayout';
@@ -28,7 +29,8 @@ export default function Home() {
   const [, setLocation] = useLocation();
   const search = useSearch();
   const isMobile = useIsMobile();
-  const [selectedProvince, setSelectedProvince] = useState('Gauteng');
+  // One province for the whole page, remembered for the session.
+  const [selectedProvince, setSelectedProvince] = useHomeProvinceState();
   const queryString = search;
   const rawIntent = new URLSearchParams(queryString).get('intent');
   const requestedJourney = normalizePublicHeroJourney(rawIntent);

@@ -1,0 +1,119 @@
+{
+  "sample": true,
+  "note": "Fictional numbers for the local preview. Band counts add up to activeSaleListings. A province entry's leadingLocality is its leading CITY. KwaZulu-Natal has no whole-province figures (province null) but one city. Provinces not listed are empty.",
+  "provinces": {
+    "pl-place-01-131e3e75ad70424e0f9c869a": {
+      "province": {
+        "placeId": "pl-place-01-131e3e75ad70424e0f9c869a",
+        "name": "Gauteng",
+        "provinceName": "Gauteng",
+        "href": "/gauteng",
+        "activeSaleListings": 27,
+        "medianAskingPrice": 2450000,
+        "typicalPricePerM2": 18240,
+        "bandCounts": [3, 7, 11, 5, 1],
+        "leadingLocality": {
+          "name": "Johannesburg",
+          "listingCount": 13,
+          "href": "/gauteng/johannesburg"
+        },
+        "sampleSize": 27
+      },
+      "cities": [
+        {
+          "placeId": "pl-place-01-131e3e75ad70424e0f9c8001",
+          "name": "Johannesburg",
+          "provinceName": "Gauteng",
+          "href": "/gauteng/johannesburg",
+          "activeSaleListings": 13,
+          "medianAskingPrice": 3000000,
+          "typicalPricePerM2": 19556,
+          "bandCounts": [0, 3, 8, 2, 0],
+          "leadingLocality": {
+            "name": "Sandton",
+            "listingCount": 7,
+            "href": "/gauteng/city-of-johannesburg/sandton"
+          },
+          "sampleSize": 13
+        },
+        {
+          "placeId": "pl-place-01-131e3e75ad70424e0f9c8003",
+          "name": "Pretoria",
+          "provinceName": "Gauteng",
+          "href": "/gauteng/pretoria",
+          "activeSaleListings": 7,
+          "medianAskingPrice": 1850000,
+          "typicalPricePerM2": 17120,
+          "bandCounts": [1, 3, 3, 0, 0],
+          "leadingLocality": {
+            "name": "Centurion",
+            "listingCount": 3,
+            "href": "/gauteng/centurion"
+          },
+          "sampleSize": 7
+        },
+        {
+          "placeId": "pl-place-01-131e3e75ad70424e0f9c8005",
+          "name": "Centurion",
+          "provinceName": "Gauteng",
+          "href": "/gauteng/centurion",
+          "activeSaleListings": 7,
+          "medianAskingPrice": 2100000,
+          "typicalPricePerM2": null,
+          "bandCounts": [2, 1, 0, 3, 1],
+          "leadingLocality": { "name": "Irene", "listingCount": 3, "href": null },
+          "sampleSize": 7
+        }
+      ]
+    },
+    "pl-place-01-203f5f71cb3565521db4718f": {
+      "province": {
+        "placeId": "pl-place-01-203f5f71cb3565521db4718f",
+        "name": "Western Cape",
+        "provinceName": "Western Cape",
+        "href": "/western-cape",
+        "activeSaleListings": 9,
+        "medianAskingPrice": 2450000,
+        "typicalPricePerM2": null,
+        "bandCounts": [1, 2, 4, 2, 0],
+        "leadingLocality": {
+          "name": "Cape Town",
+          "listingCount": 9,
+          "href": "/western-cape/cape-town"
+        },
+        "sampleSize": 9
+      },
+      "cities": [
+        {
+          "placeId": "pl-place-01-131e3e75ad70424e0f9c8002",
+          "name": "Cape Town",
+          "provinceName": "Western Cape",
+          "href": "/western-cape/cape-town",
+          "activeSaleListings": 9,
+          "medianAskingPrice": 2450000,
+          "typicalPricePerM2": null,
+          "bandCounts": [1, 2, 4, 2, 0],
+          "leadingLocality": { "name": "Sea Point", "listingCount": 4, "href": null },
+          "sampleSize": 9
+        }
+      ]
+    },
+    "pl-place-01-153d9daaed02608619c762aa": {
+      "province": null,
+      "cities": [
+        {
+          "placeId": "pl-place-01-131e3e75ad70424e0f9c8004",
+          "name": "Durban",
+          "provinceName": "KwaZulu-Natal",
+          "href": "/kwazulu-natal/durban",
+          "activeSaleListings": 5,
+          "medianAskingPrice": 850000,
+          "typicalPricePerM2": 14390,
+          "bandCounts": [2, 2, 1, 0, 0],
+          "leadingLocality": { "name": "Umhlanga", "listingCount": 3, "href": null },
+          "sampleSize": 5
+        }
+      ]
+    }
+  }
+}

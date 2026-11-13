@@ -9,7 +9,10 @@ import { Button } from '@/components/ui/button';
 import { SectionEmptyState } from '@/components/ui/SectionEmptyState';
 import { Skeleton } from '@/components/ui/skeleton';
 import { buildTransactionalGeographyHref } from '@/lib/geographySearchHandoff';
+import { ProvincePills } from '@/components/home/ProvincePills';
+import { homeProvincePlaceId } from '@/lib/homeProvinceOptions';
 import { trpc } from '@/lib/trpc';
+import { useSharedHomeProvince } from '@/lib/useHomeProvince';
 import { formatCurrency } from '@/lib/utils';
 
 /** What the server sends per city (server/services/homeMarketInsightsService.ts). */
@@ -33,9 +36,13 @@ type CityInsight = {
   computedAt: string;
 };
 
-const CITY_LIMIT = 8;
+/** Whole-province figures ("province") or one city's figures ("city"). */
+type InsightScope = 'province' | 'city';
+
+type ProvinceInsights = { province: CityInsight | null; cities: CityInsight[] };
+
 const STALE_TIME_MS = 10 * 60 * 1000;
-const EMPTY_MESSAGE = 'Market insights will appear here as more homes are listed.';
+const ALL_KEY = 'all';
 const FOOTNOTE =
   'Based on at least three qualifying published homes for sale. These are current asking inventory signals, not completed sales or a valuation.';
 const FOCUS_RING =
@@ -74,10 +81,13 @@ export function leadingBand(bands: CityInsight['askingPriceBands']) {
   return leader;
 }
 
-function citySearchHref(city: CityInsight): string | undefined {
+function citySearchHref(city: CityInsight, scope: InsightScope): string | undefined {
   return buildTransactionalGeographyHref({
     journey: 'buy',
-    scope: { kind: 'metro_city', canonicalPlaceId: city.placeId },
+    scope: {
+      kind: scope === 'province' ? 'province' : 'metro_city',
+      canonicalPlaceId: city.placeId,
+    },
     resultState: { sort: 'relevance', page: 0 },
   });
 }
@@ -196,11 +206,11 @@ function ActivityRow({
   );
 }
 
-function CityCards({ city }: { city: CityInsight }) {
+function CityCards({ city, scope }: { city: CityInsight; scope: InsightScope }) {
   const bands = city.askingPriceBands;
   const maximum = Math.max(...bands.map(band => band.count), 0);
   const topBand = leadingBand(bands);
-  const searchHref = citySearchHref(city);
+  const searchHref = citySearchHref(city, scope);
   const computedAt = new Date(city.computedAt);
   const updated = Number.isNaN(computedAt.getTime())
     ? null
@@ -225,7 +235,7 @@ function CityCards({ city }: { city: CityInsight }) {
           {locality ? (
             <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-blue-100 bg-blue-50/40 px-3 py-5 text-center">
               <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-blue-800">
-                Leading locality
+                {scope === 'province' ? 'Leading city' : 'Leading locality'}
               </p>
               {locality.href ? (
                 <Link
@@ -360,20 +370,43 @@ function CardSkeletons() {
   );
 }
 
-export function HomeMarketInsightsSection() {
+export function HomeMarketInsightsSection({
+  selectedProvince,
+  onProvinceChange,
+}: {
+  /** The page's shared province. Without it the section keeps its own. */
+  selectedProvince?: string;
+  onProvinceChange?: (province: string) => void;
+} = {}) {
+  const [province, setProvince] = useSharedHomeProvince(selectedProvince, onProvinceChange);
+  const provincePlaceId = homeProvincePlaceId(province);
   const { data, isLoading, isError, error, refetch } =
-    trpc.homeMarketInsights.getHomepageCityInsights.useQuery(
-      { limit: CITY_LIMIT },
+    trpc.homeMarketInsights.getProvinceInsights.useQuery(
+      { provincePlaceId: provincePlaceId ?? '' },
       {
+        enabled: Boolean(provincePlaceId),
         staleTime: STALE_TIME_MS,
         retry: (failureCount: number, failure: unknown) =>
           isProcedureMissing(failure) ? false : failureCount < 2,
       },
     );
-  const cities = useMemo(() => (data ?? []) as CityInsight[], [data]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const selected = cities.find(city => city.placeId === selectedId) ?? cities[0];
+  const insights = data as ProvinceInsights | undefined;
+  const cities = useMemo(() => insights?.cities ?? [], [insights]);
+  const provinceFigures = insights?.province ?? null;
+
+  // The chip is remembered with its province, so changing province goes back to "All of ...".
+  const [choice, setChoice] = useState<{ province: string; key: string } | null>(null);
+  const chosenKey = choice && choice.province === province ? choice.key : null;
+  const chosenCity = cities.find(city => city.placeId === chosenKey);
+  const selected: { city: CityInsight; scope: InsightScope } | undefined = chosenCity
+    ? { city: chosenCity, scope: 'city' }
+    : provinceFigures
+      ? { city: provinceFigures, scope: 'province' }
+      : cities[0]
+        ? { city: cities[0], scope: 'city' }
+        : undefined;
   const missing = isError && isProcedureMissing(error);
+  const selectedKey = selected?.scope === 'province' ? ALL_KEY : selected?.city.placeId;
 
   return (
     <section className="home-section bg-white" aria-labelledby="home-insights-heading">
@@ -388,10 +421,16 @@ export function HomeMarketInsightsSection() {
           Make smarter property decisions
         </h2>
         <p className="max-w-3xl text-[13px] leading-5 text-slate-600 md:text-sm md:leading-6">
-          Compare what homes for sale are asking in each city, and see where the most homes are
-          listed.
+          Compare what homes for sale are asking in {province}, by city, and see where the most
+          homes are listed.
         </p>
       </div>
+
+      <ProvincePills
+        selectedProvince={province}
+        onProvinceChange={setProvince}
+        label="Province for price insights"
+      />
 
       {isLoading ? (
         <CardSkeletons />
@@ -410,39 +449,38 @@ export function HomeMarketInsightsSection() {
       ) : !selected ? (
         <SectionEmptyState
           icon={BarChart3}
-          message={EMPTY_MESSAGE}
+          message={`Market insights for ${province} will appear here as more homes are listed.`}
           action={{ label: 'Explore areas', href: '/south-africa' }}
         />
       ) : (
         <div>
-          <div className="home-section-tabs scrollbar-hide -mx-4 flex justify-start overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0">
-            <div
-              role="group"
-              aria-label="City"
-              className="inline-flex h-auto flex-nowrap justify-start gap-1.5 rounded-xl border border-slate-200 bg-slate-50 p-1.5"
-            >
-              {cities.map(city => {
-                const isSelected = city.placeId === selected.placeId;
+          <div className="scrollbar-hide -mx-4 flex justify-start overflow-x-auto px-4 pb-1 pt-1 sm:mx-0 sm:px-0">
+            <div role="group" aria-label="City" className="flex flex-nowrap justify-start gap-2">
+              {[
+                ...(provinceFigures ? [{ key: ALL_KEY, label: `All of ${province}` }] : []),
+                ...cities.map(city => ({ key: city.placeId, label: city.name })),
+              ].map(chip => {
+                const isSelected = chip.key === selectedKey;
                 return (
                   <button
-                    key={city.placeId}
+                    key={chip.key}
                     type="button"
                     aria-pressed={isSelected}
                     aria-controls="home-market-insights-content"
-                    onClick={() => setSelectedId(city.placeId)}
-                    className={`min-h-11 shrink-0 whitespace-nowrap rounded-lg border border-transparent px-3 py-2 text-[13px] font-semibold transition-all md:px-4 md:text-sm ${FOCUS_RING} ${
+                    onClick={() => setChoice({ province, key: chip.key })}
+                    className={`min-h-11 shrink-0 whitespace-nowrap rounded-full border px-4 py-2 text-[13px] font-semibold transition-colors md:text-sm ${FOCUS_RING} ${
                       isSelected
-                        ? 'bg-[#2774AE] text-white shadow-sm'
-                        : 'bg-transparent text-slate-600 hover:bg-white hover:text-[#2774AE]'
+                        ? 'border-[#2774AE] bg-[#EEF5FB] text-[#1d5a8e]'
+                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-[#2774AE]'
                     }`}
                   >
-                    {city.name}
+                    {chip.label}
                   </button>
                 );
               })}
             </div>
           </div>
-          <CityCards city={selected} />
+          <CityCards city={selected.city} scope={selected.scope} />
         </div>
       )}
     </section>

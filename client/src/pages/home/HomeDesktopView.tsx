@@ -38,8 +38,15 @@ export function HomeDesktopView({
         />
         <DiscoverProperties withinContentRail />
         <TopDevelopers selectedProvince={selectedProvince} />
-        <ExploreCities withinContentRail />
-        <HomeMarketInsightsSection />
+        <ExploreCities
+          withinContentRail
+          selectedProvince={selectedProvince}
+          onProvinceChange={onProvinceChange}
+        />
+        <HomeMarketInsightsSection
+          selectedProvince={selectedProvince}
+          onProvinceChange={onProvinceChange}
+        />
         <WhyPropertyListifySection />
         <ListWithUsSection />
         <CTASection onBrowse={onBrowseProperties} />

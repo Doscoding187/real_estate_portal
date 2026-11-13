@@ -307,8 +307,64 @@ function getHomepageCityInsights(input) {
   return { json: cities };
 }
 
+function bandsFor(counts) {
+  return BAND_DEFINITIONS.map((band, index) => ({ ...band, count: counts[index] ?? 0 }));
+}
+
+function expandInsight(city, computedAt) {
+  const { bandCounts, ...rest } = city;
+  return { ...rest, askingPriceBands: bandsFor(bandCounts), computedAt, sample: true };
+}
+
+// Both new procedures answer NOT_FOUND under MOCK_LEGACY_API=1 (an API that does not have them yet).
+function getProvinceInsights(input) {
+  if (LEGACY_API) throw new ProcedureMissing('homeMarketInsights.getProvinceInsights');
+  const fixture = loadFixture('getProvinceInsights');
+  const entry = input?.provincePlaceId ? fixture.provinces[input.provincePlaceId] : undefined;
+  if (!entry || process.env.MOCK_EMPTY_INSIGHTS === '1') {
+    return { json: { province: null, cities: [] } };
+  }
+  const computedAt = new Date(Date.now() - 12 * 60 * 1000).toISOString();
+  return {
+    json: {
+      province: entry.province ? expandInsight(entry.province, computedAt) : null,
+      cities: entry.cities.map(city => expandInsight(city, computedAt)),
+    },
+  };
+}
+
+function getPopularAreasByProvince(input) {
+  if (LEGACY_API) throw new ProcedureMissing('homeAreas.getPopularAreasByProvince');
+  const fixture = loadFixture('getPopularAreasByProvince');
+  const entry = fixture.provinces[input?.provincePlaceId];
+  const limit = Math.min(Math.max(Number(input?.limit) || 12, 1), 24);
+  const areas = (entry?.areas || []).slice(0, limit).map(([name, href, listingCount], index) => ({
+    placeId: `${input.provincePlaceId.slice(0, -4)}${String(index).padStart(4, '0')}`,
+    name,
+    kind: 'city',
+    href,
+    listingCount,
+    saleCount: Math.ceil(listingCount * 0.7),
+    rentCount: listingCount - Math.ceil(listingCount * 0.7),
+  }));
+  return {
+    json: {
+      province: {
+        placeId: input?.provincePlaceId,
+        name: entry?.name ?? '',
+        href: entry?.href ?? null,
+      },
+      areas,
+      totalListings: areas.reduce((sum, area) => sum + area.listingCount, 0),
+      computedAt: new Date().toISOString(),
+    },
+  };
+}
+
 // Procedure name -> handler(input) returning a superjson payload { json, meta? }.
 const PROCEDURES = {
+  'homeAreas.getPopularAreasByProvince': getPopularAreasByProvince,
+  'homeMarketInsights.getProvinceInsights': getProvinceInsights,
   'homeMarketInsights.getHomepageCityInsights': getHomepageCityInsights,
   'properties.searchPublicInventory': searchPublicInventory,
   'cataloguePublisher.listPublishers': listPublishers,

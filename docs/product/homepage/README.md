@@ -20,6 +20,8 @@ Visual reference for the homepage as designed: the owner's screenshot of the int
 
 Shared rules for every section:
 
+- **One province for the whole page (owner, 2026-11-12).** The visitor picks a province and each section shows what is popular there: Trending homes, Developers, Explore by area and Property price insights. The page holds one selection (`useHomeProvinceState` in `client/src/lib/useHomeProvince.ts`, default Gauteng, remembered for the browser session in `sessionStorage`, safe when storage is blocked). Trending, Explore by area and Property price insights each show the same nine-pill row (`client/src/components/home/ProvincePills.tsx`); changing it in any of them updates all, and the page does not scroll. Developers has no pill row of its own and follows the selection.
+
 - **Never hide a section because it has no data.** Show the reusable empty state (`client/src/components/ui/SectionEmptyState.tsx`): one honest line plus one action. No fake listings, numbers or testimonials.
 - **Plain language.** No internal terms (canonical, admitted, Place catalogue, commercial activation) in visible text.
 - **Works on phone, tablet and desktop.** No page-level sideways scroll at 360, 390, 768, 1024 or 1440 px; touch targets at least 44 px.

@@ -27,8 +27,9 @@ Set `PORT` to move the mock off 5000, and point `VITE_API_URL` at the same port.
 | -------------------------------------------- | ------------------------------------------------------------ |
 | `properties.searchPublicInventory`           | Explore property (Buy and Rent rails, by province)           |
 | `cataloguePublisher.listPublishers`          | Explore real estate developers                               |
-| `homeMarketInsights.getHomepageCityInsights` | Property price insights (city pills and three cards)         |
-| `homeMarketInsights.getHomepageCityInsights` | Property price insights (city pills, three cards)            |
+| `homeAreas.getPopularAreasByProvince`        | Explore South Africa by area (province pills, tiles, counts) |
+| `homeMarketInsights.getProvinceInsights`     | Property price insights (province pills, city chips, cards)  |
+| `homeMarketInsights.getHomepageCityInsights` | Not called by the homepage any more (kept for older checks)  |
 | `auth.me`                                    | Signed-out visitor (returns `null`)                          |
 | `GET /api/readiness`                         | Maintenance gate (returns `{ kind: 'readiness', ok: true }`) |
 
@@ -61,6 +62,21 @@ MOCK_LEGACY_API=1 node scripts/preview/mock-api.mjs
 ```
 
 The fallback is remembered per page load, so reload the page after switching the mock.
+
+## Areas and insights by province
+
+Fixtures: `fixtures/getPopularAreasByProvince.json` and `fixtures/getProvinceInsights.json`.
+
+- Popular areas: Gauteng has 8 areas with counts (Johannesburg, Pretoria, Sandton, Centurion, Midrand,
+  Randburg, Roodepoort, Soweto) and 4 zero-count fallbacks; Western Cape 5 + fallbacks;
+  KwaZulu-Natal 2 + fallbacks; every other province has fallbacks only (all zero, so tiles show the
+  province name). Hrefs are published paths from `cityGuides.ts` where one exists.
+- Province insights: Gauteng (province figures + 3 cities), Western Cape (province + 1 city),
+  KwaZulu-Natal (`province: null`, 1 city), every other province empty.
+- `MOCK_LEGACY_API=1` answers both procedures with `NOT_FOUND` (the page falls back to the static
+  area list and the insights empty state). `MOCK_EMPTY_INSIGHTS=1` empties `getProvinceInsights` too.
+
+Restart the mock after pulling this change: it only reads fixtures live, not the handlers.
 
 ## Property price insights switches
 

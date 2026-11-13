@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const { useQuery, refetch } = vi.hoisted(() => ({ useQuery: vi.fn(), refetch: vi.fn() }));
 
 vi.mock('@/lib/trpc', () => ({
-  trpc: { homeMarketInsights: { getHomepageCityInsights: { useQuery } } },
+  trpc: { homeMarketInsights: { getProvinceInsights: { useQuery } } },
 }));
 
 import { HomeMarketInsightsSection, leadingBand } from './HomeMarketInsightsSection';
@@ -55,21 +55,40 @@ const capeTown = {
   leadingLocality: { name: 'Sea Point', listingCount: 4, href: null },
 };
 
-function mockData(data: unknown[]) {
-  useQuery.mockReturnValue({ data, isLoading: false, isError: false, error: null, refetch });
+function mockData(cities: unknown[], province: unknown = null) {
+  useQuery.mockReturnValue({
+    data: { province, cities },
+    isLoading: false,
+    isError: false,
+    error: null,
+    refetch,
+  });
 }
+
+const gautengProvince = {
+  ...johannesburg,
+  placeId: GAUTENG_CITY,
+  name: 'Gauteng',
+  href: '/gauteng',
+  activeSaleListings: 27,
+  medianAskingPrice: 2_450_000,
+  typicalPricePerM2: null,
+  askingPriceBands: bands([1, 2, 20, 3, 1]),
+  leadingLocality: { name: 'Johannesburg', listingCount: 13, href: '/gauteng/johannesburg' },
+};
 
 describe('HomeMarketInsightsSection', () => {
   beforeEach(() => {
     useQuery.mockReset();
     refetch.mockReset();
+    window.sessionStorage.clear();
   });
 
-  it('asks for 8 cities, caches for 10 minutes and never retries a missing procedure', () => {
+  it('asks for the province, caches for 10 minutes and never retries a missing procedure', () => {
     mockData([johannesburg]);
     render(<HomeMarketInsightsSection />);
     const [input, options] = useQuery.mock.calls[0];
-    expect(input).toEqual({ limit: 8 });
+    expect(input).toEqual({ provincePlaceId: GAUTENG_CITY });
     expect(options.staleTime).toBe(10 * 60 * 1000);
     expect(options.retry(0, { data: { code: 'NOT_FOUND' } })).toBe(false);
     expect(options.retry(0, { data: { code: 'INTERNAL_SERVER_ERROR' } })).toBe(true);
@@ -195,8 +214,91 @@ describe('HomeMarketInsightsSection', () => {
     expect(container.textContent).not.toMatch(/19.556/);
   });
 
+  it('starts on "All of {province}" with province figures and the leading city', () => {
+    mockData([johannesburg, capeTown], gautengProvince);
+    render(<HomeMarketInsightsSection />);
+    expect(screen.getByRole('button', { name: 'All of Gauteng' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    const chips = within(screen.getByRole('group', { name: 'City' })).getAllByRole('button');
+    expect(chips.map(chip => chip.textContent)).toEqual([
+      'All of Gauteng',
+      'Johannesburg',
+      'Cape Town',
+    ]);
+    expect(screen.getByText('Leading city')).toBeInTheDocument();
+    expect(screen.queryByText('Leading locality')).not.toBeInTheDocument();
+    expect(screen.getByText('Most homes for sale in Gauteng are in Johannesburg.')).toBeVisible();
+    expect(screen.getByText('27')).toBeInTheDocument();
+    const homes = screen.getByRole('link', { name: /View Gauteng homes for sale/ });
+    expect(homes.getAttribute('href')).toContain('for-sale');
+  });
+
+  it('shows one city when its chip is chosen, and goes back with "All of"', () => {
+    mockData([johannesburg, capeTown], gautengProvince);
+    render(<HomeMarketInsightsSection />);
+    fireEvent.click(screen.getByRole('button', { name: 'Cape Town' }));
+    expect(screen.getByText('Leading locality')).toBeInTheDocument();
+    expect(screen.getByText('Most homes for sale in Cape Town are in Sea Point.')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'All of Gauteng' }));
+    expect(screen.getByText('Leading city')).toBeInTheDocument();
+  });
+
+  it('returns to "All of {province}" when the province changes', () => {
+    mockData([johannesburg, capeTown], gautengProvince);
+    render(<HomeMarketInsightsSection />);
+    fireEvent.click(screen.getByRole('button', { name: 'Cape Town' }));
+    fireEvent.click(
+      within(screen.getByRole('group', { name: 'Province for price insights' })).getByRole(
+        'button',
+        { name: 'Western Cape' },
+      ),
+    );
+    expect(useQuery.mock.calls.at(-1)?.[0]).toEqual({
+      provincePlaceId: 'pl-place-01-203f5f71cb3565521db4718f',
+    });
+    expect(screen.getByRole('button', { name: 'All of Western Cape' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+  });
+
+  it('follows the shared province and tells the page when its own pills change it', () => {
+    mockData([johannesburg], gautengProvince);
+    const onProvinceChange = vi.fn();
+    render(
+      <HomeMarketInsightsSection selectedProvince="Limpopo" onProvinceChange={onProvinceChange} />,
+    );
+    expect(useQuery.mock.calls[0][0]).toEqual({
+      provincePlaceId: 'pl-place-01-191d11b42d5b13319fa7fca2',
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Free State' }));
+    expect(onProvinceChange).toHaveBeenCalledWith('Free State');
+  });
+
+  it('selects the first city and omits "All of" when the province has no figures', () => {
+    mockData([johannesburg, capeTown], null);
+    render(<HomeMarketInsightsSection />);
+    expect(screen.queryByRole('button', { name: /^All of/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Johannesburg' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByText('Leading locality')).toBeInTheDocument();
+  });
+
+  it('shows the empty state naming the province when both are empty', () => {
+    mockData([], null);
+    render(<HomeMarketInsightsSection />);
+    expect(
+      screen.getByText('Market insights for Gauteng will appear here as more homes are listed.'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Province for price insights' })).toBeVisible();
+  });
+
   it.each([
-    ['an empty list', { data: [], isError: false, error: null }],
+    ['an empty result', { data: { province: null, cities: [] }, isError: false, error: null }],
     [
       'a missing procedure',
       { data: undefined, isError: true, error: { data: { code: 'NOT_FOUND' } } },
@@ -209,7 +311,7 @@ describe('HomeMarketInsightsSection', () => {
     useQuery.mockReturnValue({ isLoading: false, refetch, ...state });
     render(<HomeMarketInsightsSection />);
     expect(
-      screen.getByText('Market insights will appear here as more homes are listed.'),
+      screen.getByText('Market insights for Gauteng will appear here as more homes are listed.'),
     ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /explore areas/i })).toHaveAttribute(
       'href',

@@ -317,6 +317,99 @@ if (LEGACY) {
   }
 }
 
+// Popular areas and province insights (the "by province" procedures).
+{
+  const ask = async (path, input) => {
+    const response = await fetch(trpcUrl([path], { 0: { json: input } }));
+    const body = await response.json();
+    return { response, body, data: body?.[0]?.result?.data?.json };
+  };
+  if (LEGACY) {
+    for (const [path, input] of [
+      ['homeAreas.getPopularAreasByProvince', { provincePlaceId: GAUTENG, limit: 12 }],
+      ['homeMarketInsights.getProvinceInsights', { provincePlaceId: GAUTENG }],
+    ]) {
+      const { response, body } = await ask(path, input);
+      check(
+        `${path}: NOT_FOUND on the older API`,
+        response.status === 404 && body?.[0]?.error?.json?.data?.code === 'NOT_FOUND',
+      );
+    }
+  } else {
+    const areasFor = async placeId =>
+      (await ask('homeAreas.getPopularAreasByProvince', { provincePlaceId: placeId, limit: 12 }))
+        .data;
+    const gauteng = await areasFor(GAUTENG);
+    const withCounts = list => list?.areas?.filter(area => area.listingCount > 0) ?? [];
+    check(
+      'areas: gauteng has 8 counted areas incl. the four big cities, and 4 zero-count fallbacks',
+      gauteng?.areas?.length === 12 &&
+        withCounts(gauteng).length === 8 &&
+        ['Johannesburg', 'Pretoria', 'Centurion', 'Midrand'].every(name =>
+          withCounts(gauteng).some(area => area.name === name),
+        ) &&
+        gauteng.province.href === '/gauteng',
+    );
+    check(
+      'areas: every area has a path href and a numeric count',
+      gauteng.areas.every(
+        area => area.href.startsWith('/') && Number.isInteger(area.listingCount) && area.placeId,
+      ),
+    );
+    const westernCape = await areasFor(WESTERN_CAPE);
+    const kzn = await areasFor(KWAZULU_NATAL);
+    const limpopo = await areasFor(LIMPOPO);
+    check(
+      'areas: western cape 5 counted, kwazulu-natal 2 counted, limpopo fallbacks only',
+      withCounts(westernCape).length === 5 &&
+        westernCape.areas.length > 5 &&
+        withCounts(kzn).length === 2 &&
+        kzn.areas.length > 2 &&
+        limpopo.areas.length > 0 &&
+        withCounts(limpopo).length === 0,
+    );
+    const limitedAreas = (
+      await ask('homeAreas.getPopularAreasByProvince', { provincePlaceId: GAUTENG, limit: 3 })
+    ).data;
+    check('areas: limit is respected', limitedAreas?.areas?.length === 3);
+
+    const insightsFor = async placeId =>
+      (await ask('homeMarketInsights.getProvinceInsights', { provincePlaceId: placeId })).data;
+    const sums = city =>
+      city.askingPriceBands.length === 5 &&
+      city.askingPriceBands.reduce((sum, band) => sum + band.count, 0) === city.activeSaleListings;
+    const gautengInsights = await insightsFor(GAUTENG);
+    const wcInsights = await insightsFor(WESTERN_CAPE);
+    const kznInsights = await insightsFor(KWAZULU_NATAL);
+    const limpopoInsights = await insightsFor(LIMPOPO);
+    if (process.env.MOCK_EMPTY_INSIGHTS === '1') {
+      check(
+        'province insights: empty on request',
+        gautengInsights?.province === null && gautengInsights.cities.length === 0,
+      );
+    } else {
+      check(
+        'province insights: gauteng province + 3 cities, western cape province + 1 city',
+        gautengInsights?.province?.name === 'Gauteng' &&
+          gautengInsights.cities.length === 3 &&
+          wcInsights?.province?.name === 'Western Cape' &&
+          wcInsights.cities.length === 1,
+      );
+      check(
+        'province insights: kwazulu-natal has no province figures but one city; limpopo is empty',
+        kznInsights?.province === null &&
+          kznInsights.cities.length === 1 &&
+          limpopoInsights?.province === null &&
+          limpopoInsights.cities.length === 0,
+      );
+      check(
+        'province insights: bands add up for every figure',
+        [gautengInsights.province, ...gautengInsights.cities, wcInsights.province].every(sums),
+      );
+    }
+  }
+}
+
 const unknown = await fetch(trpcUrl(['nope.missing'], { 0: { json: null } }));
 const unknownBody = await unknown.json();
 check(
