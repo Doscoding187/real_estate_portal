@@ -113,7 +113,7 @@ describe('ServicesHomePage', () => {
   it('partitions ranked services between the rail and the remaining directory', () => {
     render(<ServicesHomePage />);
 
-    expect(screen.getByRole('heading', { name: /the rest of the directory/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /explore more services/i })).toBeInTheDocument();
     expect(screen.getAllByRole('link', { name: /plumbing & maintenance/i })).toHaveLength(1);
     expect(screen.getAllByRole('link', { name: /inspections & compliance/i })).toHaveLength(1);
     expect(screen.queryByText('Start with what you need done')).not.toBeInTheDocument();
