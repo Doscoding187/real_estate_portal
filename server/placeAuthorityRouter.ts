@@ -2,15 +2,14 @@
 
 import { z } from 'zod';
 import { router, publicProcedure } from './_core/trpc';
-import {
-  discoverPlaces,
-  executePlace,
-} from './services/placeDiscoveryService';
+import { discoverPlaces, executePlace } from './services/placeDiscoveryService';
 import {
   canonicalPlaceUrlByPath,
   canonicalPlaceUrlByPlaceId,
 } from './services/canonicalPlaceUrlService';
 import { loadCanonicalPlaceSearchProjection } from './services/canonicalPlaceSearchService';
+import { placeIndexability } from './services/placeIndexabilityService';
+import { isPlaceIndexAllowlistedPath } from '../shared/placeIndexAllowlist';
 import { isCanonicalPlaceId } from '../shared/placeAuthority';
 import {
   PLACE_DISCOVERY_KINDS,
@@ -72,6 +71,11 @@ export const placeAuthorityRouter = router({
       const resolved = await executePlace(entry.place_id);
       if (!resolved.ok || resolved.execution.scope !== entry.search_scope) return null;
 
+      // A failed inventory lookup must not break the page: fall back to the hand-approved list.
+      const indexable = await placeIndexability([entry.place_id])
+        .then(result => result.get(entry.place_id) === true)
+        .catch(() => isPlaceIndexAllowlistedPath(entry.path));
+
       return {
         placeId: entry.place_id,
         path: entry.path,
@@ -83,6 +87,7 @@ export const placeAuthorityRouter = router({
         pathContext: entry.path_context,
         sourceAttributions: entry.source_attributions,
         publicationEligible: entry.publication_eligible,
+        indexable,
         verificationStatus: entry.verification_status,
       };
     }),
@@ -145,21 +150,18 @@ export const placeAuthorityRouter = router({
    * unresolved parent returns a refusal. There is no fallback to a name, a
    * legacy handle, or display text.
    */
-  execute: publicProcedure
-    .input(geographyAuthorityInput)
-    .query(async ({ input }) => {
-      const claim = input as PlaceAuthorityClaim;
-      const resolution = resolveSingleGeographyAuthority(claim);
-      if (!resolution.ok) return authorityFailure(resolution.reason);
-      const execution = await executePlace(resolution.authority.placeId);
-      if (!execution.ok) {
-        return {
-          ok: false as const,
-          reason: execution.reason,
-          message: `Place scope could not be executed: ${execution.reason}`,
-        };
-      }
-      return { ok: true as const, execution: execution.execution };
-    }),
-
+  execute: publicProcedure.input(geographyAuthorityInput).query(async ({ input }) => {
+    const claim = input as PlaceAuthorityClaim;
+    const resolution = resolveSingleGeographyAuthority(claim);
+    if (!resolution.ok) return authorityFailure(resolution.reason);
+    const execution = await executePlace(resolution.authority.placeId);
+    if (!execution.ok) {
+      return {
+        ok: false as const,
+        reason: execution.reason,
+        message: `Place scope could not be executed: ${execution.reason}`,
+      };
+    }
+    return { ok: true as const, execution: execution.execution };
+  }),
 });

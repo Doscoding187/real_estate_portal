@@ -1,4 +1,4 @@
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, countDistinct, eq, inArray } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import {
   developmentPlaceAssignments,
@@ -57,8 +57,7 @@ export async function recordReviewedDevelopmentPlaceAssignment(
     input.developmentId <= 0 ||
     !Number.isSafeInteger(input.reviewerUserId) ||
     input.reviewerUserId <= 0 ||
-    (input.phaseId !== null &&
-      (!Number.isSafeInteger(input.phaseId) || input.phaseId <= 0)) ||
+    (input.phaseId !== null && (!Number.isSafeInteger(input.phaseId) || input.phaseId <= 0)) ||
     !isPlaceId(input.placeId) ||
     !input.evidenceReference.trim()
   ) {
@@ -209,9 +208,7 @@ export async function listDevelopmentPlaceGeography(
     throw new Error('Development geography scope contains an invalid ID.');
   }
 
-  const result = new Map<number, DevelopmentPlaceGeography>(
-    ids.map(id => [id, EMPTY_GEOGRAPHY]),
-  );
+  const result = new Map<number, DevelopmentPlaceGeography>(ids.map(id => [id, EMPTY_GEOGRAPHY]));
   if (ids.length === 0) return result;
 
   const db = await getDb();
@@ -282,9 +279,9 @@ export async function listDevelopmentPlaceGeography(
 
   for (const [developmentId, aggregate] of placesByDevelopment) {
     const placeIds = [...aggregate.places.keys()].sort();
-    const labels = [...new Set(
-      [...aggregate.places.values()].flatMap(placeLabels => [...placeLabels]),
-    )].sort((a, b) => a.localeCompare(b));
+    const labels = [
+      ...new Set([...aggregate.places.values()].flatMap(placeLabels => [...placeLabels])),
+    ].sort((a, b) => a.localeCompare(b));
     result.set(developmentId, {
       canonicalPlaceId:
         !aggregate.hasInvalidAcceptedAssignment && placeIds.length === 1 ? placeIds[0] : null,
@@ -298,8 +295,9 @@ export async function listDevelopmentPlaceGeography(
 export async function getDevelopmentPlaceGeography(
   developmentId: number,
 ): Promise<DevelopmentPlaceGeography> {
-  return (await listDevelopmentPlaceGeography([developmentId])).get(developmentId) ??
-    EMPTY_GEOGRAPHY;
+  return (
+    (await listDevelopmentPlaceGeography([developmentId])).get(developmentId) ?? EMPTY_GEOGRAPHY
+  );
 }
 
 /**
@@ -378,10 +376,34 @@ export async function listDevelopmentIdsForCanonicalPlace(
   const geographyByDevelopment = await listDevelopmentPlaceGeography(candidateIds);
   return candidateIds
     .filter(id =>
-      hasExactDevelopmentPlaceMatch(
-        geographyByDevelopment.get(id)?.canonicalPlaceId,
-        placeId,
-      ),
+      hasExactDevelopmentPlaceMatch(geographyByDevelopment.get(id)?.canonicalPlaceId, placeId),
     )
     .sort((left, right) => left - right);
+}
+
+/**
+ * Accepted site-assignment Developments per canonical Place, one GROUP BY query.
+ * Same assignment predicate as `listDevelopmentIdsForCanonicalPlaces`; used for page indexability.
+ */
+export async function countAcceptedDevelopmentsByPlace(): Promise<Map<string, number>> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const rows = await db
+    .select({
+      placeId: developmentPlaceAssignments.placeId,
+      developmentCount: countDistinct(developmentPlaceAssignments.developmentId),
+    })
+    .from(developmentPlaceAssignments)
+    .where(
+      and(
+        eq(developmentPlaceAssignments.assignmentKind, 'site'),
+        eq(developmentPlaceAssignments.reviewState, 'accepted'),
+      ),
+    )
+    .groupBy(developmentPlaceAssignments.placeId);
+  return new Map(
+    rows
+      .filter(row => Number(row.developmentCount) > 0)
+      .map(row => [row.placeId, Number(row.developmentCount)] as const),
+  );
 }

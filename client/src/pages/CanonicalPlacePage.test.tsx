@@ -43,7 +43,8 @@ describe('Canonical Place area guides', () => {
         provinceName: 'Gauteng',
         provinceSlug: 'gauteng',
         pathContext: null,
-        publicationEligible: false,
+        publicationEligible: true,
+        indexable: false,
         verificationStatus: 'provisional',
         sourceAttributions: [
           {
@@ -93,11 +94,16 @@ describe('Canonical Place area guides', () => {
 
       expect(screen.getByRole('heading', { name: 'Explore Land in Johannesburg' })).toBeVisible();
       expect(
-        screen.getByText('Choose a suburb or locality that interests you to see Land listings in that exact area.'),
+        screen.getByText(
+          'Choose a suburb or locality that interests you to see Land listings in that exact area.',
+        ),
       ).toBeVisible();
       const areaList = screen.getByRole('list');
       const links = within(areaList).getAllByRole('link');
-      expect(links.map(link => link.textContent)).toEqual(['Newclare2 Land listings', 'Westbury1 Land listing']);
+      expect(links.map(link => link.textContent)).toEqual([
+        'Newclare2 Land listings',
+        'Westbury1 Land listing',
+      ]);
       expect(links[0]).toHaveAttribute(
         'href',
         '/plots-and-land?canonicalPlaceId=pl-place-01-000000000000000000000001',
@@ -212,5 +218,47 @@ describe('Canonical Place area guides', () => {
       );
       expect(metaControl).toHaveBeenCalledWith(expect.objectContaining({ forceNoIndex: true }));
     });
+  });
+});
+
+describe('Canonical Place page robots', () => {
+  function mockPlace(indexable: boolean) {
+    window.history.replaceState({}, '', '/gauteng/johannesburg');
+    resolveCanonicalUrl.mockReturnValue({
+      data: {
+        placeId: 'pl-place-01-21f154cd5d0954c29ec7525f',
+        path: '/gauteng/johannesburg',
+        label: 'Johannesburg',
+        placeType: 'city',
+        searchScope: 'metro_city',
+        provinceName: 'Gauteng',
+        provinceSlug: 'gauteng',
+        pathContext: null,
+        publicationEligible: true,
+        indexable,
+        verificationStatus: 'provisional',
+        sourceAttributions: [],
+      },
+      isLoading: false,
+      error: null,
+    });
+    landGuideAreas.mockReturnValue({ data: [], isLoading: false, error: null });
+    propertyGuideAreas.mockReturnValue({ data: [], isLoading: false, error: null });
+  }
+
+  beforeEach(() => metaControl.mockClear());
+  afterEach(() => cleanup());
+
+  it('sets noindex for a thin place that is published but not indexable', () => {
+    mockPlace(false);
+    render(<CanonicalPlacePage />);
+    expect(metaControl).toHaveBeenCalledWith(expect.objectContaining({ forceNoIndex: true }));
+    expect(screen.getByRole('heading', { name: 'Johannesburg' })).toBeVisible();
+  });
+
+  it('allows indexing when the server marks the place indexable', () => {
+    mockPlace(true);
+    render(<CanonicalPlacePage />);
+    expect(metaControl).toHaveBeenCalledWith(expect.objectContaining({ forceNoIndex: false }));
   });
 });

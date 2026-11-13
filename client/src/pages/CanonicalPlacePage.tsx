@@ -74,7 +74,8 @@ export default function CanonicalPlacePage() {
       ? 'Settlement within ' + place.pathContext.name
       : 'Administrative context: ' + place.pathContext.name
     : place.provinceName;
-  const indexable = place.publicationEligible;
+  // D3: thin place pages open for visitors but stay out of search engines until they have listings.
+  const indexable = place.indexable;
   const origin = typeof window === 'undefined' ? '' : window.location.origin;
 
   return (
