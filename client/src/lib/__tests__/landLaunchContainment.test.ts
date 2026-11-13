@@ -35,7 +35,8 @@ describe('Land public search and retained publication containment', () => {
       homepageVisible: false,
       homepageEnabled: false,
     });
-    expect(getHomepageHeroJourneys().map(journey => journey.key)).not.toContain('plot_land');
+    // Tab-only: the hero shows the Plots & Land tab, but it releases nothing elsewhere.
+    expect(getHomepageHeroJourneys().map(journey => journey.key)).toContain('plot_land');
     const noHostedRelease = resolvePublicJourneyReleaseContext({
       PROD: true,
       VITE_DEPLOY_ENV: 'production',
@@ -50,13 +51,21 @@ describe('Land public search and retained publication containment', () => {
   });
 
   it('routes authoring, review and public Land pages through the deferred state', () => {
-    expect(app).toContain("const LandAuthoringWorkspace = lazy(() => import('./pages/agent/LandAuthoringWorkspace'));");
-    expect(app).toContain("const LandReviewWorkspace = lazy(() => import('./pages/admin/LandReviewWorkspace'));");
+    expect(app).toContain(
+      "const LandAuthoringWorkspace = lazy(() => import('./pages/agent/LandAuthoringWorkspace'));",
+    );
+    expect(app).toContain(
+      "const LandReviewWorkspace = lazy(() => import('./pages/admin/LandReviewWorkspace'));",
+    );
     expect(app).toContain('<LandDeferred audience="reviewer" />');
     expect(app).toContain('<LandDeferred audience="author" />');
-    expect(app).toContain('<LandDeferred audience="public" />');
-    expect(app).toContain('isLandVerticalAvailable() ? <LandReviewWorkspace />');
-    expect(app).toContain('isLandVerticalAvailable() ? <LandAuthoringWorkspace />');
+    expect(app).toContain('<JourneyComingSoonPage journey="plot_land" />');
+    expect(app).toContain('<JourneyComingSoonPage journey="plot_land" detail />');
+    expect(app).not.toContain('<LandDeferred audience="public" />');
+    // Formatting-independent: the gate may be written on one line or split across lines by prettier.
+    const appCompact = app.replace(/\s+/g, ' ');
+    expect(appCompact).toContain('isLandVerticalAvailable() ? ( <LandReviewWorkspace />');
+    expect(appCompact).toContain('isLandVerticalAvailable() ? ( <LandAuthoringWorkspace />');
     expect(app).toContain('isLandPublicDiscoveryAvailable() ?');
   });
 });

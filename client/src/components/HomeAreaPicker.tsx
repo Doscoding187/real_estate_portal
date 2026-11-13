@@ -87,7 +87,7 @@ export function HomeAreaPicker({
           <DialogTitle className="text-xl">Choose a Place</DialogTitle>
           <DialogDescription className="leading-6">
             {journeyLabel}
-            {category ? ` · ${category}` : ''}. Choose one admitted canonical Place.
+            {category ? ` · ${category}` : ''}. Choose one area.
           </DialogDescription>
         </DialogHeader>
         <CanonicalPlaceSelector

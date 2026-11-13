@@ -128,6 +128,7 @@ const PUBLIC_JOURNEY_RELEASE_MANIFEST_ENV = 'VITE_PUBLIC_JOURNEY_RELEASES';
 const BASELINE_RELEASED_PUBLIC_JOURNEYS: readonly PublicHeroJourneyKey[] = [
   'buy',
   'rent',
+  'developments',
   'find_agent',
 ];
 
@@ -135,12 +136,7 @@ const BASELINE_RELEASED_PUBLIC_JOURNEYS: readonly PublicHeroJourneyKey[] = [
  * Journeys held back for the public soft launch. A held journey is NOT released
  * even when VITE_PUBLIC_JOURNEY_RELEASES lists it. Remove a key to release it.
  */
-export const LAUNCH_HELD_JOURNEYS: readonly string[] = [
-  'developments',
-  'shared_living',
-  'plot_land',
-  'commercial',
-];
+export const LAUNCH_HELD_JOURNEYS: readonly string[] = ['shared_living', 'plot_land', 'commercial'];
 
 /**
  * A held-role sign-up entry must not carry its onboarding destination into a
@@ -151,7 +147,10 @@ export function stripHeldRoleNextPath(
   heldRoleRequested: boolean,
 ): string | null {
   if (!next) return null;
-  if (heldRoleRequested && /^\/(agency\/setup|developer\/setup|service\/profile)(?:[/?#]|$)/.test(next)) {
+  if (
+    heldRoleRequested &&
+    /^\/(agency\/setup|developer\/setup|service\/profile)(?:[/?#]|$)/.test(next)
+  ) {
     return null;
   }
   return next;
@@ -216,6 +215,33 @@ export function isPublicHeroJourneyReleased(
 }
 
 /**
+ * Tab-only switch. The homepage hero shows a tab for every journey that the
+ * product defines as homepage-visible, on every build. Showing a tab does NOT
+ * release the journey: navigation, footer and route release stay with
+ * isPublicHeroJourneyReleased / isJourneyRouteHeld.
+ */
+export function isHomepageHeroTabVisible(key: PublicHeroJourneyKey): boolean {
+  return Boolean(PUBLIC_HERO_JOURNEY_BY_KEY.get(key)?.productHomepageVisible);
+}
+
+/** True when the hero tab can be selected and run a search (find_agent only navigates). */
+export function isHomepageHeroTabEnabled(key: PublicHeroJourneyKey): boolean {
+  const journey = PUBLIC_HERO_JOURNEY_BY_KEY.get(key);
+  return Boolean(journey?.productHomepageVisible && journey.productHomepageEnabled);
+}
+
+/**
+ * True when a journey's pages show the designed empty-state page instead
+ * of the working product in the running build: held journeys on hosted builds.
+ */
+export function isJourneyComingSoon(
+  key: string,
+  releaseContext: PublicJourneyReleaseContext = RUNTIME_PUBLIC_JOURNEY_RELEASE_CONTEXT,
+): boolean {
+  return isJourneyRouteHeld(key, releaseContext);
+}
+
+/**
  * Canonical product capability authority shared by the hero and public
  * navigation. Menu copy can remain audience-specific, but route meaning,
  * stable intent keys, and product readiness come from this registry. Hosted
@@ -251,8 +277,8 @@ export const PUBLIC_HERO_JOURNEYS: readonly PublicHeroJourneyDefinition[] = [
   },
   {
     key: 'developments',
-    label: 'Developments',
-    mobileLabel: 'Developments',
+    label: 'New Developments',
+    mobileLabel: 'New Developments',
     kind: 'property-search',
     destination: '/new-developments',
     productHomepageVisible: true,
@@ -274,18 +300,6 @@ export const PUBLIC_HERO_JOURNEYS: readonly PublicHeroJourneyDefinition[] = [
     supportedFields: ['location', 'minPrice', 'maxPrice'],
   },
   {
-    key: 'plot_land',
-    label: 'Plots & Land',
-    mobileLabel: 'Plots & Land',
-    kind: 'property-search',
-    destination: '/plots-and-land',
-    // Public specialist search is available. Authoring, review and inventory
-    // publication remain governed separately by the shared Land policy.
-    productHomepageVisible: true,
-    productHomepageEnabled: true,
-    supportedFields: ['location', 'landType', 'sizeMin', 'sizeMax', 'minPrice', 'maxPrice'],
-  },
-  {
     key: 'commercial',
     label: 'Commercial',
     mobileLabel: 'Commercial',
@@ -296,6 +310,18 @@ export const PUBLIC_HERO_JOURNEYS: readonly PublicHeroJourneyDefinition[] = [
     productHomepageVisible: true,
     productHomepageEnabled: true,
     supportedFields: ['location', ...COMMERCIAL_SEARCH_QUERY_KEYS],
+  },
+  {
+    key: 'plot_land',
+    label: 'Plots & Land',
+    mobileLabel: 'Plots & Land',
+    kind: 'property-search',
+    destination: '/plots-and-land',
+    // Public specialist search is available. Authoring, review and inventory
+    // publication remain governed separately by the shared Land policy.
+    productHomepageVisible: true,
+    productHomepageEnabled: true,
+    supportedFields: ['location', 'landType', 'sizeMin', 'sizeMax', 'minPrice', 'maxPrice'],
   },
   {
     key: 'find_agent',
@@ -356,9 +382,10 @@ export function getPublicHeroJourney(
 export function getHomepageHeroJourneys(
   releaseContext: PublicJourneyReleaseContext = RUNTIME_PUBLIC_JOURNEY_RELEASE_CONTEXT,
 ): readonly ResolvedPublicHeroJourneyDefinition[] {
-  return PUBLIC_HERO_JOURNEYS.map(journey =>
-    getPublicHeroJourney(journey.key, releaseContext),
-  ).filter(journey => journey.homepageVisible);
+  // Tab-only: every product-visible journey gets a tab, released or not.
+  return PUBLIC_HERO_JOURNEYS.filter(journey => isHomepageHeroTabVisible(journey.key)).map(
+    journey => getPublicHeroJourney(journey.key, releaseContext),
+  );
 }
 
 export function isHomepageHeroJourneyEnabled(

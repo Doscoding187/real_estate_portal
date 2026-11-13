@@ -69,7 +69,9 @@ describe('public discovery route authority', () => {
   it('fails closed for development browse without a canonical Place ID', () => {
     const missing = parseRelativeUrl(buildDiscoverBrowseHref('developments'));
     const browse = parseRelativeUrl(buildDiscoverBrowseHref('developments', capeTown));
-    const ready = parseRelativeUrl(buildDiscoverCardHref('Ready to Move', 'developments', capeTown));
+    const ready = parseRelativeUrl(
+      buildDiscoverCardHref('Ready to Move', 'developments', capeTown),
+    );
 
     expect(missing.pathname).toBe('/new-developments');
     expect(missing.searchParams.get('searchError')).toBe('canonical-place-required');
@@ -98,11 +100,13 @@ describe('public discovery route authority', () => {
 
     expect(source).toContain('buildDiscoverBrowseHref');
     expect(source).toContain('buildDiscoverCardHref');
-    expect(source).toMatch(/href=\{buildDiscoverCardHref\(/);
+    expect(source).toMatch(/buildDiscoverCardHref\(property\.type/);
+    expect(source).toMatch(/href=\{href\}/);
     expect(source).not.toContain('CITY_PROVINCE_MAP');
     expect(source).not.toContain('setSelectedCity');
     expect(source).not.toContain("type: 'Office Spaces'");
-    expect(source).not.toContain("type: 'Shops'");
+    // Shops and Offices are owner-approved cards that link to the Commercial journey page.
+    expect(source).toContain("type: 'Shops'");
     expect(source).not.toContain("type: 'Penthouses'");
   });
 });

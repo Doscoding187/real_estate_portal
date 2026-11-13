@@ -82,9 +82,7 @@ export default function DeveloperPublisherPage() {
   const changePlace = (selection: CanonicalPlaceSelection | null) => {
     setPlaceSelection(selection);
     setPage(0);
-    setLocation(
-      developerDiscoveryHref(`/developer/${slug}`, selection?.canonicalPlaceId, true),
-    );
+    setLocation(developerDiscoveryHref(`/developer/${slug}`, selection?.canonicalPlaceId, true));
   };
   if (profileQuery.isLoading)
     return (
@@ -114,7 +112,7 @@ export default function DeveloperPublisherPage() {
           </h1>
           <p className="mt-3 text-sm text-slate-600">
             {unavailable
-              ? 'Please try again. Your selected canonical Place is still here.'
+              ? 'Please try again. Your selected area is still here.'
               : 'This developer profile is not currently available.'}
           </p>
           <div className="mt-5 flex flex-wrap justify-center gap-3">
@@ -269,9 +267,9 @@ export default function DeveloperPublisherPage() {
                 value={placeSelection}
                 onChange={changePlace}
                 purpose="search"
-                label="Project Place"
-                placeholder="Search approved Places"
-                hint="Only projects with this exact reviewed Place assignment match."
+                label="Area"
+                placeholder="Search areas"
+                hint="Only projects in this area match."
               />
               {scope.canonicalPlaceId && !placeSelection && !scope.invalid ? (
                 <Button type="button" variant="ghost" size="sm" onClick={() => changePlace(null)}>
@@ -282,10 +280,10 @@ export default function DeveloperPublisherPage() {
           </div>
           {scope.invalid ? (
             <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-6">
-              <h3 className="font-semibold text-slate-900">Choose a canonical project Place</h3>
+              <h3 className="font-semibold text-slate-900">Choose an area</h3>
               <p className="mt-2 text-sm text-slate-600">
-                This location link is invalid or uses retired text geography. Choose an
-                approved Place above to see matching projects.
+                This location link is invalid or uses retired text geography. Choose an approved
+                Place above to see matching projects.
               </p>
             </div>
           ) : projectsQuery.isError ? (
@@ -330,7 +328,7 @@ export default function DeveloperPublisherPage() {
                     key={project.id}
                     id={String(project.id)}
                     title={project.name}
-                    locationLabel={project.locationLabels?.join(', ') || 'Place assignment pending'}
+                    locationLabel={project.locationLabels?.join(', ') || 'Area to be confirmed'}
                     image={getPrimaryDevelopmentImageUrl(project.images) || ''}
                     priceRange={projectPriceRange(project)}
                     listingType={project.transactionType === 'for_rent' ? 'rent' : 'sale'}
@@ -358,12 +356,12 @@ export default function DeveloperPublisherPage() {
                 {page
                   ? 'No more published projects'
                   : scope.canonicalPlaceId
-                    ? 'No published projects at the selected canonical Place'
+                    ? 'No published projects in the selected area'
                     : 'No published projects listed yet'}
               </h3>
               <p className="mx-auto mt-2 max-w-lg text-sm leading-relaxed text-slate-600">
                 {scope.canonicalPlaceId
-                  ? 'Choose another canonical Place or clear the Place filter to view all published projects from this developer.'
+                  ? 'Choose another area or clear the area filter to view all published projects from this developer.'
                   : 'Published projects will appear here when they become available on Property Listify.'}
               </p>
               {scope.canonicalPlaceId && (
@@ -409,7 +407,7 @@ export default function DeveloperPublisherPage() {
           <div className="mt-8 rounded-xl border border-slate-200 bg-white p-6 text-center">
             <p className="mb-3 text-sm text-slate-600">Are you part of the {profile.name} team?</p>
             <Button asChild variant="outline" className="min-h-[44px]">
-              <Link href="/developer/setup">Claim this profile</Link>
+              <Link href="/contact">Talk to us about this profile</Link>
             </Button>
           </div>
         )}

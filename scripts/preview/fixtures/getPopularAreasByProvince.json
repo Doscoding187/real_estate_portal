@@ -1,0 +1,108 @@
+{
+  "sample": true,
+  "note": "Fictional counts for the local preview. Each area is [name, href, listingCount]; a count of 0 is a 'fallback' area (a well-known city with no listings yet), which the page shows with the province name instead of a number. Hrefs are the published paths used in client/src/lib/cityGuides.ts where one exists.",
+  "provinces": {
+    "pl-place-01-131e3e75ad70424e0f9c869a": {
+      "name": "Gauteng",
+      "href": "/gauteng",
+      "areas": [
+        ["Johannesburg", "/gauteng/johannesburg", 86],
+        ["Pretoria", "/gauteng/pretoria", 54],
+        ["Sandton", "/gauteng/city-of-johannesburg/sandton", 41],
+        ["Centurion", "/gauteng/centurion", 27],
+        ["Midrand", "/gauteng/midrand", 19],
+        ["Randburg", "/gauteng/randburg", 12],
+        ["Roodepoort", "/gauteng/roodepoort", 6],
+        ["Soweto", "/gauteng/soweto", 1],
+        ["Benoni", "/gauteng/benoni", 0],
+        ["Boksburg", "/gauteng/boksburg", 0],
+        ["Kempton Park", "/gauteng/kempton-park", 0],
+        ["Alberton", "/gauteng/alberton", 0]
+      ]
+    },
+    "pl-place-01-203f5f71cb3565521db4718f": {
+      "name": "Western Cape",
+      "href": "/western-cape",
+      "areas": [
+        ["Cape Town", "/western-cape/cape-town", 63],
+        ["Stellenbosch", "/western-cape/stellenbosch", 22],
+        ["Paarl", "/western-cape/paarl", 14],
+        ["Somerset West", "/western-cape/somerset-west", 9],
+        ["George", "/western-cape/george", 4],
+        ["Hermanus", "/western-cape/hermanus", 0],
+        ["Franschhoek", "/western-cape/franschhoek", 0],
+        ["Knysna", "/western-cape/knysna", 0],
+        ["Mossel Bay", "/western-cape/mossel-bay", 0]
+      ]
+    },
+    "pl-place-01-153d9daaed02608619c762aa": {
+      "name": "KwaZulu-Natal",
+      "href": "/kwazulu-natal",
+      "areas": [
+        ["Durban", "/kwazulu-natal/durban", 17],
+        ["Pietermaritzburg", "/kwazulu-natal/pietermaritzburg", 3],
+        ["Richards Bay", "/kwazulu-natal/richards-bay", 0],
+        ["Ballito", "/kwazulu-natal/ballito", 0],
+        ["Newcastle", "/kwazulu-natal/newcastle", 0],
+        ["Port Shepstone", "/kwazulu-natal/port-shepstone", 0]
+      ]
+    },
+    "pl-place-01-9892b872a77f27e90c5cf091": {
+      "name": "Eastern Cape",
+      "href": "/eastern-cape",
+      "areas": [
+        ["Gqeberha", "/eastern-cape/gqeberha", 0],
+        ["East London", "/eastern-cape/east-london", 0],
+        ["Mthatha", "/eastern-cape/mthatha", 0],
+        ["Jeffreys Bay", "/eastern-cape/jeffreys-bay", 0]
+      ]
+    },
+    "pl-place-01-c987af17ca8c4427cb59abf5": {
+      "name": "Mpumalanga",
+      "href": "/mpumalanga",
+      "areas": [
+        ["Mbombela", "/mpumalanga/mbombela", 0],
+        ["eMalahleni", "/mpumalanga/emalahleni", 0],
+        ["Middelburg", "/mpumalanga/middelburg", 0],
+        ["Secunda", "/mpumalanga/secunda", 0]
+      ]
+    },
+    "pl-place-01-191d11b42d5b13319fa7fca2": {
+      "name": "Limpopo",
+      "href": "/limpopo",
+      "areas": [
+        ["Polokwane", "/limpopo/polokwane", 0],
+        ["Tzaneen", "/limpopo/tzaneen", 0],
+        ["Mokopane", "/limpopo/mokopane", 0]
+      ]
+    },
+    "pl-place-01-ee7ac2ac3ad791ae7a83a4e9": {
+      "name": "North West",
+      "href": "/north-west",
+      "areas": [
+        ["Mafikeng", "/north-west/mafikeng", 0],
+        ["Rustenburg", "/north-west/rustenburg", 0],
+        ["Potchefstroom", "/north-west/potchefstroom", 0],
+        ["Klerksdorp", "/north-west/klerksdorp", 0]
+      ]
+    },
+    "pl-place-01-a5e69690b90509167e54a142": {
+      "name": "Free State",
+      "href": "/free-state",
+      "areas": [
+        ["Bloemfontein", "/free-state/bloemfontein", 0],
+        ["Welkom", "/free-state/welkom", 0],
+        ["Bethlehem", "/free-state/bethlehem", 0]
+      ]
+    },
+    "pl-place-01-e7be97ff5aaae9fa7ff7d28f": {
+      "name": "Northern Cape",
+      "href": "/noord-kaap",
+      "areas": [
+        ["Kimberley", "/noord-kaap/kimberley", 0],
+        ["Upington", "/noord-kaap/upington", 0],
+        ["Springbok", "/noord-kaap/springbok", 0]
+      ]
+    }
+  }
+}

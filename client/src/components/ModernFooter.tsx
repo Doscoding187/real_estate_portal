@@ -1,5 +1,6 @@
 import { Link } from 'wouter';
 import { isHomepageHeroJourneyEnabled } from '@/lib/publicNavigation';
+import { CITY_GUIDES } from '@/lib/cityGuides';
 import {
   SUPPORT_EMAIL,
   SUPPORT_PHONE_DISPLAY,
@@ -21,6 +22,39 @@ const marketplaceLinks = [
   { label: 'Advertise / List Property', href: '/advertise' },
 ];
 
+/**
+ * Provinces (each slug is in PROVINCE_SLUGS and served by the /:province route), then cities
+ * whose public page is published (see CITY_GUIDES), then the national list.
+ */
+const FOOTER_CITY_SLUGS = [
+  'johannesburg',
+  'pretoria',
+  'cape-town',
+  'durban',
+  'sandton',
+  'gqeberha',
+  'bloemfontein',
+  'centurion',
+];
+const areaLinks = [
+  { label: 'Gauteng', href: '/gauteng' },
+  { label: 'Western Cape', href: '/western-cape' },
+  { label: 'KwaZulu-Natal', href: '/kwazulu-natal' },
+  ...FOOTER_CITY_SLUGS.flatMap(slug => {
+    const city = CITY_GUIDES.find(guide => guide.slug === slug);
+    return city ? [{ label: city.name, href: city.href }] : [];
+  }),
+  { label: 'All areas', href: '/south-africa' },
+];
+
+/** Role entry pages. For Developers is never hidden by the developments hold. */
+const professionalLinks = [
+  { label: 'For Agents', href: '/advertise/sell/agents' },
+  { label: 'For Agencies', href: '/advertise/sell/agencies' },
+  { label: 'For Developers', href: '/advertise/sell/developers' },
+  { label: 'Referrals', href: '/distribution-network' },
+];
+
 const legalLinks = [
   { label: 'Privacy', href: '/legal/privacy' },
   { label: 'Terms', href: '/legal/terms' },
@@ -35,7 +69,10 @@ export function ModernFooter() {
   return (
     <footer className="border-t border-slate-800 bg-slate-950 text-slate-300">
       <div className="container mx-auto px-4 py-10 md:py-12">
-        <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
+        <div
+          data-testid="footer-columns"
+          className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(0,1fr))] lg:items-start"
+        >
           <div className="max-w-md">
             <Link href="/" className="text-xl font-bold tracking-tight text-white">
               Property Listify
@@ -47,8 +84,38 @@ export function ModernFooter() {
 
           <nav aria-label="Marketplace footer navigation">
             <h2 className="mb-3 text-sm font-semibold text-white">Marketplace</h2>
-            <ul className="grid grid-cols-2 gap-x-8 gap-y-2 sm:grid-cols-3">
+            <ul className="grid grid-cols-1 gap-x-8 gap-y-2 sm:grid-cols-2 lg:grid-cols-1">
               {marketplaceLinks.map(link => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    className="text-sm text-slate-300 transition-colors hover:text-blue-400"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+          <nav aria-label="Explore by area footer navigation">
+            <h2 className="mb-3 text-sm font-semibold text-white">Explore by area</h2>
+            <ul className="grid grid-cols-1 gap-x-8 gap-y-2">
+              {areaLinks.map(link => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    className="text-sm text-slate-300 transition-colors hover:text-blue-400"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+          <nav aria-label="Professionals footer navigation">
+            <h2 className="mb-3 text-sm font-semibold text-white">For professionals</h2>
+            <ul className="grid grid-cols-1 gap-x-8 gap-y-2">
+              {professionalLinks.map(link => (
                 <li key={link.href}>
                   <Link
                     href={link.href}

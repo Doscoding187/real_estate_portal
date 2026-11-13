@@ -1,0 +1,66 @@
+{
+  "sample": true,
+  "note": "Fictional numbers for the local preview. Band counts add up to activeSaleListings. Cape Town has no typicalPricePerM2 and its leading locality has no page (href null); Durban has no city page (href null).",
+  "cities": [
+    {
+      "placeId": "pl-place-01-131e3e75ad70424e0f9c8001",
+      "name": "Johannesburg",
+      "provinceName": "Gauteng",
+      "href": "/gauteng/johannesburg",
+      "activeSaleListings": 13,
+      "medianAskingPrice": 3000000,
+      "typicalPricePerM2": 19556,
+      "bandCounts": [0, 3, 8, 2, 0],
+      "leadingLocality": {
+        "name": "Sandton",
+        "listingCount": 7,
+        "href": "/gauteng/johannesburg/sandton"
+      },
+      "sampleSize": 13
+    },
+    {
+      "placeId": "pl-place-01-131e3e75ad70424e0f9c8002",
+      "name": "Cape Town",
+      "provinceName": "Western Cape",
+      "href": "/western-cape/cape-town",
+      "activeSaleListings": 9,
+      "medianAskingPrice": 2450000,
+      "typicalPricePerM2": null,
+      "bandCounts": [1, 2, 4, 2, 0],
+      "leadingLocality": { "name": "Sea Point", "listingCount": 4, "href": null },
+      "sampleSize": 9
+    },
+    {
+      "placeId": "pl-place-01-131e3e75ad70424e0f9c8003",
+      "name": "Pretoria",
+      "provinceName": "Gauteng",
+      "href": "/gauteng/pretoria",
+      "activeSaleListings": 7,
+      "medianAskingPrice": 1850000,
+      "typicalPricePerM2": 17120,
+      "bandCounts": [1, 3, 3, 0, 0],
+      "leadingLocality": {
+        "name": "Centurion",
+        "listingCount": 3,
+        "href": "/gauteng/pretoria/centurion"
+      },
+      "sampleSize": 7
+    },
+    {
+      "placeId": "pl-place-01-131e3e75ad70424e0f9c8004",
+      "name": "Durban",
+      "provinceName": "KwaZulu-Natal",
+      "href": null,
+      "activeSaleListings": 5,
+      "medianAskingPrice": 850000,
+      "typicalPricePerM2": 14390,
+      "bandCounts": [2, 2, 1, 0, 0],
+      "leadingLocality": {
+        "name": "Umhlanga",
+        "listingCount": 3,
+        "href": "/kwazulu-natal/durban/umhlanga"
+      },
+      "sampleSize": 5
+    }
+  ]
+}
