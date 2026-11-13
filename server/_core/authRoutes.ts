@@ -14,7 +14,11 @@ import {
 const VERIFIED_SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 /** Roles self-registration accepts at launch. Add a role here to release it. */
-export const REGISTRATION_ALLOWED_ROLES: readonly string[] = ['visitor', 'agent'];
+export const REGISTRATION_ALLOWED_ROLES: readonly string[] = [
+  'visitor',
+  'agent',
+  'service_provider',
+];
 
 /** Known professional roles that are rejected (HTTP 400) unless listed above. */
 export const HELD_REGISTRATION_ROLES: readonly string[] = [
@@ -164,7 +168,7 @@ export function registerAuthRoutes(app: Express) {
         role === 'agent'
           ? 'Registration successful! Please check your email to verify your account. Your agent profile is pending review and will unlock after verification and approval.'
           : role === 'service_provider'
-            ? 'Registration successful! Please verify your email, then complete your partner profile.'
+            ? 'Registration successful! Please verify your email, then complete your service provider profile. It will stay private until it is reviewed and approved. If you are approved, we expect providers to respond to customer requests within 1 business day.'
             : 'Registration successful. Please check your email to verify your account.';
 
       res.status(verificationEmailSent ? 201 : 202).json({

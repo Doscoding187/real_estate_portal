@@ -18,23 +18,27 @@ describe('launch-held partner entries', () => {
   it('NotOpenYetCta is a non-link state with the launch sentence', () => {
     render(<NotOpenYetCta />);
     expect(screen.getByText('Not open yet')).toBeInTheDocument();
-    expect(screen.getByText('We are launching with agents first.')).toBeInTheDocument();
+    expect(
+      screen.getByText('Buyer, agent and service-provider registration is open.'),
+    ).toBeInTheDocument();
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
   });
 
-  it('the services advertise page no longer offers a provider sign-in link', () => {
+  it('the services advertise page routes providers into application registration', () => {
     render(<AdvertiseServicesPage />);
-    expect(screen.getByTestId('cta-not-open-yet')).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: /provider sign in/i })).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: 'Apply as a service provider' }),
+    ).toHaveAttribute('href', '/login?mode=register&role=service_provider');
+    expect(screen.queryByTestId('cta-not-open-yet')).not.toBeInTheDocument();
     expect(document.querySelector('a[href*="service%2Fprofile"]')).toBeNull();
   });
 
-  it('partner selection shows Not open yet, not links, for developer and service provider', () => {
+  it('partner selection holds developer and links service providers to the application page', () => {
     render(<PartnerSelectionSection />);
-    expect(screen.getAllByTestId('partner-card-coming-soon')).toHaveLength(2);
-    expect(screen.getAllByText('Not open yet')).toHaveLength(2);
+    expect(screen.getAllByTestId('partner-card-coming-soon')).toHaveLength(1);
+    expect(screen.getAllByText('Not open yet')).toHaveLength(1);
     expect(document.querySelector('a[href="/advertise/developers"]')).toBeNull();
-    expect(document.querySelector('a[href="/advertise/service-providers"]')).toBeNull();
+    expect(document.querySelector('a[href="/advertise/services"]')).not.toBeNull();
     expect(document.querySelector('a[href="/advertise/agents"]')).not.toBeNull();
   });
 

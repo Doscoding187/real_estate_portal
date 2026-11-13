@@ -34,7 +34,7 @@ describe('consumer Services entry points while the directory is held', () => {
   it('keeps /advertise/services open but drops its link to the directory', () => {
     const { container } = render(<AdvertiseServicesPage />);
     expect(
-      screen.getByText('Put your property service in front of the right audience.'),
+      screen.getByText('Give your service business a professional home on Property Listify.'),
     ).toBeInTheDocument();
     expect(servicesLinks(container)).toEqual([]);
   });

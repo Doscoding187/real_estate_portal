@@ -1,6 +1,6 @@
 /**
  * Non-clickable replacement for the sign-up CTA on role landing pages that are
- * held at launch (agency, developer, service provider). Not a link.
+ * held at launch (currently agency and developer). Not a link.
  */
 export function NotOpenYetCta({ tone = 'dark' }: { tone?: 'dark' | 'light' }) {
   const dark = tone === 'dark';
@@ -15,7 +15,7 @@ export function NotOpenYetCta({ tone = 'dark' }: { tone?: 'dark' | 'light' }) {
         Not open yet
       </span>
       <span className={`text-sm ${dark ? 'text-slate-300' : 'text-slate-600'}`}>
-        We are launching with agents first.
+        Buyer, agent and service-provider registration is open.
       </span>
     </div>
   );
