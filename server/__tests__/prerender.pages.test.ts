@@ -152,11 +152,16 @@ describe('vercel route order', () => {
   it('serves generated files before the single-page-app catch-all', () => {
     const southAfrica = indexOf(route => route.src === '/south-africa/?');
     const filesystem = indexOf(route => route.handle === 'filesystem');
-    const catchAll = indexOf(route => route.src === '/(.*)' && route.dest === '/index.html');
+    const catchAll = indexOf(route => route.src === '/(.*)' && route.dest === '/app-shell.html');
     expect(southAfrica).toBeGreaterThan(-1);
     expect(filesystem).toBeGreaterThan(southAfrica);
     expect(catchAll).toBe(filesystem + 1);
     expect(catchAll).toBe(routes.length - 1);
+  });
+
+  it('never sends the prepared homepage for other addresses', () => {
+    // index.html is the prepared homepage (canonical "/"); the catch-all must use the plain shell.
+    expect(indexOf(route => route.src === '/(.*)' && route.dest === '/index.html')).toBe(-1);
   });
 
   it('keeps robots, sitemap and asset rules ahead of the filesystem handler', () => {

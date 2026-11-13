@@ -70,7 +70,8 @@ describe('Developer Engine S2 supersession authority contracts', () => {
     const routing = source('shared/developmentSupersessionRouting.ts');
 
     expect(vercel).toContain("outputDirectory: 'dist/public'");
-    expect(vercel).toContain("dest: '/index.html'");
+    // Single-page-app fallback: the plain shell (index.html is the prepared homepage since #767).
+    expect(vercel).toContain("dest: '/app-shell.html'");
     expect(middleware).toContain("matcher: '/:path*'");
     expect(middleware).toContain('probeDevelopmentSupersession');
     expect(middleware).toContain('status: 307');

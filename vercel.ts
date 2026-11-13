@@ -46,7 +46,10 @@ export const config = {
     // <path>/index.html (see docs/product/seo-prerender.md). Vercel's routes format runs every
     // route above this handler first and then checks the filesystem; only a path with no file
     // reaches the application shell below. Keep this handler directly before the catch-all.
+    // The catch-all serves the UNTOUCHED shell (app-shell.html, emitted by the prerender plugin),
+    // not index.html: index.html is now the prepared homepage, and its canonical/title must not be
+    // sent for search, listing or unknown URLs.
     { handle: 'filesystem' },
-    { src: '/(.*)', dest: '/index.html' },
+    { src: '/(.*)', dest: '/app-shell.html' },
   ],
 };
