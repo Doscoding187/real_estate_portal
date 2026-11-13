@@ -10,7 +10,9 @@ set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 API_PORT="${PARITY_API_PORT:-5070}"
 WEB_PORT="${PARITY_WEB_PORT:-3020}"
-STATE_DIR="/var/tmp/property-listify-$(id -u)/local-parity"
+# Never inside /var/tmp/property-listify-<uid>/: that directory is owned by the
+# Database Authority service, which refuses to start on unexpected entries.
+STATE_DIR="/var/tmp/property-listify-parity-$(id -u)"
 API_PID_FILE="$STATE_DIR/api.pid"
 WEB_PID_FILE="$STATE_DIR/web.pid"
 API_URL="http://127.0.0.1:${API_PORT}"

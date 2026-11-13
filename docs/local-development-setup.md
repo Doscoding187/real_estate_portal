@@ -398,7 +398,9 @@ places are the digest-pinned admission packages loaded by
    ```
 
    The script is idempotent, refuses to touch a port held by another process,
-   and keeps PIDs and logs under `/var/tmp/property-listify-<uid>/local-parity/`.
+   and keeps PIDs and logs under `/var/tmp/property-listify-parity-<uid>/`
+   (never inside the Database Authority service directory
+   `/var/tmp/property-listify-<uid>/`, which refuses unexpected entries).
    Override the ports with `PARITY_API_PORT` and `PARITY_WEB_PORT`. The web app
    gets `VITE_API_URL` and `VITE_API_BASE_URL` pointing at the local API on the
    command line. Open `http://127.0.0.1:3020`.
