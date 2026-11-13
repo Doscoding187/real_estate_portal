@@ -1,56 +1,81 @@
 <!doctype html>
 <html lang="en">
-
   <head>
     <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0" />
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
     <!-- SEO Meta Tags -->
-    <meta name="description" content="Discover your dream property in South Africa. Browse residential, commercial, and development properties across all major cities. PropertyListify SA - South Africa's fastest growing real estate platform." />
-    <meta name="keywords" content="south africa property, real estate, properties for sale, properties to rent, houses, apartments, developments, johannesburg, cape town, durban, pretoria" />
-    <meta name="author" content="PropertyListify SA" />
+    <meta
+      name="description"
+      content="Search South African property listings, explore new developments, compare areas, and connect with agents and developers on Property Listify."
+    />
+    <meta
+      name="keywords"
+      content="south africa property, real estate, properties for sale, properties to rent, houses, apartments, developments, johannesburg, cape town, durban, pretoria"
+    />
+    <meta name="author" content="Property Listify" />
     <meta name="robots" content="index, follow" />
-    
+
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="PropertyListify SA - South Africa's Fastest Growing Real Estate Platform" />
-    <meta property="og:description" content="Discover your dream property in South Africa. Browse residential, commercial, and development properties across all major cities." />
-    <meta property="og:site_name" content="PropertyListify SA" />
-    <!-- Add og:image when you have a social sharing image -->
-    <!-- <meta property="og:image" content="https://www.propertylistifysa.co.za/og-image.jpg" /> -->
-    
+    <meta
+      property="og:title"
+      content="Property Listify | South African Property Search and New Developments"
+    />
+    <meta
+      property="og:description"
+      content="Search South African property listings, explore new developments, compare areas, and connect with agents and developers on Property Listify."
+    />
+    <meta property="og:site_name" content="Property Listify" />
+    <meta property="og:image" content="https://www.propertylistifysa.co.za/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Property Listify" />
+
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="PropertyListify SA - South Africa's Fastest Growing Real Estate Platform" />
-    <meta name="twitter:description" content="Discover your dream property in South Africa. Browse residential, commercial, and development properties." />
-    <!-- Add twitter:image when you have a social sharing image -->
-    <!-- <meta name="twitter:image" content="https://www.propertylistifysa.co.za/twitter-image.jpg" /> -->
-    
-    <!-- Resource Hints for Performance -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="dns-prefetch" href="https://images.unsplash.com">
-    
-    <!-- Preload Critical Resources -->
-    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" as="style">
-    
-    <!-- Load Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" href="/logo.png" />
-    <link rel="apple-touch-icon" href="/logo.png" />
-    
-    <title>PropertyListify SA - South Africa's Fastest Growing Real Estate Platform</title>
-  </head>
+    <meta
+      name="twitter:title"
+      content="Property Listify | South African Property Search and New Developments"
+    />
+    <meta
+      name="twitter:description"
+      content="Search South African property listings, explore new developments, compare areas, and connect with agents and developers on Property Listify."
+    />
+    <meta name="twitter:image" content="https://www.propertylistifysa.co.za/og-image.png" />
 
+    <!-- Resource Hints for Performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="dns-prefetch" href="https://images.unsplash.com" />
+
+    <!-- Fonts (non-blocking) -->
+    <link
+      rel="preload"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+      as="style"
+      onload="
+        this.onload = null;
+        this.rel = 'stylesheet';
+      "
+    />
+    <noscript
+      ><link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    /></noscript>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/brand/favicon.svg" />
+    <link rel="icon" type="image/png" href="/logo.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <title>Property Listify | South African Property Search and New Developments</title>
+  </head>
 
   <body>
     <div id="dnd-portal"></div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
-
 </html>

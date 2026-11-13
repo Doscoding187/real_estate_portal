@@ -54,7 +54,7 @@ describe('founder Google sign-in entry', () => {
     render(<FounderLogin />);
     const link = await screen.findByRole('link', { name: 'Founder sign-in with Google' });
     expect(screen.getByRole('heading', { name: 'Founder sign-in' })).toBeInTheDocument();
-    expect(screen.getByText('PropertyListify')).toBeInTheDocument();
+    expect(screen.getByText('Property Listify')).toBeInTheDocument();
     expect(link.className).toContain('bg-slate-900');
     expect(link.className).toContain('dark:bg-white');
   });

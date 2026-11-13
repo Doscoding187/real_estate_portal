@@ -10,7 +10,13 @@ const state = vi.hoisted(() => ({
   directoryLookup: vi.fn(),
 }));
 vi.mock('@/components/location/CanonicalPlaceSelector', () => ({
-  CanonicalPlaceSelector: ({ label, onChange }: { label: string; onChange: (value: unknown) => void }) => (
+  CanonicalPlaceSelector: ({
+    label,
+    onChange,
+  }: {
+    label: string;
+    onChange: (value: unknown) => void;
+  }) => (
     <button
       type="button"
       onClick={() =>
@@ -167,7 +173,7 @@ describe('Public developer profile', () => {
   it('keeps an empty chosen Place until the visitor explicitly requests all projects', () => {
     state.projects = { ...ready, data: [] };
     render(<DeveloperPublisherPage />);
-    expect(screen.getByText('No published projects at the selected canonical Place')).toBeInTheDocument();
+    expect(screen.getByText('No published projects in the selected area')).toBeInTheDocument();
     expect(state.navigate).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'View all published projects' }));
     expect(state.navigate).toHaveBeenCalledWith('/developer/local-builder#developments');
@@ -191,7 +197,7 @@ describe('Public developer profile', () => {
       expect.anything(),
       expect.objectContaining({ enabled: false }),
     );
-    expect(screen.getByRole('alert')).toHaveTextContent('Choose a canonical project Place');
+    expect(screen.getByRole('alert')).toHaveTextContent('Choose an area');
     expect(screen.queryByRole('heading', { name: 'Local Homes' })).not.toBeInTheDocument();
   });
   it('paginates at the server and keeps the exact project Place', () => {
@@ -283,7 +289,7 @@ describe('Developer directory', () => {
   });
   it('updates the location URL through an explicit canonical Place choice', () => {
     render(<DeveloperDirectoryPage />);
-    fireEvent.click(screen.getByRole('button', { name: 'Project Place' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Area' }));
     expect(state.navigate).toHaveBeenCalledWith(
       '/developers?canonicalPlaceId=pl-place-01-000000000000000000000002',
     );

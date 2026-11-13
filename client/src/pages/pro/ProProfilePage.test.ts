@@ -51,6 +51,50 @@ describe('ProProfilePage structured editor preservation', () => {
     expect(service.isActive).toBe(true);
   });
 
+  it('sends edited service descriptions with the matching canonical service row', () => {
+    const [service] = linesToServices(
+      'home_improvement, plumbing, Plumbing repairs',
+      [
+        {
+          id: 17,
+          category: 'home_improvement',
+          code: 'plumbing',
+          displayName: 'Plumbing repairs',
+          description: 'Old description',
+          isActive: true,
+        },
+      ],
+      {},
+      { plumbing: 'Updated plumbing work description.' },
+    );
+
+    expect(service).toMatchObject({
+      id: 17,
+      code: 'plumbing',
+      description: 'Updated plumbing work description.',
+    });
+  });
+
+  it('allows a provider to clear an optional description', () => {
+    const [service] = linesToServices(
+      'home_improvement, plumbing, Plumbing repairs',
+      [
+        {
+          id: 17,
+          category: 'home_improvement',
+          code: 'plumbing',
+          displayName: 'Plumbing repairs',
+          description: 'Old description',
+          isActive: true,
+        },
+      ],
+      {},
+      { plumbing: '' },
+    );
+
+    expect(service.description).toBe('');
+  });
+
   it('does not transfer service metadata by array position when the code changes', () => {
     const [service] = linesToServices('home_improvement, new-service, New service', [
       {

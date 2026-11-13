@@ -1,5 +1,5 @@
 import { Link } from 'wouter';
-import { Building2, Heart, MapPin } from 'lucide-react';
+import { Building2, Heart, MapPin, type LucideIcon } from 'lucide-react';
 import {
   getCompactPropertyFacts,
   getPropertyCardImage,
@@ -8,6 +8,13 @@ import {
 } from '@/lib/property';
 import { withRentalPeriod } from '@/lib/rentPresentation';
 import { FallbackImage } from './FallbackImage';
+
+/** One fixed detail item for the bottom row (used where the facts are chosen by the caller). */
+export interface SimpleHomeListingCardDetail {
+  key: string;
+  icon: LucideIcon;
+  label: string;
+}
 
 export interface SimpleHomeListingCardProps {
   id: string;
@@ -29,9 +36,15 @@ export interface SimpleHomeListingCardProps {
   propertyType?: string | null;
   listingType?: 'sale' | 'rent';
   badgeLabel?: string;
+  /** Optional second chip beside the badge, e.g. the transaction on a development unit type. */
+  secondaryBadgeLabel?: string;
+  /** When given, replaces the facts worked out from the property fields. */
+  detailItems?: SimpleHomeListingCardDetail[];
   isSaved?: boolean;
   favoritePending?: boolean;
   onFavoriteClick?: () => void;
+  /** Overrides the heart's accessible name (default: Save property / Remove from saved homes). */
+  favoriteLabel?: { save: string; remove: string };
   onOpen?: () => void;
 }
 
@@ -55,9 +68,12 @@ export function SimpleHomeListingCard({
   propertyType,
   listingType,
   badgeLabel = 'For sale',
+  secondaryBadgeLabel,
+  detailItems,
   isSaved = false,
   favoritePending = false,
   onFavoriteClick,
+  favoriteLabel,
   onOpen,
 }: SimpleHomeListingCardProps) {
   const normalizedProperty = {
@@ -78,7 +94,9 @@ export function SimpleHomeListingCard({
   const locationLabel = publicLocationLabel || getPropertyCardLocation(normalizedProperty).label;
   const resolvedImage = image ? getPropertyCardImage(normalizedProperty) : undefined;
   const priceLabel = getPropertyCardPrice(normalizedProperty).label;
-  const specItems = getCompactPropertyFacts(normalizedProperty, 4);
+  const specItems = detailItems
+    ? detailItems.map(item => ({ key: item.key, icon: item.icon, shortValue: item.label }))
+    : getCompactPropertyFacts(normalizedProperty, 4);
 
   return (
     <div className="group relative h-full w-full overflow-hidden rounded-xl border border-slate-200 bg-white transition-all duration-300 hover:shadow-lg">
@@ -112,10 +130,15 @@ export function SimpleHomeListingCard({
               />
             ))}
 
-          <div className="absolute left-2.5 top-2.5 z-20">
+          <div className="absolute left-2.5 top-2.5 z-20 flex max-w-[calc(100%-1.25rem)] flex-wrap gap-1">
             <span className="rounded-full bg-white/95 px-2.5 py-1 text-[9px] font-semibold text-slate-700 shadow-sm">
               {badgeLabel}
             </span>
+            {secondaryBadgeLabel ? (
+              <span className="rounded-full bg-slate-900/80 px-2.5 py-1 text-[9px] font-semibold text-white shadow-sm">
+                {secondaryBadgeLabel}
+              </span>
+            ) : null}
           </div>
         </div>
 
@@ -162,7 +185,11 @@ export function SimpleHomeListingCard({
               ? 'border-rose-200 bg-white/95 text-rose-600 hover:bg-rose-50'
               : 'border-white/80 bg-white/90 text-slate-600 hover:bg-white hover:text-rose-600'
           }`}
-          aria-label={isSaved ? 'Remove from saved homes' : 'Save property'}
+          aria-label={
+            isSaved
+              ? (favoriteLabel?.remove ?? 'Remove from saved homes')
+              : (favoriteLabel?.save ?? 'Save property')
+          }
           aria-pressed={isSaved}
           disabled={favoritePending}
           onClick={event => {

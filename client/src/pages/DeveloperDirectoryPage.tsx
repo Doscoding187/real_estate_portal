@@ -66,7 +66,7 @@ export default function DeveloperDirectoryPage() {
             <h1 className="mb-3 text-3xl font-bold md:text-4xl">Developer directory</h1>
             <p className="mb-6 text-base leading-relaxed text-indigo-100">
               {scope.canonicalPlaceId
-                ? 'Discover developers with published projects assigned to this canonical Place.'
+                ? 'Discover developers with published projects in this area.'
                 : 'Explore developer profiles and their published projects across South Africa.'}
             </p>
             <div className="grid gap-3 text-left sm:grid-cols-[minmax(0,1fr)_12rem_9rem]">
@@ -100,9 +100,9 @@ export default function DeveloperDirectoryPage() {
                   value={placeSelection}
                   onChange={changePlace}
                   purpose="search"
-                  label="Project Place"
-                  placeholder="Search approved Places"
-                  hint="Only projects with this exact reviewed Place assignment match."
+                  label="Area"
+                  placeholder="Search areas"
+                  hint="Only projects in this area match."
                 />
                 {scope.canonicalPlaceId && !placeSelection && !scope.invalid ? (
                   <Button type="button" variant="ghost" size="sm" onClick={clearPlace}>
@@ -142,10 +142,9 @@ export default function DeveloperDirectoryPage() {
             role="alert"
             className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-center"
           >
-            <h2 className="font-semibold text-slate-900">Choose a canonical Place</h2>
+            <h2 className="font-semibold text-slate-900">Choose an area</h2>
             <p className="mt-2 text-sm text-slate-600">
-              This location link is invalid or uses the retired province filter. Select an approved
-              Place above to continue.
+              This location link is not valid. Select an area above to continue.
             </p>
           </div>
         ) : query.isError ? (
@@ -181,7 +180,7 @@ export default function DeveloperDirectoryPage() {
           <>
             <p className="mb-4 text-sm text-slate-600" aria-live="polite">
               Showing {page * PAGE_SIZE + 1}–{page * PAGE_SIZE + profiles.length} developers
-              {scope.canonicalPlaceId ? ' with projects at the selected Place' : ''}
+              {scope.canonicalPlaceId ? ' with projects in the selected area' : ''}
             </p>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               {profiles.map(profile => {
@@ -280,7 +279,7 @@ export default function DeveloperDirectoryPage() {
             </h2>
             <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-slate-600">
               {scope.canonicalPlaceId
-                ? 'There are no matching developer profiles with projects assigned to this canonical Place. You can choose another Place or clear the name and reach filters.'
+                ? 'There are no matching developer profiles with projects in this area. You can choose another area or clear the name and reach filters.'
                 : 'Try another developer name or clear the filters.'}
             </p>
             <Button variant="outline" onClick={clearFilters} className="mt-4 min-h-[44px]">

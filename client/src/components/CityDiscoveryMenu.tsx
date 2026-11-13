@@ -21,9 +21,7 @@ export function CityDiscoveryMenu({ onNavigate }: CityDiscoveryMenuProps) {
       <div className="public-navbar__city-grid">
         <section aria-label="Find a place" className="public-navbar__city-column">
           <h2 className="public-navbar__section-heading">Find a place</h2>
-          <p className="mb-4 text-sm text-muted-foreground">
-            Search admitted cities, towns, suburbs, and localities.
-          </p>
+          <p className="mb-4 text-sm text-muted-foreground">Search cities, towns and suburbs.</p>
           <LocationAutosuggest
             placeholder="Search South African places"
             onSelect={location => onNavigate(locationHref(location))}
@@ -32,10 +30,10 @@ export function CityDiscoveryMenu({ onNavigate }: CityDiscoveryMenuProps) {
 
         <aside className="public-navbar__city-discovery">
           <div className="public-navbar__city-summary">
-            <p className="public-navbar__menu-kicker">Place Authority</p>
+            <p className="public-navbar__menu-kicker">Areas</p>
             <h2 className="public-navbar__city-title">Browse South Africa</h2>
             <p className="public-navbar__city-count-summary">
-              Open the national place catalogue and choose a canonical place.
+              Browse provinces, cities and suburbs across South Africa.
             </p>
           </div>
           <div className="public-navbar__city-actions">

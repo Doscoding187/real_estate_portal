@@ -3,6 +3,8 @@ type SeoInput = {
   description?: string;
   canonicalPath?: string;
   noindex?: boolean;
+  /** `noindex, follow`: keep the page out of results but let crawlers follow its links. `noindex` wins when both are set. */
+  noindexFollow?: boolean;
   image?: string;
   twitterCard?: 'summary' | 'summary_large_image';
   geo?: {
@@ -133,7 +135,10 @@ export function applySeo(input: SeoInput) {
     'twitter:card',
     input.twitterCard ?? (input.image ? 'summary_large_image' : 'summary'),
   );
-  upsertMetaByName('robots', input.noindex ? 'noindex, nofollow' : 'index, follow');
+  upsertMetaByName(
+    'robots',
+    input.noindex ? 'noindex, nofollow' : input.noindexFollow ? 'noindex, follow' : 'index, follow',
+  );
 
   if (input.geo) {
     upsertMetaByName('geo.position', `${input.geo.latitude};${input.geo.longitude}`);

@@ -31,10 +31,10 @@ export default function FounderLogin() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-50 px-6 dark:bg-slate-950">
       <div className="w-full max-w-md space-y-4 rounded-2xl border border-slate-200 bg-white p-8 shadow-lg dark:border-slate-700 dark:bg-slate-900">
-        <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">PropertyListify</p>
+        <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">Property Listify</p>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50">Founder sign-in</h1>
         <p className="text-sm text-slate-600 dark:text-slate-400">
-          Admin access for the PropertyListify owner account.
+          Admin access for the Property Listify owner account.
         </p>
         {founderLoginAvailable ? (
           <Button

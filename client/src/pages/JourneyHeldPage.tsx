@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Link } from 'wouter';
 
+import JourneyComingSoonPage, { isComingSoonJourney } from '@/pages/JourneyComingSoonPage';
 import { isJourneyRouteHeld, type PublicJourneyReleaseContext } from '@/lib/publicNavigation';
 
 /** Shown on direct routes for journeys that are held back at launch. */
@@ -22,16 +23,24 @@ export default function JourneyHeldPage() {
   );
 }
 
-/** Renders the held page while the journey is held, otherwise the real page. */
+/** Renders the journey's empty-state page while it is held, otherwise the real page. */
 export function HeldJourneyGate({
   journey,
   children,
   releaseContext,
+  detail = false,
 }: {
   journey: string;
   children: ReactNode;
   /** Defaults to the running build's release context. */
   releaseContext?: PublicJourneyReleaseContext;
+  /** True for single-listing and account sub-routes: shows a plain not-found state. */
+  detail?: boolean;
 }) {
-  return isJourneyRouteHeld(journey, releaseContext) ? <JourneyHeldPage /> : <>{children}</>;
+  if (!isJourneyRouteHeld(journey, releaseContext)) return <>{children}</>;
+  return isComingSoonJourney(journey) ? (
+    <JourneyComingSoonPage journey={journey} detail={detail} />
+  ) : (
+    <JourneyHeldPage />
+  );
 }

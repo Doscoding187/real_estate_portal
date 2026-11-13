@@ -9,11 +9,13 @@ import { useAuth } from '@/_core/hooks/useAuth';
 import { useLocation } from 'wouter';
 import { toast } from 'sonner';
 import { getLoginUrl } from '@/const';
+import { useSavedUnitTypes } from '@/lib/savedUnitTypes';
 
 export default function Favorites() {
   const { isAuthenticated, loading } = useAuth();
   const [, setLocation] = useLocation();
   const utils = trpc.useUtils();
+  const deviceSaved = useSavedUnitTypes();
 
   const { data: favorites, isLoading } = trpc.properties.getFavorites.useQuery(undefined, {
     enabled: isAuthenticated,
@@ -86,6 +88,41 @@ export default function Favorites() {
             action={<Button onClick={() => setLocation('/')}>Choose a search journey</Button>}
           />
         )}
+
+        {deviceSaved.items.length > 0 ? (
+          <section className="mt-10" aria-labelledby="device-saved-heading">
+            <h2 id="device-saved-heading" className="text-lg font-bold text-slate-900">
+              New-development units saved on this device
+            </h2>
+            <p className="mt-1 text-sm text-slate-600">
+              These are kept in this browser only and are not part of your account yet.
+            </p>
+            <ul className="mt-4 divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white">
+              {deviceSaved.items.map(item => (
+                <li
+                  key={item.unitTypeId}
+                  className="flex items-center justify-between gap-3 px-4 py-3"
+                >
+                  <a href={item.href} className="min-w-0 text-sm font-semibold text-[#2774AE]">
+                    {item.title}
+                    <span className="block truncate text-xs font-normal text-slate-600">
+                      {item.developmentName}
+                    </span>
+                  </a>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="min-h-11 shrink-0"
+                    aria-label={`Remove ${item.title} at ${item.developmentName} from saved`}
+                    onClick={() => deviceSaved.toggle(item)}
+                  >
+                    Remove
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
       </PageFrame>
 
       <footer className="mt-12 bg-muted/30 py-8">

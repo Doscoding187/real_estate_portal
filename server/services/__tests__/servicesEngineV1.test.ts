@@ -1464,6 +1464,61 @@ describe('Services V1 authoritative service replacement', () => {
     expect(insert).not.toHaveBeenCalled();
   });
 
+  it('persists an edited description on its owned canonical service row', async () => {
+    const rows = structuredClone(existingServiceRows);
+    let updateIndex = 0;
+    const update = vi.fn(() => {
+      const rowIndex = updateIndex++;
+      return {
+        set: vi.fn(values => ({
+          where: vi.fn(async () => {
+            Object.assign(rows[rowIndex], values);
+            return { affectedRows: 1 };
+          }),
+        })),
+      };
+    });
+    const tx = {
+      select: vi.fn(() => ({
+        from: vi.fn(() => ({
+          where: vi.fn(() => ({ for: vi.fn().mockResolvedValue(rows) })),
+        })),
+      })),
+      update,
+      insert: vi.fn(),
+    };
+    const db = {
+      transaction: vi.fn(async (callback: (tx: typeof tx) => Promise<unknown>) => callback(tx)),
+      select: vi.fn(() => ({
+        from: vi.fn(() => ({
+          where: vi.fn(() => ({ orderBy: vi.fn().mockResolvedValue(rows) })),
+        })),
+      })),
+    };
+    mockGetDb.mockResolvedValue(db);
+
+    const result = await servicesEngineService.replaceProviderServices(20, [
+      {
+        id: 31,
+        category: 'home_improvement',
+        code: 'plumbing',
+        displayName: 'Plumbing',
+        description: 'Clear, specific plumbing service information.',
+      },
+      {
+        id: 32,
+        category: 'finance_legal',
+        code: 'conveyancing',
+        displayName: 'Conveyancing',
+        description: '',
+      },
+    ]);
+
+    expect(update).toHaveBeenCalledWith(serviceProviderServices);
+    expect(result[0]?.description).toBe('Clear, specific plumbing service information.');
+    expect(result[1]?.description).toBeNull();
+  });
+
   it('updates the owned canonical row when a service code changes', async () => {
     const { set, insert, update } = mockServiceReplacementDb(existingServiceRows);
 

@@ -40,6 +40,7 @@ export function linesToServices(
   text: string,
   existingServices: any[] = [],
   activeOverrides: Record<string, boolean> = {},
+  descriptionOverrides: Record<string, string> = {},
 ) {
   return text
     .split('\n')
@@ -51,6 +52,7 @@ export function linesToServices(
         existingServices.find(
           service => code && service.code?.toLowerCase() === code.toLowerCase(),
         ) || {};
+      const serviceKey = String(code || previous.code || '').trim().toLowerCase();
       const safeCategory = SERVICE_CATEGORIES.some(item => item.value === category)
         ? (category as ServiceCategory)
         : previous.category || ('home_improvement' as ServiceCategory);
@@ -59,7 +61,9 @@ export function linesToServices(
         category: safeCategory,
         code: code || previous.code || `code-${Math.random().toString(36).slice(2, 7)}`,
         displayName: displayName || previous.displayName || code || 'Service',
-        description: previous.description ?? undefined,
+        description: Object.prototype.hasOwnProperty.call(descriptionOverrides, serviceKey)
+          ? descriptionOverrides[serviceKey].trim()
+          : previous.description ?? undefined,
         minPrice: previous.minPrice ?? undefined,
         maxPrice: previous.maxPrice ?? undefined,
         currency: 'ZAR' as const,
@@ -125,6 +129,7 @@ export default function ProProfilePage() {
   const replaceServices = trpc.servicesEngine.replaceProviderServices.useMutation({
     onSuccess: () => {
       toast.success('Services updated');
+      myProfileQuery.refetch();
       refetchStatus();
     },
     onError: error => toast.error(error.message || 'Could not update services'),
@@ -146,6 +151,9 @@ export default function ProProfilePage() {
   const [websiteUrl, setWebsiteUrl] = useState('');
   const [servicesText, setServicesText] = useState('');
   const [serviceActiveOverrides, setServiceActiveOverrides] = useState<Record<string, boolean>>({});
+  const [serviceDescriptionOverrides, setServiceDescriptionOverrides] = useState<
+    Record<string, string>
+  >({});
   const [coverageAreas, setCoverageAreas] = useState<EditableCoverageArea[]>([]);
   const [autoBootstrapAttempted, setAutoBootstrapAttempted] = useState(false);
 
@@ -174,6 +182,14 @@ export default function ProProfilePage() {
         .join('\n'),
     );
     setServiceActiveOverrides({});
+    setServiceDescriptionOverrides(
+      Object.fromEntries(
+        (profile.services || []).map((item: any) => [
+          String(item.code || '').trim().toLowerCase(),
+          item.description || '',
+        ]),
+      ),
+    );
     const resolvedPlaces = new Map(
       (resolvedProfilePlacesQuery.data?.results || []).flatMap(place =>
         place
@@ -463,26 +479,56 @@ export default function ProProfilePage() {
                     const checked =
                       serviceActiveOverrides[serviceKey] ?? service.isActive !== false;
                     return (
-                      <label
+                      <div
                         key={service.id || serviceKey}
-                        className="flex items-center gap-2 text-sm text-slate-700"
+                        className="space-y-2 rounded-lg border border-slate-200 bg-white p-3"
                       >
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={event => {
-                            const nextChecked = event.target.checked;
-                            setServiceActiveOverrides(current => ({
-                              ...current,
-                              [serviceKey]: nextChecked,
-                            }));
-                          }}
-                        />
-                        <span>
-                          {service.displayName || service.code || 'Service'} —{' '}
-                          {checked ? 'Available for requests' : 'Inactive'}
-                        </span>
-                      </label>
+                        <label className="flex items-center gap-2 text-sm text-slate-700">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={event => {
+                              const nextChecked = event.target.checked;
+                              setServiceActiveOverrides(current => ({
+                                ...current,
+                                [serviceKey]: nextChecked,
+                              }));
+                            }}
+                          />
+                          <span>
+                            {service.displayName || service.code || 'Service'} —{' '}
+                            {checked ? 'Available for requests' : 'Inactive'}
+                          </span>
+                        </label>
+                        <label className="block space-y-1.5 text-sm text-slate-700">
+                          <span className="flex items-center justify-between gap-3">
+                            <span className="font-medium">
+                              Service description for {service.displayName || service.code || 'service'}
+                            </span>
+                            <span className="text-xs text-slate-400">
+                              {(serviceDescriptionOverrides[serviceKey] ?? service.description ?? '').length}/2000
+                            </span>
+                          </span>
+                          <Textarea
+                            aria-label={`Service description for ${service.displayName || service.code || 'service'}`}
+                            value={serviceDescriptionOverrides[serviceKey] ?? service.description ?? ''}
+                            onChange={event =>
+                              setServiceDescriptionOverrides(current => ({
+                                ...current,
+                                [serviceKey]: event.target.value.slice(0, 2000),
+                              }))
+                            }
+                            maxLength={2000}
+                            rows={3}
+                            placeholder="Explain what this service includes and what customers can expect."
+                            disabled={saving}
+                          />
+                          <span className="block text-xs text-slate-500">
+                            Unpublished profiles stay private until review. Changes to a published
+                            service page appear when saved.
+                          </span>
+                        </label>
+                      </div>
                     );
                   })}
                 </div>
@@ -496,6 +542,7 @@ export default function ProProfilePage() {
                         servicesText,
                         profile?.services || [],
                         serviceActiveOverrides,
+                        serviceDescriptionOverrides,
                       ),
                     })
                   }
