@@ -27,6 +27,7 @@ describe('hero journey authority', () => {
     expect(getPublicHeroJourney('buy').homepageEnabled).toBe(true);
     expect(getPublicHeroJourney('rent').homepageEnabled).toBe(true);
     expect(getPublicHeroJourney('developments').homepageEnabled).toBe(true);
+    expect(getPublicHeroJourney('developments').label).toBe('New Developments');
     expect(getPublicHeroJourney('plot_land')).toMatchObject({
       destination: '/plots-and-land',
       productHomepageVisible: true,
@@ -48,6 +49,7 @@ describe('hero journey authority', () => {
       'developments',
       'shared_living',
       'commercial',
+      'plot_land',
       'find_agent',
     ]);
   });
@@ -91,27 +93,33 @@ describe('hero journey authority', () => {
       homepageVisible: true,
       homepageEnabled: true,
     });
+    // Developments is public at launch: released on hosted builds without a manifest entry.
     expect(getPublicHeroJourney('developments', containedHostedRelease)).toMatchObject({
       productHomepageVisible: true,
       productHomepageEnabled: true,
-      homepageVisible: false,
-      homepageEnabled: false,
+      homepageVisible: true,
+      homepageEnabled: true,
     });
-    // Held at launch: the manifest cannot release it until it leaves LAUNCH_HELD_JOURNEYS.
     expect(getPublicHeroJourney('developments', explicitHostedRelease)).toMatchObject({
-      homepageVisible: false,
-      homepageEnabled: false,
+      homepageVisible: true,
+      homepageEnabled: true,
     });
-    expect(getHomepageHeroJourneys(containedHostedRelease).map(journey => journey.key)).toEqual([
+    // Tab-only switch: every hosted build shows all seven tabs.
+    const allTabs = [
       'buy',
       'rent',
+      'developments',
+      'shared_living',
+      'commercial',
+      'plot_land',
       'find_agent',
-    ]);
-    expect(getHomepageHeroJourneys(explicitHostedRelease).map(journey => journey.key)).toEqual([
-      'buy',
-      'rent',
-      'find_agent',
-    ]);
+    ];
+    expect(getHomepageHeroJourneys(containedHostedRelease).map(journey => journey.key)).toEqual(
+      allTabs,
+    );
+    expect(getHomepageHeroJourneys(explicitHostedRelease).map(journey => journey.key)).toEqual(
+      allTabs,
+    );
   });
 
   it('keeps public Land hidden while the first cohort remains deferred', () => {

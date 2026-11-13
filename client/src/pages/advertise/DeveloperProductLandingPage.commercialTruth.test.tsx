@@ -140,9 +140,10 @@ describe('public Developer product landing page', () => {
       screen.queryByRole('link', { name: /Request Launch Access invoice/i }),
     ).not.toBeInTheDocument();
     expect(screen.queryByText(/manual EFT/i)).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('link', { name: /Contact Property Listify/i }),
-    ).not.toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: /Contact Property Listify/i })[0]).toHaveAttribute(
+      'href',
+      '/contact',
+    );
   });
 
   it('mounts the paid surface only for the exact Developer Launch Access product', () => {
@@ -194,11 +195,9 @@ describe('public Developer product landing page', () => {
     expect(screen.getAllByText(/No automatic renewal/i).length).toBeGreaterThan(0);
     const launchCard = screen.getByTestId('developer-launch-access-card');
     expect(
-      within(launchCard).getByRole('link', { name: /Request Launch Access invoice/i }),
-    ).toHaveAttribute('href', '/developer/plans');
-    expect(
-      screen.getByText(/complete your company profile, then request your Launch Access invoice/i),
-    ).toBeInTheDocument();
+      within(launchCard).getByRole('link', { name: /Talk to us about listing your development/i }),
+    ).toHaveAttribute('href', '/contact');
+    expect(screen.queryByText(/Create your owner account/i)).not.toBeInTheDocument();
     expect(
       screen.getAllByRole('link', { name: /Contact Property Listify/i }).length,
     ).toBeGreaterThan(0);

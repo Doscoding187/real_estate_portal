@@ -1,3 +1,4 @@
+import { SectionEmptyState } from '@/components/ui/SectionEmptyState';
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useSearch } from 'wouter';
 import { Building2, ChevronLeft, ChevronRight, List, Loader2, X } from 'lucide-react';
@@ -202,9 +203,9 @@ export default function DevelopmentsDemo() {
     (hasRetiredGeography ||
     placeIds.length > 1 ||
     (placeIds.length === 1 && !selectedCanonicalPlaceId)
-      ? 'Choose one approved canonical Place. Text and legacy location filters are no longer supported.'
+      ? 'Choose one area from the suggestions to search.'
       : placeQueryUnselected
-        ? 'Select a Place from the results or clear the Place filter before searching.'
+        ? 'Select an area from the results or clear the area filter before searching.'
         : undefined);
   const hasLocationError = Boolean(
     intent.validation ||
@@ -422,9 +423,9 @@ export default function DevelopmentsDemo() {
                 value={placeSelection}
                 onChange={selectPlace}
                 purpose="search"
-                label="Project Place"
-                placeholder="Search approved Places"
-                hint="Only developments assigned to this exact reviewed Place match."
+                label="Area"
+                placeholder="Search areas"
+                hint="Only developments in this area match."
               />
             </div>
             {selectedCanonicalPlaceId ? (
@@ -432,12 +433,12 @@ export default function DevelopmentsDemo() {
                 <span>
                   {placeSelection?.canonicalPlaceId === selectedCanonicalPlaceId
                     ? `Searching ${placeSelection.label}`
-                    : 'Canonical Place filter active'}
+                    : 'Area filter active'}
                 </span>
                 <button
                   type="button"
                   onClick={clearPlace}
-                  aria-label="Clear development Place"
+                  aria-label="Clear area"
                   className="rounded-full p-0.5 hover:bg-blue-100"
                 >
                   <X className="h-4 w-4" />
@@ -447,7 +448,7 @@ export default function DevelopmentsDemo() {
           </div>
           {hasLocationError ? (
             <p className="mt-3 text-sm font-medium text-amber-700" role="status">
-              {locationMessage || 'The selected canonical Place could not be used.'}
+              {locationMessage || 'That area could not be used. Choose another area.'}
             </p>
           ) : null}
         </div>
@@ -537,7 +538,7 @@ export default function DevelopmentsDemo() {
                       )}
                       title={development.name}
                       rating={development.rating ?? undefined}
-                      location={development.locationLabels.join(', ') || 'Place assignment pending'}
+                      location={development.locationLabels.join(', ') || 'Area to be confirmed'}
                       description={development.description}
                       image={development.images[0] || PROPERTY_IMAGE_FALLBACK}
                       unitTypes={development.unitTypes.map(unit => ({
@@ -581,13 +582,16 @@ export default function DevelopmentsDemo() {
                 </div>
               </>
             ) : (
-              <div className="flex flex-col items-center justify-center py-20 text-center">
-                <Building2 className="mb-4 h-16 w-16 text-slate-300" />
-                <h2 className="mb-2 text-lg font-semibold text-slate-700">No developments found</h2>
-                <p className="max-w-md text-slate-500">
-                  Try another canonical location or adjust the development refinements.
-                </p>
-              </div>
+              <SectionEmptyState
+                icon={Building2}
+                title="No developments found"
+                titleAs="h3"
+                message="No new developments are listed yet. Try another area or change your filters."
+                action={{
+                  label: 'Talk to us about listing your development',
+                  href: '/contact',
+                }}
+              />
             )}
           </main>
         </div>

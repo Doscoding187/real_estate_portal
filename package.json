@@ -281,6 +281,7 @@
     "lint:check": "eslint client/src/**/*.{ts,tsx} server/**/*.{ts,tsx} shared/**/*.{ts,tsx}",
     "lint:fix": "eslint client/src/**/*.{ts,tsx} server/**/*.{ts,tsx} shared/**/*.{ts,tsx} --fix",
     "lint:tsnocheck-baseline": "node scripts/check-ts-nocheck-allowlist.mjs",
+    "images:categories": "node scripts/images/build-category-images.mjs",
     "place:admission:audit-retained-targets": "tsx tools/place-admission/audit-retained-targets.mjs",
     "place:admission:build": "tsx tools/place-admission/build-place-admission.mjs",
     "place:admission:check": "tsx tools/place-admission/build-place-admission.mjs --check",

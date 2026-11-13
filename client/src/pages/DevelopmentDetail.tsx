@@ -1118,7 +1118,7 @@ export default function DevelopmentDetail() {
         ? Number(dev.publisherPublishedDevelopmentCount)
         : null,
 
-    location: publicFacts.locationLabels.join(', ') || 'Place assignment pending',
+    location: publicFacts.locationLabels.join(', ') || 'Area to be confirmed',
     address: dev.address || '',
     description: publicFacts.description,
     completionDate: publicFacts.completionDate
@@ -2083,9 +2083,9 @@ export default function DevelopmentDetail() {
 
                   <Card className="border-slate-200 shadow-sm">
                     <CardContent className="p-6">
-                      <h2 className="text-base font-semibold text-slate-900">Assigned Place</h2>
+                      <h2 className="text-base font-semibold text-slate-900">Area</h2>
                       <p className="mt-2 text-sm text-slate-600">
-                        {publicFacts.locationLabels.join(', ') || 'Place assignment pending review.'}
+                        {publicFacts.locationLabels.join(', ') || 'Area to be confirmed.'}
                       </p>
                     </CardContent>
                   </Card>

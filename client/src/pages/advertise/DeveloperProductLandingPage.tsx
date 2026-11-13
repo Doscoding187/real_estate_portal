@@ -131,8 +131,8 @@ const DEVELOPER_CAPABILITIES: readonly DeveloperCapability[] = [
     title: 'Know which development and unit prompted the interest.',
     description:
       'Review development-linked leads, move enquiries through the available stages, assign ownership, log activity and keep the next action visible.',
-    href: '/developer/leads',
-    ctaLabel: 'Explore enquiry workflow',
+    href: '/contact',
+    ctaLabel: 'Talk to us about listing your development',
     icon: MessageSquareText,
   },
   {
@@ -140,8 +140,8 @@ const DEVELOPER_CAPABILITIES: readonly DeveloperCapability[] = [
     title: 'Make readiness and demand easier to see across launches.',
     description:
       'Developer views bring review and publication state, inventory snapshots, captured demand, funnel stages and attention queues into the project views available to your account.',
-    href: '/developer/dashboard',
-    ctaLabel: 'See Developer dashboard',
+    href: '/contact',
+    ctaLabel: 'Talk to us about listing your development',
     icon: BarChart3,
   },
 ] as const;
@@ -456,7 +456,8 @@ function DeveloperLaunchAccessCard({ product }: { product?: CommercialProduct })
   const term = getCommercialTermPresentation(product);
   const action = getCommercialActionPresentation(product);
   const limits = getCommercialPresentationLimits(product);
-  const actionHref = action.href || '/contact';
+  // Developer accounts are not open yet, so the card never leads into a sign-up.
+  const actionHref = '/contact';
   const portfolioEntitled = product.limits.unlimited_development_portfolio === true;
 
   return (
@@ -535,10 +536,8 @@ function DeveloperLaunchAccessCard({ product }: { product?: CommercialProduct })
           <span>Manual EFT · finance-verified activation</span>
         </div>
         <p className="mt-2">
-          Create your owner account, verify your email, complete your company profile, then request
-          your Launch Access invoice. Pay by manual EFT and submit proof through your authenticated
-          Developer billing flow — finance verification starts your access period.{' '}
-          {term.renewalLabel || 'There is no automatic renewal.'}
+          Talk to us first. We confirm the current setup, price and payment steps with you before
+          anything is arranged. {term.renewalLabel || 'There is no automatic renewal.'}
         </p>
       </div>
 
@@ -546,11 +545,11 @@ function DeveloperLaunchAccessCard({ product }: { product?: CommercialProduct })
         href={actionHref}
         className="mt-8 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--conversion)] px-5 py-4 text-sm font-bold text-white shadow-lg shadow-orange-900/15 transition hover:bg-[var(--conversion-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2"
       >
-        {action.disabled ? 'Contact Property Listify' : action.label}{' '}
+        Talk to us about listing your development{' '}
         <ArrowRight className="h-4 w-4" aria-hidden="true" />
       </a>
       <p className="mt-4 text-center text-xs leading-5 text-slate-500">
-        Requesting an invoice is not instant checkout and does not activate access.
+        Contacting us does not start or activate anything on its own.
       </p>
     </div>
   );
@@ -885,10 +884,7 @@ export function DeveloperCommercialLandingPage() {
                   finance system.
                 </SectionIntro>
                 <div className="mt-8 grid gap-4 sm:grid-cols-2">
-                  <a
-                    href="/developer/dashboard"
-                    className="flex h-full flex-col rounded-2xl border border-slate-200 bg-slate-50 p-6 transition hover:border-blue-200 hover:bg-white"
-                  >
+                  <div className="flex h-full flex-col rounded-2xl border border-slate-200 bg-slate-50 p-6 transition hover:border-blue-200 hover:bg-white">
                     <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-[var(--brand-blue)] shadow-sm">
                       <ClipboardCheck className="h-5 w-5" aria-hidden="true" />
                     </span>
@@ -897,11 +893,8 @@ export function DeveloperCommercialLandingPage() {
                       Review blockers, review feedback, lifecycle state, public eligibility and
                       items requiring attention in the project home.
                     </p>
-                  </a>
-                  <a
-                    href="/developer/leads"
-                    className="flex h-full flex-col rounded-2xl border border-slate-200 bg-slate-50 p-6 transition hover:border-blue-200 hover:bg-white"
-                  >
+                  </div>
+                  <div className="flex h-full flex-col rounded-2xl border border-slate-200 bg-slate-50 p-6 transition hover:border-blue-200 hover:bg-white">
                     <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-orange-700 shadow-sm">
                       <MessageSquareText className="h-5 w-5" aria-hidden="true" />
                     </span>
@@ -910,7 +903,7 @@ export function DeveloperCommercialLandingPage() {
                       Work with selected-period captured leads, stages, owners, SLA warnings,
                       activity and next actions where available.
                     </p>
-                  </a>
+                  </div>
                 </div>
               </div>
 
@@ -1084,7 +1077,7 @@ function DeveloperPreparationLandingPage({
     <div className="min-h-screen bg-[var(--surface)] text-slate-950">
       <SEOHead
         title="Prepare your Developer organisation | Property Listify"
-        description="Create your Property Listify Developer account, establish your organisation for review, and prepare private development drafts before commercial activation."
+        description="Developer accounts on Property Listify are not open yet. See how developer set-up will work and get in touch."
         canonicalUrl="/advertise/sell/developers"
       />
       <EnhancedNavbar />
@@ -1113,11 +1106,17 @@ function DeveloperPreparationLandingPage({
                   Establish your Developer organisation and prepare private projects.
                 </h1>
                 <p className="mt-7 max-w-2xl text-lg leading-8 text-slate-300 sm:text-xl sm:leading-9">
-                  Create a Developer account, establish your organisation for review, then prepare
-                  private development drafts while commercial activation remains protected.
+                  Developer accounts are not open yet. Below is how developer set-up will work.
+                  Contact us to talk it through or to ask about early access.
                 </p>
                 <div className="mt-9 flex flex-wrap gap-3">
                   <NotOpenYetCta tone="dark" />
+                  <a
+                    href="/contact"
+                    className="inline-flex items-center gap-2 rounded-2xl border border-white/35 bg-white/10 px-5 py-3.5 text-sm font-bold text-white shadow-sm transition hover:border-white/60 hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+                  >
+                    Contact Property Listify <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                  </a>
                 </div>
               </div>
 
@@ -1147,11 +1146,11 @@ function DeveloperPreparationLandingPage({
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <SectionIntro
               eyebrow="Prepare for participation"
-              title="Start the Developer work that can be completed before commercial activation."
+              title="How developer set-up will work once accounts open."
             >
-              Preparation establishes your organisation and lets you save private development work.
-              It does not grant public project presentation, marketplace participation, or paid
-              commercial access.
+              These are the steps once developer accounts open. Set-up establishes your organisation
+              and lets you save private development work. It does not grant public project
+              presentation, marketplace participation, or paid commercial access.
             </SectionIntro>
             <div className="mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
               {[
@@ -1212,6 +1211,14 @@ function DeveloperPreparationLandingPage({
               </p>
               <div className="mt-7">
                 <NotOpenYetCta tone="light" />
+                <div>
+                  <a
+                    href="/contact"
+                    className="mt-4 inline-flex items-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 py-3.5 text-sm font-bold text-slate-950 transition hover:border-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+                  >
+                    Contact Property Listify <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                  </a>
+                </div>
               </div>
             </div>
           </div>

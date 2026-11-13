@@ -1,0 +1,28 @@
+# Homepage section logic
+
+One file per homepage section. Each file records **why the section exists, what it must do, the rules behind it, and its history**, so that if a section is removed or rewritten, the reasoning is not lost with the code.
+
+Rule for contributors (people and agents): before removing, hiding or rewriting a homepage section, read its file here, and update the file in the same pull request. A section removed without updating its file is a review failure.
+
+Visual reference for the homepage as designed: the owner's screenshot of the integrated preview (pre-#693), described section by section in each file. Decisions below are the owner's unless marked _proposal_.
+
+| Order | Section                                      | Component                                                | Logic file                                         |
+| ----- | -------------------------------------------- | -------------------------------------------------------- | -------------------------------------------------- |
+| 1     | Hero and journey tabs                        | `client/src/components/EnhancedHero.tsx`                 | [hero.md](hero.md)                                 |
+| 2     | Trending properties                          | `client/src/sections/home/HomeTrendingSection.tsx`       | [trending-properties.md](trending-properties.md)   |
+| 3     | Browse by city, category and journey         | `client/src/components/DiscoverProperties.tsx`           | [browse-by-category.md](browse-by-category.md)     |
+| 4     | Developers                                   | `client/src/components/TopDevelopers.tsx`                | [developers.md](developers.md)                     |
+| 5     | Explore South Africa by area (compact tiles) | `client/src/components/ExploreCities.tsx`                | [explore-by-area.md](explore-by-area.md)           |
+| 6     | Property market insights                     | `client/src/sections/home/HomeMarketInsightsSection.tsx` | [market-insights.md](market-insights.md)           |
+| 7     | Why Property Listify (value by audience)     | `client/src/sections/home/WhyPropertyListifySection.tsx` | [why-property-listify.md](why-property-listify.md) |
+| 8     | List with Property Listify                   | `client/src/sections/home/ListWithUsSection.tsx`         | [professionals.md](professionals.md)               |
+| 9     | Closing call to action                       | `client/src/sections/home/CTASection.tsx`                | [closing-cta.md](closing-cta.md)                   |
+
+Shared rules for every section:
+
+- **One province for the whole page (owner, 2026-11-12).** The visitor picks a province and each section shows what is popular there: Trending homes, Developers, Explore by area and Property price insights. The page holds one selection (`useHomeProvinceState` in `client/src/lib/useHomeProvince.ts`, default Gauteng, remembered for the browser session in `sessionStorage`, safe when storage is blocked). Trending, Explore by area and Property price insights each show the same nine-pill row (`client/src/components/home/ProvincePills.tsx`); changing it in any of them updates all, and the page does not scroll. Developers has no pill row of its own and follows the selection.
+
+- **Never hide a section because it has no data.** Show the reusable empty state (`client/src/components/ui/SectionEmptyState.tsx`): one honest line plus one action. No fake listings, numbers or testimonials.
+- **Plain language.** No internal terms (canonical, admitted, Place catalogue, commercial activation) in visible text.
+- **Works on phone, tablet and desktop.** No page-level sideways scroll at 360, 390, 768, 1024 or 1440 px; touch targets at least 44 px.
+- **Search engines can follow it.** Anything that leads to a page is a real link (`<a href>`), not only a button.

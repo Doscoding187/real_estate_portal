@@ -16,13 +16,29 @@ export const DISCOVER_PROPERTY_TYPE_BY_LABEL = {
   Farms: 'farm',
 } as const;
 
-type CanonicalBrowsePlace = Pick<CanonicalPlaceSelection, 'canonicalPlaceId' | 'scope'>;
+/**
+ * Cards whose category has no filter in the residential Buy/Rent search
+ * (shared/property-taxonomy.ts: only apartment, house, townhouse, cluster_home, farm and legacy
+ * villa are accepted; plot and commercial are rejected or redirected). They link to the
+ * specialist journey page instead. /commercial reads canonicalPlaceId and useTypes.
+ */
+export const DISCOVER_JOURNEY_PAGE_BY_LABEL = {
+  'Plots & Land': { pathname: '/plots-and-land' },
+  Offices: { pathname: '/commercial', useTypes: 'office' },
+  Shops: { pathname: '/commercial', useTypes: 'retail' },
+} as const;
 
-function placeFromLocation(location: LocationNode): CanonicalBrowsePlace | null {
+export type CanonicalBrowsePlace = Pick<CanonicalPlaceSelection, 'canonicalPlaceId' | 'scope'>;
+
+export function placeFromLocation(location: LocationNode): CanonicalBrowsePlace | null {
   const canonicalPlaceId = location.canonicalPlaceId;
   if (!isCanonicalPlaceId(canonicalPlaceId)) return null;
   const scope: PlaceSearchScope =
-    location.type === 'province' ? 'province' : location.type === 'city' ? 'metro_city' : 'locality';
+    location.type === 'province'
+      ? 'province'
+      : location.type === 'city'
+        ? 'metro_city'
+        : 'locality';
   return { canonicalPlaceId, scope };
 }
 
@@ -36,22 +52,20 @@ function buildPlaceBrowseHref(
     return `${pathname}?searchError=invalid-place-authority`;
   }
   const journey = listingType === 'rent' ? 'rent' : 'buy';
-  const scope = place
-    ? { kind: place.scope, canonicalPlaceId: place.canonicalPlaceId }
-    : undefined;
+  const scope = place ? { kind: place.scope, canonicalPlaceId: place.canonicalPlaceId } : undefined;
   const href = buildTransactionalGeographyHref({
-      journey,
-      scope,
-      filters: propertyType ? { propertyType } : undefined,
-      resultState: { sort: 'relevance', page: 0 },
-    });
+    journey,
+    scope,
+    filters: propertyType ? { propertyType } : undefined,
+    resultState: { sort: 'relevance', page: 0 },
+  });
   return href || `${pathname}?searchError=invalid-place-authority`;
 }
 
 /** Category browse carries only a reviewed Place selection or country-wide intent. */
 export function buildDiscoverBrowseHref(
   listingType: DiscoverListingType,
-  place?: CanonicalPlaceSelection | null,
+  place?: (CanonicalBrowsePlace & Partial<CanonicalPlaceSelection>) | null,
 ) {
   if (listingType === 'developments') {
     return buildDevelopmentsSearchUrl({ canonicalPlaceId: place?.canonicalPlaceId });
@@ -63,10 +77,26 @@ export function buildDiscoverBrowseHref(
 export function buildDiscoverCardHref(
   propertyLabel: string,
   listingType: DiscoverListingType,
-  place?: CanonicalPlaceSelection | null,
+  place?: CanonicalBrowsePlace | null,
 ) {
   if (listingType === 'developments') {
     return buildDevelopmentsSearchUrl({ canonicalPlaceId: place?.canonicalPlaceId });
+  }
+
+  const journeyPage =
+    DISCOVER_JOURNEY_PAGE_BY_LABEL[propertyLabel as keyof typeof DISCOVER_JOURNEY_PAGE_BY_LABEL];
+  if (journeyPage) {
+    const params = new URLSearchParams();
+    if ('useTypes' in journeyPage) params.set('useTypes', journeyPage.useTypes);
+    if (
+      journeyPage.pathname === '/commercial' &&
+      place &&
+      isCanonicalPlaceId(place.canonicalPlaceId)
+    ) {
+      params.set('canonicalPlaceId', place.canonicalPlaceId);
+    }
+    const query = params.toString();
+    return query ? `${journeyPage.pathname}?${query}` : journeyPage.pathname;
   }
 
   const propertyType =
