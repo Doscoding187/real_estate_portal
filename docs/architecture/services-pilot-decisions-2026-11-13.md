@@ -52,3 +52,11 @@ Metropolitan municipalities are contract-defined as context Places (`docs/archit
 `:1112`). The ids above are read from source only; no database was contacted. Whether a given id is currently active and
 selectable as provider coverage is unverified and must be confirmed in the isolated rehearsal (plan Stage 3) before recruitment
 uses these ids.
+
+### Rehearsal check: pilot trial entitlement
+
+Public eligibility requires a provider to be verified, directory-active, and on an active trial or active subscription
+(`server/services/servicesEngineService.ts:548-560`). The pilot is free (D8). The Stage 3 rehearsal must therefore show the exact,
+audited step that gives an approved pilot provider its active trial (or confirm that publication does this). It must also record
+that step in the operations runbook. If no supported path exists, stop: decide on a trial-grant path before recruitment.
+Never use direct SQL.

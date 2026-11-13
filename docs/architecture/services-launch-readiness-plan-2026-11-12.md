@@ -36,7 +36,7 @@ An audited super-admin role-management path can assign the `service_provider` ro
 
 ### Evidence not yet available
 
-- The exact Vercel frontend SHA and the API/worker artifact serving the live domain were not confirmed in the previous assessment; platform metadata reads failed. Hosting correction (checked 2026-11-13 against `origin/main` `14696b8e2`): the frontend is on Vercel and the API image targets Azure Container Apps (`Dockerfile:3-5`; production environment `cae-property-listify-prod` in `docs/database-authority/evidence/release-plan-20261105/release-plan-20261105.json:26`, executed via an Azure Container Apps job). `.github/workflows` contains no deploy job (`ci.yml` only builds the image, line 612). `docs/railway-release-procedure.md` (last changed 2026-10-12) still describes Railway for `api.propertylistifysa.co.za` and is unreconciled with the Azure Dockerfile (2026-11-04); which platform currently serves live API traffic is unverified and must be resolved in Stage 4.
+- The exact Vercel frontend SHA and the API/worker artifact serving the live domain were not confirmed in the previous assessment; platform metadata reads failed. Hosting correction (checked 2026-11-13 against `origin/main` `14696b8e2`): the frontend is on Vercel and the API image targets Azure Container Apps (`Dockerfile:3-5`; production environment `cae-property-listify-prod` in `docs/database-authority/evidence/release-plan-20261105/release-plan-20261105.json:26`, executed via an Azure Container Apps job). `.github/workflows` contains no deploy job (`ci.yml` only builds the image, line 612). Live API hosting was confirmed on 2026-11-13. The #762 release (`14696b8e2`) was deployed as Azure Container Apps revision `ca-property-listify-prod--r24-11131033`. After the revision switch, `https://api.propertylistifysa.co.za/api/health` and `/api/readiness` both returned 200. `docs/railway-release-procedure.md` (last changed 2026-10-12) is stale: it describes a superseded Railway setup and is not the release path.
 - A public page response or `/api/health` result does not establish production database readiness. No protected database target was contacted in this planning work.
 - `pnpm db:authority:status` could not run in the fresh worktree because dependencies are absent (`tsx: not found`). No dependency installation was attempted. Resolve the actual database target and collect governed readiness evidence in the release phase.
 - The prior local journey preview used synthetic data in a disposable worktree. It is not evidence of production supply or hosted end-to-end readiness.
@@ -104,7 +104,7 @@ These are the pilot gates:
 
 ### Platform and release
 
-- Vercel, the API/workers host (Azure Container Apps per `Dockerfile`; confirm against the Railway docs, see §2), email delivery, authentication, and support links are confirmed on the same intended release candidate.
+- Vercel, the API/workers host (Azure Container Apps, confirmed 2026-11-13, see §2), email delivery, authentication, and support links are confirmed on the same intended release candidate.
 - `/api/readiness` and Database Authority evidence are collected; process liveness alone is not accepted as readiness.
 - Service pages, request routes, authentication callbacks, and APIs are checked on mobile and desktop, with error and response-time baselines recorded for the expected pilot load.
 - The release owner records the deployed SHA, monitoring window, rollback/withdrawal action, and GO decision. A paid-MVP launch decision is not a substitute for this Services decision.
