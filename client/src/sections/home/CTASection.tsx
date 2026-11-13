@@ -87,8 +87,8 @@ export function CTASection({ onBrowse }: CTASectionProps) {
               Have a property to list?
             </h3>
             <p className="mt-3 flex-1 text-base leading-7 text-white md:text-lg md:leading-8">
-              Agents, agencies and developers can see how to list. Owners can find an agent to list
-              for them.
+              Agents, agencies, developers and service businesses can see how to list. Owners can
+              find an agent to list for them.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
               <a
