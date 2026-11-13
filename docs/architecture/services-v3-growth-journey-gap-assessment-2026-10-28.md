@@ -9,6 +9,29 @@ launch register, or any database authority. Nothing here authorizes or schedules
 **Task branch:** `feat/services-growth-journey-gap-assessment-20261028` (worktree `property-listify-services-gap-assessment-20261028`, read-only investigation; this document is the only change)
 **Method:** Original read-only audit of `main` at `026586690`, plus a documentation reconciliation against `main` at `dd5e11114` on 2026-11-03. The reconciliation incorporates #693's retired localized route and canonical Place model, and #700's sitemap, structured data, and slug changes.
 
+**Current-status overlay (2026-11-12, `origin/main` #761):** This dated gap
+assessment remains a historical analysis. Refreshing its implementation claims
+against the current source confirms DELTA-1 (#704), DELTA-3 (#701), DELTA-4
+(#700), and DELTA-7 (#702) are shipped; canonical Place coverage is implemented
+through #693. Do not use older “pending”, “not yet on main”, or DELTA-10
+foundation statements below as current status. DELTA-12 provider acquisition
+and DELTA-13 provider-editable service descriptions are implemented on the
+2026-11-12 task branch. A real task-local MySQL application integration journey
+verified registration, email-token acceptance, onboarding, service-description
+save/reload, provider ownership, public projection, and reviewer publication.
+The required full authority suite now reaches the database but exits 1 (812
+files passed, 4 failed, 12 skipped; 5,914 tests passed, 22 failed, 99 skipped).
+Nineteen failures were in unrelated S4 billing tests (one missing test-only
+JWT secret and 18 stale legal-release reads), three readiness-monitor tests
+timed out under suite load, and other failed files reported legal-fixture
+setup/teardown conflicts. A focused concurrent reproduction confirmed that
+tests mutate the shared `legal_active_release` pointer; affected paths passed
+serially. The stale local database PID/socket blocker was resolved through the
+documented recovery procedure without deleting data. External email delivery
+and current approved legal-release content remain unverified. The Services
+master product vision and engine state register contain the current capability
+and verification baseline.
+
 ## 1. Purpose and evaluation lens
 
 Edward's approved product direction for Services is a **service business growth

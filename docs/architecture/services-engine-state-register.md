@@ -2,8 +2,9 @@
 
 **Status:** Draft standing register, adopted 2026-10-28 with Edward's approval of the
 approach. Facts are audited; **dispositions marked *Proposed* require explicit
-founder approval before any execution.** This register is a scheduling-and-disposition
-authority for the Services vertical. It does not amend
+founder approval before any execution.** This register is the Services
+implementation-status and delivery-queue record. It does not amend or
+independently approve changes to
 `services-v1-product-contract.md` (authority for shipped public Services behaviour),
 `services-v2-product-contract.md` (approved MVP direction), or the launch register.
 
@@ -42,8 +43,8 @@ task-owned worktree with evidence recorded in the register line itself.
 
 ## §1 Engine stage statement
 
-**As of `main` @ `b2dd9a18` (2026-11-03):** the Services engine is a
-*contract-governed pilot directory with a complete autonomous enquiry loop* —
+**As of `origin/main` @ `93723fdb` (#761, refreshed 2026-11-12):** the Services
+engine is a contract-governed pilot marketplace and provider workspace —
 the six-category directory (`/services` and `/services/:category`), provider
 profiles, and five topic pages are indexable with canonicals; the localized
 directory route was retired by #693. The engine also has fail-closed reviewed
@@ -51,25 +52,61 @@ publication with audit, one-to-one attributable requests with durable idempotent
 request identity and server-validated property/listing/development context,
 provider lead custody with a six-state lifecycle and notes, verified-request
 reviews with moderation/report triage and transactionally recomputed aggregates,
-a super-admin review workspace, and a gated provider workspace. DELTA-4's
-services sitemap child, structured data, and category alias canonicalization
-landed in #700; localized URLs are omitted. Response measurement is on main
-through #701: the public profile shows a 90-day median from response-event
-truth only, with a minimum of three measured leads. The engine has no campaign
-landing capability, provider-attributed demand capture, export/handover, or
-provider media library.
+a super-admin review workspace, and a gated provider workspace. DELTA-1 per-
+service pages (#704), DELTA-3 response measurement (#701), DELTA-4 SEO (#700),
+and DELTA-7 workspace upgrades (#702) are merged. Canonical Place coverage is
+implemented through #693; broader service-by-Place landing pages remain future
+work. Public provider applications remain held, and service-description editing
+is incomplete in the visible provider editor. Campaign landing/capture,
+provider media, export/handover, automated notifications, and monetization are
+not implemented or approved for launch.
 
-**2026-11-03 update:** DELTA-3 and DELTA-4 are on main through #701 and #700,
-respectively; DELTA-7 is in flight in #702. The Services V3 contract is
-approved and recorded in `services-v3-product-contract.md`; remaining work is
-governed by that contract and the open queue below.
+**Task branch update (2026-11-13):** DELTA-12 provider acquisition and the
+approved provider service-description editor improvement are implemented in
+`feat/services-master-product-vision-and-provider-acquisition-20261112` and
+verified against the exact task-owned disposable MySQL database. The new
+`server/__tests__/integration.services-provider-acquisition.test.ts` uses real
+registration and verification HTTP routes, real authenticated provider
+mutations and reads, persistent service-description writes, ownership checks,
+public projection, and super-admin publication/unpublication. It proves the
+profile remains private until review, blank descriptions clear, over-limit
+content is rejected, foreign service IDs fail, and unpublished edits remain
+private. Verification mail is captured in memory; no external email was sent.
+The integration installs a synthetic local legal fixture, so current approved
+legal content remains a separate release check. The client smoke reached the
+acquisition and role-selected registration pages; it did not submit a browser
+registration.
+
+Focused Services/auth tests passed (13 files, 163 tests). `pnpm check` passed;
+`pnpm run lint:check` exited 0 with zero errors and 12,809 warnings. The full
+`pnpm test:authority` run completed with 812 files passed, 4 failed, 12 skipped
+(5,914 tests passed, 22 failed, 99 skipped). Nineteen failures were in unrelated
+S4 billing tests (one missing test-only `JWT_SECRET`, 18 stale legal-release
+reads); three readiness-monitor tests timed out under full-suite load. The
+remaining failed files reported legal-fixture setup/teardown errors. A focused
+seven-file concurrent reproduction showed the shared mutable
+`legal_active_release` race affecting S4, agency listing lifecycle, agency
+principal bootstrap, and launch-readiness fixture cleanup; those affected paths
+passed in serial reruns (S4 with an ephemeral test-only JWT secret). The 99
+skips are existing explicit opt-in, future-schema, or retired legacy tests, not
+database-startup skips.
+
+The earlier authority attempt failed before test execution could use the local
+database: the repository-owned 3307 MySQL service had a stale PID/socket/lock
+set referring to absent PID 1676553, no listener, and no openers. The documented
+`pnpm db:authority:service:recover` procedure removed only those stale runtime
+artifacts and restarted the service; the exact task-owned database then passed
+authority status and schema-congruency checks. No database files were removed,
+and no shared/production database, schema, migration, deployment or provider
+promotion was touched. The master vision remains the strategic product
+authority; this register tracks implementation state only.
 
 ## §2 Supersession ledger
 
 | # | Artifact | Status | Disposition |
 | --- | --- | --- | --- |
-| S-1 | `services-v1-product-contract.md` | **Authority for shipped public behaviour.** Its remaining-dependency list changes: dep #5 (review authorship/moderation/aggregates) is now implemented via V2 MVP-8; dep #2 (super-admin reviewer staffing/cadence) remains an operational launch dependency; deps #1/#3/#4 unchanged. | Keep. Annotate dep #5 as implemented at next contract revision. |
-| S-2 | `services-v2-product-contract.md` | Authority for approved direction. §6 "provider mini-site" **vocabulary is superseded** by the approved web-presence/growth-journey direction; §6 *sequencing* (MINI-3/MINI-4 first, schema only when evidenced) carries forward unchanged. | Keep §6 as spec; record vocabulary supersession in the V3 contract. Proposed: V3 contract named `services-v3-product-contract.md`. |
+| S-1 | `services-v1-product-contract.md` | **Authority for shipped public behaviour.** V2 review authorship/moderation/aggregates, DELTA-3 response measurement, DELTA-1 service pages, DELTA-4 SEO and canonical Place coverage are later shipped extensions. Reviewer staffing/cadence remains an operational dependency; contact evidence and formal quotes remain open. | Keep and reconcile current-state notes without removing dated history. |
+| S-2 | `services-v2-product-contract.md` | Authority for approved direction. §6 "provider mini-site" vocabulary is superseded by the approved V3 web-presence/growth-journey model; its sequence (existing data first, schema only when evidenced) carries forward. | Keep as the source of the free controlled pilot, hosted presence, and review decisions; V3 is the approved growth contract. |
 | S-3 | `.kiro/specs/services-marketplace-overhaul/` (`requirements.md`, `design.md`, `tasks.md`) | **Superseded.** Pre-contract UI-overhaul spec ("Angi-style" polish, wizard replacement, `Trust_Bar`, provider-card *response time and job count* — invented trust signals). It is the paper trail explaining the unmounted components in §4.2, which were built against this spec and never landed in routed code. | *Proposed: Archive in place* (no deletion, no merge). Never resurrect its response-time/job-count display: trust claims may come only from measured event truth (DELTA-3) and the platforms verified/reviews ladder. |
 | S-4 | Phase-0 notification/orphan-scheduler implementation (`feature_services-engine-phase0`, recovery copies `origin/recovery/services-engine-clean-baseline-2026-07-02`, `origin/recovery/safety-2026-07-03/feature_services-engine-phase0`) | **Retired archive-only** (recorded in `docs/operations/repository-convergence-2026-08-31-classification.md:72`). Relies on retired migration/delivery assumptions. Local branch `feature/services-engine-phase0` no longer exists; local worktree path `/home/edwardspc/Desktop/Dev/listify-services-engine-phase0` is gone. | Do not resurrect. Any notification/reminder/delivery capability is created fresh only as DELTA-8 (new domain, new owner, new contract). |
 | S-5 | `svc/future-state-wt` classification | Historical: broad alternative services-engine rewrite with retired `0062–0074` migration assumptions (convergence doc `:158`). Not a registered worktree today. | Reference-only. Any services schema replacement requires a fresh database-authority design. |
@@ -82,22 +119,29 @@ Statuses: `Proposed` (awaiting founder/V3 approval) · `Approved, not started` �
 
 | Delta | Work | Type | Status | Notes |
 | --- | --- | --- | --- | --- |
-| DELTA-1 Provider web presence (profile → homepage; per-service detail pages) | Code | **Done 2026-10-28** on `feat/services-provider-web-presence-20261028` (PR #704, pending merge) | V3 contract P1-1..6 delivered, no schema, no unrelated refactors. Per-service canonical pages at `/services/provider/:slug/service/:service` reusing `getProviderPublicProfile` (fail-closed on unpublished providers); shared slug authority `toProviderServiceSlug`; honest price range ('Price on request' when unpublished); Platform verified chip; sample-gated measured response; enquiry reuses `buildServiceRequestPath` with `category`+`serviceCode`; per-page `applySeo` with canonical path + BreadcrumbList + honest `Service` JSON-LD; `/sitemap-services.xml` enumerates published per-provider service pages through one additional read-only SELECT leg on the same eligibility conjunction (canonical Place gated on main); profile Services tab cards link to the service pages. Verification: `pnpm check` clean; vitest — sitemap services 10, slug parity 5, client services sweep incl. new page contract test |
+| DELTA-1 Provider web presence (profile → homepage; per-service detail pages) | Code | **Done on `origin/main` #761** (PR #704, commit `bce489970`) | Per-service canonical pages reuse `getProviderPublicProfile` and shared slug authority, preserve price/trust truth and request attribution, add page metadata/structured data and sitemap entries, and link from profile services. No schema. |
 | DELTA-2 Campaign landing pages + provider-attributed demand capture | Code + contract | Proposed | New context vocabulary; idempotency semantics preserved; `noindex`-by-default policy is a contract clause |
-| DELTA-3 Measured response performance from `service_lead_events` | Code | **Done on main 2026-11-03 through #701** | 90-day median from response-event truth; SQL includes leads created at the inclusive cutoff; public display requires three measured leads |
-| DELTA-4 Services SEO infrastructure (sitemap child, JSON-LD, slug canonicalization) | Code | Done (#700) | Category and published-provider sitemap entries; localized URLs omitted; category aliases redirect to canonical slugs |
+| DELTA-3 Measured response performance from `service_lead_events` | Code | **Done on `origin/main` #761** (PR #701, commit `b2dd9a18b`) | 90-day median from response-event truth; public display requires three measured leads |
+| DELTA-4 Services SEO infrastructure (sitemap child, JSON-LD, slug canonicalization) | Code | **Done on `origin/main` #761** (PR #700, commit `dd5e11114`) | Category and eligible provider/service sitemap entries; localized URLs omitted; category aliases redirect to canonical slugs |
 | DELTA-5 Provider media library | Schema (DB authority) | Proposed, evidence-gated | V2 MINI-1 |
 | DELTA-6 Provider content model (case studies/projects) | Schema (DB authority) | Proposed, evidence-gated | V2 MINI-2 |
-| DELTA-7 Lead workspace upgrades (filters/totals/event analytics) + client hygiene sweep | Code | **In flight in #702** | Fail-closed status filtering, request-mix and response-performance panels, honest below-sample states, and dead `ProProfilePage` lazy-import cleanup; read-only queries, no schema change |
+| DELTA-7 Lead workspace upgrades (filters/totals/event analytics) + client hygiene sweep | Code | **Done on `origin/main` #761** (PR #702, commit `3a18d781f`) | Fail-closed status filtering, request-mix and response-performance panels, honest below-sample states, and client hygiene cleanup; read-only queries, no schema change |
 | DELTA-8 Fresh notification/delivery domain (alerts, reminders) | Contract + ops authority | Proposed | Fresh design only; S-4 stays retired |
 | DELTA-9 Export/handover with POPIA consent semantics | Contract (+ legal review) | Proposed | Platform stays attribution system of record |
-| DELTA-10 Coverage geography convergence (typed canonical Places) | Place Authority consumer slice | Proposed | Pre-existing recorded slice; prerequisite for `service × place` discovery pages |
+| DELTA-10 Canonical Place coverage and geography | Place Authority consumer slice | **Foundation shipped through #693** (commit `cbff3e7b3`); service-by-Place pages remain future | Provider coverage/search uses canonical Place IDs; this does not implement radius search or service-by-Place SEO routes |
 | DELTA-11 Commercial model (tiers/placement/lead fees) | Founder decision | Proposed | V2 §3.1 gate: research then approval |
+| DELTA-12 Provider acquisition and registration | Code + operations | **Implemented and task-local DB-backed verified; release email/legal verification pending** | Services acquisition route enters existing `service_provider` registration; real registration and verification HTTP routes established the provider role/session; onboarding completed against existing profile/service/Place authorities; pending provider remained private until super-admin publication. Evidence: `integration.services-provider-acquisition.test.ts`, role/auth/session/onboarding tests. Verification mail was captured in memory; current legal bundle and external delivery not verified. No schema, pricing, provider promotion or deployment. |
+| DELTA-13 Provider-editable service descriptions | Code | **Implemented and task-local DB-backed verified; release validation pending** | Existing provider editor and `service_provider_services.description` authority are reused. Real DB integration proves save/reload, optional blank clear, 2,000-character limit, foreign-service rejection, public profile/service projection, and unpublished privacy. No schema or migration. Published edits remain immediate under V1; no edit-review state is implemented or claimed. |
 
-**Current direction:** The V3 contract basis was approved on 2026-10-28 and is
-recorded in `services-v3-product-contract.md`. DELTA-3 and DELTA-4 are complete;
-DELTA-7 is in flight. Remaining work stays governed by the statuses and
-evidence gates in this queue.
+**Current direction:** V3 is approved. DELTA-1/3/4/7 and the DELTA-10 canonical
+Place foundation are shipped on the refreshed baseline. DELTA-12 and DELTA-13
+have task-local DB-backed journey evidence and focused tests, but remain branch-
+only until normal review/merge/release. The full authority suite is not green:
+the remaining failure is shared legal-fixture concurrency and a missing
+test-only JWT secret in unrelated suites, not database initialization or a
+Services failure. Actual email/legal-release verification, launch supply, and
+operational/release readiness remain outstanding. Later deltas retain their
+stated evidence, founder, legal, and Database Authority gates.
 
 ## §4 Asset reconciliation
 
@@ -213,20 +257,20 @@ remain per their rows below.
    `EnhancedNavbar.account-routing.test.ts`); targeted run 2 files / 85 tests
    pass; `pnpm check` clean.
 
-Remaining hygiene item:
+Resolved hygiene history:
 1. ~~Uncanonicalized category slug aliases~~ — **Resolved 2026-10-28 inside DELTA-4**:
    `ServicesCategoryPage` now redirects legacy underscore/hyphen aliases (and any
    non-canonical rendering of a known category) to its canonical `/services/<hyphen-slug>`
    path by replace-navigation, preserving campaign query context; topic pages
    (`/services/home-loans` etc.) are explicitly excluded from canonicalization. Tests:
    `ServicesCategoryPage.test.tsx` (alias redirect preserved query, canonical route kept
-   in place, topics untouched, BreadcrumbList emitted). §4.6 has no open items; the
-   only hygiene line left overall is the `App.tsx:88` `ProProfilePage` lazy import
-   (advances with DELTA-7).
+   in place, topics untouched, BreadcrumbList emitted). §4.6 has no open items;
+   the former `App.tsx:88` `ProProfilePage` lazy import closed with DELTA-7
+   (#702).
 
 ## §5 Maintenance
 
-- **Evidence age:** current-main reconciliation `main` @ `dd5e11114`, 2026-11-03.
+- **Evidence age:** refreshed source baseline `origin/main` @ `93723fdb` (#761), 2026-11-12.
   Any register line
   older than one merge involving its area must be re-verified before acting on it.
 - Queue and asset lines are updated **in the PR** that changes them — never in a
@@ -237,6 +281,7 @@ Remaining hygiene item:
   §3 statuses are re-based from its definition-of-done, and §4.2 becomes empty by
   execution, not by memory.
 
-*Verification basis: reference sweeps (`rg -l`), `git rev-list --left-right --count`,
-`git log main..<branch>`, `git status` of registered paths at `main` @ `026586690`,
-audit companion `services-v3-growth-journey-gap-assessment-2026-10-28.md`.*
+*Historical asset and branch-lineage checks: reference sweeps (`rg -l`),
+`git rev-list --left-right --count`, `git log`, and registered-path status at
+`main` @ `026586690`. Current product-state reconciliation: `origin/main` @
+`93723fdb` (#761), 2026-11-12, with the evidence in §1 and DELTA rows above.*
