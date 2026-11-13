@@ -88,15 +88,29 @@ function requireCanonicalSharedLivingAssignments(): never {
 
 const capabilityTokenSchema = z.string().uuid();
 
+const SHARED_LIVING_PAGE_SIZE = 24;
+const SHARED_LIVING_NOT_FOUND_MESSAGE = 'This shared living listing was not found.';
+
 export const sharedLivingRouter = router({
   // ---------- Independent public discovery ----------
-  search: publicProcedure
-    .input(sharedLivingSearchSchema.optional())
-    .query(() => requireCanonicalSharedLivingAssignments()),
+  // Public reads answer "nothing found" while no listing has a reviewed place
+  // assignment; restore real reads together with authoring.
+  search: publicProcedure.input(sharedLivingSearchSchema.optional()).query(({ input }) => ({
+    items: [] as never[],
+    total: 0,
+    page: input?.page ?? 0,
+    pageSize: SHARED_LIVING_PAGE_SIZE,
+    hasMore: false,
+    locationState: 'none' as const,
+  })),
 
+  // Public reads answer "nothing found" while no listing has a reviewed place
+  // assignment; restore real reads together with authoring.
   detail: publicProcedure
     .input(z.object({ slug: z.string().trim().min(1).max(180) }).strict())
-    .query(() => requireCanonicalSharedLivingAssignments()),
+    .query((): never => {
+      throw new TRPCError({ code: 'NOT_FOUND', message: SHARED_LIVING_NOT_FOUND_MESSAGE });
+    }),
 
   // ---------- Canonical public enquiry + secure lead thread ----------
   enquire: publicProcedure
@@ -113,17 +127,10 @@ export const sharedLivingRouter = router({
         })
         .strict(),
     )
-    .mutation(async ({ ctx, input }) => {
-      requireCanonicalSharedLivingAssignments();
-      const { capturePublicLead } = await import('./services/publicLeadCaptureService');
-      const result = await capturePublicLead({
-        ...input,
-        authenticatedUserId: ctx.user?.id,
-        source: 'shared_living',
-        sourceSurface: 'shared_living_detail',
-        leadSource: 'shared_living',
-      });
-      return { ...result, threadToken: input.captureRequestId };
+    .mutation((): never => {
+      // An enquiry needs an existing listing and none can exist while no listing
+      // has a reviewed place assignment; restore real reads together with authoring.
+      throw new TRPCError({ code: 'NOT_FOUND', message: SHARED_LIVING_NOT_FOUND_MESSAGE });
     }),
 
   thread: publicProcedure

@@ -184,8 +184,17 @@ export const commercialRouter = router({
         })
         .strict(),
     )
-    .query(() => requireCanonicalCommercialAssignments()),
+    // Public reads answer "nothing found" while no listing has a reviewed place
+    // assignment; restore real reads together with authoring.
+    .query(() => [] as never[]),
+  // Public reads answer "nothing found" while no listing has a reviewed place
+  // assignment; restore real reads together with authoring.
   detail: publicProcedure
     .input(z.object({ slug: z.string().trim().min(1).max(255) }).strict())
-    .query(() => requireCanonicalCommercialAssignments()),
+    .query((): never => {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'This commercial listing was not found.',
+      });
+    }),
 });
