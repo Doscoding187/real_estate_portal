@@ -5,6 +5,7 @@ vi.mock('../../db', () => ({ getDb }));
 
 import {
   hasExactDevelopmentPlaceMatch,
+  listDevelopmentIdsForCanonicalPlaces,
   listDevelopmentPlaceGeography,
 } from '../developmentPlaceAssignmentService';
 
@@ -90,6 +91,26 @@ describe('reviewed Development Place geography projection', () => {
     const result = await listDevelopmentPlaceGeography([42]);
 
     expect(result.get(42)).toEqual({ canonicalPlaceId: null, locationLabels: [] });
+  });
+
+  it('resolves Developments whose single executable Place is any requested Place', async () => {
+    useRows([
+      acceptedAssignment(JOHANNESBURG_PLACE_ID, 'Johannesburg', { developmentId: 42 }),
+      acceptedAssignment(PRETORIA_PLACE_ID, 'Pretoria', { developmentId: 43 }),
+      acceptedAssignment(JOHANNESBURG_PLACE_ID, 'Johannesburg', { developmentId: 44 }),
+      acceptedAssignment(PRETORIA_PLACE_ID, 'Pretoria', { developmentId: 44 }),
+    ]);
+
+    await expect(listDevelopmentIdsForCanonicalPlaces([JOHANNESBURG_PLACE_ID])).resolves.toEqual([
+      42,
+    ]);
+    await expect(
+      listDevelopmentIdsForCanonicalPlaces([JOHANNESBURG_PLACE_ID, PRETORIA_PLACE_ID]),
+    ).resolves.toEqual([42, 43]);
+    await expect(listDevelopmentIdsForCanonicalPlaces([])).resolves.toEqual([]);
+    await expect(listDevelopmentIdsForCanonicalPlaces(['malformed'])).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+    });
   });
 
   it('matches only exact valid Place IDs and fails closed for null or malformed assignments', () => {

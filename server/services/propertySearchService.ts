@@ -66,12 +66,35 @@ export interface PropertySearchOptions {
   provincePlaceId?: string;
 }
 
+/** Manual-source sort values: the shared SortOption plus the homepage rail's score order. */
+export type ManualPropertySortOption = SortOption | 'trending';
+
+/**
+ * Trending score, computed in SQL from columns already on the properties table:
+ *   score = (enquiries * 5 + LEAST(views, 500) / 50 + 1) / POW(age_days + 2, 1.3)
+ * - enquiries * 5: an enquiry is the strongest intent signal, so it weighs most.
+ * - LEAST(views, 500) / 50: views are not deduplicated (every public detail load
+ *   increments them), so they are capped at 500 and scaled to at most 10 points.
+ * - + 1: a base so listings with no signals still rank by recency.
+ * - POW(age_days + 2, 1.3): age decay so new listings surface; +2 avoids a zero
+ *   divisor and softens the first days. Future-dated rows count as age 0.
+ * NULL views/enquiries count as 0.
+ */
+export function buildTrendingScoreExpression(): SQL {
+  return sql`(COALESCE(${properties.enquiries}, 0) * 5 + LEAST(COALESCE(${properties.views}, 0), 500) / 50 + 1) / POW(GREATEST(DATEDIFF(NOW(), ${properties.createdAt}), 0) + 2, 1.3)`;
+}
+
 /**
  * Manual-property pages must remain stable when the selected sort field ties.
  * A property ID tie-breaker prevents candidates moving between pages across
  * otherwise identical requests.
  */
-export function buildManualPropertySortOrder(sortOption: SortOption): [SQL, SQL] {
+export function buildManualPropertySortOrder(
+  sortOption: ManualPropertySortOption,
+): [SQL, SQL] | [SQL, SQL, SQL] {
+  if (sortOption === 'trending') {
+    return [desc(buildTrendingScoreExpression()), desc(properties.createdAt), asc(properties.id)];
+  }
   let primaryOrder: SQL;
   switch (sortOption) {
     case 'price_asc':
@@ -360,7 +383,7 @@ export class PropertySearchService {
    */
   async searchProperties(
     filters: PropertyFilters,
-    sortOption: SortOption = 'date_desc',
+    sortOption: ManualPropertySortOption = 'date_desc',
     page: number = 1,
     pageSize: number = 12,
     options: PropertySearchOptions = { publicOnly: true },

@@ -103,6 +103,8 @@ import { cacheRouter } from './cacheRouter';
 import { monetizationRouter } from './monetizationRouter';
 import { partnerRouter } from './partnerRouter';
 import { cataloguePublisherRouter } from './cataloguePublisherRouter';
+import { homeMarketInsightsRouter } from './homeMarketInsightsRouter';
+import { homeAreasRouter } from './homeAreasRouter';
 import { superAdminPublisherRouter } from './superAdminPublisherRouter';
 import { reviewsRouter } from './reviewsRouter';
 import { leadsRouter } from './leadsRouter';
@@ -157,6 +159,8 @@ const appRouterConfig = {
   similarProperties: similarPropertiesRouter,
   cache: cacheRouter,
   cataloguePublisher: cataloguePublisherRouter,
+  homeMarketInsights: homeMarketInsightsRouter,
+  homeAreas: homeAreasRouter,
   superAdminPublisher: superAdminPublisherRouter,
   reviews: reviewsRouter,
   leads: leadsRouter,
@@ -293,8 +297,10 @@ const appRouterConfig = {
             minLng: z.number().optional(),
             maxLng: z.number().optional(),
             sortOption: z
-              .enum(['relevance', 'price_asc', 'price_desc', 'date_desc', 'date_asc'])
+              .enum(['relevance', 'price_asc', 'price_desc', 'date_desc', 'date_asc', 'trending'])
               .default('relevance'),
+            requirePhoto: z.boolean().optional(),
+            developmentResultShape: z.enum(['development', 'unit_type']).optional(),
             page: z.number().int().min(0).max(PUBLIC_SEARCH_MAX_PAGE_INDEX).default(0),
             pageSize: z.number().int().min(1).max(50).default(12),
           })
