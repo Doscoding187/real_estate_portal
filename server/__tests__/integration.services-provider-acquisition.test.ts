@@ -27,7 +27,7 @@ vi.mock('../_core/email', () => ({
 
 import { COOKIE_NAME } from '../../shared/const';
 import type { AppRouter } from '../routers';
-import { users, partners, auditLogs, userLegalAcceptances } from '../../drizzle/schema';
+import { users, partners, auditLogs } from '../../drizzle/schema';
 import { authService } from '../_core/auth';
 import { registerAuthRoutes } from '../_core/authRoutes';
 import { createContext } from '../_core/context';
@@ -79,7 +79,8 @@ async function cleanupFixtures() {
     await db.delete(partners).where(inArray(partners.id, providerIds));
   }
   if (userIds.length) {
-    await db.delete(userLegalAcceptances).where(inArray(userLegalAcceptances.userId, userIds));
+    // Legal acceptances are append-only for runtime and CI roles (SELECT, INSERT). The synthetic
+    // legal release fixture removes them through its authority connection, so it must run first.
     await db.delete(users).where(inArray(users.id, userIds));
   }
   createdUserIds.length = 0;
@@ -155,8 +156,10 @@ describeWithDb('Services provider acquisition and editable descriptions', () => 
 
   afterAll(async () => {
     if (server) await new Promise<void>(resolve => server!.close(() => resolve()));
-    await cleanupFixtures();
+    // The legal fixture owns its synthetic release and every acceptance tied to it; clean it up
+    // before deleting the users those acceptances reference.
     await legalFixture?.cleanup();
+    await cleanupFixtures();
     deliveredVerificationEmails.length = 0;
     await releaseDevelopmentIntegrationMutex();
     if (priorJwtSecret === undefined) delete process.env.JWT_SECRET;
