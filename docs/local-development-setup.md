@@ -414,7 +414,9 @@ places are the digest-pinned admission packages loaded by
    and to `placeAuthority.resolveCanonicalUrl` with `{"json":{"path":"/gauteng"}}`.
 
 Port 3020 is in the local development CORS list in
-`server/_core/browserSecurity.ts`.
+`server/_core/browserSecurity.ts`, and backend port 5070 (localhost and
+127.0.0.1) is in the development-only allowed backends in
+`client/src/lib/env.contract.ts`; production and staging rules are unchanged.
 
 ## Running The App Locally
 

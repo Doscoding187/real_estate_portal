@@ -62,11 +62,17 @@ case "${1:-status}" in
     echo "API: $API_URL   WEB: $WEB_URL"
     ;;
   stop)
-    for f in "$API_PID_FILE" "$WEB_PID_FILE"; do
+    # Only act when our own pid file says we started it. The pid file holds the
+    # launcher; the listener is its child, found by port.
+    for pair in "$API_PID_FILE:$API_PORT" "$WEB_PID_FILE:$WEB_PORT"; do
+      f="${pair%%:*}"
+      port="${pair##*:}"
       if alive "$f"; then
         pid="$(cat "$f")"
-        kill -- "-$pid" 2>/dev/null || kill "$pid" 2>/dev/null
-        echo "stopped $pid"
+        lpid="$(ss -ltnp 2>/dev/null | grep ":$port " | sed -n 's/.*pid=\([0-9]*\).*/\1/p' | head -n 1)"
+        [ -n "$lpid" ] && kill "$lpid" 2>/dev/null
+        kill "$pid" 2>/dev/null
+        echo "stopped launcher $pid listener ${lpid:-none}"
       fi
       rm -f "$f"
     done
