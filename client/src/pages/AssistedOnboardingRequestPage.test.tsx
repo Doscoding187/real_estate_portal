@@ -95,6 +95,21 @@ describe('assisted onboarding request page', () => {
     );
   });
 
+  it.each([
+    ['developer_operations', 'Talk to us about listing your development'],
+    ['agency_operations', 'Talk to us about your agency'],
+    ['agent', 'Get help with your agent account'],
+    ['other', 'Contact Property Listify'],
+  ])('shows a plain heading for ?area=%s without internal wording', (area, heading) => {
+    window.history.replaceState({}, '', `/contact?area=${area}`);
+    render(<AssistedOnboardingRequestPage />);
+
+    expect(screen.getByRole('heading', { level: 1, name: heading })).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(
+      /commercial activation|preparation|assisted onboarding|controlled/i,
+    );
+  });
+
   it('fails closed on an unrecognised query-area value', () => {
     window.history.replaceState({}, '', '/contact?area=distribution_manager');
     render(<AssistedOnboardingRequestPage />);

@@ -38,7 +38,7 @@ export default function NavLandingPage() {
       '/legal/compliance',
     ].includes(path)
   ) {
-    return <LegalDocumentPage kind="privacy" />;
+    return <LegalDocumentPage kind="privacy" coversCookies={path.endsWith('/cookies')} />;
   }
   if (path.startsWith('/legal/') || ['/cookies', '/compliance'].includes(path)) {
     const titles: Record<string, string> = {

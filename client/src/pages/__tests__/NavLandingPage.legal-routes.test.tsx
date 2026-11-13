@@ -53,6 +53,20 @@ describe('released legal document routes', () => {
     expect(screen.queryByText(/temporarily unavailable/)).toBeNull();
   });
 
+  it('points cookie routes at the cookie wording in the Privacy Notice', async () => {
+    window.history.replaceState({}, '', `/legal/cookies?bundle=${release.bundleId}`);
+    render(<NavLandingPage />);
+    expect(await screen.findByText(release.privacy.content)).toBeTruthy();
+    expect(
+      screen.getByText(/cookies and browser storage is explained in this Privacy Notice/),
+    ).toBeTruthy();
+    cleanup();
+    window.history.replaceState({}, '', `/legal/privacy?bundle=${release.bundleId}`);
+    render(<NavLandingPage />);
+    expect(await screen.findByText(release.privacy.content)).toBeTruthy();
+    expect(screen.queryByText(/cookies and browser storage is explained/)).toBeNull();
+  });
+
   it('keeps the cookie route unavailable when released copy cannot be fetched', async () => {
     controls.fetch.mockRejectedValue(new Error('No released copy'));
     window.history.replaceState({}, '', '/legal/cookies');

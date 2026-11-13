@@ -51,7 +51,10 @@ const entries: Entry[] = (
   ) as { entries: Entry[] }
 ).entries;
 
-const BROKEN_LIVE = new Set(['/gauteng/soweto/albertynsville', '/gauteng/city-of-johannesburg/althea']);
+const BROKEN_LIVE = new Set([
+  '/gauteng/soweto/albertynsville',
+  '/gauteng/city-of-johannesburg/althea',
+]);
 
 function runtimeScope(entry: Entry) {
   return BROKEN_LIVE.has(entry.path) ? 'metro_city' : entry.search_scope;

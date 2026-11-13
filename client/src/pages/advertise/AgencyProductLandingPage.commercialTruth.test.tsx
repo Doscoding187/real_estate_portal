@@ -125,22 +125,20 @@ describe('public Agency product landing page', () => {
 
     expect(
       screen.getByRole('heading', {
-        name: 'Establish your Agency workspace and prepare private inventory.',
+        name: 'Agency accounts are coming. See how set-up will work.',
         level: 1,
       }),
     ).toBeInTheDocument();
-    expect(screen.getByText('Preparation-only onboarding')).toBeInTheDocument();
+    expect(screen.getByText('Publishing is not open yet')).toBeInTheDocument();
     expect(
       screen.getByText(
-        'Commercial activation is not available yet. Complete your profile and prepare private drafts; publishing becomes available after approved commercial activation.',
+        'You can set up your profile and prepare listings privately now. Publishing and paid plans open later.',
       ),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(
-        'Publishing, marketplace participation and team activation follow approval and commercial activation.',
-      ),
+      screen.getByText('Publishing and team access open later, after approval.'),
     ).toBeInTheDocument();
-    expect(screen.getByText('Prepare private inventory')).toBeInTheDocument();
+    expect(screen.getByText('Prepare private listings')).toBeInTheDocument();
 
     // Held at launch: the sign-up CTA is a non-link "Not open yet" state.
     expect(
@@ -183,7 +181,7 @@ describe('public Agency product landing page', () => {
 
     render(<AgencyProductLandingPage />);
 
-    expect(screen.getByText('Preparation-only onboarding')).toBeInTheDocument();
+    expect(screen.getByText('Publishing is not open yet')).toBeInTheDocument();
     expect(screen.queryByText('R999')).not.toBeInTheDocument();
     expect(useCatalogMock).not.toHaveBeenCalled();
   });
@@ -217,7 +215,7 @@ describe('public Agency product landing page', () => {
 
     render(<AgencyProductLandingPage />);
 
-    expect(screen.getByText('Preparation-only onboarding')).toBeInTheDocument();
+    expect(screen.getByText('Publishing is not open yet')).toBeInTheDocument();
     expect(screen.getByText(/temporarily unavailable/i)).toBeInTheDocument();
     expect(screen.queryByText('R999')).not.toBeInTheDocument();
   });
@@ -305,7 +303,7 @@ describe('public Agency product landing page', () => {
     expect(screen.getByText('Assisted commercial confirmation')).toBeInTheDocument();
     expect(screen.getByText('Finance-verified activation')).toBeInTheDocument();
     expect(screen.getByText('No instant checkout')).toBeInTheDocument();
-    expect(screen.getByText(/canonical product details are unavailable/i)).toBeInTheDocument();
+    expect(screen.getByText(/plan details are unavailable/i)).toBeInTheDocument();
     expect(
       within(screen.getByTestId('agency-launch-access-card')).getByRole('link', {
         name: /Contact Property Listify/i,

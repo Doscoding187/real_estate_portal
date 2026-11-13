@@ -2,7 +2,10 @@ import { lazy, Suspense } from 'react';
 import { BriefcaseBusiness, Building2, UsersRound } from 'lucide-react';
 import { EnhancedNavbar } from '@/components/EnhancedNavbar';
 import { Footer } from '@/components/Footer';
-import { CommercialActivationNotice } from '@/components/commercial/CommercialActivationNotice';
+import {
+  CommercialActivationNotice,
+  PUBLIC_PUBLISHING_NOTICE,
+} from '@/components/commercial/CommercialActivationNotice';
 import { SEOHead } from '@/components/advertise/SEOHead';
 import { StructuredData } from '@/components/advertise/StructuredData';
 import { VisualPathCard } from '@/components/advertise/VisualPathCard';
@@ -289,7 +292,7 @@ function PreparationAdvertiseWithUs() {
               </p>
             </div>
             <div className="rounded-[28px] border border-white/15 bg-white/10 p-6 shadow-[0_28px_80px_rgba(15,23,42,0.24)] backdrop-blur sm:p-8">
-              <CommercialActivationNotice />
+              <CommercialActivationNotice {...PUBLIC_PUBLISHING_NOTICE} />
             </div>
           </div>
         </section>

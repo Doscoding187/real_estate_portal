@@ -2,7 +2,10 @@ import React from 'react';
 import { EnhancedNavbar } from '@/components/EnhancedNavbar';
 import { Footer } from '@/components/Footer';
 import { Building2, UserRound, UsersRound, ArrowLeft } from 'lucide-react';
-import { CommercialActivationNotice } from '@/components/commercial/CommercialActivationNotice';
+import {
+  CommercialActivationNotice,
+  PUBLIC_PUBLISHING_NOTICE,
+} from '@/components/commercial/CommercialActivationNotice';
 import { VisualPathCard } from '@/components/advertise/VisualPathCard';
 import { SEOHead } from '@/components/advertise/SEOHead';
 import { Link } from 'wouter';
@@ -83,8 +86,8 @@ function PreparationAdvertiseSellPage() {
   return (
     <div className="flex min-h-screen flex-col bg-slate-50">
       <SEOHead
-        title="Choose your preparation path | Property Listify"
-        description="Choose the Property Listify preparation path for an Agent, Agency, or Developer business before commercial activation."
+        title="Choose your role | Property Listify"
+        description="Choose your role on Property Listify: agent, agency or developer. Publishing and paid plans are not open yet."
         canonicalUrl="/advertise/sell"
       />
       <EnhancedNavbar />
@@ -94,66 +97,52 @@ function PreparationAdvertiseSellPage() {
           <Link href="/advertise">
             <a className="mb-8 inline-flex cursor-pointer items-center text-slate-500 transition-colors hover:text-primary">
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to preparation paths
+              Back to Advertise
             </a>
           </Link>
 
           <div className="mx-auto max-w-3xl text-center">
             <h1 className="mb-4 text-4xl font-bold tracking-tight text-slate-900 md:text-5xl">
-              Choose your Property Listify preparation path
+              Choose your role
             </h1>
             <p className="text-xl text-slate-600">
-              Establish your role-specific presence and prepare private inventory before commercial
-              activation.
+              Set up your profile and prepare private listings. Publishing is not open yet.
             </p>
           </div>
 
           <div className="mx-auto mt-10 max-w-3xl">
-            <CommercialActivationNotice />
+            <CommercialActivationNotice {...PUBLIC_PUBLISHING_NOTICE} />
           </div>
 
           <div className="mx-auto mt-16 grid max-w-6xl grid-cols-1 gap-8 md:grid-cols-3">
             <VisualPathCard
               title="For Agents"
-              description="Complete the available Agent setup and prepare private listing drafts."
+              description="Set up your agent profile and prepare private listing drafts."
               icon={UserRound}
               href="/advertise/sell/agents"
-              ctaText="Start Agent preparation"
-              benefits={[
-                'Professional profile preparation',
-                'Canonical coverage setup',
-                'Private listing drafts',
-              ]}
+              ctaText="Set up your agent profile"
+              benefits={['Professional profile', 'The areas you cover', 'Private listing drafts']}
             />
             <VisualPathCard
               title="For Agencies"
-              description="Establish an Agency owner account, identity, and private inventory workspace."
+              description="Agency accounts are not open yet. See how set-up will work."
               icon={UsersRound}
               href="/advertise/sell/agencies"
-              ctaText="Start Agency preparation"
-              benefits={[
-                'Agency owner account',
-                'Business identity preparation',
-                'Private inventory workspace',
-              ]}
+              ctaText="See agency details"
+              benefits={['Agency owner account', 'Business details', 'Private listings workspace']}
             />
             <VisualPathCard
               title="For Developers"
-              description="Establish your Developer organisation for review and prepare private development drafts."
+              description="Developer accounts are not open yet. See how set-up will work."
               icon={Building2}
               href="/advertise/sell/developers"
-              ctaText="Start Developer preparation"
-              benefits={[
-                'Developer organisation setup',
-                'Organisation review state',
-                'Private development drafts',
-              ]}
+              ctaText="See developer details"
+              benefits={['Company set-up', 'Company review', 'Private development drafts']}
             />
           </div>
 
           <div className="mx-auto mt-12 max-w-3xl rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center text-sm leading-7 text-slate-700">
-            Marketplace publication, paid commercial access, and new marketplace opportunities
-            remain protected by their existing approval and activation requirements.
+            Publishing and paid plans are not open yet, and will need approval when they are.
           </div>
         </div>
       </main>

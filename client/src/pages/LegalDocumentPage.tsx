@@ -25,7 +25,14 @@ export function LegalDocumentUnavailable({ title }: { title: string }) {
   );
 }
 
-export default function LegalDocumentPage({ kind }: { kind: 'terms' | 'privacy' }) {
+export default function LegalDocumentPage({
+  kind,
+  coversCookies = false,
+}: {
+  kind: 'terms' | 'privacy';
+  /** The cookie routes show the Privacy Notice, which holds the cookie wording. */
+  coversCookies?: boolean;
+}) {
   const [release, setRelease] = useState<RegistrationLegalRelease | null>(null);
   const [failed, setFailed] = useState(false);
   const title = kind === 'terms' ? 'Terms of Service' : 'Privacy Notice';
@@ -56,6 +63,11 @@ export default function LegalDocumentPage({ kind }: { kind: 'terms' | 'privacy' 
     <HomeLayout>
       <main className="mx-auto max-w-4xl px-5 pb-16 pt-28 text-slate-900">
         <h1 className="text-3xl font-semibold">{title}</h1>
+        {coversCookies ? (
+          <p id="cookies" className="mt-3 text-sm text-slate-600">
+            How we use cookies and browser storage is explained in this Privacy Notice.
+          </p>
+        ) : null}
         {document && release ? (
           <>
             <p className="my-5 text-sm">

@@ -122,24 +122,20 @@ describe('public Agent product landing page', () => {
 
     expect(
       screen.getByRole('heading', {
-        name: 'Establish your Agent presence and prepare private inventory.',
+        name: 'Set up your agent profile and prepare your listings.',
         level: 1,
       }),
     ).toBeInTheDocument();
-    expect(screen.getByText('Preparation-only onboarding')).toBeInTheDocument();
+    expect(screen.getByText('Publishing is not open yet')).toBeInTheDocument();
     expect(
       screen.getByText(
-        'Commercial activation is not available yet. Complete your profile and prepare private drafts; publishing becomes available after approved commercial activation.',
+        'You can set up your profile and prepare listings privately now. Publishing and paid plans open later.',
       ),
     ).toBeInTheDocument();
     expect(screen.getAllByText('Prepare private listing drafts')).toHaveLength(1);
-    expect(
-      screen.getByText(
-        'Publication and marketplace participation follow approved commercial activation.',
-      ),
-    ).toBeInTheDocument();
+    expect(screen.getByText('Publishing opens later.')).toBeInTheDocument();
 
-    const preparationLinks = screen.getAllByRole('link', { name: /Start Agent preparation/i });
+    const preparationLinks = screen.getAllByRole('link', { name: /Set up your agent profile/i });
     expect(preparationLinks).toHaveLength(2);
     preparationLinks.forEach(link => {
       expect(link).toHaveAttribute('href', '/login?mode=register&next=%2Fagent%2Fsetup&role=agent');
@@ -223,7 +219,7 @@ describe('public Agent product landing page', () => {
     render(<AgentProductLandingPage />);
 
     expect(screen.queryByTestId('agent-launch-access-unavailable-card')).not.toBeInTheDocument();
-    expect(screen.getByText('Preparation-only onboarding')).toBeInTheDocument();
+    expect(screen.getByText('Publishing is not open yet')).toBeInTheDocument();
   });
 
   it('keeps account creation primary when the separately enabled commercial catalog is unavailable', () => {

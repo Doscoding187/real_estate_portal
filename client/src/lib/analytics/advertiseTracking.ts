@@ -6,6 +6,8 @@
  * Requirements: 8.4, 8.5
  */
 
+import { getApiUrl } from '@/lib/api';
+
 // Event types
 export type AdvertiseEventType =
   | 'page_view'
@@ -307,7 +309,9 @@ const sendToAnalytics = async (event: any): Promise<void> => {
       return;
     }
 
-    const endpoint = '/api/analytics/track';
+    // The site is served from a static host; the analytics route lives on the API host.
+    // A relative path there answers a POST with 405 (a console error on /advertise).
+    const endpoint = getApiUrl('/api/analytics/track');
 
     await fetch(endpoint, {
       method: 'POST',

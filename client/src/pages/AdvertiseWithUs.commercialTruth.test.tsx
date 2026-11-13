@@ -47,7 +47,7 @@ describe('public advertise entry', () => {
         level: 1,
       }),
     ).toBeInTheDocument();
-    expect(screen.getByText('Preparation-only onboarding')).toBeInTheDocument();
+    expect(screen.getByText('Publishing is not open yet')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Set up your agent profile' })).toHaveAttribute(
       'href',
       '/advertise/sell/agents',
