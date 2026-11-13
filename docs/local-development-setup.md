@@ -376,6 +376,50 @@ not access `listify_local`, staging, or production.
 4. Log in as `agent@listify.local` to confirm an Agent account retains its
    Agent dashboard and reaches Distribution from the Agent sidebar.
 
+## Local parity preview: place search and place pages
+
+Use this to check place search (`placeAuthority.discover`) and place pages
+(`placeAuthority.resolveCanonicalUrl`) against the real server code and the real
+national place data, with no user data and no live database connection. The
+places are the digest-pinned admission packages loaded by
+`pnpm db:places:prepare-national` into your disposable worktree database on
+`127.0.0.1:3307`. Port 3306 stays prohibited.
+
+1. Run the "Database Authority local runtime" sequence up to and including
+   `pnpm db:places:verify-national` (service start and wait,
+   `db:worktree:create`, `db:migrate:apply`, `db:schema:congruency`,
+   `db:places:prepare-national`, `db:places:verify-national`).
+2. Start, check and stop the API (:5070) and web app (:3020):
+
+   ```bash
+   bash scripts/preview/local-parity.sh start
+   bash scripts/preview/local-parity.sh status
+   bash scripts/preview/local-parity.sh stop
+   ```
+
+   The script is idempotent, refuses to touch a port held by another process,
+   and keeps PIDs and logs under `/var/tmp/property-listify-parity-<uid>/`
+   (never inside the Database Authority service directory
+   `/var/tmp/property-listify-<uid>/`, which refuses unexpected entries).
+   Override the ports with `PARITY_API_PORT` and `PARITY_WEB_PORT`. The web app
+   gets `VITE_API_URL` and `VITE_API_BASE_URL` pointing at the local API on the
+   command line. Open `http://127.0.0.1:3020`.
+3. Local-only values: the script reads no env file. The API takes its database
+   target and JWT secret from the central local Database Authority environment
+   (`pnpm db:authority:status` shows which required names are configured; never
+   print the values). `REDIS_URL` is not needed, because the distributed
+   rate-limit store is only required for production and staging. If a secret is
+   missing, generate a dev-only one (see the JWT command earlier in this file)
+   in your own local environment; never copy a value from another environment.
+4. Check from a script, for example a GET to
+   `http://127.0.0.1:5070/api/trpc/placeAuthority.discover?input={"json":{"query":"Sandton"}}`
+   and to `placeAuthority.resolveCanonicalUrl` with `{"json":{"path":"/gauteng"}}`.
+
+Port 3020 is in the local development CORS list in
+`server/_core/browserSecurity.ts`, and backend port 5070 (localhost and
+127.0.0.1) is in the development-only allowed backends in
+`client/src/lib/env.contract.ts`; production and staging rules are unchanged.
+
 ## Running The App Locally
 
 Start backend and frontend together:
