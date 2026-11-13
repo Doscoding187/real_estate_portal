@@ -87,9 +87,8 @@ describe('WhyPropertyListifySection', () => {
     ).toHaveAttribute('href', '/services');
     fireEvent.click(screen.getByRole('tab', { name: 'Service providers' }));
     const panel = screen.getByRole('tabpanel');
-    expect(
-      within(panel).getByText(/service provider accounts are not open yet/i),
-    ).toBeInTheDocument();
+    expect(within(panel).getByText(/service provider applications are open/i)).toBeInTheDocument();
+    expect(within(panel).getByText(/the services directory is live/i)).toBeInTheDocument();
     expect(within(panel).getByRole('link', { name: 'Contact us' })).toHaveAttribute(
       'href',
       '/contact?area=other',
@@ -118,6 +117,7 @@ describe('WhyPropertyListifySection', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Service providers' }));
     const panel = screen.getByRole('tabpanel');
     expect(within(panel).getByRole('link', { name: 'Contact us' })).toBeInTheDocument();
+    expect(within(panel).getByText(/service provider applications are open/i)).toBeInTheDocument();
     expect(
       within(panel).getByRole('link', { name: /see service provider details/i }),
     ).toHaveAttribute('href', '/advertise/services');

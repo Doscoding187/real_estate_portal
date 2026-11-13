@@ -50,11 +50,12 @@ const PROFESSIONAL_PATHS: readonly RolePath[] = [
   {
     title: 'Service businesses',
     get: 'A service profile in the property services directory, with requests from people who need you.',
-    today: 'Service provider accounts are not open yet. See how it will work and get in touch.',
+    today:
+      'Service provider applications are open. Apply, verify your email and complete your profile, which stays private until reviewed.',
     href: '/advertise/services',
     cta: 'See service details',
     icon: Wrench,
-    open: false,
+    open: true,
   },
 ];
 

@@ -487,7 +487,7 @@ export default function Login() {
             Choose your <span className="text-indigo-600 dark:text-indigo-400">role</span>
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-slate-600 dark:text-slate-400 sm:text-lg">
-            One platform for buyers and agents. Start with the path that fits you.
+            One platform for buyers, agents and service providers. Start with the path that fits you.
           </p>
         </div>
 

@@ -170,9 +170,9 @@ const WHY_AUDIENCES: readonly Audience[] = [
     tabIcon: Wrench,
     headline: 'Be found by people who need a property service.',
     summary:
-      'Service provider accounts are not open yet. The services directory is live, and you can see how provider access will work.',
+      'Service provider applications are open: apply, verify your email and complete your profile, which stays private until an authorized reviewer approves it. The services directory is live.',
     heldSummary:
-      'Service provider accounts are not open yet. The services directory opens once reviewed providers are listed, and you can see how provider access will work.',
+      'Service provider applications are open: apply, verify your email and complete your profile, which stays private until an authorized reviewer approves it. The services directory opens once reviewed providers are listed.',
     benefits: [
       {
         title: 'A service profile',

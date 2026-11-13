@@ -26,7 +26,8 @@ describe('ListWithUsSection', () => {
       'href',
       '/advertise/services',
     );
-    expect(screen.getAllByText('Opening soon')).toHaveLength(3);
+    expect(screen.getAllByText('Opening soon')).toHaveLength(2);
+    expect(screen.getByText(/service provider applications are open/i)).toBeInTheDocument();
     expect(
       screen.getByText(
         'Put your properties, your profile and your developments where buyers and renters search.',
