@@ -22,7 +22,10 @@ import {
 import { EnhancedNavbar } from '@/components/EnhancedNavbar';
 import { Footer } from '@/components/Footer';
 import { SEOHead } from '@/components/advertise/SEOHead';
-import { CommercialActivationNotice } from '@/components/commercial/CommercialActivationNotice';
+import {
+  CommercialActivationNotice,
+  PUBLIC_PUBLISHING_NOTICE,
+} from '@/components/commercial/CommercialActivationNotice';
 import { useCommercialCatalog, type CommercialProduct } from '@/hooks/useCommercialCatalog';
 import { useCommercialProductAvailability } from '@/hooks/useCommercialProductAvailability';
 import { SalesPauseNotice } from '@/components/commercial/SalesPauseNotice';
@@ -237,7 +240,7 @@ function getAgencyFaqs(product?: CommercialProduct): readonly AgencyFaq[] {
       {
         question: 'How can we confirm the current offer?',
         answer:
-          'Contact Property Listify for an assisted commercial conversation. We will confirm the current price, access term, activation path and applicable safeguards from the canonical catalogue rather than relying on an old public value.',
+          'Contact Property Listify for an assisted commercial conversation. We will confirm the current price, access term, how access starts and any conditions from our current price list rather than an old public value.',
       },
       {
         question: 'What does the Agency workspace support?',
@@ -594,8 +597,8 @@ function LaunchAccessCard({ product }: { product?: CommercialProduct }) {
           </span>
         </div>
         <p className="mt-5 text-sm leading-7 text-slate-600">
-          The canonical product details are unavailable right now, so Property Listify is keeping
-          this route assisted rather than showing an unverified price.
+          The plan details are unavailable right now, so Property Listify is keeping this route
+          assisted rather than showing an unverified price.
         </p>
         <div className="mt-7 space-y-3">
           {AGENCY_LAUNCH_FALLBACK_DETAILS.map(item => {
@@ -1130,8 +1133,7 @@ export function AgencyCommercialLandingPage() {
                   ))}
                 </div>
                 <p className="mt-6 text-xs leading-5 text-slate-600">
-                  Capability availability is governed by the current canonical Agency product and
-                  implemented runtime.
+                  What you can use depends on what is open at the time.
                 </p>
               </div>
             </div>
@@ -1286,7 +1288,7 @@ function AgencyPreparationLandingPage({
   return (
     <div className="min-h-screen bg-[var(--surface)] text-slate-950">
       <SEOHead
-        title="Prepare your Agency workspace | Property Listify"
+        title="Agency accounts | Property Listify"
         description="Agency accounts on Property Listify are not open yet. See how agency set-up will work and get in touch."
         canonicalUrl="/advertise/sell/agencies"
       />
@@ -1313,7 +1315,7 @@ function AgencyPreparationLandingPage({
                   For property agencies
                 </p>
                 <h1 className="mt-6 font-serif text-5xl font-semibold leading-[1.03] tracking-[-0.05em] text-white sm:text-6xl lg:text-7xl">
-                  Establish your Agency workspace and prepare private inventory.
+                  Agency accounts are coming. See how set-up will work.
                 </h1>
                 <p className="mt-7 max-w-2xl text-lg leading-8 text-slate-300 sm:text-xl sm:leading-9">
                   Agency accounts are not open yet. Below is how agency set-up will work. Contact us
@@ -1331,7 +1333,7 @@ function AgencyPreparationLandingPage({
               </div>
 
               <div className="relative rounded-[30px] border border-white/15 bg-white/10 p-6 shadow-[0_28px_80px_rgba(15,23,42,0.24)] backdrop-blur sm:p-8">
-                <CommercialActivationNotice />
+                <CommercialActivationNotice {...PUBLIC_PUBLISHING_NOTICE} />
               </div>
             </div>
           </div>
@@ -1340,12 +1342,12 @@ function AgencyPreparationLandingPage({
         <section className="border-b border-slate-200 bg-white py-24 md:py-32">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <SectionIntro
-              eyebrow="Prepare for participation"
+              eyebrow="Get ready"
               title="How agency set-up will work once accounts open."
             >
-              These are the steps once agency accounts open. Set-up establishes the business context
-              and lets your Agency organise private inventory. It does not grant marketplace
-              publication, paid commercial access, or active team participation.
+              These are the steps once agency accounts open. Set-up records your business details
+              and lets your agency organise private listings. It does not publish anything, start a
+              paid plan or add your team.
             </SectionIntro>
             <div className="mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
               {[
@@ -1361,13 +1363,13 @@ function AgencyPreparationLandingPage({
                 },
                 {
                   icon: ClipboardCheck,
-                  title: 'Record preparation details',
-                  text: 'Save the information and commercial preference needed for a later approved activation path.',
+                  title: 'Save your details',
+                  text: 'Save the information we will need when paid plans open.',
                 },
                 {
                   icon: ListChecks,
-                  title: 'Prepare private inventory',
-                  text: 'Open the workspace, create private drafts and return to continue preparing them.',
+                  title: 'Prepare private listings',
+                  text: 'Open the workspace, create private drafts and return to continue them.',
                 },
               ].map(item => {
                 const Icon = item.icon;
@@ -1394,15 +1396,14 @@ function AgencyPreparationLandingPage({
           <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
             <div className="rounded-[30px] border border-amber-200 bg-amber-50 p-7 md:p-10">
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-amber-800">
-                What remains protected
+                What is not open yet
               </p>
               <h2 className="mt-4 text-3xl font-bold tracking-[-0.035em] text-slate-950 md:text-4xl">
-                Publishing, marketplace participation and team activation follow approval and
-                commercial activation.
+                Publishing and team access open later, after approval.
               </h2>
               <p className="mt-5 max-w-3xl text-base leading-8 text-slate-700">
-                Private inventory stays private. Team access and marketplace participation remain
-                subject to their existing approval and commercial activation requirements.
+                Private listings stay private. Team access and publishing are not open yet and will
+                need approval when they are.
               </p>
               <div className="mt-7">
                 <NotOpenYetCta tone="light" />

@@ -36,27 +36,25 @@ describe('public role-path chooser', () => {
 
     expect(
       screen.getByRole('heading', {
-        name: 'Choose your Property Listify preparation path',
+        name: 'Choose your role',
         level: 1,
       }),
     ).toBeInTheDocument();
-    expect(screen.getByText('Preparation-only onboarding')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Start Agent preparation' })).toHaveAttribute(
+    expect(screen.getByText('Publishing is not open yet')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Set up your agent profile' })).toHaveAttribute(
       'href',
       '/advertise/sell/agents',
     );
-    expect(screen.getByRole('link', { name: 'Start Agency preparation' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'See agency details' })).toHaveAttribute(
       'href',
       '/advertise/sell/agencies',
     );
-    expect(screen.getByRole('link', { name: 'Start Developer preparation' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'See developer details' })).toHaveAttribute(
       'href',
       '/advertise/sell/developers',
     );
     expect(
-      screen.getByText(
-        /Marketplace publication, paid commercial access, and new marketplace opportunities remain protected/i,
-      ),
+      screen.getByText(/Publishing and paid plans are not open yet, and will need approval/i),
     ).toBeInTheDocument();
   });
 

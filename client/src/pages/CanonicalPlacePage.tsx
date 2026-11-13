@@ -225,7 +225,7 @@ export default function CanonicalPlacePage() {
           <p className="max-w-2xl text-muted-foreground">
             {isBroadPlace
               ? 'Choose Sale or Rent to browse published listings in exact localities within this area.'
-              : 'Search listings using this canonical place. Its location scope comes from the admitted Place Authority.'}
+              : 'Search homes in this area.'}
           </p>
           <div className="flex flex-wrap gap-3">
             {isBroadPlace ? (

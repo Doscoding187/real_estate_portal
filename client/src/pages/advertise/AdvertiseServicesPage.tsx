@@ -52,7 +52,7 @@ export default function AdvertiseServicesPage() {
               {
                 icon: MapPinned,
                 title: 'Complete your business profile',
-                copy: 'Add your business information, services and the canonical Places where you operate.',
+                copy: 'Add your business information, services and the areas where you work.',
               },
               {
                 icon: BadgeCheck,

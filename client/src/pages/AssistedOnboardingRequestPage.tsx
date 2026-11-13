@@ -32,6 +32,29 @@ const AREA_OPTIONS: Array<{ value: AssistedRequestArea; label: string }> = [
   { value: 'other', label: 'Other onboarding or platform question' },
 ];
 
+const PAGE_COPY: Record<AssistedRequestArea, { heading: string; intro: string }> = {
+  agent: {
+    heading: 'Get help with your agent account',
+    intro:
+      'Agents can set up a profile and prepare listings now. Tell us what you need help with. Publishing and paid plans are not open yet.',
+  },
+  agency_operations: {
+    heading: 'Talk to us about your agency',
+    intro:
+      'Agency accounts are not open yet. Tell us about your agency and what you need, and our team will review your request.',
+  },
+  developer_operations: {
+    heading: 'Talk to us about listing your development',
+    intro:
+      'Developer accounts are not open yet. Tell us about your company and your development, and our team will review your request.',
+  },
+  other: {
+    heading: 'Contact Property Listify',
+    intro:
+      'Ask us a question about your account, listing options or Property Listify. Publishing and paid plans are not open yet.',
+  },
+};
+
 const TOPIC_LABELS: Record<string, string> = {
   'account-access': 'Account or access support',
   'agency-workspace': 'Agency workspace support',
@@ -83,9 +106,9 @@ export default function AssistedOnboardingRequestPage() {
 
   useEffect(() => {
     applySeo({
-      title: 'Assisted onboarding request | Property Listify',
+      title: 'Contact Property Listify',
       description:
-        'Request controlled onboarding assistance for your Property Listify account, workspace, or team access.',
+        'Get in touch about your Property Listify account, listing options or team access.',
       canonicalPath: '/contact',
     });
   }, []);
@@ -96,6 +119,7 @@ export default function AssistedOnboardingRequestPage() {
     },
   });
 
+  const pageCopy = PAGE_COPY[form.requestedArea];
   const topicLabel = context.topic ? (TOPIC_LABELS[context.topic] ?? context.topic) : null;
   const messageValid = form.message.trim().length >= 10;
   const canSubmit =
@@ -142,7 +166,7 @@ export default function AssistedOnboardingRequestPage() {
                     Request received
                   </p>
                   <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
-                    Your assisted onboarding request is in the review queue
+                    We have received your request
                   </h1>
                   <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-slate-600">
                     Reference #{requestId}. This request is stored for authorized Property Listify
@@ -168,17 +192,12 @@ export default function AssistedOnboardingRequestPage() {
               >
                 <div className="max-w-2xl">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-700">
-                    Controlled onboarding
+                    Get in touch
                   </p>
                   <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
-                    Request assisted onboarding support
+                    {pageCopy.heading}
                   </h1>
-                  <p className="mt-3 text-sm leading-6 text-slate-600">
-                    Use this form if you need help completing your Property Listify account,
-                    professional presence, private listing preparation, or controlled team access.
-                    Commercial activation and marketplace publication remain unavailable through
-                    this request.
-                  </p>
+                  <p className="mt-3 text-sm leading-6 text-slate-600">{pageCopy.intro}</p>
                 </div>
 
                 <div className="mt-7 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-blue-950">
@@ -274,7 +293,7 @@ export default function AssistedOnboardingRequestPage() {
                     placeholder="Describe the onboarding or access issue without sensitive information."
                   />
                   <span id="assisted-message-help" className="block text-xs font-normal text-slate-500">
-                    Please use at least 10 characters so the review queue has enough context.
+                    Please write at least 10 characters so we have enough to go on.
                   </span>
                 </label>
 
@@ -286,9 +305,8 @@ export default function AssistedOnboardingRequestPage() {
 
                 <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <p className="max-w-lg text-xs leading-5 text-slate-500">
-                    A final launch privacy notice and terms remain required before public rollout.
-                    This controlled request does not change the current pre-payment onboarding or
-                    commercial-entitlement policy.
+                    Sending this request does not publish anything, start a payment or change your
+                    account.
                   </p>
                   <Button type="submit" disabled={!canSubmit || submitRequest.isPending}>
                     {submitRequest.isPending ? 'Saving request…' : 'Send assisted request'}

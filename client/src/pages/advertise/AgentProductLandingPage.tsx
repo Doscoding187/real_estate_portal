@@ -23,7 +23,10 @@ import {
 import { EnhancedNavbar } from '@/components/EnhancedNavbar';
 import { Footer } from '@/components/Footer';
 import { SEOHead } from '@/components/advertise/SEOHead';
-import { CommercialActivationNotice } from '@/components/commercial/CommercialActivationNotice';
+import {
+  CommercialActivationNotice,
+  PUBLIC_PUBLISHING_NOTICE,
+} from '@/components/commercial/CommercialActivationNotice';
 import { AgentWorkspacePreview } from './AgentWorkspacePreview';
 import { useCommercialCatalog, type CommercialProduct } from '@/hooks/useCommercialCatalog';
 import { useCommercialProductAvailability } from '@/hooks/useCommercialProductAvailability';
@@ -813,8 +816,7 @@ export function AgentCommercialLandingPage() {
                   ))}
                 </div>
                 <p className="mt-6 text-xs leading-5 text-slate-600">
-                  Capability availability is governed by the current canonical Agent product and
-                  runtime.
+                  What you can use depends on what is open at the time.
                 </p>
               </div>
             </div>
@@ -921,8 +923,8 @@ function AgentPreparationLandingPage({
   return (
     <div className="min-h-screen bg-[var(--surface)] text-slate-950">
       <SEOHead
-        title="Prepare your Agent presence | Property Listify"
-        description="Create your Property Listify Agent account, complete your professional presence and prepare private listing drafts before commercial activation."
+        title="Set up your agent profile | Property Listify"
+        description="Create your Property Listify agent account, complete your professional profile and prepare private listing drafts. Publishing is not open yet."
         canonicalUrl="/advertise/sell/agents"
       />
       <EnhancedNavbar />
@@ -948,19 +950,19 @@ function AgentPreparationLandingPage({
                   For independent property agents
                 </p>
                 <h1 className="mt-6 font-serif text-5xl font-semibold leading-[1.03] tracking-[-0.05em] text-white sm:text-6xl lg:text-7xl">
-                  Establish your Agent presence and prepare private inventory.
+                  Set up your agent profile and prepare your listings.
                 </h1>
                 <p className="mt-7 max-w-2xl text-lg leading-8 text-slate-300 sm:text-xl sm:leading-9">
-                  Create and verify your account, complete your professional profile and coverage,
-                  then create, save and return to private listing drafts while commercial activation
-                  remains protected.
+                  Create and verify your account, complete your professional profile and the areas
+                  you cover, then create, save and return to private listing drafts. Publishing is
+                  not open yet.
                 </p>
                 <div className="mt-9 flex flex-wrap gap-3">
                   <a
                     href={AGENT_PREPARATION_START_HREF}
                     className="inline-flex items-center gap-2 rounded-2xl bg-[var(--conversion)] px-5 py-3.5 text-sm font-bold text-white shadow-lg shadow-orange-950/25 transition hover:bg-[var(--conversion-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
                   >
-                    Start Agent preparation
+                    Set up your agent profile
                     <ArrowRight className="h-4 w-4" aria-hidden="true" />
                   </a>
                   <a
@@ -973,7 +975,7 @@ function AgentPreparationLandingPage({
               </div>
 
               <div className="relative rounded-[30px] border border-white/15 bg-white/10 p-6 shadow-[0_28px_80px_rgba(15,23,42,0.24)] backdrop-blur sm:p-8">
-                <CommercialActivationNotice />
+                <CommercialActivationNotice {...PUBLIC_PUBLISHING_NOTICE} />
               </div>
             </div>
           </div>
@@ -981,12 +983,9 @@ function AgentPreparationLandingPage({
 
         <section className="border-b border-slate-200 bg-white py-24 md:py-32">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <SectionIntro
-              eyebrow="Prepare for participation"
-              title="Start the work that can be completed before commercial activation."
-            >
-              Preparation gives you a place to establish your professional presence and organise
-              inventory. It does not grant marketplace publication or paid commercial access.
+            <SectionIntro eyebrow="Get ready" title="What you can do today.">
+              You can set up your profile and organise your listings privately. This does not
+              publish anything or start a paid plan.
             </SectionIntro>
             <div className="mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
               {[
@@ -997,8 +996,8 @@ function AgentPreparationLandingPage({
                 },
                 {
                   icon: UserRound,
-                  title: 'Complete your professional presence',
-                  text: 'Add your profile information and the canonical coverage needed for your Agent presence.',
+                  title: 'Complete your professional profile',
+                  text: 'Add your profile information and the areas you cover.',
                 },
                 {
                   icon: ListChecks,
@@ -1007,8 +1006,8 @@ function AgentPreparationLandingPage({
                 },
                 {
                   icon: ClipboardCheck,
-                  title: 'Be ready for activation',
-                  text: 'Complete the onboarding information required for the later commercial path.',
+                  title: 'Be ready for publishing',
+                  text: 'Add the details we will need when publishing opens.',
                 },
               ].map(item => {
                 const Icon = item.icon;
@@ -1035,20 +1034,20 @@ function AgentPreparationLandingPage({
           <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
             <div className="rounded-[30px] border border-amber-200 bg-amber-50 p-7 md:p-10">
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-amber-800">
-                What remains protected
+                What is not open yet
               </p>
               <h2 className="mt-4 text-3xl font-bold tracking-[-0.035em] text-slate-950 md:text-4xl">
-                Publication and marketplace participation follow approved commercial activation.
+                Publishing opens later.
               </h2>
               <p className="mt-5 max-w-3xl text-base leading-8 text-slate-700">
-                Private drafts stay private. Publishing, marketplace visibility and new marketplace
-                enquiries are unavailable until the required commercial activation is approved.
+                Your drafts stay private. Publishing your listings and receiving enquiries through
+                Property Listify are not open yet.
               </p>
               <a
                 href={AGENT_PREPARATION_START_HREF}
                 className="mt-7 inline-flex items-center gap-2 rounded-2xl bg-[var(--conversion)] px-5 py-3.5 text-sm font-bold text-white shadow-lg shadow-orange-900/15 transition hover:bg-[var(--conversion-hover)]"
               >
-                Start Agent preparation <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                Set up your agent profile <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </a>
             </div>
           </div>

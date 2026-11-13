@@ -20,7 +20,10 @@ import {
 } from 'lucide-react';
 import { EnhancedNavbar } from '@/components/EnhancedNavbar';
 import { Footer } from '@/components/Footer';
-import { CommercialActivationNotice } from '@/components/commercial/CommercialActivationNotice';
+import {
+  CommercialActivationNotice,
+  PUBLIC_PUBLISHING_NOTICE,
+} from '@/components/commercial/CommercialActivationNotice';
 import { SEOHead } from '@/components/advertise/SEOHead';
 import { useCommercialCatalog, type CommercialProduct } from '@/hooks/useCommercialCatalog';
 import {
@@ -1076,7 +1079,7 @@ function DeveloperPreparationLandingPage({
   return (
     <div className="min-h-screen bg-[var(--surface)] text-slate-950">
       <SEOHead
-        title="Prepare your Developer organisation | Property Listify"
+        title="Developer accounts | Property Listify"
         description="Developer accounts on Property Listify are not open yet. See how developer set-up will work and get in touch."
         canonicalUrl="/advertise/sell/developers"
       />
@@ -1121,7 +1124,7 @@ function DeveloperPreparationLandingPage({
               </div>
 
               <div className="relative rounded-[30px] border border-white/15 bg-white/10 p-6 shadow-[0_28px_80px_rgba(15,23,42,0.24)] backdrop-blur sm:p-8">
-                <CommercialActivationNotice />
+                <CommercialActivationNotice {...PUBLIC_PUBLISHING_NOTICE} />
               </div>
             </div>
           </div>
@@ -1199,15 +1202,14 @@ function DeveloperPreparationLandingPage({
           <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
             <div className="rounded-[30px] border border-amber-200 bg-amber-50 p-7 md:p-10">
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-amber-800">
-                What remains protected
+                What is not open yet
               </p>
               <h2 className="mt-4 text-3xl font-bold tracking-[-0.035em] text-slate-950 md:text-4xl">
-                Public project presentation and commercial participation follow approval, review,
-                and commercial activation.
+                Publishing your developments opens later, after review and approval.
               </h2>
               <p className="mt-5 max-w-3xl text-base leading-8 text-slate-700">
-                Private drafts stay private. Any later publication remains subject to the existing
-                organisation, project-review, and commercial activation requirements.
+                Private drafts stay private. Publishing is not open yet and will need your company
+                and each project to be reviewed and approved.
               </p>
               <div className="mt-7">
                 <NotOpenYetCta tone="light" />

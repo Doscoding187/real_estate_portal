@@ -464,8 +464,10 @@ export default function DevelopmentsDemo() {
                 <h1 className="text-xl font-bold text-slate-800">
                   {isLoading || (isFetching && !data) ? (
                     <span className="text-slate-400">Finding developments…</span>
+                  ) : error || resultCount === 0 ? (
+                    'New developments'
                   ) : (
-                    `${resultCount} New Developments Found`
+                    `${resultCount} New ${resultCount === 1 ? 'Development' : 'Developments'} Found`
                   )}
                 </h1>
                 <p className="mt-1 text-sm text-slate-500">
@@ -589,7 +591,7 @@ export default function DevelopmentsDemo() {
                 message="No new developments are listed yet. Try another area or change your filters."
                 action={{
                   label: 'Talk to us about listing your development',
-                  href: '/contact',
+                  href: '/contact?area=developer_operations',
                 }}
               />
             )}

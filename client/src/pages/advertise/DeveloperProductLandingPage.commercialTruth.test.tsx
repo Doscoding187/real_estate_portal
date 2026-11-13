@@ -108,17 +108,15 @@ describe('public Developer product landing page', () => {
         level: 1,
       }),
     ).toBeInTheDocument();
-    expect(screen.getByText('Preparation-only onboarding')).toBeInTheDocument();
+    expect(screen.getByText('Publishing is not open yet')).toBeInTheDocument();
     expect(
       screen.getByText(
-        'Commercial activation is not available yet. Complete your profile and prepare private drafts; publishing becomes available after approved commercial activation.',
+        'You can set up your profile and prepare listings privately now. Publishing and paid plans open later.',
       ),
     ).toBeInTheDocument();
     expect(screen.getByText('Prepare private development drafts')).toBeInTheDocument();
     expect(
-      screen.getByText(
-        'Public project presentation and commercial participation follow approval, review, and commercial activation.',
-      ),
+      screen.getByText('Publishing your developments opens later, after review and approval.'),
     ).toBeInTheDocument();
 
     // Held at launch: the sign-up CTA is a non-link "Not open yet" state.

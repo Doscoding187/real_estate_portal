@@ -46,7 +46,7 @@ export default function CountryDiscoveryPage() {
             <div>
               <p className="provincial-eyebrow">South Africa</p>
               <h1>Find a place to search</h1>
-              <p>{COUNTRY_DISCOVERY_DESCRIPTION}</p>
+              <p>Search South African provinces, cities, towns, suburbs and areas.</p>
             </div>
             <div className="flex flex-wrap items-center gap-4 text-sm font-bold">
               <a className="provincial-section__link" href="/property-for-sale">
@@ -71,12 +71,9 @@ export default function CountryDiscoveryPage() {
         <section className="provincial-rail provincial-section provincial-section--tinted">
           <div className="provincial-section__heading">
             <div>
-              <p className="provincial-eyebrow">One place authority</p>
+              <p className="provincial-eyebrow">Browse by place</p>
               <h2>Search within the place you choose</h2>
-              <p>
-                Each place page resolves to one admitted Place identity. Its search scope and URL
-                come from the same national projection.
-              </p>
+              <p>Pick a province, city, town or suburb to open its page and search homes there.</p>
             </div>
           </div>
         </section>
