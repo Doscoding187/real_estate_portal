@@ -1,4 +1,4 @@
-import { and, countDistinct, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import {
   developmentPlaceAssignments,
@@ -10,6 +10,7 @@ import {
 import { isPlaceId } from '../../drizzle/schema/placeAuthority';
 import { getDb } from '../db';
 import { normalizeDateTimeForDb } from './developmentDateUtils';
+import { publicDevelopmentEligibilityConditions } from './publicDevelopmentEligibility';
 
 export type DevelopmentPlaceGeography = {
   /**
@@ -382,28 +383,32 @@ export async function listDevelopmentIdsForCanonicalPlace(
 }
 
 /**
- * Accepted site-assignment Developments per canonical Place, one GROUP BY query.
- * Same assignment predicate as `listDevelopmentIdsForCanonicalPlaces`; used for page indexability.
+ * Publicly visible Developments per canonical Place, for page indexability. A Development counts
+ * for Place P only if it passes `publicDevelopmentEligibilityConditions()` (as public development
+ * search requires) and `listDevelopmentPlaceGeography` resolves its single executable Place to P
+ * (as `listDevelopmentIdsForCanonicalPlace` matches). Both are reused, not restated.
  */
 export async function countAcceptedDevelopmentsByPlace(): Promise<Map<string, number>> {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
   const rows = await db
-    .select({
-      placeId: developmentPlaceAssignments.placeId,
-      developmentCount: countDistinct(developmentPlaceAssignments.developmentId),
-    })
+    .selectDistinct({ developmentId: developmentPlaceAssignments.developmentId })
     .from(developmentPlaceAssignments)
+    .innerJoin(developments, eq(developments.id, developmentPlaceAssignments.developmentId))
     .where(
       and(
         eq(developmentPlaceAssignments.assignmentKind, 'site'),
         eq(developmentPlaceAssignments.reviewState, 'accepted'),
+        publicDevelopmentEligibilityConditions(),
       ),
-    )
-    .groupBy(developmentPlaceAssignments.placeId);
-  return new Map(
-    rows
-      .filter(row => Number(row.developmentCount) > 0)
-      .map(row => [row.placeId, Number(row.developmentCount)] as const),
-  );
+    );
+  const ids = rows.map(row => Number(row.developmentId));
+  const counts = new Map<string, number>();
+  if (!ids.length) return counts;
+  const geography = await listDevelopmentPlaceGeography(ids);
+  for (const id of ids) {
+    const placeId = geography.get(id)?.canonicalPlaceId;
+    if (placeId) counts.set(placeId, (counts.get(placeId) ?? 0) + 1);
+  }
+  return counts;
 }
