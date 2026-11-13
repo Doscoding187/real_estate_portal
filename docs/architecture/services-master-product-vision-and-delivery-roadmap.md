@@ -2,9 +2,12 @@
 
 **Document status:** Living strategic product authority, initialized from Edward's 2026-11-12 product directive. Product direction in the directive is adopted for planning. Specific commercial prices, offers, new data models, and changes to shipped contracts remain subject to their named decision authorities.
 
-**Product owner:** Edward  
-**Delivery owner:** Property Listify product and engineering  
-**Current source baseline:** `origin/main` `93723fdb2a4ce928753d6a86e562c4e92a65c56d` (#761), refreshed 2026-11-13  
+**Product owner:** Edward
+
+**Delivery owner:** Property Listify product and engineering
+
+**Current source baseline:** `origin/main` `93723fdb2a4ce928753d6a86e562c4e92a65c56d` (#761), refreshed 2026-11-13
+
 **Next review trigger:** every Services release or approved product-direction change; refresh the full capability register at least at each roadmap phase boundary.
 
 ## 1. How this document governs Services
