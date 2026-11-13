@@ -321,6 +321,11 @@ function canonicalDiscoveryStructuredData(pathname: string): Record<string, unkn
   ];
 }
 
+/** Breadcrumb and Place structured data for a canonical Place path (empty for other paths). */
+export function placeStructuredData(pathname: string): Record<string, unknown>[] {
+  return canonicalDiscoveryStructuredData(pathname) ?? [];
+}
+
 export function injectSeoHead(template: string, requestUrl: string): string {
   const seo = resolveSeoPageData(requestUrl);
   const withHead = template

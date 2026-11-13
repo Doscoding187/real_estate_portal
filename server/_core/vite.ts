@@ -78,6 +78,10 @@ export function serveStatic(app: Express) {
   app.use(
     express.static(distPath, {
       index: false,
+      // The build now contains prepared page folders (e.g. dist/public/gauteng/index.html). Without
+      // this, a request for /gauteng would be redirected to /gauteng/ and the app's router would not
+      // match it. Directory requests fall through to the application shell below instead.
+      redirect: false,
       setHeaders: (res, filePath) => {
         const normalizedPath = filePath.toLowerCase();
 
@@ -108,7 +112,10 @@ export function serveStatic(app: Express) {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
-    const indexPath = path.resolve(distPath, 'index.html');
+    // index.html is the prepared homepage when the prerender plugin ran; app-shell.html is the plain
+    // shell every other address must receive (same rule as the vercel.ts catch-all).
+    const shellPath = path.resolve(distPath, 'app-shell.html');
+    const indexPath = fs.existsSync(shellPath) ? shellPath : path.resolve(distPath, 'index.html');
     fs.promises
       .readFile(indexPath, 'utf-8')
       .then(template => injectSeoHead(template, req.originalUrl))

@@ -1,5 +1,6 @@
 import { trpc } from '@/lib/trpc';
 import { MetaControl } from '@/components/seo/MetaControl';
+import { placePageDescription, placePageTitle } from '@shared/placePageSeo';
 import { Button } from '@/components/ui/button';
 import { LoadingState } from '@/components/ui/feedback-state';
 import { PageFrame, PageHeader } from '@/components/ui/page-frame';
@@ -19,7 +20,8 @@ function guideHref(path: string, mode: PropertyGuideMode) {
 }
 
 function inventoryLabel(mode: PropertyGuideMode, listingCount: number) {
-  if (mode === 'sale') return listingCount + (listingCount === 1 ? ' home for sale' : ' homes for sale');
+  if (mode === 'sale')
+    return listingCount + (listingCount === 1 ? ' home for sale' : ' homes for sale');
   return listingCount + (listingCount === 1 ? ' rental listing' : ' rental listings');
 }
 
@@ -78,9 +80,10 @@ export default function CanonicalPlacePage() {
   return (
     <PageFrame>
       <MetaControl
-        title={place.label + ' property search | Property Listify'}
-        description={'Explore property listings in ' + place.label + ', ' + place.provinceName + '.'}
+        title={placePageTitle(place.label)}
+        description={placePageDescription(place.label, place.provinceName)}
         canonicalUrl={origin + place.path}
+        image={origin + '/og-image.png'}
         forceNoIndex={!indexable}
       />
       <div className="space-y-8">
@@ -167,13 +170,17 @@ export default function CanonicalPlacePage() {
         ) : null}
 
         {landDiscoveryAvailable && isBroadPlace ? (
-          <section aria-labelledby="land-area-guide-title" className="space-y-4 rounded-xl border p-5">
+          <section
+            aria-labelledby="land-area-guide-title"
+            className="space-y-4 rounded-xl border p-5"
+          >
             <div>
               <h2 id="land-area-guide-title" className="text-xl font-semibold">
                 Explore Land in {place.label}
               </h2>
               <p className="mt-1 max-w-2xl text-muted-foreground">
-                Choose a suburb or locality that interests you to see Land listings in that exact area.
+                Choose a suburb or locality that interests you to see Land listings in that exact
+                area.
               </p>
             </div>
             {landAreas.isPending ? (
@@ -203,7 +210,10 @@ export default function CanonicalPlacePage() {
             ) : (
               <div role="status" className="space-y-2 text-sm text-muted-foreground">
                 <p>No land listed in {place.label} yet.</p>
-                <a className="font-medium text-primary underline-offset-4 hover:underline" href="/plots-and-land">
+                <a
+                  className="font-medium text-primary underline-offset-4 hover:underline"
+                  href="/plots-and-land"
+                >
                   Search Land in another area
                 </a>
               </div>
@@ -252,7 +262,8 @@ export default function CanonicalPlacePage() {
 
         {place.sourceAttributions?.length ? (
           <p className="text-xs text-muted-foreground">
-            Geographic data: {place.sourceAttributions.map((attribution, index) => (
+            Geographic data:{' '}
+            {place.sourceAttributions.map((attribution, index) => (
               <span key={attribution.provider}>
                 {index > 0 ? '; ' : ''}
                 {attribution.url ? (

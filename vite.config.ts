@@ -1,5 +1,6 @@
 import { COUNTRY_DISCOVERY_PATH } from './shared/countryDiscovery';
 import { injectSeoHead } from './server/_core/seoHead';
+import { prerenderPagesPlugin } from './server/_core/prerenderPlugin';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
@@ -73,6 +74,7 @@ export function canonicalDiscoveryHtml(): Plugin {
 
 const plugins = [
   canonicalDiscoveryHtml(),
+  prerenderPagesPlugin(),
   developmentSupersessionDevMiddleware(),
   react(),
   tailwindcss(),
