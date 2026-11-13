@@ -83,12 +83,14 @@ describe('prerendered head and body', () => {
     const html = renderPrerenderedHtml(SHELL, city);
     const label = /<h1>(.*?)<\/h1>/.exec(html)?.[1] ?? '';
     expect(html).toContain(`<title>${label} property search | Property Listify</title>`);
-    expect(html).toMatch(/content="Explore property listings in [^"]+\."/);
+    expect(html).toMatch(
+      /content="Find homes for sale and to rent in [^"]+ on Property Listify\."/,
+    );
     expect(html.match(/rel="canonical"/g)).toHaveLength(1);
     expect(html).toContain(`href="https://www.propertylistifysa.co.za${city.path}"`);
     expect(html).toContain('name="robots" content="index, follow"');
     expect(html).toContain(
-      'property="og:image" content="https://www.propertylistifysa.co.za/assets/',
+      'property="og:image" content="https://www.propertylistifysa.co.za/og-image.png"',
     );
     expect(html).not.toContain('example.test/old.jpg');
     expect(html).toContain('"@type":"BreadcrumbList"');

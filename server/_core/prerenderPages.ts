@@ -1,5 +1,6 @@
 import { COMMERCIAL_ACTIVATION_STATE } from '../../shared/commercialActivation';
 import { COUNTRY_DISCOVERY_PATH } from '../../shared/countryDiscovery';
+import { placePageDescription, placePageTitle } from '../../shared/placePageSeo';
 import { landingPages, NAV_LANDING_ALIASES } from '../../client/src/lib/navLandingPages';
 import {
   buildOrganizationStructuredData,
@@ -19,7 +20,7 @@ import { placeStructuredData } from './seoHead';
 export const PRERENDER_ORIGIN = 'https://www.propertylistifysa.co.za';
 export const SITE_NAME = 'Property Listify';
 /** An image that exists on main. The homepage work will switch this to a branded share image. */
-export const PRERENDER_SHARE_IMAGE = '/assets/placeholder-home.jpg';
+export const PRERENDER_SHARE_IMAGE = '/og-image.png';
 
 export type PrerenderPlaceFamily = 'province' | 'city' | 'locality';
 export type PrerenderFamily = 'home' | 'static' | 'advertise' | PrerenderPlaceFamily;
@@ -153,8 +154,8 @@ function placePage(entry: PlaceEntry): PrerenderPage {
   return {
     path: entry.path,
     family: placeFamily(entry),
-    title: `${label} property search | ${SITE_NAME}`,
-    description: `Explore property listings in ${label}, ${entry.province_name}.`,
+    title: placePageTitle(label),
+    description: placePageDescription(label, entry.province_name),
     canonicalPath: entry.path,
     robots: 'index, follow',
     structuredData: placeStructuredData(entry.path),
