@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Link } from 'wouter';
 
+import { MetaControl } from '@/components/seo/MetaControl';
 import JourneyComingSoonPage, { isComingSoonJourney } from '@/pages/JourneyComingSoonPage';
 import { isJourneyRouteHeld, type PublicJourneyReleaseContext } from '@/lib/publicNavigation';
 
@@ -8,6 +9,7 @@ import { isJourneyRouteHeld, type PublicJourneyReleaseContext } from '@/lib/publ
 export default function JourneyHeldPage() {
   return (
     <main className="mx-auto max-w-2xl space-y-4 p-6 md:p-10">
+      <MetaControl title="Not available yet | Property Listify" noIndexFollow />
       <h1 className="text-2xl font-semibold">This section is not available yet</h1>
       <p className="text-slate-700">
         We are launching with property for sale, property to rent and finding an agent. This section

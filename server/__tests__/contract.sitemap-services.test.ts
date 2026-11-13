@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { getDbMock, sitemapEntries } = vi.hoisted(() => ({
+const { getDbMock, heldState, sitemapEntries } = vi.hoisted(() => ({
   getDbMock: vi.fn(),
+  heldState: { services: false },
   sitemapEntries: {
     providers: [] as Array<{ providerId: number; companyName: string; updatedAt: string | null }>,
     providerServices: [] as Array<{
@@ -17,6 +18,16 @@ const { getDbMock, sitemapEntries } = vi.hoisted(() => ({
 vi.mock('../db-connection', () => ({
   getDb: getDbMock,
 }));
+
+// Exercise both states of the services hold; the real list is covered by the static sitemap test.
+vi.mock('../../shared/launchHeldJourneys', async importOriginal => {
+  const actual = await importOriginal<typeof import('../../shared/launchHeldJourneys')>();
+  return {
+    ...actual,
+    isLaunchHeldJourney: (key: string) =>
+      key === 'services' ? heldState.services : actual.isLaunchHeldJourney(key),
+  };
+});
 
 vi.mock('../services/servicesEngineService', () => ({
   servicesEngineService: {
@@ -85,6 +96,7 @@ async function requestSitemap(path: string): Promise<SendCapture> {
 
 describe('services sitemap contract', () => {
   beforeEach(() => {
+    heldState.services = false;
     sitemapEntries.providers = [];
     sitemapEntries.providerServices = [];
   });
@@ -165,6 +177,20 @@ describe('services sitemap contract', () => {
     );
     expect(body).not.toContain('/service//');
     expect((body.match(/<lastmod>/g) || []).length).toBe(1);
+  });
+
+  it('returns a valid empty urlset while the services journey is held', async () => {
+    heldState.services = true;
+    sitemapEntries.providers = [{ providerId: 7, companyName: 'Cape', updatedAt: null }];
+    const capture = await requestSitemap('/sitemap-services.xml');
+    const body = String(capture.body);
+
+    expect(capture.headers['Content-Type']).toContain('application/xml');
+    expect(body).toContain('<urlset');
+    expect(body).not.toContain('<loc>');
+    // The index keeps the child for static-fallback parity.
+    const index = await requestSitemap('/sitemap.xml');
+    expect(String(index.body)).toContain('/sitemap-services.xml');
   });
 
   it('registers the services child in the sitemap index', async () => {

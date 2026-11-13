@@ -19,6 +19,7 @@ import {
   toProviderSlug,
   toServiceCategorySlug,
 } from '../../shared/serviceDirectorySlugs';
+import { isHeldJourneyPath, isLaunchHeldJourney } from '../../shared/launchHeldJourneys';
 import { SITEMAP_INDEX_CHILDREN } from '../../shared/sitemapIndex';
 import { publishedCanonicalPlaceUrls } from '../services/canonicalPlaceUrlService';
 
@@ -228,6 +229,12 @@ router.get('/sitemap-agents.xml', async (_req, res, next) => {
 
 router.get('/sitemap-services.xml', async (_req, res, next) => {
   try {
+    // Held journey: valid empty urlset (the index entry stays for static-fallback parity).
+    if (isLaunchHeldJourney('services')) {
+      sendXml(res, buildUrlSet([]));
+      return;
+    }
+
     const baseUrl = resolveBaseUrl(_req);
     const db = await getDb();
     if (!db) {
@@ -331,7 +338,7 @@ router.get('/sitemap-static.xml', async (_req, res, next) => {
       throw new Error('Database not available');
     }
 
-    const staticEntries: SitemapUrlEntry[] = [
+    const allStaticEntries: SitemapUrlEntry[] = [
       { loc: toAbsoluteUrl('/', baseUrl), changefreq: 'daily', priority: 1.0 },
       { loc: toAbsoluteUrl('/property-for-sale', baseUrl), changefreq: 'daily', priority: 0.9 },
       { loc: toAbsoluteUrl('/property-to-rent', baseUrl), changefreq: 'daily', priority: 0.9 },
@@ -444,6 +451,11 @@ router.get('/sitemap-static.xml', async (_req, res, next) => {
       { loc: toAbsoluteUrl('/agencies', baseUrl), changefreq: 'weekly', priority: 0.7 },
       { loc: toAbsoluteUrl('/distribution-network', baseUrl), changefreq: 'weekly', priority: 0.6 },
     ];
+
+    // Paths of held journeys are not advertised to search engines.
+    const staticEntries = allStaticEntries.filter(
+      entry => !isHeldJourneyPath(new URL(entry.loc).pathname),
+    );
 
     const developerRows = await db
       .select({
