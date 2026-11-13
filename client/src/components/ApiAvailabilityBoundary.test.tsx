@@ -67,17 +67,20 @@ describe('ApiAvailabilityBoundary', () => {
       </HelmetProvider>,
     );
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(250);
+      await vi.advanceTimersByTimeAsync(5600);
     });
 
     expect(screen.getByRole('status')).toHaveTextContent('We’re upgrading Property Listify');
     expect(screen.queryByText('Property search')).not.toBeInTheDocument();
-    expect(fetcher).toHaveBeenCalledTimes(2);
+    expect(fetcher).toHaveBeenCalledTimes(4);
   });
 
-  it('shows maintenance only after the readiness retry fails', async () => {
+  it('keeps the page after one failed check and shows maintenance after two consecutive failures', async () => {
     vi.useFakeTimers();
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 503 })));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(async () => new Response(null, { status: 503 })),
+    );
 
     render(
       <HelmetProvider>
@@ -87,7 +90,14 @@ describe('ApiAvailabilityBoundary', () => {
       </HelmetProvider>,
     );
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(250);
+      await vi.advanceTimersByTimeAsync(600);
+    });
+
+    expect(screen.getByText('Property search')).toBeInTheDocument();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
     });
 
     expect(screen.getByRole('status')).toHaveTextContent('We’re upgrading Property Listify');
@@ -130,6 +140,8 @@ describe('ApiAvailabilityBoundary', () => {
       .fn()
       .mockResolvedValueOnce(new Response(null, { status: 503 }))
       .mockResolvedValueOnce(new Response(null, { status: 503 }))
+      .mockResolvedValueOnce(new Response(null, { status: 503 }))
+      .mockResolvedValueOnce(new Response(null, { status: 503 }))
       .mockResolvedValueOnce(readyResponse());
     vi.stubGlobal('fetch', fetcher);
 
@@ -141,7 +153,7 @@ describe('ApiAvailabilityBoundary', () => {
       </HelmetProvider>,
     );
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(250);
+      await vi.advanceTimersByTimeAsync(5600);
     });
     expect(screen.getByRole('status')).toHaveTextContent('We’re upgrading Property Listify');
 

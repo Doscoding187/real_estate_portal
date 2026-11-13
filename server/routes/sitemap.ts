@@ -153,9 +153,16 @@ function sendXml(res: Response, xml: string) {
 }
 
 router.get('/robots.txt', (_req, res) => {
+  // One robots.txt for both hosts (www proxies /robots.txt here, see vercel.ts), so it never
+  // depends on proxy headers. Crawlers must be able to fetch the public read endpoints the site
+  // calls while rendering (/api/readiness, /api/trpc/*): otherwise Googlebot's renderer fails the
+  // readiness check and sees a failed page. Longest matching rule wins, so these Allow lines beat
+  // Disallow: /api/. The www host serves no /api paths, so the extra lines change nothing there.
   const robots = [
     'User-agent: *',
     'Allow: /',
+    'Allow: /api/readiness',
+    'Allow: /api/trpc/',
     'Disallow: /admin',
     'Disallow: /dashboard',
     'Disallow: /api/',
@@ -267,10 +274,7 @@ router.get('/sitemap-services.xml', async (_req, res, next) => {
       })
       .filter(entry => entry != null);
 
-    sendXml(
-      res,
-      buildUrlSet([...categoryEntries, ...providerEntries, ...providerServiceEntries]),
-    );
+    sendXml(res, buildUrlSet([...categoryEntries, ...providerEntries, ...providerServiceEntries]));
   } catch (error) {
     next(error);
   }
