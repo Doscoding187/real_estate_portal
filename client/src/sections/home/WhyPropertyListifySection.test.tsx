@@ -111,6 +111,9 @@ describe('WhyPropertyListifySection', () => {
     }
     expect(screen.queryByRole('link', { name: 'Browse the directory' })).toBeNull();
     expect(container.querySelector('a[href^="/services"]')).toBeNull();
+    // All panels are in the DOM, so this covers every audience.
+    expect(container.textContent ?? '').not.toMatch(/browse property services/i);
+    expect(container.textContent ?? '').not.toMatch(/the services directory is live/i);
     // The provider-side link and the other secondary links are untouched.
     fireEvent.click(screen.getByRole('tab', { name: 'Service providers' }));
     const panel = screen.getByRole('tabpanel');
