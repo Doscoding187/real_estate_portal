@@ -525,17 +525,42 @@ function Router() {
           <Route path="/pro/profile">
             <Redirect to="/service/profile" />
           </Route>
-          {/* Services marketplace routes */}
-          <Route path="/services/request/:category" component={ServicesRequestPage} />
-          <Route path="/services/results/:leadId" component={ServicesResultsPage} />
-          <Route path="/services/provider/:slug" component={ServiceProviderProfilePage} />
-          <Route
-            path="/services/provider/:slug/service/:service"
-            component={ProviderServiceDetailPage}
-          />
-          <Route path="/services/reviews/:providerId" component={ServiceProviderReviewsPage} />
-          <Route path="/services/:category" component={ServicesCategoryPage} />
-          <Route path="/services" component={ServicesHomePage} />
+          {/* Consumer Services routes are held until the directory is stocked (LAUNCH_HELD_JOURNEYS) */}
+          <Route path="/services/request/:category">
+            <HeldJourneyGate journey="services">
+              <ServicesRequestPage />
+            </HeldJourneyGate>
+          </Route>
+          <Route path="/services/results/:leadId">
+            <HeldJourneyGate journey="services">
+              <ServicesResultsPage />
+            </HeldJourneyGate>
+          </Route>
+          <Route path="/services/provider/:slug">
+            <HeldJourneyGate journey="services">
+              <ServiceProviderProfilePage />
+            </HeldJourneyGate>
+          </Route>
+          <Route path="/services/provider/:slug/service/:service">
+            <HeldJourneyGate journey="services">
+              <ProviderServiceDetailPage />
+            </HeldJourneyGate>
+          </Route>
+          <Route path="/services/reviews/:providerId">
+            <HeldJourneyGate journey="services">
+              <ServiceProviderReviewsPage />
+            </HeldJourneyGate>
+          </Route>
+          <Route path="/services/:category">
+            <HeldJourneyGate journey="services">
+              <ServicesCategoryPage />
+            </HeldJourneyGate>
+          </Route>
+          <Route path="/services">
+            <HeldJourneyGate journey="services">
+              <ServicesHomePage />
+            </HeldJourneyGate>
+          </Route>
 
           {/* Thin SEO landing pages for non-listing engines */}
           <Route path="/insights/:slug" component={NavLandingPage} />

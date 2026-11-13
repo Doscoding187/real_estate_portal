@@ -15,9 +15,9 @@ import {
 const HELD_ENV_VALUE = 'developments,shared_living,plot_land,commercial';
 
 describe('launch-held public journeys', () => {
-  it('holds developments, shared living, land and commercial', () => {
+  it('holds developments, shared living, land, commercial and the consumer services directory', () => {
     expect([...LAUNCH_HELD_JOURNEYS].sort()).toEqual(
-      ['commercial', 'developments', 'plot_land', 'shared_living'].sort(),
+      ['commercial', 'developments', 'plot_land', 'services', 'shared_living'].sort(),
     );
     expect(isLaunchHeldJourney('buy')).toBe(false);
   });
