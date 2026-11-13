@@ -2,6 +2,7 @@ import { and, inArray } from 'drizzle-orm';
 
 import { properties } from '../../drizzle/schema';
 import { getDb } from '../db';
+import { canonicalPlaceUrlByPlaceId } from './canonicalPlaceUrlService';
 import { loadHomeProvinceScope } from './homeProvinceScopeService';
 import {
   HOME_MARKET_INSIGHTS_TTL_MS,
@@ -72,6 +73,10 @@ const FALLBACK_PRIORITY: Record<string, readonly string[]> = {
   'northern cape': ['Kimberley', 'Upington'],
 };
 
+/** Fallback tiles are towns and cities; suburbs only when they are a priority name. */
+const CITY_LEVEL_TYPES: ReadonlySet<string> = new Set(['city', 'town']);
+const PRIORITY_LOCALITY_TYPES: ReadonlySet<string> = new Set(['suburb', 'locality']);
+
 /** The place authority labels some provinces in Afrikaans. */
 const PROVINCE_KEY_ALIASES: Record<string, string> = { 'noord kaap': 'northern cape' };
 
@@ -134,12 +139,16 @@ async function computePopularAreas(
 
   const toArea = (cityPlaceId: string, sale: number, rent: number): HomePopularArea | null => {
     const label = projection.labels.get(cityPlaceId);
+    const execution = projection.executions.get(cityPlaceId);
     const href = publishedPath(cityPlaceId);
-    if (!label || !href) return null;
+    if (!label || !execution || !href) return null;
+    // The place page opens a path only when the published URL entry and the
+    // runtime Place execution agree on the search scope (resolveCanonicalUrl).
+    if (canonicalPlaceUrlByPlaceId(cityPlaceId)?.search_scope !== execution.scope) return null;
     return {
       placeId: cityPlaceId,
       name: label.label,
-      kind: label.placeType === 'suburb' ? 'suburb' : 'city',
+      kind: CITY_LEVEL_TYPES.has(String(label.placeType ?? '')) ? 'city' : 'suburb',
       href,
       listingCount: sale + rent,
       saleCount: sale,
@@ -157,13 +166,23 @@ async function computePopularAreas(
 
   if (areas.length < limit) {
     const taken = new Set(areas.map(area => area.placeId));
-    const fallback = Array.from(projection.executions.values())
-      .filter(
-        execution =>
-          execution.scope === 'metro_city' &&
-          execution.provincePlaceId === provincePlaceId &&
-          !taken.has(execution.placeId),
-      )
+    const takenNames = new Set(areas.map(area => normalise(area.name)));
+    const candidates = Array.from(projection.executions.values())
+      .filter(execution => {
+        if (execution.provincePlaceId !== provincePlaceId || taken.has(execution.placeId)) {
+          return false;
+        }
+        if (execution.scope === 'province') return false;
+        const label = projection.labels.get(execution.placeId);
+        if (!label) return false;
+        const placeType = String(label.placeType ?? '');
+        if (CITY_LEVEL_TYPES.has(placeType) && execution.scope === 'metro_city') return true;
+        // A well-known name may be a published locality (Sandton) with a working page.
+        return (
+          priorityRank(scope.province.name, label.label) !== Number.MAX_SAFE_INTEGER &&
+          PRIORITY_LOCALITY_TYPES.has(placeType)
+        );
+      })
       .flatMap(execution => {
         const area = toArea(execution.placeId, 0, 0);
         return area ? [area] : [];
@@ -171,8 +190,17 @@ async function computePopularAreas(
       .sort(
         (left, right) =>
           priorityRank(scope.province.name, left.name) -
-            priorityRank(scope.province.name, right.name) || left.name.localeCompare(right.name),
+            priorityRank(scope.province.name, right.name) ||
+          Number(left.kind === 'suburb') - Number(right.kind === 'suburb') ||
+          left.name.localeCompare(right.name),
       );
+    // One tile per name (some towns also exist as a suburb of the same name).
+    const fallback = candidates.filter(area => {
+      const key = normalise(area.name);
+      if (takenNames.has(key)) return false;
+      takenNames.add(key);
+      return true;
+    });
     areas.push(...fallback.slice(0, limit - areas.length));
   }
 

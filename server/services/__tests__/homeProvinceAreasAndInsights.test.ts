@@ -111,8 +111,13 @@ function reset() {
   mockPlaceUrl.mockReset();
   mockPlaceUrl.mockImplementation((placeId: string) =>
     placeId === HIDDEN
-      ? { path: '/x', publication_eligible: false, lifecycle_status: 'active' }
-      : { path: `/gauteng/${placeId}`, publication_eligible: true, lifecycle_status: 'active' },
+      ? { path: '/x', publication_eligible: false, lifecycle_status: 'active', search_scope: 'metro_city' }
+      : {
+          path: `/gauteng/${placeId}`,
+          publication_eligible: true,
+          lifecycle_status: 'active',
+          search_scope: PLACES[placeId]?.scope,
+        },
   );
   installProjection();
 }
