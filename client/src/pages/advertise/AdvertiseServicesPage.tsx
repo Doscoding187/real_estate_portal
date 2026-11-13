@@ -2,7 +2,6 @@ import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BadgeCheck, ClipboardCheck, MapPinned } from 'lucide-react';
-import { NotOpenYetCta } from '@/components/advertise/NotOpenYetCta';
 
 export default function AdvertiseServicesPage() {
   return (
@@ -14,19 +13,26 @@ export default function AdvertiseServicesPage() {
             Service provider access
           </div>
           <h1 className="font-['Sora'] text-4xl font-bold tracking-[-0.05em] text-slate-950 md:text-6xl">
-            Put your property service in front of the right audience.
+            Give your service business a professional home on Property Listify.
           </h1>
           <p className="max-w-2xl text-base leading-7 text-slate-700 md:text-lg">
-            Property Listify Services is a focused directory for repairs, moving, finance and legal
-            help, inspections, insurance, and property media. Providers publish a clear service
-            profile and receive requests from people working through a property journey.
+            Build a shareable business profile, present your services and listed coverage, and let
+            customers send requests through Property Listify. Approved providers have a public
+            business profile and individual service pages.
           </p>
           <div className="flex flex-wrap gap-3">
-            <NotOpenYetCta tone="light" />
+            <Link href="/login?mode=register&role=service_provider">
+              <Button>Apply as a service provider</Button>
+            </Link>
             <Link href="/services">
               <Button variant="outline">Browse the directory</Button>
             </Link>
           </div>
+          <p className="max-w-2xl text-sm leading-6 text-slate-600">
+            Register, verify your email, complete your profile and submit it for review. Your
+            profile stays private until an authorized reviewer approves publication. Applying does
+            not guarantee approval or customer enquiries.
+          </p>
         </section>
 
         <Card className="border-[#0f3d91]/10 bg-white shadow-[0_24px_90px_-50px_rgba(15,61,145,0.55)]">
@@ -37,18 +43,18 @@ export default function AdvertiseServicesPage() {
             {[
               {
                 icon: ClipboardCheck,
-                title: 'Build a credible profile',
-                copy: 'Describe your business, active services, prices where appropriate, and the areas you cover.',
+                title: 'Apply and verify your account',
+                copy: 'Create a service-provider account and verify your email before starting business profile setup.',
               },
               {
                 icon: MapPinned,
-                title: 'List your coverage',
-                copy: 'Consumers use your listed service area to understand where you can operate.',
+                title: 'Complete your business profile',
+                copy: 'Add your business information, services and the canonical Places where you operate.',
               },
               {
                 icon: BadgeCheck,
-                title: 'Receive a private request',
-                copy: 'Once approved for the directory, consumer requests and account contact context appear in your provider workspace.',
+                title: 'Wait for publication review',
+                copy: 'An authorized reviewer checks profile readiness. If approved, your public business pages can receive customer requests.',
               },
             ].map(item => {
               const Icon = item.icon;
@@ -66,8 +72,8 @@ export default function AdvertiseServicesPage() {
               );
             })}
             <p className="text-xs leading-5 text-slate-500">
-              Services V1 uses a small, manually reviewed provider cohort. There are no paid plans
-              or automated ranking commitments in this flow.
+              Services is opening applications for a controlled provider pilot. Profiles remain
+              private until approved. The pilot does not include paid plans or paid placement.
             </p>
           </CardContent>
         </Card>

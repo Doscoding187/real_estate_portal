@@ -61,9 +61,8 @@ const defaultPartnerTypes: PartnerType[] = [
     icon: Wrench,
     title: 'Property Service Provider',
     benefit:
-      'Reach homeowners and property managers who need your services, from maintenance to renovations.',
-    href: '/advertise/service-providers',
-    comingSoon: true,
+      'If approved, present your services to property owners and managers and receive requests through your Property Listify workspace.',
+    href: '/advertise/services',
   },
 ];
 

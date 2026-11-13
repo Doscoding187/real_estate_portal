@@ -198,13 +198,13 @@ const roles: RoleCard[] = [
     role: 'service_provider',
     label: 'Service Provider',
     description:
-      'Join the partner network for inspections, conveyancing, repairs, media, moving, and related services.',
+      'Apply to build a public business profile and receive requests when customers choose your service.',
     intro:
-      'Create your partner account first. You will complete your directory profile, service coverage, and explore setup after verification.',
+      'Verify your email, complete your business profile, services and coverage, then submit it for review. Your profile stays private until an authorized reviewer approves publication.',
     tag: 'Partner network',
-    cta: 'Create partner account',
-    // Held at launch: buyers and agents only. Set true to release.
-    available: false,
+    cta: 'Apply as a service provider',
+    // Registration is open; publication remains a separate reviewed decision.
+    available: true,
     wide: true,
     Icon: Wrench,
     iconWrap: 'bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300',
@@ -497,8 +497,8 @@ export default function Login() {
             data-testid="unavailable-role-notice"
             className="mb-6 w-full max-w-5xl rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
           >
-            Agency, developer and service provider accounts are not open yet. You can create a
-            buyer or an agent account now.
+            Agency and developer registrations are not open yet. Buyers, agents and service
+            providers can register now.
           </p>
         ) : null}
         <div className="grid w-full max-w-5xl grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
