@@ -8,6 +8,7 @@ import { PROVINCE_SLUGS } from '@/lib/locationUtils';
 import { parseDeployEnv } from './env.contract';
 import { COMMERCIAL_SEARCH_QUERY_KEYS } from '@shared/commercialSearchContract';
 import { isLandPublicDiscoveryAvailable } from '@shared/landLaunchPolicy';
+import { isLaunchHeldJourney, LAUNCH_HELD_JOURNEYS } from '@shared/launchHeldJourneys';
 
 export type PublicNavigationCapabilityStatus =
   | 'LAUNCH_READY'
@@ -133,16 +134,8 @@ const BASELINE_RELEASED_PUBLIC_JOURNEYS: readonly PublicHeroJourneyKey[] = [
   'find_agent',
 ];
 
-/**
- * Journeys held back for the public soft launch. A held journey is NOT released
- * even when VITE_PUBLIC_JOURNEY_RELEASES lists it. Remove a key to release it.
- */
-export const LAUNCH_HELD_JOURNEYS: readonly string[] = [
-  'shared_living',
-  'plot_land',
-  'commercial',
-  'services',
-];
+// Held list lives in shared/launchHeldJourneys.ts (also used by the server sitemap).
+export { LAUNCH_HELD_JOURNEYS, isLaunchHeldJourney };
 
 /**
  * A held-role sign-up entry must not carry its onboarding destination into a
@@ -160,10 +153,6 @@ export function stripHeldRoleNextPath(
     return null;
   }
   return next;
-}
-
-export function isLaunchHeldJourney(key: string): boolean {
-  return LAUNCH_HELD_JOURNEYS.includes(key);
 }
 
 function parseSupplementalPublicJourneyReleases(value: unknown): readonly string[] {

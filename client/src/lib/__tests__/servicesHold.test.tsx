@@ -9,6 +9,7 @@ vi.mock('wouter', () => ({
       {children}
     </a>
   ),
+  useLocation: () => ['/services', vi.fn()],
 }));
 
 import {
