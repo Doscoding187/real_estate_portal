@@ -4,6 +4,7 @@ const { getDb } = vi.hoisted(() => ({ getDb: vi.fn() }));
 vi.mock('../../db', () => ({ getDb }));
 
 import {
+  countAcceptedDevelopmentsByPlace,
   hasExactDevelopmentPlaceMatch,
   listDevelopmentIdsForCanonicalPlaces,
   listDevelopmentPlaceGeography,
@@ -71,7 +72,10 @@ describe('reviewed Development Place geography projection', () => {
 
     const result = await listDevelopmentPlaceGeography([42]);
 
-    expect(result.get(42)).toEqual({ canonicalPlaceId: null, locationLabels: ['Johannesburg', 'Pretoria'] });
+    expect(result.get(42)).toEqual({
+      canonicalPlaceId: null,
+      locationLabels: ['Johannesburg', 'Pretoria'],
+    });
   });
 
   it('fails closed when any accepted assignment is malformed or no longer executable', async () => {
@@ -119,5 +123,51 @@ describe('reviewed Development Place geography projection', () => {
     expect(hasExactDevelopmentPlaceMatch(null, JOHANNESBURG_PLACE_ID)).toBe(false);
     expect(hasExactDevelopmentPlaceMatch('malformed', JOHANNESBURG_PLACE_ID)).toBe(false);
     expect(hasExactDevelopmentPlaceMatch(JOHANNESBURG_PLACE_ID, 'malformed')).toBe(false);
+  });
+});
+
+describe('countAcceptedDevelopmentsByPlace', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  /** First select = eligible development ids; second = accepted assignments for geography. */
+  function useQueries(eligibleIds: number[], assignments: unknown[]) {
+    const queries = [
+      makeQuery(eligibleIds.map(developmentId => ({ developmentId }))),
+      makeQuery(assignments),
+    ];
+    const select = vi.fn(() => queries.shift());
+    getDb.mockResolvedValue({ select, selectDistinct: select });
+    return select;
+  }
+
+  it('counts an eligible single-place development', async () => {
+    useQueries([42], [acceptedAssignment(JOHANNESBURG_PLACE_ID, 'Johannesburg')]);
+    expect((await countAcceptedDevelopmentsByPlace()).get(JOHANNESBURG_PLACE_ID)).toBe(1);
+  });
+
+  it('does not count an ineligible development with an accepted assignment', async () => {
+    // The eligibility predicate filters the first query, so the draft never reaches geography.
+    const select = useQueries([], [acceptedAssignment(JOHANNESBURG_PLACE_ID, 'Johannesburg')]);
+    expect((await countAcceptedDevelopmentsByPlace()).size).toBe(0);
+    expect(select).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not count a development with two accepted places', async () => {
+    useQueries(
+      [42],
+      [
+        acceptedAssignment(JOHANNESBURG_PLACE_ID, 'Johannesburg'),
+        acceptedAssignment(PRETORIA_PLACE_ID, 'Pretoria'),
+      ],
+    );
+    expect((await countAcceptedDevelopmentsByPlace()).size).toBe(0);
+  });
+
+  it('does not count a development with an invalid accepted assignment', async () => {
+    useQueries(
+      [42],
+      [acceptedAssignment(JOHANNESBURG_PLACE_ID, 'Johannesburg', { reviewedByUserId: null })],
+    );
+    expect((await countAcceptedDevelopmentsByPlace()).size).toBe(0);
   });
 });

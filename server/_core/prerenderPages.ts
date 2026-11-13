@@ -1,5 +1,6 @@
 import { COMMERCIAL_ACTIVATION_STATE } from '../../shared/commercialActivation';
 import { COUNTRY_DISCOVERY_PATH } from '../../shared/countryDiscovery';
+import { isPlaceIndexAllowlistedPath } from '../../shared/placeIndexAllowlist';
 import { placePageDescription, placePageTitle } from '../../shared/placePageSeo';
 import { landingPages, NAV_LANDING_ALIASES } from '../../client/src/lib/navLandingPages';
 import {
@@ -322,7 +323,10 @@ export function listPrerenderPages(
   pages.push(...advertisePages());
 
   const reserved = new Set(pages.map(page => page.path));
+  // Build time has no listing data, so only hand-approved places get raw 'index' HTML. Every
+  // other place falls back to the app shell and the client decides robots after boot.
   const places = publishedCanonicalPlaceUrls()
+    .filter(entry => isPlaceIndexAllowlistedPath(entry.path))
     .filter(entry => options.includeLocalities || entry.search_scope !== 'locality')
     .sort((a, b) => a.path.localeCompare(b.path));
   for (const entry of places) {

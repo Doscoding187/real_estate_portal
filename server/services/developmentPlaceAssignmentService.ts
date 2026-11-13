@@ -10,6 +10,7 @@ import {
 import { isPlaceId } from '../../drizzle/schema/placeAuthority';
 import { getDb } from '../db';
 import { normalizeDateTimeForDb } from './developmentDateUtils';
+import { publicDevelopmentEligibilityConditions } from './publicDevelopmentEligibility';
 
 export type DevelopmentPlaceGeography = {
   /**
@@ -57,8 +58,7 @@ export async function recordReviewedDevelopmentPlaceAssignment(
     input.developmentId <= 0 ||
     !Number.isSafeInteger(input.reviewerUserId) ||
     input.reviewerUserId <= 0 ||
-    (input.phaseId !== null &&
-      (!Number.isSafeInteger(input.phaseId) || input.phaseId <= 0)) ||
+    (input.phaseId !== null && (!Number.isSafeInteger(input.phaseId) || input.phaseId <= 0)) ||
     !isPlaceId(input.placeId) ||
     !input.evidenceReference.trim()
   ) {
@@ -209,9 +209,7 @@ export async function listDevelopmentPlaceGeography(
     throw new Error('Development geography scope contains an invalid ID.');
   }
 
-  const result = new Map<number, DevelopmentPlaceGeography>(
-    ids.map(id => [id, EMPTY_GEOGRAPHY]),
-  );
+  const result = new Map<number, DevelopmentPlaceGeography>(ids.map(id => [id, EMPTY_GEOGRAPHY]));
   if (ids.length === 0) return result;
 
   const db = await getDb();
@@ -282,9 +280,9 @@ export async function listDevelopmentPlaceGeography(
 
   for (const [developmentId, aggregate] of placesByDevelopment) {
     const placeIds = [...aggregate.places.keys()].sort();
-    const labels = [...new Set(
-      [...aggregate.places.values()].flatMap(placeLabels => [...placeLabels]),
-    )].sort((a, b) => a.localeCompare(b));
+    const labels = [
+      ...new Set([...aggregate.places.values()].flatMap(placeLabels => [...placeLabels])),
+    ].sort((a, b) => a.localeCompare(b));
     result.set(developmentId, {
       canonicalPlaceId:
         !aggregate.hasInvalidAcceptedAssignment && placeIds.length === 1 ? placeIds[0] : null,
@@ -298,8 +296,9 @@ export async function listDevelopmentPlaceGeography(
 export async function getDevelopmentPlaceGeography(
   developmentId: number,
 ): Promise<DevelopmentPlaceGeography> {
-  return (await listDevelopmentPlaceGeography([developmentId])).get(developmentId) ??
-    EMPTY_GEOGRAPHY;
+  return (
+    (await listDevelopmentPlaceGeography([developmentId])).get(developmentId) ?? EMPTY_GEOGRAPHY
+  );
 }
 
 /**
@@ -378,10 +377,38 @@ export async function listDevelopmentIdsForCanonicalPlace(
   const geographyByDevelopment = await listDevelopmentPlaceGeography(candidateIds);
   return candidateIds
     .filter(id =>
-      hasExactDevelopmentPlaceMatch(
-        geographyByDevelopment.get(id)?.canonicalPlaceId,
-        placeId,
-      ),
+      hasExactDevelopmentPlaceMatch(geographyByDevelopment.get(id)?.canonicalPlaceId, placeId),
     )
     .sort((left, right) => left - right);
+}
+
+/**
+ * Publicly visible Developments per canonical Place, for page indexability. A Development counts
+ * for Place P only if it passes `publicDevelopmentEligibilityConditions()` (as public development
+ * search requires) and `listDevelopmentPlaceGeography` resolves its single executable Place to P
+ * (as `listDevelopmentIdsForCanonicalPlace` matches). Both are reused, not restated.
+ */
+export async function countAcceptedDevelopmentsByPlace(): Promise<Map<string, number>> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const rows = await db
+    .selectDistinct({ developmentId: developmentPlaceAssignments.developmentId })
+    .from(developmentPlaceAssignments)
+    .innerJoin(developments, eq(developments.id, developmentPlaceAssignments.developmentId))
+    .where(
+      and(
+        eq(developmentPlaceAssignments.assignmentKind, 'site'),
+        eq(developmentPlaceAssignments.reviewState, 'accepted'),
+        publicDevelopmentEligibilityConditions(),
+      ),
+    );
+  const ids = rows.map(row => Number(row.developmentId));
+  const counts = new Map<string, number>();
+  if (!ids.length) return counts;
+  const geography = await listDevelopmentPlaceGeography(ids);
+  for (const id of ids) {
+    const placeId = geography.get(id)?.canonicalPlaceId;
+    if (placeId) counts.set(placeId, (counts.get(placeId) ?? 0) + 1);
+  }
+  return counts;
 }
