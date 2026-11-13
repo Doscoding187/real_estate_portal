@@ -67,8 +67,9 @@ export function areaCaption(listingCount: number, provinceName: string): string 
   return provinceName;
 }
 
-function glyphSlugForHref(href: string): string {
-  return CITY_GUIDES.find(city => city.href === href)?.slug ?? 'fallback';
+/** The guide slug when the page is a known city guide, otherwise the place name (matched by CityGlyph). */
+function glyphSlugForArea(href: string, name: string): string {
+  return CITY_GUIDES.find(city => city.href === href)?.slug ?? name;
 }
 
 /** The curated static list for a province, popular cities first. No counts. */
@@ -165,7 +166,7 @@ export function ExploreCities({
         name: area.name,
         href: area.href,
         caption: areaCaption(area.listingCount, province),
-        glyphSlug: glyphSlugForHref(area.href),
+        glyphSlug: glyphSlugForArea(area.href, area.name),
       }))
     : staticTiles(province);
 

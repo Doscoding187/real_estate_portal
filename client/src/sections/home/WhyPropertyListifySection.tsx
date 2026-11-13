@@ -304,7 +304,7 @@ export function WhyPropertyListifySection() {
                 aria-labelledby={`home-why-tab-${item.id}`}
                 aria-hidden={selected ? undefined : true}
                 tabIndex={selected ? 0 : -1}
-                className={`gap-8 rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_20px_60px_-30px_rgba(15,61,145,0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2774AE] sm:p-7 lg:col-start-1 lg:row-start-1 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-10 lg:p-10 ${
+                className={`gap-8 rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_20px_60px_-30px_rgba(15,61,145,0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2774AE] sm:p-7 lg:col-start-1 lg:row-start-1 lg:gap-10 lg:p-10 xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] ${
                   selected
                     ? 'grid motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:duration-300'
                     : 'hidden lg:grid lg:invisible'
@@ -323,7 +323,7 @@ export function WhyPropertyListifySection() {
                     </p>
                     <p className="mt-1 text-sm leading-6 text-slate-800">{item.today}</p>
                   </div>
-                  <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-1 lg:mt-auto lg:pt-6">
+                  <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-1 xl:mt-auto xl:pt-6">
                     <a
                       href={item.cta.href}
                       className="inline-flex min-h-12 items-center gap-2 rounded-full bg-[#1f5f94] px-7 text-sm font-bold text-white shadow-md shadow-blue-900/20 transition hover:bg-[#174d7b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2774AE] focus-visible:ring-offset-2"
@@ -331,19 +331,23 @@ export function WhyPropertyListifySection() {
                       {item.cta.label}
                       <ArrowRight className="h-4 w-4" aria-hidden="true" />
                     </a>
-                    {item.secondary?.map(link => (
-                      <a
-                        key={link.href}
-                        href={link.href}
-                        className="inline-flex min-h-11 items-center text-sm font-bold text-[#1f5f94] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2774AE]"
-                      >
-                        {link.label}
-                      </a>
-                    ))}
+                    {item.secondary && item.secondary.length > 0 ? (
+                      <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
+                        {item.secondary.map(link => (
+                          <a
+                            key={link.href}
+                            href={link.href}
+                            className="inline-flex min-h-11 items-center whitespace-nowrap text-sm font-bold text-[#1f5f94] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2774AE]"
+                          >
+                            {link.label}
+                          </a>
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
                 </div>
 
-                <ul className="grid content-start gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+                <ul className="grid content-start gap-3 sm:grid-cols-3">
                   {item.benefits.map(({ title, text, icon: Icon }) => (
                     <li
                       key={title}

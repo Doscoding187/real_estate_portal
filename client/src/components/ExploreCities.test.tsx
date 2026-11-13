@@ -102,12 +102,13 @@ describe('area discovery entry', () => {
     mockAreas([
       area('Johannesburg', '/gauteng/johannesburg', 5),
       area('Paarl', '/western-cape/paarl', 2),
+      area('Nowhereville', '/gauteng/nowhereville', 1),
     ]);
     const { container } = render(<ExploreCities />);
     const glyphs = [...container.querySelectorAll('svg[data-glyph]')].map(svg =>
       svg.getAttribute('data-glyph'),
     );
-    expect(glyphs).toEqual(['johannesburg', 'fallback']);
+    expect(glyphs).toEqual(['johannesburg', 'paarl', 'fallback']);
   });
 
   it('links "View all areas" to the province page, or /south-africa when it has none', () => {
@@ -247,10 +248,63 @@ describe('area discovery entry', () => {
 
   it('draws every popular city and falls back to a generic glyph for an unmapped city', () => {
     for (const slug of POPULAR_CITY_SLUGS) expect(hasCityGlyph(slug)).toBe(true);
-    const { container } = render(<CityGlyph slug="midrand" />);
+    const { container } = render(<CityGlyph slug="Nowhereville" />);
     const svg = container.querySelector('svg');
     expect(svg).toHaveAttribute('data-glyph', 'fallback');
     expect(svg).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  it('matches glyphs by place name, ignoring case, spacing and apostrophes, and resolves aliases', () => {
+    const glyphOf = (name: string) =>
+      render(<CityGlyph slug={name} />)
+        .container.querySelector('svg')
+        ?.getAttribute('data-glyph');
+    expect(glyphOf('Kempton Park')).toBe('kempton-park');
+    expect(glyphOf('SOWETO')).toBe('soweto');
+    expect(glyphOf("Jeffrey's Bay")).toBe('jeffreys-bay');
+    expect(glyphOf('Mafikeng')).toBe('mahikeng');
+    expect(glyphOf('constructor')).toBe('fallback');
+  });
+
+  it('gives every main area of every province its own glyph', () => {
+    const names = [
+      'Midrand',
+      'Randburg',
+      'Roodepoort',
+      'Soweto',
+      'Benoni',
+      'Boksburg',
+      'Kempton Park',
+      'Alberton',
+      'Paarl',
+      'George',
+      'Somerset West',
+      'Knysna',
+      'Hermanus',
+      'Mossel Bay',
+      'Franschhoek',
+      'Pietermaritzburg',
+      'Ballito',
+      'Richards Bay',
+      'Newcastle',
+      'Umhlanga',
+      'East London',
+      'Mthatha',
+      'Jeffreys Bay',
+      'Welkom',
+      'Bethlehem',
+      'Tzaneen',
+      'Thohoyandou',
+      'Emalahleni',
+      'Secunda',
+      'Middelburg',
+      'Rustenburg',
+      'Mahikeng',
+      'Potchefstroom',
+      'Klerksdorp',
+      'Upington',
+    ];
+    for (const name of names) expect(hasCityGlyph(name), name).toBe(true);
   });
 
   it('only uses cities with a published page in the static list', () => {

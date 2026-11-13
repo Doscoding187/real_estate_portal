@@ -89,4 +89,19 @@ describe('WhyPropertyListifySection', () => {
       '/services',
     );
   });
+
+  it('keeps benefit tiles in a three-column row under the text until the two-column desktop layout', () => {
+    render(<WhyPropertyListifySection />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Service providers' }));
+    const panel = screen.getByRole('tabpanel');
+    expect(panel.className).toContain('xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]');
+    expect(panel.className).not.toMatch(/(^|\s)lg:grid-cols-/);
+    const list = within(panel).getByRole('list');
+    expect(list.className).toContain('sm:grid-cols-3');
+    expect(list.className).not.toContain('lg:grid-cols-1');
+    // Secondary links stay together in one group.
+    const contact = within(panel).getByRole('link', { name: 'Contact us' });
+    const browse = within(panel).getByRole('link', { name: 'Browse the directory' });
+    expect(contact.parentElement).toBe(browse.parentElement);
+  });
 });
