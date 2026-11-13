@@ -4,7 +4,7 @@ import { Link } from 'wouter';
 import { HomeLayout } from '@/layouts/HomeLayout';
 import { Button } from '@/components/ui/button';
 import { applySeo } from '@/lib/seo';
-import { isHomepageHeroJourneyEnabled } from '@/lib/publicNavigation';
+import { isHomepageHeroJourneyEnabled, isJourneyRouteHeld } from '@/lib/publicNavigation';
 import { landingPages, NAV_LANDING_ALIASES, type LandingPageConfig } from '@/lib/navLandingPages';
 
 function getPageConfig(): LandingPageConfig {
@@ -56,11 +56,17 @@ export default function NavLandingPage() {
 
 function GenericNavLandingPage() {
   const page = getPageConfig();
+  // Consumer Services CTAs are hidden while the Services journey is held.
+  const servicesHeld = isJourneyRouteHeld('services');
+  const isServicesHref = (href?: string) => href === '/services' || href?.startsWith('/services/');
   const primaryCtaEnabled =
-    !page.primaryCta.href.startsWith('/property-to-rent') || isHomepageHeroJourneyEnabled('rent');
+    (!page.primaryCta.href.startsWith('/property-to-rent') ||
+      isHomepageHeroJourneyEnabled('rent')) &&
+    !(servicesHeld && isServicesHref(page.primaryCta.href));
   const secondaryCtaEnabled =
-    !page.secondaryCta?.href.startsWith('/new-developments') ||
-    isHomepageHeroJourneyEnabled('developments');
+    (!page.secondaryCta?.href.startsWith('/new-developments') ||
+      isHomepageHeroJourneyEnabled('developments')) &&
+    !(servicesHeld && isServicesHref(page.secondaryCta?.href));
 
   useEffect(() => {
     applySeo({

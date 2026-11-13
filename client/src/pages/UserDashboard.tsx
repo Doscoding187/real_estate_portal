@@ -18,6 +18,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useComparison } from '@/contexts/ComparisonContext';
 import { normalizePropertyForUI } from '@/lib/normalizers';
+import { isJourneyRouteHeld } from '@/lib/publicNavigation';
 import {
   getSavedSearchDeliveryLabel,
   getSavedSearchNotificationDescription,
@@ -155,7 +156,6 @@ function normalizeRole(value?: string | null) {
   return value;
 }
 
-
 function formatRand(value?: number | null) {
   if (!value || !Number.isFinite(value)) return 'R0';
   return `R${Math.round(value).toLocaleString('en-ZA')}`;
@@ -201,7 +201,9 @@ function buildSavedSearchHref(search: Pick<SavedSearch, 'placeId' | 'criteria'>)
     'searchAreaId',
   ];
   if (
-    retiredKeys.some(key => criteria[key] !== undefined && criteria[key] !== null && criteria[key] !== '') ||
+    retiredKeys.some(
+      key => criteria[key] !== undefined && criteria[key] !== null && criteria[key] !== '',
+    ) ||
     criteria.canonicalPlaceId !== undefined
   ) {
     return null;
@@ -483,20 +485,23 @@ export default function UserDashboard() {
     sellerPlanning.propertyType,
   ]);
 
-  const sellerStrategy = useMemo(() => ({
-    marketTemperature: 'Place analytics unavailable',
-    strongestArea: watchAreas[0]?.label || 'No canonical watch area saved',
-    launchWindow:
-      sellerPlanning.timeline === '0_30_days'
-        ? 'Prepare the home and book a professional valuation soon'
-        : sellerPlanning.timeline === '6_months_plus'
-          ? 'Use the longer runway to prepare the home before valuation'
-          : 'Build a preparation plan before setting a list price',
-    summary:
-      sellerPlanning.readiness === 'needs_work'
-        ? 'Your seller plan is saved. Work through repairs and compliance before arranging a valuation.'
-        : 'Your seller plan is saved. The dashboard will not estimate a sale price until Place based market data is available.',
-  }), [sellerPlanning.readiness, sellerPlanning.timeline, watchAreas]);
+  const sellerStrategy = useMemo(
+    () => ({
+      marketTemperature: 'Place analytics unavailable',
+      strongestArea: watchAreas[0]?.label || 'No canonical watch area saved',
+      launchWindow:
+        sellerPlanning.timeline === '0_30_days'
+          ? 'Prepare the home and book a professional valuation soon'
+          : sellerPlanning.timeline === '6_months_plus'
+            ? 'Use the longer runway to prepare the home before valuation'
+            : 'Build a preparation plan before setting a list price',
+      summary:
+        sellerPlanning.readiness === 'needs_work'
+          ? 'Your seller plan is saved. Work through repairs and compliance before arranging a valuation.'
+          : 'Your seller plan is saved. The dashboard will not estimate a sale price until Place based market data is available.',
+    }),
+    [sellerPlanning.readiness, sellerPlanning.timeline, watchAreas],
+  );
 
   const sellerValuationGuide = useMemo(
     () => ({
@@ -519,6 +524,9 @@ export default function UserDashboard() {
     [watchAreas],
   );
 
+  // Consumer Services directory is held until stocked (LAUNCH_HELD_JOURNEYS).
+  const servicesHeld = isJourneyRouteHeld('services');
+
   const bridgePlan = useMemo(() => {
     if (intent !== 'both') return null;
 
@@ -530,9 +538,10 @@ export default function UserDashboard() {
         headline: 'Your buy and sell moves can run in parallel',
         detail:
           'Your affordability plan is active and your seller context is strong enough to start valuation prep without losing buyer momentum.',
-        primaryLabel: 'Open valuation prep',
-        primaryHref:
-          '/services/inspection_compliance?intentStage=seller_valuation&sourceSurface=journey_injection&reasonKey=seller_valuation_prep',
+        primaryLabel: servicesHeld ? 'Review seller readiness' : 'Open valuation prep',
+        primaryHref: servicesHeld
+          ? '#overview-seller-readiness'
+          : '/services/inspection_compliance?intentStage=seller_valuation&sourceSurface=journey_injection&reasonKey=seller_valuation_prep',
         secondaryLabel: 'Refine buyability plan',
       };
     }
@@ -567,7 +576,7 @@ export default function UserDashboard() {
       primaryHref: '#open-planner',
       secondaryLabel: 'Save target areas',
     };
-  }, [buyabilityResults, intent, prospectProgress?.progress, sellerReadiness.score]);
+  }, [buyabilityResults, intent, prospectProgress?.progress, sellerReadiness.score, servicesHeld]);
 
   const handleSaveSellerPlanning = async () => {
     try {
@@ -742,7 +751,7 @@ export default function UserDashboard() {
                   <Search className="mr-2 h-4 w-4" />
                   Browse properties
                 </Button>
-                {(intent === 'seller' || intent === 'both') && (
+                {(intent === 'seller' || intent === 'both') && !servicesHeld && (
                   <Button
                     variant="outline"
                     onClick={() =>
@@ -1249,43 +1258,45 @@ export default function UserDashboard() {
                     </div>
                   </div>
 
-                  <div className="grid gap-3 pt-1">
-                    <Button
-                      variant="outline"
-                      className="h-auto w-full justify-between whitespace-normal rounded-2xl px-4 py-4 text-left"
-                      onClick={() =>
-                        setLocation(
-                          '/services/inspection_compliance?intentStage=seller_valuation&sourceSurface=journey_injection&reasonKey=seller_valuation_prep',
-                        )
-                      }
-                    >
-                      <div className="min-w-0">
-                        <p className="font-semibold text-slate-900">Seller valuation prep</p>
-                        <p className="text-sm text-slate-500">
-                          Bring in inspections and readiness checks before you set your price.
-                        </p>
-                      </div>
-                      <ArrowRight className="h-4 w-4 text-slate-400" />
-                    </Button>
+                  {!servicesHeld && (
+                    <div className="grid gap-3 pt-1">
+                      <Button
+                        variant="outline"
+                        className="h-auto w-full justify-between whitespace-normal rounded-2xl px-4 py-4 text-left"
+                        onClick={() =>
+                          setLocation(
+                            '/services/inspection_compliance?intentStage=seller_valuation&sourceSurface=journey_injection&reasonKey=seller_valuation_prep',
+                          )
+                        }
+                      >
+                        <div className="min-w-0">
+                          <p className="font-semibold text-slate-900">Seller valuation prep</p>
+                          <p className="text-sm text-slate-500">
+                            Bring in inspections and readiness checks before you set your price.
+                          </p>
+                        </div>
+                        <ArrowRight className="h-4 w-4 text-slate-400" />
+                      </Button>
 
-                    <Button
-                      variant="outline"
-                      className="h-auto w-full justify-between whitespace-normal rounded-2xl px-4 py-4 text-left"
-                      onClick={() =>
-                        setLocation(
-                          '/services/media_marketing?intentStage=seller_listing_prep&sourceSurface=journey_injection&reasonKey=seller_listing_prep',
-                        )
-                      }
-                    >
-                      <div className="min-w-0">
-                        <p className="font-semibold text-slate-900">Listing prep</p>
-                        <p className="text-sm text-slate-500">
-                          Line up photography, staging, and launch media before you go live.
-                        </p>
-                      </div>
-                      <ArrowRight className="h-4 w-4 text-slate-400" />
-                    </Button>
-                  </div>
+                      <Button
+                        variant="outline"
+                        className="h-auto w-full justify-between whitespace-normal rounded-2xl px-4 py-4 text-left"
+                        onClick={() =>
+                          setLocation(
+                            '/services/media_marketing?intentStage=seller_listing_prep&sourceSurface=journey_injection&reasonKey=seller_listing_prep',
+                          )
+                        }
+                      >
+                        <div className="min-w-0">
+                          <p className="font-semibold text-slate-900">Listing prep</p>
+                          <p className="text-sm text-slate-500">
+                            Line up photography, staging, and launch media before you go live.
+                          </p>
+                        </div>
+                        <ArrowRight className="h-4 w-4 text-slate-400" />
+                      </Button>
+                    </div>
+                  )}
 
                   {locations.length > 0 ? (
                     <div className="flex flex-wrap gap-2 pt-1">
@@ -1316,7 +1327,8 @@ export default function UserDashboard() {
                     <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5">
                       <p className="font-semibold text-slate-900">No canonical watch areas yet</p>
                       <p className="mt-2 text-sm text-slate-600">
-                        Save a home with an admitted Place or save a search for one Place or governed Search Area.
+                        Save a home with an admitted Place or save a search for one Place or
+                        governed Search Area.
                       </p>
                     </div>
                   ) : (
@@ -1329,16 +1341,22 @@ export default function UserDashboard() {
                           <div>
                             <p className="text-lg font-semibold text-slate-900">{area.label}</p>
                             <p className="mt-1 text-sm text-slate-500">
-                              Saved from {area.source === 'saved-home' ? 'a saved home' : 'a saved search'}
+                              Saved from{' '}
+                              {area.source === 'saved-home' ? 'a saved home' : 'a saved search'}
                               {' · canonical Place'}
                             </p>
                           </div>
-                          <Button variant="outline" size="sm" onClick={() => setLocation(area.href)}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setLocation(area.href)}
+                          >
                             View homes
                           </Button>
                         </div>
                         <p className="mt-4 text-sm text-slate-500">
-                          Place based market analytics are not connected yet. No suburb text or numeric location IDs are used to estimate this area.
+                          Place based market analytics are not connected yet. No suburb text or
+                          numeric location IDs are used to estimate this area.
                         </p>
                       </div>
                     ))
@@ -1352,7 +1370,7 @@ export default function UserDashboard() {
                     <Clock3 className="h-5 w-5 text-slate-700" />
                     What changed
                   </CardTitle>
-              <CardDescription>
+                  <CardDescription>
                     Signals generated from saved homes and canonical saved searches.
                   </CardDescription>
                 </CardHeader>
@@ -1417,7 +1435,8 @@ export default function UserDashboard() {
                         <div>
                           <p className="text-lg font-semibold text-slate-900">{property.title}</p>
                           <p className="text-sm text-slate-500">
-                            {property.canonicalPlaceId && watchPlaceLabels.get(property.canonicalPlaceId)
+                            {property.canonicalPlaceId &&
+                            watchPlaceLabels.get(property.canonicalPlaceId)
                               ? watchPlaceLabels.get(property.canonicalPlaceId)
                               : 'Location not assigned to an admitted Place'}
                           </p>

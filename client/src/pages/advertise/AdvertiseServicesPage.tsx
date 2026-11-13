@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BadgeCheck, ClipboardCheck, MapPinned } from 'lucide-react';
 import { NotOpenYetCta } from '@/components/advertise/NotOpenYetCta';
+import { isJourneyRouteHeld } from '@/lib/publicNavigation';
 
 export default function AdvertiseServicesPage() {
   return (
@@ -23,9 +24,11 @@ export default function AdvertiseServicesPage() {
           </p>
           <div className="flex flex-wrap gap-3">
             <NotOpenYetCta tone="light" />
-            <Link href="/services">
-              <Button variant="outline">Browse the directory</Button>
-            </Link>
+            {isJourneyRouteHeld('services') ? null : (
+              <Link href="/services">
+                <Button variant="outline">Browse the directory</Button>
+              </Link>
+            )}
           </div>
         </section>
 
