@@ -22,7 +22,8 @@ describe('hosting route contract', () => {
     expect(config.routes.find(route => route.src === '/south-africa/?')).toMatchObject({
       dest: '/south-africa/index.html',
     });
-    expect(config.routes.at(-1)).toMatchObject({ src: '/(.*)', dest: '/index.html' });
+    // Single-page-app fallback is the plain shell; index.html is the prepared homepage (#767).
+    expect(config.routes.at(-1)).toMatchObject({ src: '/(.*)', dest: '/app-shell.html' });
     for (const path of ['/gauteng', '/gauteng/johannesburg', '/gauteng/johannesburg/sandton']) {
       expect(config.routes.some(route => route.src === `${path}/?`)).toBe(false);
     }
@@ -40,7 +41,7 @@ describe('hosting route contract', () => {
     expect(explicitGuideDocuments).toEqual([
       expect.objectContaining({ src: '/south-africa/?', dest: '/south-africa/index.html' }),
     ]);
-    expect(config.routes.at(-1)).toMatchObject({ src: '/(.*)', dest: '/index.html' });
+    expect(config.routes.at(-1)).toMatchObject({ src: '/(.*)', dest: '/app-shell.html' });
   });
 
   it('proxies the public sitemap index and the guide sitemap to the production API', async () => {
