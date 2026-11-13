@@ -76,7 +76,7 @@ describe('LocationAutosuggest canonical Place discovery', () => {
     const onSelect = vi.fn();
     render(<LocationAutosuggest onSelect={onSelect} />);
 
-    const input = screen.getByRole('combobox', { name: 'Search admitted places' });
+    const input = screen.getByRole('combobox', { name: 'Search places' });
     fireEvent.change(input, { target: { value: 'San' } });
     await waitFor(() =>
       expect(screen.getByRole('option', { name: /Sandton/ })).toBeInTheDocument(),
@@ -96,7 +96,7 @@ describe('LocationAutosuggest canonical Place discovery', () => {
     const inputRef = createRef<HTMLInputElement>();
     render(<LocationAutosuggest inputRef={inputRef} />);
 
-    const input = screen.getByRole('combobox', { name: 'Search admitted places' });
+    const input = screen.getByRole('combobox', { name: 'Search places' });
     expect(inputRef.current).toBe(input);
     expect(usePlaceDiscoveryQuery).toHaveBeenLastCalledWith(
       { query: '' },

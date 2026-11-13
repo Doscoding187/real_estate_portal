@@ -212,6 +212,9 @@ describe('ProviderOnboardingWizard', () => {
     fireEvent.change(screen.getByPlaceholderText(/geyser replacement/i), {
       target: { value: 'Plumbing repair' },
     });
+    fireEvent.change(screen.getByLabelText(/service description/i), {
+      target: { value: 'Repair leaks, taps and household pipework.' },
+    });
     await clickContinue();
     await waitFor(() => expect(screen.getByText('Step 4 of 5')).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: /select sandton coverage place/i }));
@@ -222,6 +225,14 @@ describe('ProviderOnboardingWizard', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Profile setup complete')).toBeInTheDocument();
+    });
+    expect(mockReplaceServices).toHaveBeenCalledWith({
+      services: [
+        expect.objectContaining({
+          displayName: 'Plumbing repair',
+          description: 'Repair leaks, taps and household pipework.',
+        }),
+      ],
     });
     expect(mockReplaceLocations).toHaveBeenCalledWith({
       locations: [
@@ -299,6 +310,10 @@ describe('ProviderOnboardingWizard', () => {
     render(<ProviderOnboardingWizard />);
     await waitFor(() => expect(screen.getByText('Step 3 of 5')).toBeInTheDocument());
     expect(screen.getByLabelText(/service name/i)).toHaveValue('Plumbing repairs');
+    const description = screen.getByLabelText('Service description');
+    expect(description).toHaveValue('Existing description');
+    expect(description).toHaveAttribute('maxLength', '2000');
+    fireEvent.change(description, { target: { value: 'Updated pipe repair description.' } });
     const activeToggle = screen.getByLabelText(/available for requests/i);
     expect(activeToggle).not.toBeChecked();
     fireEvent.click(activeToggle);
@@ -312,7 +327,7 @@ describe('ProviderOnboardingWizard', () => {
         expect.objectContaining({
           id: 41,
           code: 'plumbing',
-          description: 'Existing description',
+          description: 'Updated pipe repair description.',
           minPrice: 250,
           maxPrice: 900,
           currency: 'ZAR',

@@ -225,6 +225,46 @@ describe('publicSearchService canonical Place contract', () => {
     );
   });
 
+  it('threads requirePhoto to the manual source only when requested', async () => {
+    await publicSearchService.searchInventory({ listingType: 'sale', listingSource: 'manual' });
+    expect(mockSearchProperties.mock.calls[0][4]).not.toHaveProperty('requirePhoto');
+
+    mockSearchProperties.mockClear();
+    await publicSearchService.searchInventory({
+      listingType: 'sale',
+      listingSource: 'manual',
+      requirePhoto: true,
+    });
+    expect(mockSearchProperties.mock.calls[0][4]).toMatchObject({
+      publicOnly: true,
+      requirePhoto: true,
+    });
+  });
+
+  it('sends trending to the manual source and date_desc to the development source', async () => {
+    await publicSearchService.searchInventory({
+      canonicalPlaceId: PLACE_ID,
+      listingType: 'sale',
+      sortOption: 'trending',
+    });
+    expect(mockSearchProperties.mock.calls[0][1]).toBe('trending');
+    expect(mockSearchDevelopments).toHaveBeenCalledWith(
+      expect.objectContaining({ sortOption: 'date_desc' }),
+    );
+  });
+
+  it('leaves date_desc unchanged for both sources', async () => {
+    await publicSearchService.searchInventory({
+      canonicalPlaceId: PLACE_ID,
+      listingType: 'sale',
+      sortOption: 'date_desc',
+    });
+    expect(mockSearchProperties.mock.calls[0][1]).toBe('date_desc');
+    expect(mockSearchDevelopments).toHaveBeenCalledWith(
+      expect.objectContaining({ sortOption: 'date_desc' }),
+    );
+  });
+
   it('rejects unsupported and Commercial journeys', async () => {
     await expect(publicSearchService.searchInventory({ listingType: 'shared_living' as never }))
       .rejects.toThrow('Buy or Rent');
@@ -272,5 +312,53 @@ describe('publicSearchService canonical Place contract', () => {
       minLng: 28, maxLng: 29,
     })).rejects.toThrow('Map bounds must be complete and ordered');
     expect(mockSearchProperties).not.toHaveBeenCalled();
+  });
+});
+
+describe('publicSearchService unit_type development result shape', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockLoadPlaceProjection.mockResolvedValue(projection('province'));
+    mockSearchProperties.mockResolvedValue({ cards: [], total: 0 });
+    mockSearchDevelopments.mockResolvedValue({
+      items: [developmentItem(1), developmentItem(2)],
+      total: 2,
+      page: 0,
+      pageSize: 10,
+      hasMore: false,
+      locationState: 'resolved',
+      unpricedHiddenCount: 0,
+    });
+  });
+
+  it('returns one card per available unit type, not one per development, and asks for unit sizes', async () => {
+    const result = await publicSearchService.searchInventory({
+      canonicalPlaceId: PLACE_ID, listingType: 'sale', sortOption: 'trending', pageSize: 10,
+      developmentResultShape: 'unit_type',
+    });
+    expect(result.cards.map(c => c.title)).toEqual(['2-bed Two bedroom', '2-bed Two bedroom']);
+    expect(result.cards.map(c => c.href)).toEqual([
+      '/development/development-1/unit/unit-1',
+      '/development/development-2/unit/unit-1',
+    ]);
+    expect(mockSearchDevelopments.mock.calls[0][0]).toMatchObject({ includeUnitSize: true });
+    expect(result.total).toBe(2);
+  });
+
+  it('keeps the whole-development card and no includeUnitSize by default', async () => {
+    const result = await publicSearchService.searchInventory({
+      canonicalPlaceId: PLACE_ID, listingType: 'sale', pageSize: 10,
+    });
+    expect(result.cards.map(c => c.title)).toEqual(['Development 1', 'Development 2']);
+    expect(mockSearchDevelopments.mock.calls[0][0]).not.toHaveProperty('includeUnitSize');
+  });
+
+  it('ignores the shape when no place is given (no development source)', async () => {
+    mockSearchProperties.mockResolvedValue({ cards: [card('property', 'p-1', 1)], total: 1 });
+    const result = await publicSearchService.searchInventory({
+      listingType: 'sale', pageSize: 10, developmentResultShape: 'unit_type',
+    });
+    expect(result.cards.map(c => c.id)).toEqual(['p-1']);
+    expect(mockSearchDevelopments).not.toHaveBeenCalled();
   });
 });

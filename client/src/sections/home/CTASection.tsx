@@ -1,36 +1,109 @@
-import { Button } from '@/components/ui/button';
+// Why this section exists, what it says and its rules: docs/product/homepage/closing-cta.md
+import type { MouseEvent } from 'react';
+import { ArrowRight, Home, KeyRound } from 'lucide-react';
 
 type CTASectionProps = {
-  onBrowse: () => void;
+  onBrowse?: () => void;
 };
 
-export function CTASection({ onBrowse }: CTASectionProps) {
+/** Simple original skyline: a few rooftops in outline, used as quiet decoration. */
+function Rooftops({ className }: { className: string }) {
   return (
-    <section className="home-section bg-white">
-      <div className="relative overflow-hidden rounded-[1.5rem] bg-gradient-to-br from-[#2774AE] via-[#2D68C4] to-[#0F52BA] px-4 py-7 text-center shadow-2xl sm:px-6 sm:py-8 md:rounded-[2rem] md:px-12 md:py-12">
-        <div className="absolute left-0 top-0 hidden h-48 w-48 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/10 blur-3xl sm:block md:h-96 md:w-96" />
-        <div className="absolute bottom-0 right-0 hidden h-48 w-48 translate-x-1/2 translate-y-1/2 rounded-full bg-white/10 blur-3xl sm:block md:h-96 md:w-96" />
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS1vcGFjaXR5PSIwLjA1IiBzdHJva2Utd2lkdGg9IjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')] opacity-30" />
+    <svg viewBox="0 0 240 80" fill="none" aria-hidden="true" className={className}>
+      <path
+        d="M4 76V44l18-14 18 14v32M40 76V30l22-20 22 20v46M84 76V50l16-12 16 12v26M116 76V36l20-16 20 16v40M156 76V54l14-10 14 10v22M184 76V40l18-14 18 14v36M2 76h236"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
 
-        <div className="relative z-10 mx-auto max-w-4xl">
-          <div className="mx-auto mb-3 inline-flex items-center rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-50">
-            Start your search
+export function CTASection({ onBrowse }: CTASectionProps) {
+  const handleBrowse = (event: MouseEvent<HTMLAnchorElement>) => {
+    if (!onBrowse || event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
+    event.preventDefault();
+    onBrowse();
+  };
+
+  return (
+    <section
+      data-testid="home-closing-cta"
+      aria-labelledby="home-closing-heading"
+      className="mb-6 mt-14 md:mb-10 md:mt-24"
+    >
+      <div className="mx-auto mb-7 max-w-2xl text-center">
+        <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#1f5f94]">
+          Start with Property Listify
+        </p>
+        <h2
+          id="home-closing-heading"
+          className="mt-3 text-[1.75rem] font-bold leading-[1.1] tracking-tight text-slate-900 sm:text-4xl md:text-[2.75rem]"
+        >
+          Ready when you are.
+        </h2>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 md:gap-5">
+        <div className="relative flex flex-col overflow-hidden rounded-[1.75rem] border border-blue-200 bg-gradient-to-br from-blue-50 via-white to-blue-100 p-6 text-slate-900 shadow-xl shadow-blue-900/10 sm:p-8 md:rounded-[2rem] md:p-12">
+          <Rooftops className="pointer-events-none absolute -bottom-2 -right-4 w-56 text-[#2774AE]/15 md:w-72" />
+          <div className="relative flex flex-1 flex-col">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#1f5f94] text-white shadow-lg shadow-blue-900/20">
+              <Home className="h-7 w-7" aria-hidden="true" />
+            </div>
+            <h3 className="mt-6 text-[1.75rem] font-bold leading-tight tracking-tight md:text-4xl">
+              Looking for a home?
+            </h3>
+            <p className="mt-3 flex-1 text-base leading-7 text-slate-800 md:text-lg md:leading-8">
+              Search homes for sale and to rent, then contact the agent directly.
+            </p>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
+              <a
+                href="/property-for-sale"
+                onClick={handleBrowse}
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#1f5f94] px-8 text-base font-bold text-white shadow-lg shadow-blue-900/25 transition hover:bg-[#174d7b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1f5f94] focus-visible:ring-offset-2"
+              >
+                Browse homes for sale <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </a>
+              <a
+                href="/property-to-rent"
+                className="inline-flex min-h-11 items-center justify-center text-base font-bold text-[#1f5f94] underline underline-offset-4 hover:text-[#174d7b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1f5f94]"
+              >
+                Homes to rent
+              </a>
+            </div>
           </div>
-          <h2 className="mb-3 text-[1.65rem] font-bold leading-[1.08] tracking-tight text-white sm:mb-4 sm:text-3xl md:mb-6 md:text-5xl">
-            Ready to find your next home?
-          </h2>
-          <p className="mx-auto mb-5 max-w-[30rem] text-[13px] leading-5 text-blue-50 sm:text-base md:mb-10 md:text-xl md:leading-relaxed">
-            Explore homes for sale, compare the details that matter, and contact the people
-            responsible for the property.
-          </p>
-          <div className="flex items-center justify-center">
-            <Button
-              size="lg"
-              onClick={onBrowse}
-              className="h-auto w-full rounded-full bg-white px-5 py-3.5 text-sm font-bold text-[#2774AE] shadow-2xl transition-all hover:-translate-y-1 hover:scale-[1.01] hover:bg-blue-50 sm:w-auto sm:px-8 sm:py-5 sm:text-base md:text-lg"
-            >
-              Browse homes for sale
-            </Button>
+        </div>
+
+        <div className="relative flex flex-col overflow-hidden rounded-[1.75rem] border border-white/10 bg-gradient-to-br from-slate-950 via-[#0b2a4a] to-[#0f4c81] p-6 text-white shadow-xl shadow-slate-900/30 sm:p-8 md:rounded-[2rem] md:p-12">
+          <Rooftops className="pointer-events-none absolute -bottom-2 -right-4 w-56 text-white/10 md:w-72" />
+          <div className="relative flex flex-1 flex-col">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-300 text-amber-950 shadow-lg shadow-black/20">
+              <KeyRound className="h-7 w-7" aria-hidden="true" />
+            </div>
+            <h3 className="mt-6 text-[1.75rem] font-bold leading-tight tracking-tight md:text-4xl">
+              Have a property to list?
+            </h3>
+            <p className="mt-3 flex-1 text-base leading-7 text-white md:text-lg md:leading-8">
+              Agents, agencies, developers and service businesses can see how to list. Owners can
+              find an agent to list for them.
+            </p>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
+              <a
+                href="/advertise"
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-white px-8 text-base font-bold text-slate-900 shadow-lg shadow-black/25 transition hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+              >
+                List with us <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </a>
+              <a
+                href="/agents"
+                className="inline-flex min-h-11 items-center justify-center text-base font-bold text-white underline underline-offset-4 hover:text-blue-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              >
+                Find an agent
+              </a>
+            </div>
           </div>
         </div>
       </div>

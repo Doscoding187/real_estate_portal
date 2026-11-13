@@ -14,7 +14,7 @@ import {
   normalizePublicSearchPageIndex,
   normalizePublicSearchPageSize,
 } from '../../shared/publicSearchPagination';
-import type { PropertyFilters, SearchCardResult, SortOption } from '../../shared/types';
+import type { PropertyFilters, SearchCardResult } from '../../shared/types';
 import type { PublicDevelopmentSearchItem } from '../../shared/publicDevelopmentSearch';
 import { isCanonicalPlaceId } from '../../shared/placeAuthority';
 import { validatePublicSearchInput } from '../../shared/publicSearchValidation';
@@ -28,7 +28,14 @@ import {
   isCommercialMarketingPropertyType,
 } from '../../shared/commercial-domain';
 import { publicDevelopmentSearchService } from './publicDevelopmentSearchService';
-import { propertySearchService } from './propertySearchService';
+import {
+  developmentUnitTypeCards,
+  mixListingsAndUnitTypes,
+} from './developmentUnitTypeCards';
+import { propertySearchService, type ManualPropertySortOption } from './propertySearchService';
+
+/** Public inventory sort values: the shared search sorts plus the homepage rail's trending order. */
+export type PublicInventorySortOption = SearchResultSortOption | 'trending';
 
 export interface PublicSearchInventoryInput {
   canonicalPlaceId?: string;
@@ -53,7 +60,14 @@ export interface PublicSearchInventoryInput {
   maxLat?: number;
   minLng?: number;
   maxLng?: number;
-  sortOption?: SearchResultSortOption;
+  sortOption?: PublicInventorySortOption;
+  /** Manual source only: require an approved photo. Development results ignore it. */
+  requirePhoto?: boolean;
+  /**
+   * 'development' (default) returns one card per development. 'unit_type'
+   * returns one card per available unit type, mixed with listings under a cap.
+   */
+  developmentResultShape?: 'development' | 'unit_type';
   page?: number;
   pageSize?: number;
 }
@@ -162,9 +176,10 @@ function buildDevelopmentSearchInput(
     maxPrice: input.maxPrice,
     minBedrooms: input.minBedrooms,
     maxBedrooms: input.maxBedrooms,
-    sortOption: input.sortOption,
+    sortOption: input.sortOption === 'trending' ? 'date_desc' : input.sortOption,
     page,
     pageSize,
+    ...(input.developmentResultShape === 'unit_type' ? { includeUnitSize: true } : {}),
   };
 }
 
@@ -285,7 +300,7 @@ function blendSearchSources(
   return mixed;
 }
 
-function sourceSort(sortOption: SearchResultSortOption): SortOption {
+function sourceSort(sortOption: PublicInventorySortOption): ManualPropertySortOption {
   return sortOption === 'relevance' ? 'date_desc' : sortOption;
 }
 
@@ -316,8 +331,9 @@ export class PublicSearchService {
 
     const page = normalizePublicSearchPageIndex(input.page);
     const pageSize = normalizePublicSearchPageSize(input.pageSize);
-    const sortOption: SearchResultSortOption =
+    const sortOption: PublicInventorySortOption =
       input.sortOption === 'relevance' ||
+      input.sortOption === 'trending' ||
       input.sortOption === 'price_asc' ||
       input.sortOption === 'price_desc' ||
       input.sortOption === 'date_desc' ||
@@ -362,8 +378,9 @@ export class PublicSearchService {
     const filters = buildPublicFilters(input, placeMemberIds);
     const manualEnabled = input.listingSource !== 'development';
     const developmentEnabled = input.listingSource !== 'manual' && Boolean(input.canonicalPlaceId);
+    const unitTypeShape = input.developmentResultShape === 'unit_type' && developmentEnabled;
     const fetchSourceResults = async (requestedPage: number) => {
-      const combined = manualEnabled && developmentEnabled;
+      const combined = (manualEnabled && developmentEnabled) || unitTypeShape;
       const sourcePageSize = combined ? (requestedPage + 1) * pageSize : pageSize;
       const manualSourcePage = combined ? 1 : requestedPage + 1;
       const developmentSourcePage = combined ? 0 : requestedPage;
@@ -376,6 +393,7 @@ export class PublicSearchService {
               sourcePageSize,
               {
                 publicOnly: true,
+                ...(input.requirePhoto ? { requirePhoto: true } : {}),
                 ...(placeProjection ? { placeProjection } : {}),
                 provincePlaceId,
               },
@@ -395,14 +413,23 @@ export class PublicSearchService {
 
     let [manualResults, developmentResults] = await fetchSourceResults(page);
     let manualTotal = manualResults?.total || 0;
-    let developmentTotal = developmentResults?.total || 0;
+    const unitCardsFrom = () =>
+      (developmentResults?.items || []).flatMap(item =>
+        developmentUnitTypeCards(item, {
+          listingType: input.listingType!,
+          requirePhoto: input.requirePhoto,
+        }),
+      );
+    let unitTypeCards = unitTypeShape ? unitCardsFrom() : [];
+    let developmentTotal = unitTypeShape ? unitTypeCards.length : developmentResults?.total || 0;
     let total = manualTotal + developmentTotal;
     const canonicalPage = normalizePublicSearchPageForTotal(page, total, pageSize);
 
     if (canonicalPage !== page) {
       [manualResults, developmentResults] = await fetchSourceResults(canonicalPage);
       manualTotal = manualResults?.total || 0;
-      developmentTotal = developmentResults?.total || 0;
+      unitTypeCards = unitTypeShape ? unitCardsFrom() : [];
+      developmentTotal = unitTypeShape ? unitTypeCards.length : developmentResults?.total || 0;
       total = manualTotal + developmentTotal;
     }
 
@@ -410,12 +437,22 @@ export class PublicSearchService {
     const developmentCards = (developmentResults?.items || []).map(developmentCard);
     const blended =
       manualEnabled && developmentEnabled
-        ? blendSearchSources(manualCards, developmentCards, sortOption)
+        ? blendSearchSources(
+            manualCards,
+            developmentCards,
+            // Trending orders the manual source only; keep its order and interleave.
+            sortOption === 'trending' ? 'relevance' : sortOption,
+          )
         : manualEnabled
           ? manualCards
           : developmentCards;
-    const cards =
-      manualEnabled && developmentEnabled
+    const cards = unitTypeShape
+      ? mixListingsAndUnitTypes(manualEnabled ? manualCards : [], unitTypeCards, {
+          limit: (canonicalPage + 1) * pageSize,
+          maxPerDevelopment: 2,
+          maxUnitTypesWhenListingsAtLeast6: 4,
+        }).slice(canonicalPage * pageSize, canonicalPage * pageSize + pageSize)
+      : manualEnabled && developmentEnabled
         ? blended.slice(canonicalPage * pageSize, canonicalPage * pageSize + pageSize)
         : blended;
 

@@ -34,6 +34,8 @@ interface LocationAutosuggestProps {
   renderSelectedLocations?: boolean;
   inputRef?: RefObject<HTMLInputElement | null>;
   inputAriaDescribedBy?: string;
+  /** Set when a visible or sr-only <label htmlFor={inputId}> names the input. */
+  hasExternalLabel?: boolean;
 }
 
 export function LocationAutosuggest({
@@ -51,6 +53,7 @@ export function LocationAutosuggest({
   renderSelectedLocations = true,
   inputRef,
   inputAriaDescribedBy,
+  hasExternalLabel = false,
 }: LocationAutosuggestProps) {
   const [query, setQuery] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -257,7 +260,7 @@ export function LocationAutosuggest({
           type="text"
           autoComplete="off"
           role="combobox"
-          aria-label="Search admitted places"
+          aria-label={hasExternalLabel ? undefined : 'Search places'}
           aria-autocomplete="list"
           aria-controls={listboxId}
           aria-expanded={showSuggestions}
@@ -301,7 +304,7 @@ export function LocationAutosuggest({
           ? 'Loading Place suggestions'
           : placeDiscoveryError
             ? 'Canonical Place suggestions are unavailable.'
-          : suggestionCount > 0
+            : suggestionCount > 0
               ? `${suggestionCount} Place suggestions available`
               : debouncedQuery.length >= 2
                 ? 'No locations found'
@@ -319,7 +322,8 @@ export function LocationAutosuggest({
           {/* Canonical Place results from the admitted Place Authority. */}
           {placeSuggestions.map((location, index) => {
             const suggestionIndex = index;
-            const context = location.selectionContextLabel ||
+            const context =
+              location.selectionContextLabel ||
               [location.cityName, location.provinceName].filter(Boolean).join(', ');
             return (
               <div

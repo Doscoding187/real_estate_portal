@@ -302,6 +302,47 @@ export async function getDevelopmentPlaceGeography(
     EMPTY_GEOGRAPHY;
 }
 
+/**
+ * Resolves Development IDs whose single executable assigned Place is any of the
+ * given canonical Places. Each Development still needs one unambiguous Place,
+ * exactly as in `listDevelopmentIdsForCanonicalPlace`.
+ */
+export async function listDevelopmentIdsForCanonicalPlaces(
+  placeIds: readonly string[],
+): Promise<number[]> {
+  const requested = [...new Set(placeIds)];
+  if (requested.some(id => !isPlaceId(id))) {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'A canonical Place ID is required.' });
+  }
+  if (requested.length === 0) return [];
+
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const rows = await db
+    .select({ developmentId: developmentPlaceAssignments.developmentId })
+    .from(developmentPlaceAssignments)
+    .where(
+      and(
+        inArray(developmentPlaceAssignments.placeId, requested),
+        eq(developmentPlaceAssignments.assignmentKind, 'site'),
+        eq(developmentPlaceAssignments.reviewState, 'accepted'),
+      ),
+    );
+  const candidateIds: number[] = Array.from(
+    new Set<number>(rows.map(row => Number(row.developmentId))),
+  );
+  if (!candidateIds.length) return [];
+
+  const requestedSet = new Set(requested);
+  const geographyByDevelopment = await listDevelopmentPlaceGeography(candidateIds);
+  return candidateIds
+    .filter(id => {
+      const assigned = geographyByDevelopment.get(id)?.canonicalPlaceId;
+      return typeof assigned === 'string' && requestedSet.has(assigned);
+    })
+    .sort((left, right) => left - right);
+}
+
 /** Resolves Development IDs assigned to exactly one canonical Place. */
 export async function listDevelopmentIdsForCanonicalPlace(
   placeId: string,

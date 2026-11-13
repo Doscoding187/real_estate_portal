@@ -357,7 +357,7 @@ describe('existing payment reference when sales are paused or blocked', () => {
     expect(screen.getByRole('heading', { name: 'Early access' })).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Agent Launch Access is open now. You're one of the first agents on PropertyListify.",
+        "Agent Launch Access is open now. You're one of the first agents on Property Listify.",
       ),
     ).toBeInTheDocument();
     const account = screen.getByTestId('plan-account');

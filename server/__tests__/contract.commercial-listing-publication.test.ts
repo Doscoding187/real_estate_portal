@@ -25,8 +25,15 @@ describe('Commercial listing publication boundary', () => {
     expect(source).not.toContain('validateCommercialOfficeListingPricing');
   });
 
-  it('keeps Commercial search closed until canonical assignments are available', () => {
+  it('answers Commercial public reads with nothing found while authoring stays held', () => {
+    const searchStart = commercialRouter.indexOf('  search: publicProcedure');
+    const publicReads = commercialRouter.slice(searchStart);
     expect(commercialRouter).toContain('canonicalPlaceId');
+    expect(publicReads).toContain('.query(() => [] as never[])');
+    expect(publicReads).toContain("code: 'NOT_FOUND'");
+    expect(publicReads).not.toContain('PRECONDITION_FAILED');
+    expect(publicReads).not.toContain('requireCanonicalCommercialAssignments');
+    // Authoring remains held.
     expect(commercialRouter).toContain('requireCanonicalCommercialAssignments');
     expect(commercialRouter).toContain('PRECONDITION_FAILED');
     expect(commercialRouter).not.toContain('commercialOfficeService');

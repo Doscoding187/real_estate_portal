@@ -7,6 +7,7 @@ import { Trash2, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { trpc } from '@/lib/trpc';
 import { SERVICE_CATEGORIES } from '@/features/services/catalog';
 import { type OnboardingState, type OnboardingAction } from '../useOnboardingReducer';
@@ -69,7 +70,7 @@ export function ServicesOfferedStep({ state, dispatch, onNext, onBack }: Service
         category: s.category,
         code: s.code || s.displayName.trim().toLowerCase().replace(/\s+/g, '_').slice(0, 80),
         displayName: s.displayName.trim(),
-        description: s.description || undefined,
+        description: s.description.trim(),
         minPrice: s.minPrice ? Number(s.minPrice) : undefined,
         maxPrice: s.maxPrice ? Number(s.maxPrice) : undefined,
         currency: s.currency,
@@ -141,6 +142,33 @@ export function ServicesOfferedStep({ state, dispatch, onNext, onBack }: Service
                   placeholder="e.g. Geyser replacement"
                   disabled={isPending}
                 />
+              </div>
+
+              <div className="space-y-1.5 sm:col-span-2">
+                <div className="flex items-center justify-between gap-3">
+                  <Label htmlFor={`svc-description-${svc.id}`}>Service description</Label>
+                  <span className="text-xs text-slate-400">{svc.description.length}/2000</span>
+                </div>
+                <Textarea
+                  id={`svc-description-${svc.id}`}
+                  value={svc.description}
+                  onChange={e =>
+                    dispatch({
+                      type: 'UPDATE_SERVICE',
+                      id: svc.id,
+                      field: 'description',
+                      value: e.target.value.slice(0, 2000),
+                    })
+                  }
+                  maxLength={2000}
+                  rows={3}
+                  placeholder="Explain what this service includes and what customers can expect."
+                  disabled={isPending}
+                />
+                <p className="text-xs text-slate-500">
+                  This stays private until your profile is published. Changes to an already
+                  published service page take effect when saved.
+                </p>
               </div>
 
               <div className="space-y-1.5">

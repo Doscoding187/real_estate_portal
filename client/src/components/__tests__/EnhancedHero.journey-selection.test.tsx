@@ -2,7 +2,11 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { LAND_VERTICAL_LAUNCH_STATE, isLandPublicDiscoveryAvailable, isLandVerticalAvailable } from '@shared/landLaunchPolicy';
+import {
+  LAND_VERTICAL_LAUNCH_STATE,
+  isLandPublicDiscoveryAvailable,
+  isLandVerticalAvailable,
+} from '@shared/landLaunchPolicy';
 
 const { setLocation, searchDiscoveryQuery } = vi.hoisted(() => ({
   setLocation: vi.fn(),
@@ -15,6 +19,11 @@ const rosebankId = 'pl-place-01-c07bb29f37ad926848934844';
 
 vi.mock('wouter', () => ({
   useLocation: () => ['/', setLocation],
+  Link: ({ href, children, ...props }: any) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
+  ),
 }));
 
 vi.mock('@/components/LocationAutosuggest', () => ({
@@ -234,9 +243,7 @@ describe('EnhancedHero explicit journey selection', () => {
     expect(screen.getByTestId(`selected-location-${rosebankId}`)).toHaveTextContent('Rosebank');
     expect(screen.getByTestId('homepage-location-intent-buy')).toBeDisabled();
     expect(
-      screen.getByText(
-        'Buy and Rent searches use one canonical Place. Remove extra Places to continue.',
-      ),
+      screen.getByText('Buy and Rent searches use one area. Remove the extra areas to continue.'),
     ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Remove Rosebank' }));
@@ -461,5 +468,17 @@ describe('EnhancedHero explicit journey selection', () => {
 
     expect(rentPanel).not.toContain('Lease Term');
     expect(rentPanel).not.toContain('Furnished Only');
+  });
+
+  it('labels the journey group and location input, with no List with us link or tools panel', () => {
+    render(<EnhancedHero />);
+
+    expect(screen.getByRole('group', { name: 'What are you looking for?' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /list with us/i })).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/where do you want to look\? search by city, suburb or area/i).tagName,
+    ).toBe('LABEL');
+    expect(screen.queryByText(/upcoming property tools/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/new developments, explore local insights/i)).not.toBeInTheDocument();
   });
 });

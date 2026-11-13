@@ -149,6 +149,101 @@ describe('manual property Search approved projection authority', () => {
     expect(order[1]).toBe('`properties`.`id` asc');
   });
 
+  it('orders trending by the score expression, then newest, then property ID', () => {
+    const dialect = new MySqlDialect();
+    const order = buildManualPropertySortOrder('trending').map(
+      value => dialect.sqlToQuery(value).sql,
+    );
+
+    expect(order).toEqual([
+      '(COALESCE(`properties`.`enquiries`, 0) * 5 + LEAST(COALESCE(`properties`.`views`, 0), 500) / 50 + 1) / POW(GREATEST(DATEDIFF(NOW(), `properties`.`createdAt`), 0) + 2, 1.3) desc',
+      '`properties`.`createdAt` desc',
+      '`properties`.`id` asc',
+    ]);
+  });
+
+  it('leaves the date_desc ordering unchanged', () => {
+    const dialect = new MySqlDialect();
+    expect(
+      buildManualPropertySortOrder('date_desc').map(value => dialect.sqlToQuery(value).sql),
+    ).toEqual(['`properties`.`createdAt` desc', '`properties`.`id` asc']);
+  });
+
+  it('applies the trending order to the candidate query and the page query', async () => {
+    const candidates = candidateQuery([{ id: 501, canonicalPlaceId: PLACE_ID }]);
+    const page = pagedQuery([]);
+    mockSelect.mockReturnValueOnce(candidates).mockReturnValueOnce(page);
+    await new PropertySearchService().searchProperties({}, 'trending', 1, 12, {
+      publicOnly: true,
+    });
+    const dialect = new MySqlDialect();
+    const render = (args: unknown[]) =>
+      args.map(value => dialect.sqlToQuery(value as any).sql);
+    expect(render(candidates.orderBy.mock.calls[0])).toHaveLength(3);
+    expect(render(page.orderBy.mock.calls[0])).toEqual(render(candidates.orderBy.mock.calls[0]));
+  });
+
+  it('keeps candidate order through eligibility filtering and pagination for trending', async () => {
+    mockSelect
+      .mockReturnValueOnce(
+        candidateQuery([
+          { id: 9, canonicalPlaceId: PLACE_ID },
+          { id: 3, canonicalPlaceId: PLACE_ID },
+          { id: 7, canonicalPlaceId: PLACE_ID },
+          { id: 1, canonicalPlaceId: PLACE_ID },
+        ]),
+      )
+      .mockReturnValueOnce(pagedQuery([]));
+    // Property 3 is not publicly eligible and drops out; the rest keep their order.
+    mockResolvePublicPropertyEligibilities.mockResolvedValue(
+      new Map([9, 7, 1].map(id => [id, { property: { id }, images: [] }])),
+    );
+    const result = await new PropertySearchService().searchProperties({}, 'trending', 2, 1, {
+      publicOnly: true,
+    });
+    expect(mockResolvePublicPropertyEligibilities).toHaveBeenCalledWith([9, 3, 7, 1]);
+    expect(result.total).toBe(3);
+    // Page 2 of size 1 over [9, 7, 1] is property 7; the page query is restricted to it.
+    const pageIdCondition = new MySqlDialect().sqlToQuery(
+      mockSelect.mock.results[1].value.where.mock.calls[0][0],
+    );
+    expect(pageIdCondition.params).toContain(7);
+    expect(pageIdCondition.params).not.toContain(9);
+    expect(pageIdCondition.params).not.toContain(1);
+  });
+
+  it('requirePhoto excludes listings without an approved photo before pagination', async () => {
+    const candidateRows = [1, 2, 3, 4].map(id => ({ id, canonicalPlaceId: PLACE_ID }));
+    const eligibility = new Map<number, unknown>([
+      [1, { property: { id: 1 }, images: [] }],
+      [2, { property: { id: 2 }, images: [{ url: 'https://cdn.example.test/a.jpg', isPrimary: true }] }],
+      [3, { property: { id: 3 }, images: [{ url: 'https://cdn.example.test/placeholder.jpg' }] }],
+      [4, { property: { id: 4 }, images: [{ imageUrl: '/media/b.jpg' }] }],
+    ]);
+    mockResolvePublicPropertyEligibilities.mockResolvedValue(eligibility);
+
+    mockSelect
+      .mockReturnValueOnce(candidateQuery(candidateRows))
+      .mockReturnValueOnce(pagedQuery([]));
+    const withPhoto = await new PropertySearchService().searchProperties({}, 'date_desc', 1, 12, {
+      publicOnly: true,
+      requirePhoto: true,
+    });
+    expect(withPhoto.total).toBe(2);
+
+    mockSelect
+      .mockReturnValueOnce(candidateQuery(candidateRows))
+      .mockReturnValueOnce(pagedQuery([]));
+    const withoutFilter = await new PropertySearchService().searchProperties(
+      {},
+      'date_desc',
+      1,
+      12,
+      { publicOnly: true },
+    );
+    expect(withoutFilter.total).toBe(4);
+  });
+
   it('builds a canonical card from properties + propertyImages without reading listing state', async () => {
     mockSelect
       .mockReturnValueOnce(candidateQuery([{ id: 501, canonicalPlaceId: PLACE_ID }]))

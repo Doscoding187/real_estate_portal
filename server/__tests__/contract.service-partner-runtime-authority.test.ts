@@ -88,6 +88,25 @@ describe('canonical Service Partner server runtime authority', () => {
     expect(router).toContain('A request area is required');
   });
 
+  it('scopes editable service descriptions to the authenticated provider and existing service rows', () => {
+    const replacement = router.slice(
+      router.indexOf('replaceProviderServices: protectedProcedure'),
+      router.indexOf('replaceProviderLocations: protectedProcedure'),
+    );
+    expect(replacement).toContain('description: z.string().trim().max(2000).optional()');
+    expect(replacement).toContain('requireProviderRole(user.role)');
+    expect(replacement).toContain('requireProviderId(user.id)');
+    expect(replacement).not.toMatch(/providerId:\s*z\./);
+
+    const serviceReplacement = service.slice(
+      service.indexOf('async replaceProviderServices'),
+      service.indexOf('async replaceProviderLocations'),
+    );
+    expect(serviceReplacement).toContain('eq(serviceProviderServices.providerId, providerId)');
+    expect(serviceReplacement).toContain('submittedRowIds.some(id => !existingById.has(id))');
+    expect(serviceReplacement).toContain("normalizeText(input.description) || null");
+  });
+
   it('accepts numeric provider IDs at public server boundaries', () => {
     expect(router).not.toMatch(/providerId:\s*z\.string\(\)/);
 
