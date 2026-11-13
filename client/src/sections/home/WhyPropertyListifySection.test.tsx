@@ -1,7 +1,17 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { WhyPropertyListifySection } from './WhyPropertyListifySection';
+
+const heldState = vi.hoisted(() => ({ services: false }));
+
+vi.mock('@/lib/publicNavigation', () => ({
+  isJourneyRouteHeld: (key: string) => key === 'services' && heldState.services,
+}));
+
+beforeEach(() => {
+  heldState.services = false;
+});
 
 const PANELS = [
   ['Buying or renting', 'Browse homes for sale', '/property-for-sale'],
@@ -88,6 +98,26 @@ describe('WhyPropertyListifySection', () => {
       'href',
       '/services',
     );
+  });
+
+  it('renders no /services link in any panel while the Services directory is held', () => {
+    heldState.services = true;
+    const { container } = render(<WhyPropertyListifySection />);
+    for (const [tab] of PANELS) {
+      fireEvent.click(screen.getByRole('tab', { name: tab }));
+      expect(
+        within(screen.getByRole('tabpanel')).queryByRole('link', { name: 'Property services' }),
+      ).toBeNull();
+    }
+    expect(screen.queryByRole('link', { name: 'Browse the directory' })).toBeNull();
+    expect(container.querySelector('a[href^="/services"]')).toBeNull();
+    // The provider-side link and the other secondary links are untouched.
+    fireEvent.click(screen.getByRole('tab', { name: 'Service providers' }));
+    const panel = screen.getByRole('tabpanel');
+    expect(within(panel).getByRole('link', { name: 'Contact us' })).toBeInTheDocument();
+    expect(
+      within(panel).getByRole('link', { name: /see service provider details/i }),
+    ).toHaveAttribute('href', '/advertise/services');
   });
 
   it('keeps benefit tiles in a three-column row under the text until the two-column desktop layout', () => {

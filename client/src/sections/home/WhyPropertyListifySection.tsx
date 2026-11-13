@@ -24,6 +24,8 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
+import { isJourneyRouteHeld } from '@/lib/publicNavigation';
+
 type Benefit = { title: string; text: string; icon: LucideIcon };
 type PanelLink = { label: string; href: string };
 
@@ -189,7 +191,12 @@ const WHY_AUDIENCES: readonly Audience[] = [
   },
 ];
 
+function isServicesLink(link: PanelLink): boolean {
+  return link.href === '/services' || link.href.startsWith('/services/');
+}
+
 export function WhyPropertyListifySection() {
+  const servicesHeld = isJourneyRouteHeld('services');
   const [activeId, setActiveId] = useState<string>(WHY_AUDIENCES[0].id);
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const active = WHY_AUDIENCES.find(item => item.id === activeId) ?? WHY_AUDIENCES[0];
@@ -296,6 +303,9 @@ export function WhyPropertyListifySection() {
         <div className="mt-5 lg:grid">
           {WHY_AUDIENCES.map(item => {
             const selected = item.id === active.id;
+            const secondaryLinks = (item.secondary ?? []).filter(
+              link => !(servicesHeld && isServicesLink(link)),
+            );
             return (
               <div
                 key={item.id}
@@ -331,9 +341,9 @@ export function WhyPropertyListifySection() {
                       {item.cta.label}
                       <ArrowRight className="h-4 w-4" aria-hidden="true" />
                     </a>
-                    {item.secondary && item.secondary.length > 0 ? (
+                    {secondaryLinks.length > 0 ? (
                       <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
-                        {item.secondary.map(link => (
+                        {secondaryLinks.map(link => (
                           <a
                             key={link.href}
                             href={link.href}
