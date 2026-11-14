@@ -185,7 +185,7 @@ export function EditCataloguePublisherDialog({
 
         setUploadProgress(40);
 
-        // 2. Upload to S3
+        // 2. Upload to the configured media storage adapter
         const uploadResponse = await fetch(url, {
           method: 'PUT',
           body: file,
@@ -200,8 +200,12 @@ export function EditCataloguePublisherDialog({
 
         setUploadProgress(100);
 
-        // 3. Set URL in form
-        form.setValue('logoUrl', publicUrl, { shouldValidate: true });
+        // The local adapter returns a same-origin path, while this form's URL
+        // validator expects an absolute URL. Keep the path same-origin.
+        const formLogoUrl = publicUrl.startsWith('/')
+          ? new URL(publicUrl, window.location.origin).toString()
+          : publicUrl;
+        form.setValue('logoUrl', formLogoUrl, { shouldValidate: true });
         toast.success('Logo uploaded successfully');
       } catch (error) {
         console.error('Logo upload error:', error);
