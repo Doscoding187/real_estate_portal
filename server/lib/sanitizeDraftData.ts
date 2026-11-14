@@ -99,7 +99,7 @@ const normalizeUnitType = (u: any) => {
     id: asString(cleaned.id ?? `unit-${Date.now()}-${Math.random()}`),
     name: asString(cleaned.name ?? ''),
     bedrooms: clampInt(cleaned.bedrooms, 0, 20, 0),
-    bathrooms: clampInt(cleaned.bathrooms, 0, 20, 0),
+    bathrooms: Math.min(20, Math.max(0, asNumber(cleaned.bathrooms, 0))),
     parkingType: asString(cleaned.parkingType ?? cleaned.parking ?? 'none') || 'none',
     parkingBays: clampInt(cleaned.parkingBays ?? cleaned.parkingSpaces, 0, 20, 0),
     priceFrom: asNumber(cleaned.priceFrom ?? cleaned.basePriceFrom, 0),

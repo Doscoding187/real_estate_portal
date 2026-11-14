@@ -225,6 +225,7 @@ export interface UnitType {
   totalUnits: number; // Total units of this type
   availableUnits: number; // Currently available
   reservedUnits: number; // Under offer / held
+  availabilityNotProvided?: boolean; // Curated draft source has no verified counts yet
   // soldUnits = totalUnits - availableUnits - reservedUnits (calculated)
 
   // Legacy compatibility (deprecated, use priceFrom/priceTo)
@@ -1939,6 +1940,7 @@ const createActions = (
               availableUnits: Number(u.availableUnits ?? 0),
               reservedUnits: Number(u.reservedUnits ?? 0),
               totalUnits: Number(u.totalUnits ?? 0),
+              availabilityNotProvided: u.availabilityNotProvided === true,
               completionDate: u.completionDate || undefined,
 
               // Complex fields

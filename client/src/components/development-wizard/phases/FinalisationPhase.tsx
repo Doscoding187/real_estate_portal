@@ -791,12 +791,16 @@ export function FinalisationPhase({
                           <Badge
                             variant="outline"
                             className={
-                              (toInt(u?.availableUnits, 0) ?? 0) > 0
-                                ? 'text-green-600 border-green-200'
-                                : 'text-red-600 border-red-200'
+                              u?.availabilityNotProvided === true
+                                ? 'text-slate-600 border-slate-200'
+                                : (toInt(u?.availableUnits, 0) ?? 0) > 0
+                                  ? 'text-green-600 border-green-200'
+                                  : 'text-red-600 border-red-200'
                             }
                           >
-                            {toInt(u?.availableUnits, 0)} Avail
+                            {u?.availabilityNotProvided === true
+                              ? 'Counts not supplied'
+                              : `${toInt(u?.availableUnits, 0)} Avail`}
                           </Badge>
                         </div>
                       </div>

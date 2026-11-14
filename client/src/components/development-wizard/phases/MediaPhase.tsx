@@ -25,12 +25,18 @@ import {
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/_core/hooks/useAuth';
+import { usePublisherContext } from '@/hooks/usePublisherContext';
 import { SortableMediaGrid } from '@/components/media/SortableMediaGrid';
 import type { MediaItem as GridMediaItem } from '@/components/media/SortableMediaGrid';
 
 export function MediaPhase() {
   const { developmentData, saveWorkflowStepData, stepData: allStepData } = useDevelopmentWizard();
   const editingDevelopmentId = useDevelopmentWizard(state => state.editingId);
+  const { user } = useAuth();
+  const { context: publisherContext } = usePublisherContext();
+  const isCuratedPublisherMode =
+    user?.role === 'super_admin' && publisherContext?.mode === 'platform_curator';
 
   const [activeTab, setActiveTab] = useState('gallery');
 
@@ -79,6 +85,7 @@ export function MediaPhase() {
 
   const reserveMediaUpload = trpc.developer.reserveMediaUpload.useMutation();
   const confirmMediaUpload = trpc.developer.confirmMediaUpload.useMutation();
+  const presignCuratedUpload = trpc.upload.presign.useMutation();
 
   // ACTIONS ------------------------------------------------------------------
 
@@ -247,40 +254,65 @@ export function MediaPhase() {
               : type === 'pdf'
                 ? 'development_document'
                 : 'development_image';
-          const reservation = await reserveMediaUpload.mutateAsync({
-            filename: file.name,
-            contentType: file.type,
-            category: receiptCategory,
-            ...(editingDevelopmentId ? { developmentId: editingDevelopmentId } : {}),
-          });
+          let mediaUrl: string;
+          let storageKey: string;
+          let fileSize: number;
+          let uploadReceipt: string | undefined;
 
-          const uploadResponse = await fetch(reservation.uploadUrl, {
-            method: 'PUT',
-            body: file,
-            headers: { 'Content-Type': file.type },
-          });
-          if (!uploadResponse.ok) {
-            throw new Error(`Upload failed with status ${uploadResponse.status}.`);
+          if (isCuratedPublisherMode) {
+            const target = await presignCuratedUpload.mutateAsync({
+              filename: file.name,
+              contentType: file.type,
+            });
+            const uploadResponse = await fetch(target.url, {
+              method: 'PUT',
+              body: file,
+              headers: { 'Content-Type': file.type },
+            });
+            if (!uploadResponse.ok) {
+              throw new Error(`Upload failed with status ${uploadResponse.status}.`);
+            }
+            mediaUrl = target.publicUrl;
+            storageKey = target.key;
+            fileSize = file.size;
+          } else {
+            const reservation = await reserveMediaUpload.mutateAsync({
+              filename: file.name,
+              contentType: file.type,
+              category: receiptCategory,
+              ...(editingDevelopmentId ? { developmentId: editingDevelopmentId } : {}),
+            });
+            const uploadResponse = await fetch(reservation.uploadUrl, {
+              method: 'PUT',
+              body: file,
+              headers: { 'Content-Type': file.type },
+            });
+            if (!uploadResponse.ok) {
+              throw new Error(`Upload failed with status ${uploadResponse.status}.`);
+            }
+            const confirmed = await confirmMediaUpload.mutateAsync({
+              uploadReceipt: reservation.uploadReceipt,
+            });
+            mediaUrl = confirmed.url;
+            storageKey = confirmed.key;
+            fileSize = confirmed.fileSize;
+            uploadReceipt = confirmed.uploadReceipt;
           }
-
-          const confirmed = await confirmMediaUpload.mutateAsync({
-            uploadReceipt: reservation.uploadReceipt,
-          });
 
           toast.dismiss(loadingToast);
           toast.success(`Uploaded ${file.name}`);
 
           return {
             id: `media-${Date.now()}-${Math.random()}`,
-            url: confirmed.url,
+            url: mediaUrl,
             type,
             category: isHero ? 'hero' : category, // Enforce 'hero' category on new uploads
             isPrimary: isHero,
             displayOrder: 0,
             fileName: file.name,
-            fileSize: confirmed.fileSize,
-            storageKey: confirmed.key,
-            uploadReceipt: confirmed.uploadReceipt,
+            fileSize,
+            storageKey,
+            ...(uploadReceipt ? { uploadReceipt } : {}),
             uploadedAt: new Date(),
           } as MediaItem;
         } catch (error) {

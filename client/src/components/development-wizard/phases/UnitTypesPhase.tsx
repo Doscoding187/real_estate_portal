@@ -29,6 +29,8 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
+import { useAuth } from '@/_core/hooks/useAuth';
+import { usePublisherContext } from '@/hooks/usePublisherContext';
 import {
   Trash2,
   Plus,
@@ -217,6 +219,10 @@ export function UnitTypesPhase() {
   const isRental = transactionType === 'for_rent';
   const isAuction = transactionType === 'auction';
   const editingDevelopmentId = useDevelopmentWizard(state => state.editingId);
+  const { user } = useAuth();
+  const { context: publisherContext } = usePublisherContext();
+  const isCuratedPublisherMode =
+    user?.role === 'super_admin' && publisherContext?.mode === 'platform_curator';
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -268,6 +274,7 @@ export function UnitTypesPhase() {
     availableUnits: 0,
     reservedUnits: 0,
     soldUnitsHistorical: 0,
+    availabilityNotProvided: isCuratedPublisherMode,
     features: {
       kitchen: [],
       bathroom: [],
@@ -284,6 +291,7 @@ export function UnitTypesPhase() {
   const [floorPlanImages, setFloorPlanImages] = useState<MediaItem[]>([]);
   const reserveMediaUpload = trpc.developer.reserveMediaUpload.useMutation();
   const confirmMediaUpload = trpc.developer.confirmMediaUpload.useMutation();
+  const presignCuratedUpload = trpc.upload.presign.useMutation();
 
   // Auto-Save Draft (Only when adding new unit)
   useEffect(() => {
@@ -336,6 +344,7 @@ export function UnitTypesPhase() {
       availableUnits: 0,
       reservedUnits: 0,
       soldUnitsHistorical: 0,
+      availabilityNotProvided: isCuratedPublisherMode,
       features: {
         kitchen: [],
         bathroom: [],
@@ -423,6 +432,7 @@ export function UnitTypesPhase() {
         auctionEndDate: auctionEndDateValue,
         auctionStatus: auctionStatusValue,
         soldUnitsHistorical: soldHistorical,
+        availabilityNotProvided: Boolean((unit as any).availabilityNotProvided),
         extras: unit.extras || [],
         features: unit.features || {
           kitchen: [],
@@ -666,10 +676,20 @@ export function UnitTypesPhase() {
     if (formData.parkingKind !== 'none' && (!formData.parkingBays || formData.parkingBays <= 0))
       return toast.error('Parking Bays are required');
 
-    const availableUnits = Math.max(0, Number(formData.availableUnits || 0));
-    const reservedUnits = Math.max(0, Number(formData.reservedUnits || 0));
-    const soldUnitsHistorical = Math.max(0, Number(formData.soldUnitsHistorical || 0));
-    const totalUnits = availableUnits + reservedUnits + soldUnitsHistorical;
+    const availabilityNotProvided =
+      isCuratedPublisherMode && Boolean(formData.availabilityNotProvided);
+    const availableUnits = availabilityNotProvided
+      ? undefined
+      : Math.max(0, Number(formData.availableUnits || 0));
+    const reservedUnits = availabilityNotProvided
+      ? undefined
+      : Math.max(0, Number(formData.reservedUnits || 0));
+    const soldUnitsHistorical = availabilityNotProvided
+      ? undefined
+      : Math.max(0, Number(formData.soldUnitsHistorical || 0));
+    const totalUnits = availabilityNotProvided
+      ? undefined
+      : (availableUnits || 0) + (reservedUnits || 0) + (soldUnitsHistorical || 0);
 
     const isSale = !isRental && !isAuction;
 
@@ -736,6 +756,7 @@ export function UnitTypesPhase() {
       availableUnits,
       reservedUnits,
       soldUnitsHistorical,
+      availabilityNotProvided,
 
       features: formData.features,
       baseMedia: {
@@ -792,37 +813,68 @@ export function UnitTypesPhase() {
   const handleMediaUpload = async (files: File[], category: 'gallery' | 'floorPlans') => {
     try {
       for (const file of files) {
-        const persistedUnitId =
-          editingId && !editingId.startsWith('unit-') ? editingId : undefined;
-        const reservation = await reserveMediaUpload.mutateAsync({
-          filename: file.name,
-          contentType: file.type,
-          category: category === 'gallery' ? 'unit_gallery' : 'unit_floorplan',
-          ...(editingDevelopmentId ? { developmentId: editingDevelopmentId } : {}),
-          ...(persistedUnitId ? { unitId: persistedUnitId } : {}),
-        });
-        const uploadResponse = await fetch(reservation.uploadUrl, {
-          method: 'PUT',
-          body: file,
-          headers: { 'Content-Type': file.type },
-        });
-        if (!uploadResponse.ok) {
-          throw new Error(`Upload failed with status ${uploadResponse.status}.`);
+        let mediaUrl: string;
+        let storageKey: string;
+        let fileName: string;
+        let fileSize: number;
+        let uploadReceipt: string | undefined;
+
+        if (isCuratedPublisherMode) {
+          const target = await presignCuratedUpload.mutateAsync({
+            filename: file.name,
+            contentType: file.type,
+          });
+          const uploadResponse = await fetch(target.url, {
+            method: 'PUT',
+            body: file,
+            headers: { 'Content-Type': file.type },
+          });
+          if (!uploadResponse.ok) {
+            throw new Error(`Upload failed with status ${uploadResponse.status}.`);
+          }
+          mediaUrl = target.publicUrl;
+          storageKey = target.key;
+          fileName = file.name;
+          fileSize = file.size;
+        } else {
+          const persistedUnitId =
+            editingId && !editingId.startsWith('unit-') ? editingId : undefined;
+          const reservation = await reserveMediaUpload.mutateAsync({
+            filename: file.name,
+            contentType: file.type,
+            category: category === 'gallery' ? 'unit_gallery' : 'unit_floorplan',
+            ...(editingDevelopmentId ? { developmentId: editingDevelopmentId } : {}),
+            ...(persistedUnitId ? { unitId: persistedUnitId } : {}),
+          });
+          const uploadResponse = await fetch(reservation.uploadUrl, {
+            method: 'PUT',
+            body: file,
+            headers: { 'Content-Type': file.type },
+          });
+          if (!uploadResponse.ok) {
+            throw new Error(`Upload failed with status ${uploadResponse.status}.`);
+          }
+          const confirmed = await confirmMediaUpload.mutateAsync({
+            uploadReceipt: reservation.uploadReceipt,
+          });
+          mediaUrl = confirmed.url;
+          storageKey = confirmed.key;
+          fileName = confirmed.fileName;
+          fileSize = confirmed.fileSize;
+          uploadReceipt = confirmed.uploadReceipt;
         }
-        const confirmed = await confirmMediaUpload.mutateAsync({
-          uploadReceipt: reservation.uploadReceipt,
-        });
+
         const newItem: MediaItem = {
           id: `u-${Date.now()}-${Math.random()}`,
-          url: confirmed.url,
+          url: mediaUrl,
           type: category === 'floorPlans' && file.type === 'application/pdf' ? 'pdf' : 'image',
           category: category === 'gallery' ? 'photo' : 'floorplan',
           isPrimary: category === 'gallery' && unitGallery.length === 0,
           displayOrder: 0,
-          fileName: confirmed.fileName,
-          fileSize: confirmed.fileSize,
-          storageKey: confirmed.key,
-          uploadReceipt: confirmed.uploadReceipt,
+          fileName,
+          fileSize,
+          storageKey,
+          ...(uploadReceipt ? { uploadReceipt } : {}),
         };
 
         if (category === 'gallery') setUnitGallery(prev => [...prev, newItem]);
@@ -1296,12 +1348,18 @@ export function UnitTypesPhase() {
                     <Badge
                       variant="outline"
                       className={cn(
-                        unit.availableUnits > 0
-                          ? 'text-green-600 bg-green-50'
-                          : 'text-red-600 bg-red-50',
+                        unit.availabilityNotProvided
+                          ? 'text-slate-600 bg-slate-50'
+                          : unit.availableUnits > 0
+                            ? 'text-green-600 bg-green-50'
+                            : 'text-red-600 bg-red-50',
                       )}
                     >
-                      {unit.availableUnits > 0 ? `${unit.availableUnits} Avail` : 'Sold Out'}
+                      {unit.availabilityNotProvided
+                        ? 'Counts not supplied'
+                        : unit.availableUnits > 0
+                          ? `${unit.availableUnits} Avail`
+                          : 'Sold Out'}
                     </Badge>
                   </div>
                   <p className="text-sm font-semibold text-blue-600">
@@ -1903,12 +1961,27 @@ export function UnitTypesPhase() {
 
               <TabsContent value="stock" className="mt-0 space-y-6">
                 <div className="p-6 bg-slate-50/50 border rounded-xl space-y-8">
+                  {isCuratedPublisherMode && (
+                    <label className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                      <Checkbox
+                        checked={Boolean(formData.availabilityNotProvided)}
+                        onCheckedChange={checked =>
+                          setFormData(p => ({ ...p, availabilityNotProvided: Boolean(checked) }))
+                        }
+                      />
+                      <span>
+                        Availability counts are not in the supplied source. Keep them unknown until
+                        the developer confirms current stock.
+                      </span>
+                    </label>
+                  )}
                   <div className="grid md:grid-cols-3 gap-6">
                     <div className="space-y-2">
                       <Label className="text-green-600">Available Units</Label>
                       <Input
                         type="number"
                         className="border-green-200 focus:border-green-500"
+                        disabled={isCuratedPublisherMode && Boolean(formData.availabilityNotProvided)}
                         value={formData.availableUnits || ''}
                         onFocus={e => e.target.select()}
                         onChange={e =>
@@ -1921,6 +1994,7 @@ export function UnitTypesPhase() {
                       <Input
                         type="number"
                         className="border-blue-200 focus:border-blue-500"
+                        disabled={isCuratedPublisherMode && Boolean(formData.availabilityNotProvided)}
                         value={formData.reservedUnits || ''}
                         onFocus={e => e.target.select()}
                         onChange={e => setFormData(p => ({ ...p, reservedUnits: +e.target.value }))}
@@ -1931,6 +2005,7 @@ export function UnitTypesPhase() {
                       <Input
                         type="number"
                         className="border-slate-300 focus:border-slate-500"
+                        disabled={isCuratedPublisherMode && Boolean(formData.availabilityNotProvided)}
                         value={formData.soldUnitsHistorical || ''}
                         onFocus={e => e.target.select()}
                         onChange={e =>
@@ -1946,25 +2021,36 @@ export function UnitTypesPhase() {
                         <Label>Total Units (Auto-Calculated)</Label>
                         <Input
                           type="number"
-                          value={stockTotalUnits}
+                          value={
+                            isCuratedPublisherMode && formData.availabilityNotProvided
+                              ? ''
+                              : stockTotalUnits
+                          }
                           disabled
                           className="font-semibold"
                         />
                         <p className="text-xs text-slate-500">
-                          Available {stockAvailableUnits} + Reserved {stockReservedUnits} + Sold{' '}
-                          {stockSoldHistoricalUnits} = Total {stockTotalUnits}
+                          {isCuratedPublisherMode && formData.availabilityNotProvided
+                            ? 'Availability has not been verified.'
+                            : `Available ${stockAvailableUnits} + Reserved ${stockReservedUnits} + Sold ${stockSoldHistoricalUnits} = Total ${stockTotalUnits}`}
                         </p>
                       </div>
                       <div className="flex-1">
                         <div
                           className={cn(
                             'p-3 rounded-lg text-center font-bold border',
-                            stockAvailableUnits > 0
-                              ? 'bg-green-50 border-green-200 text-green-700'
-                              : 'bg-red-50 border-red-200 text-red-700',
+                            isCuratedPublisherMode && formData.availabilityNotProvided
+                              ? 'bg-slate-50 border-slate-200 text-slate-700'
+                              : stockAvailableUnits > 0
+                                ? 'bg-green-50 border-green-200 text-green-700'
+                                : 'bg-red-50 border-red-200 text-red-700',
                           )}
                         >
-                          {stockAvailableUnits > 0 ? 'AVAILABLE' : 'SOLD OUT / LISTING'}
+                          {isCuratedPublisherMode && formData.availabilityNotProvided
+                            ? 'COUNTS NOT SUPPLIED'
+                            : stockAvailableUnits > 0
+                              ? 'AVAILABLE'
+                              : 'SOLD OUT / LISTING'}
                         </div>
                       </div>
                     </div>
