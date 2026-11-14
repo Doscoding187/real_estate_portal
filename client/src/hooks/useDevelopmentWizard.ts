@@ -1201,20 +1201,6 @@ const createActions = (
             errors.push('Please select at least one ownership type');
           }
           if (
-            (state.developmentData?.status === 'launching-soon' ||
-              state.developmentData?.status === 'selling') &&
-            !state.developmentData?.launchDate
-          ) {
-            errors.push('Launch date is required for this status');
-          }
-          if (
-            (state.developmentData?.status === 'launching-soon' ||
-              state.developmentData?.status === 'selling') &&
-            !state.developmentData?.completionDate
-          ) {
-            errors.push('Expected completion date is required for this status');
-          }
-          if (
             state.developmentData?.handoverDuringConstruction &&
             !state.developmentData?.expectedFirstHandoverDate
           ) {
@@ -1302,15 +1288,6 @@ const createActions = (
       const status = wizardData.status ?? state.developmentData.status;
       if (!status) {
         errors.push('Development status is required');
-      }
-
-      if (status === 'launching-soon' || status === 'selling') {
-        if (!wizardData.launchDate) {
-          errors.push('Launch date is required for this status');
-        }
-        if (!wizardData.completionDate) {
-          errors.push('Expected completion date is required for this status');
-        }
       }
 
       const ownershipTypes =

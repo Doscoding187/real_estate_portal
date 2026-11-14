@@ -187,7 +187,7 @@ export function IdentityPhase() {
             {statusNeedsDates ? (
               <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
                 <Label htmlFor="launchDate" className="flex items-center gap-2">
-                  Launch Date <span className="text-red-500">*</span>
+                  Launch Date <span className="text-xs font-normal text-slate-500">(optional)</span>
                   {getError('launchDate') && (
                     <span className="text-xs text-red-500 font-normal ml-auto flex items-center gap-1">
                       <AlertCircle className="w-3 h-3" /> Required
@@ -210,6 +210,9 @@ export function IdentityPhase() {
                   }
                   className={`h-11 ${getError('launchDate') ? 'border-red-300' : ''}`}
                 />
+                <p className="text-xs text-slate-500">
+                  Leave blank if the developer has not supplied an official launch date.
+                </p>
               </div>
             ) : (
               <div className="text-xs text-slate-500 rounded-lg border border-slate-200 bg-slate-50 p-3">
@@ -222,7 +225,8 @@ export function IdentityPhase() {
             <div className="grid md:grid-cols-2 gap-5 animate-in fade-in slide-in-from-top-2">
               <div className="space-y-2">
                 <Label htmlFor="completionDate" className="flex items-center gap-2">
-                  Expected Completion <span className="text-red-500">*</span>
+                  Expected Completion{' '}
+                  <span className="text-xs font-normal text-slate-500">(optional)</span>
                   {getError('completionDate') && (
                     <span className="text-xs text-red-500 font-normal ml-auto flex items-center gap-1">
                       <AlertCircle className="w-3 h-3" /> Required
@@ -245,6 +249,9 @@ export function IdentityPhase() {
                   }
                   className={`h-11 ${getError('completionDate') ? 'border-red-300' : ''}`}
                 />
+                <p className="text-xs text-slate-500">
+                  Leave blank if the developer has not supplied an expected completion date.
+                </p>
               </div>
 
               <div className="space-y-3 rounded-lg border border-slate-200 p-4 bg-slate-50/40">
