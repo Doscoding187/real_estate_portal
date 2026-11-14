@@ -271,8 +271,12 @@ export function projectPublicDevelopmentFacts(
     const totalRaw = projectionFiniteNumber(unit.totalUnits);
     const availableRaw = projectionFiniteNumber(unit.availableUnits);
     const reservedRaw = projectionFiniteNumber(unit.reservedUnits);
-    const inventoryKnown = totalRaw !== null && availableRaw !== null;
-    const totalUnits = totalRaw === null ? null : Math.round(Math.max(0, totalRaw));
+    // A zero total is the database default when the source did not provide
+    // inventory. It cannot establish that a unit type is sold out, so only a
+    // positive reported total makes these aggregate counts authoritative.
+    const inventoryKnown = totalRaw !== null && totalRaw > 0 && availableRaw !== null;
+    const totalUnits =
+      totalRaw === null || totalRaw <= 0 ? null : Math.round(Math.max(0, totalRaw));
     const reservedUnits =
       totalUnits === null ? null : Math.min(Math.round(Math.max(0, reservedRaw ?? 0)), totalUnits);
     const availableUnits =
