@@ -134,10 +134,24 @@ export function FinalisationPhase({
   // Run validation
   const validationResult = validateForPublish();
   const errors = validationResult?.errors || [];
+  const isCuratedPublisherMode =
+    isSuperAdmin && publisherContext?.mode === 'platform_curator';
+  const timelineDateMessages = new Set([
+    'Launch date is required for this status',
+    'Expected completion date is required for this status',
+  ]);
+  const unpublishedTimelineErrors = isCuratedPublisherMode
+    ? errors.filter(error => timelineDateMessages.has(error))
+    : [];
+  const reviewErrors = errors.filter(error => !unpublishedTimelineErrors.includes(error));
   const warnings: string[] = getCardFieldRecommendations().filter(
     message => !errors.includes(message),
   );
   const canPublish = errors.length === 0;
+  const canReviewPrivateDraft =
+    isCuratedPublisherMode && !canPublish && reviewErrors.length === 0;
+  const hasOnlyUnpublishedTimelineBlockers =
+    canReviewPrivateDraft && unpublishedTimelineErrors.length > 0;
   const publisherId = publisherContext?.cataloguePublisherId ?? null;
   const shouldUseSuperAdminFlow = isSuperAdmin && typeof publisherId === 'number';
   const finalisationCopy = shouldUseSuperAdminFlow
@@ -582,41 +596,97 @@ export function FinalisationPhase({
         {/* Left Col: Validation & Summary */}
         <div className="lg:col-span-2 space-y-6">
           {/* Validation Dashboard */}
-          <Card className={!canPublish ? 'border-red-200 shadow-sm' : 'border-green-200 shadow-sm'}>
-            <CardHeader className={!canPublish ? 'bg-red-50/50 pb-4' : 'bg-green-50/50 pb-4'}>
+          <Card
+            className={
+              !canPublish && !canReviewPrivateDraft
+                ? 'border-red-200 shadow-sm'
+                : hasOnlyUnpublishedTimelineBlockers
+                  ? 'border-amber-200 shadow-sm'
+                  : 'border-green-200 shadow-sm'
+            }
+          >
+            <CardHeader
+              className={
+                !canPublish && !canReviewPrivateDraft
+                  ? 'bg-red-50/50 pb-4'
+                  : hasOnlyUnpublishedTimelineBlockers
+                    ? 'bg-amber-50/60 pb-4'
+                    : 'bg-green-50/50 pb-4'
+              }
+            >
               <div className="flex items-start gap-4">
                 <div
                   className={
-                    !canPublish
+                    !canPublish && !canReviewPrivateDraft
                       ? 'p-2 bg-red-100 rounded-full text-red-600'
-                      : 'p-2 bg-green-100 rounded-full text-green-600'
+                      : hasOnlyUnpublishedTimelineBlockers
+                        ? 'p-2 bg-amber-100 rounded-full text-amber-700'
+                        : 'p-2 bg-green-100 rounded-full text-green-600'
                   }
                 >
-                  {!canPublish ? (
+                  {!canPublish && !canReviewPrivateDraft ? (
+                    <AlertTriangle className="w-6 h-6" />
+                  ) : hasOnlyUnpublishedTimelineBlockers ? (
                     <AlertTriangle className="w-6 h-6" />
                   ) : (
                     <CheckCircle2 className="w-6 h-6" />
                   )}
                 </div>
                 <div>
-                  <CardTitle className={!canPublish ? 'text-red-900' : 'text-green-900'}>
-                    {!canPublish ? 'Action Required' : finalisationCopy.readinessTitle}
+                  <CardTitle
+                    className={
+                      !canPublish && !canReviewPrivateDraft
+                        ? 'text-red-900'
+                        : hasOnlyUnpublishedTimelineBlockers
+                          ? 'text-amber-950'
+                          : 'text-green-900'
+                    }
+                  >
+                    {!canPublish && !canReviewPrivateDraft
+                      ? 'Action Required'
+                      : canReviewPrivateDraft
+                        ? 'Private Draft Ready for Review'
+                        : finalisationCopy.readinessTitle}
                   </CardTitle>
-                  <CardDescription className={!canPublish ? 'text-red-700' : 'text-green-700'}>
-                    {!canPublish
-                      ? `Please resolve ${errors.length} error${errors.length > 1 ? 's' : ''} to continue.`
-                      : finalisationCopy.readinessDescription}
+                  <CardDescription
+                    className={
+                      !canPublish && !canReviewPrivateDraft
+                        ? 'text-red-700'
+                        : hasOnlyUnpublishedTimelineBlockers
+                          ? 'text-amber-900'
+                          : 'text-green-700'
+                    }
+                  >
+                    {!canPublish && !canReviewPrivateDraft
+                      ? `Please resolve ${reviewErrors.length} error${reviewErrors.length > 1 ? 's' : ''} before publishing.`
+                      : hasOnlyUnpublishedTimelineBlockers
+                        ? 'This draft is ready for local review. Official timeline dates were not supplied, so publishing remains disabled until they are confirmed.'
+                        : finalisationCopy.readinessDescription}
                   </CardDescription>
                 </div>
               </div>
             </CardHeader>
             {(!canPublish || warnings.length > 0) && (
               <CardContent className="pt-4 space-y-3">
-                {errors.map((err, idx) => (
+                {reviewErrors.map((err, idx) => (
                   <Alert key={`err-${idx}`} variant="destructive">
                     <AlertCircle className="h-4 w-4" />
                     <AlertTitle>Missing Requirement</AlertTitle>
                     <AlertDescription>{err}</AlertDescription>
+                  </Alert>
+                ))}
+                {unpublishedTimelineErrors.map(error => (
+                  <Alert
+                    key={`timeline-${error}`}
+                    className="border-amber-200 bg-amber-50 text-amber-900"
+                  >
+                    <AlertTriangle className="h-4 w-4 text-amber-700" />
+                    <AlertTitle>Timeline Date Not Supplied</AlertTitle>
+                    <AlertDescription>
+                      {error.startsWith('Launch date')
+                        ? 'Cosmopolitan confirms Phase 2 has launched but does not publish the exact launch date.'
+                        : 'No Baltimore-specific expected completion date was found in the source materials reviewed.'}
+                    </AlertDescription>
                   </Alert>
                 ))}
                 {warnings.map((warn: string, idx: number) => (
@@ -858,7 +928,9 @@ export function FinalisationPhase({
                 </Button>
                 {!canPublish && (
                   <p className="text-xs text-center text-red-500">
-                    {finalisationCopy.disabledHelper}
+                    {hasOnlyUnpublishedTimelineBlockers
+                      ? 'Add verified launch and expected completion dates before publishing.'
+                      : finalisationCopy.disabledHelper}
                   </p>
                 )}
                 <p className="text-xs text-center text-slate-400">{finalisationCopy.terms}</p>
