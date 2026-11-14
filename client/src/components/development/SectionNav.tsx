@@ -43,9 +43,11 @@ export function SectionNav() {
   };
 
   return (
-    <nav className={cn('bg-white border-b border-slate-200 transition-all duration-300')}>
-      <div className="container max-w-7xl mx-auto px-4">
-        <div className="flex overflow-x-auto scrollbar-hide">
+    <nav
+      className={cn('w-full min-w-0 bg-white border-b border-slate-200 transition-all duration-300')}
+    >
+      <div className="container mx-auto w-full min-w-0 max-w-7xl px-4">
+        <div className="flex min-w-0 overflow-x-auto scrollbar-hide">
           {sections.map(section => (
             <button
               key={section.id}

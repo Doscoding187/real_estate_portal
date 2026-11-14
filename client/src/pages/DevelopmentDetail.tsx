@@ -1669,7 +1669,7 @@ export default function DevelopmentDetail() {
             showQuickNav ? 'fixed top-0 left-0 right-0 z-[999]' : 'relative'
           }`}
         >
-          <div className="container max-w-7xl mx-auto h-16 flex items-center">
+          <div className="container mx-auto flex h-16 w-full min-w-0 max-w-7xl items-center">
             <SectionNav />
           </div>
         </div>
