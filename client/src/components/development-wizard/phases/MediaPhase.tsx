@@ -598,8 +598,14 @@ export function MediaPhase() {
 
         {/* Gallery Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-slate-900">Media Gallery</h3>
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-slate-900">Media Gallery</h3>
+              <p className="mt-1 text-sm text-slate-500">
+                Category-specific photos are optional. The public page uses a labeled placeholder
+                when amenity or outdoor photos are not supplied.
+              </p>
+            </div>
             <TabsList className="bg-slate-100">
               <TabsTrigger value="gallery">Photos</TabsTrigger>
               <TabsTrigger value="videos">Videos</TabsTrigger>

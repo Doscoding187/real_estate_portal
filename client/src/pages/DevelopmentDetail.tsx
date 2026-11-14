@@ -986,7 +986,8 @@ export default function DevelopmentDetail() {
   const isPlatformReference = publisher.authorityKind === 'platform_reference';
 
   // 1. RAW DATA EXTRACTION
-  const rawImages = parseJSON(dev.images);
+  const publicImageMedia = Array.isArray(dev.imageMedia) ? dev.imageMedia : [];
+  const rawImages = publicImageMedia.length ? publicImageMedia : parseJSON(dev.images);
   const rawVideos = parseJSON(dev.videos);
   const rawFloorPlans = parseJSON(dev.floorPlans);
 

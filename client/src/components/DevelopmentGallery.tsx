@@ -108,6 +108,50 @@ export function DevelopmentGallery({
     </div>
   );
 
+  const renderCategoryTile = ({
+    image,
+    alt,
+    label,
+    lightboxTitle,
+    index,
+    missingDescription,
+  }: {
+    image: ImageMedia | undefined;
+    alt: string;
+    label: string;
+    lightboxTitle: string;
+    index: number;
+    missingDescription: string;
+  }) => {
+    const tileClassName =
+      'relative h-[194px] overflow-hidden rounded-card bg-slate-100 shadow-sm ring-1 ring-black/5';
+    const labelElement = (
+      <span className="absolute right-2.5 bottom-2.5 rounded-pill border border-white/20 bg-white/95 px-3 py-1.5 text-[11px] font-semibold shadow-sm backdrop-blur-md">
+        {label}
+      </span>
+    );
+
+    if (!image) {
+      return (
+        <div className={tileClassName}>
+          {renderTileFallback('No photos yet', missingDescription)}
+          {labelElement}
+        </div>
+      );
+    }
+
+    return (
+      <button
+        onClick={() => onOpenLightbox(index, lightboxTitle)}
+        className={`${tileClassName} group transition-all hover:shadow-md`}
+      >
+        {renderImage(image, alt)}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+        {labelElement}
+      </button>
+    );
+  };
+
   const renderFeaturedContent = () => {
     if (featuredMedia.type === 'video') {
       const video = featuredMedia.video;
@@ -170,40 +214,24 @@ export function DevelopmentGallery({
         {/* Top Row: 2 cards side by side (50/50) - Fixed 200px height */}
         <div className="grid grid-cols-2 gap-3 h-[194px]">
           {/* Amenities Card */}
-          <button
-            onClick={() => onOpenLightbox(indices.amenities, 'Amenities')}
-            disabled={!amenityTileImage && !hasAnyMedia}
-            className="relative rounded-card overflow-hidden shadow-sm hover:shadow-md transition-all group h-[194px] ring-1 ring-black/5 bg-slate-100"
-          >
-            {amenityTileImage
-              ? renderImage(amenityTileImage, 'Development amenities')
-              : renderTileFallback(
-                  'Amenities',
-                  'Amenity visuals will appear here as the developer adds more media.',
-                )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-            <span className="absolute right-2.5 bottom-2.5 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-pill font-semibold text-[11px] shadow-sm border border-white/20">
-              Amenities
-            </span>
-          </button>
+          {renderCategoryTile({
+            image: amenityTileImage,
+            alt: 'Development amenities',
+            label: 'Amenities',
+            lightboxTitle: 'Amenities',
+            index: indices.amenities,
+            missingDescription: 'No amenity photos have been provided yet.',
+          })}
 
           {/* Outdoors Card */}
-          <button
-            onClick={() => onOpenLightbox(indices.outdoors, 'Outdoor Spaces')}
-            disabled={!outdoorsTileImage && !hasAnyMedia}
-            className="relative rounded-card overflow-hidden shadow-sm hover:shadow-md transition-all group h-[194px] ring-1 ring-black/5 bg-slate-100"
-          >
-            {outdoorsTileImage
-              ? renderImage(outdoorsTileImage, 'Outdoor spaces')
-              : renderTileFallback(
-                  'Outdoor Spaces',
-                  'Landscape and exterior imagery will be added as sales content expands.',
-                )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-            <span className="absolute right-2.5 bottom-2.5 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-pill font-semibold text-[11px] shadow-sm border border-white/20">
-              Outdoors
-            </span>
-          </button>
+          {renderCategoryTile({
+            image: outdoorsTileImage,
+            alt: 'Outdoor spaces',
+            label: 'Outdoors',
+            lightboxTitle: 'Outdoor Spaces',
+            index: indices.outdoors,
+            missingDescription: 'No exterior or outdoor photos have been provided yet.',
+          })}
         </div>
 
         {/* Bottom Row: Dynamic Card (Videos -> Floor Plans -> Gallery) - Fixed 200px height */}

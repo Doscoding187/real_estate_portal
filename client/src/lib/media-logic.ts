@@ -163,33 +163,18 @@ export function getDevelopmentViewGalleryTileImage(
 }
 
 /**
- * Amenities Tile
+ * Category tiles are literal jump points. Never borrow a featured or unrelated
+ * image, because the tile label must describe the photo it shows.
  */
 export function getDevelopmentAmenityTileImage(media: DevelopmentMedia): ImageMedia | undefined {
-  return (
-    pickFallbackImage(media, [
-      ['amenities'],
-      ['interior', 'general'],
-      ['outdoors'],
-      ['photo'],
-      ['render'],
-    ]) ?? media.featuredImage
-  );
+  return pickFirstByCategory(getUniqueImages(media), ['amenities']);
 }
 
 /**
  * Outdoors Tile
  */
 export function getDevelopmentOutdoorsTileImage(media: DevelopmentMedia): ImageMedia | undefined {
-  return (
-    pickFallbackImage(media, [
-      ['outdoors'],
-      ['photo'],
-      ['amenities'],
-      ['interior', 'general'],
-      ['render'],
-    ]) ?? media.featuredImage
-  );
+  return pickFirstByCategory(getUniqueImages(media), ['outdoors']);
 }
 
 // =============================================================================

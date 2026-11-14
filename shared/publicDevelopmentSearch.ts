@@ -74,6 +74,21 @@ export interface PublicDevelopmentSearchItem {
   availabilityState: PublicDevelopmentSearchAvailabilityState;
 }
 
+export type PublicDevelopmentImageCategory =
+  | 'featured'
+  | 'general'
+  | 'interior'
+  | 'amenities'
+  | 'outdoors'
+  | 'photo'
+  | 'render';
+
+export interface PublicDevelopmentImageMedia {
+  url: string;
+  category: PublicDevelopmentImageCategory;
+  isPrimary: boolean;
+}
+
 export interface PublicDevelopmentDetailUnit extends PublicDevelopmentSearchUnit {
   name: string;
   developmentId: number;
@@ -92,6 +107,8 @@ export interface PublicDevelopmentDetailUnit extends PublicDevelopmentSearchUnit
 
 export interface PublicDevelopmentDetail extends PublicDevelopmentSearchItem {
   publicFacts: PublicDevelopmentSearchItem;
+  /** Safe image metadata for category-specific detail-page gallery tiles. */
+  imageMedia?: PublicDevelopmentImageMedia[];
   address: string | null;
   showHouseAddress: boolean;
   canonicalPlaceId: string | null;
@@ -221,6 +238,85 @@ function projectionImages(value: unknown): string[] {
     })
     .map(item => item.trim())
     .filter(Boolean);
+}
+
+function safePublicImageUrl(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const candidate = value.trim();
+  if (!candidate || candidate.length > 2048 || candidate.startsWith('//')) return null;
+  if (candidate.startsWith('/')) return candidate;
+
+  try {
+    const parsed = new URL(candidate);
+    if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password) {
+      return null;
+    }
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+}
+
+function publicImageCategory(value: unknown): PublicDevelopmentImageCategory {
+  const category = String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, '');
+  if (['hero', 'featured', 'cover'].includes(category)) return 'featured';
+  if (['amenity', 'amenities'].includes(category)) return 'amenities';
+  if (['outdoor', 'outdoors', 'exterior', 'exterioroutdoor', 'exterioroutdoors'].includes(category)) {
+    return 'outdoors';
+  }
+  if (category === 'interior') return 'interior';
+  if (['photo', 'location', 'view', 'views'].includes(category)) return 'photo';
+  if (['render', 'rendering', 'aerial', 'drone'].includes(category)) return 'render';
+  return 'general';
+}
+
+/**
+ * Detail-page media projection. Preserve only safe image URLs and the small
+ * amount of category metadata needed by the labeled gallery tiles; upload
+ * receipts, storage keys and filenames stay private.
+ */
+export function projectPublicDevelopmentImageMedia(value: unknown): PublicDevelopmentImageMedia[] {
+  let entries: unknown[] = [];
+  if (Array.isArray(value)) {
+    entries = value;
+  } else if (typeof value === 'string' && value.trim()) {
+    let current: unknown = value;
+    for (let depth = 0; depth < 2 && typeof current === 'string'; depth += 1) {
+      try {
+        current = JSON.parse(current);
+      } catch {
+        break;
+      }
+    }
+    entries = Array.isArray(current) ? current : current ? [current] : [];
+  } else if (value && typeof value === 'object') {
+    entries = [value];
+  }
+
+  const projected: PublicDevelopmentImageMedia[] = [];
+  const seen = new Set<string>();
+  for (const entry of entries) {
+    if (typeof entry !== 'string' && (!entry || typeof entry !== 'object' || Array.isArray(entry))) {
+      continue;
+    }
+    const image = typeof entry === 'string' ? null : (entry as Record<string, unknown>);
+    if (image?.type && image.type !== 'image') continue;
+    const url = safePublicImageUrl(
+      typeof entry === 'string' ? entry : image?.url ?? image?.imageUrl ?? image?.src ?? image?.key,
+    );
+    if (!url || seen.has(url)) continue;
+    seen.add(url);
+    projected.push({
+      url,
+      category: publicImageCategory(image?.category),
+      isPrimary: image?.isPrimary === true || image?.isPrimary === 1,
+    });
+    if (projected.length === 50) break;
+  }
+  return projected;
 }
 
 function projectionHighlights(value: unknown): string[] {

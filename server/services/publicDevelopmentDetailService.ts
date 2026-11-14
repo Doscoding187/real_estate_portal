@@ -8,6 +8,7 @@ import {
 } from '../../drizzle/schema';
 import {
   projectPublicDevelopmentFacts,
+  projectPublicDevelopmentImageMedia,
   type PublicDevelopmentDetail,
   type PublicDevelopmentDetailUnit,
   type PublicDevelopmentProjectionDevelopment,
@@ -332,6 +333,7 @@ export class PublicDevelopmentDetailService {
     const detail: PublicDevelopmentDetail = {
       ...publicFacts,
       publicFacts,
+      imageMedia: projectPublicDevelopmentImageMedia(row.images),
       address:
         Number(row.showHouseAddress || 0) === 1 ? ((row.address as string | null) ?? null) : null,
       showHouseAddress: Number(row.showHouseAddress || 0) === 1,
