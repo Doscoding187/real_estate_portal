@@ -1,6 +1,10 @@
 import { useEffect, useId, useState } from 'react';
 import { trpc } from '@/lib/trpc';
-import { isCanonicalPlaceId, normalizePlaceQuery, type PlaceSearchScope } from '@shared/placeAuthority';
+import {
+  isCanonicalPlaceId,
+  normalizePlaceQuery,
+  type PlaceSearchScope,
+} from '@shared/placeAuthority';
 
 export interface CanonicalPlaceSelection {
   canonicalPlaceId: string;
@@ -88,6 +92,7 @@ export function CanonicalPlaceSelectorView({
   inputId: suppliedInputId,
   placeholder,
   hint,
+  compact = false,
 }: {
   value: CanonicalPlaceSelection | null;
   onChange: (value: CanonicalPlaceSelection | null) => void;
@@ -101,6 +106,7 @@ export function CanonicalPlaceSelectorView({
   inputId?: string;
   placeholder?: string;
   hint?: string;
+  compact?: boolean;
 }) {
   const generatedId = useId();
   const inputId = suppliedInputId ?? generatedId;
@@ -161,8 +167,11 @@ export function CanonicalPlaceSelectorView({
                 : 'Type a city, town, suburb or locality.';
 
   return (
-    <div className="space-y-2">
-      <label htmlFor={inputId} className="text-sm font-medium">
+    <div className={compact ? 'space-y-1' : 'space-y-2'}>
+      <label
+        htmlFor={inputId}
+        className={compact ? 'text-[11px] font-medium text-slate-600' : 'text-sm font-medium'}
+      >
         {label}
       </label>
       <input
@@ -179,7 +188,7 @@ export function CanonicalPlaceSelectorView({
         maxLength={200}
         autoComplete="off"
         placeholder={placeholder}
-        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+        className={`flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ${compact ? 'h-9 pr-8' : 'h-10'}`}
         onChange={event => {
           onChange(null);
           onQueryChange(event.target.value);
@@ -221,11 +230,15 @@ export function CanonicalPlaceSelectorView({
           {hint}
         </p>
       )}
-      <p id={statusId} role="status" className="text-sm text-muted-foreground">
+      <p
+        id={statusId}
+        role="status"
+        className={compact ? 'sr-only' : 'text-sm text-muted-foreground'}
+      >
         {status}
       </p>
       {value && (
-        <p className="text-sm">
+        <p className={compact ? 'sr-only' : 'text-sm'}>
           {factualTypeLabel(value.placeType)}
           {value.administrativeContext ? ` · ${value.administrativeContext}` : ''}
         </p>
@@ -280,6 +293,7 @@ export function CanonicalPlaceSelector({
   inputId,
   placeholder,
   hint,
+  compact,
   initialQuery,
 }: {
   value: CanonicalPlaceSelection | null;
@@ -289,6 +303,7 @@ export function CanonicalPlaceSelector({
   inputId?: string;
   placeholder?: string;
   hint?: string;
+  compact?: boolean;
   initialQuery?: string;
 }) {
   const [query, setQuery] = useState(value?.label ?? initialQuery ?? '');
@@ -319,6 +334,7 @@ export function CanonicalPlaceSelector({
       inputId={inputId}
       placeholder={placeholder}
       hint={hint}
+      compact={compact}
       query={query}
       onQueryChange={setQuery}
       discovery={lookup.data}

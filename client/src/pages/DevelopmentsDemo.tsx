@@ -1,9 +1,20 @@
 import { SectionEmptyState } from '@/components/ui/SectionEmptyState';
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useSearch } from 'wouter';
-import { Building2, ChevronLeft, ChevronRight, List, Loader2, X } from 'lucide-react';
+import { toast } from 'sonner';
+import {
+  ArrowLeft,
+  Building2,
+  ChevronLeft,
+  ChevronDown,
+  ChevronRight,
+  Loader2,
+  SlidersHorizontal,
+  X,
+} from 'lucide-react';
 
 import { DevelopmentCard } from '@/components/DevelopmentCard';
+import { DevelopmentSearchAdRail } from '@/components/developments/DevelopmentSearchAdRail';
 import { EnhancedNavbar } from '@/components/EnhancedNavbar';
 import {
   CanonicalPlaceSelector,
@@ -14,12 +25,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { trpc } from '@/lib/trpc';
 import { generateIntentUrl, resolveSearchIntent, type SearchIntent } from '@/lib/searchIntent';
+import { canonicalPlaceSelectionFromResolved } from '@/lib/canonicalPlaceSelection';
 import {
   appendDevelopmentSearchReturn,
   normalizeDevelopmentSearchReturn,
 } from '@/lib/developmentJourneyContinuity';
 import { isCanonicalPlaceId } from '@shared/placeAuthority';
 import { PROPERTY_IMAGE_FALLBACK } from '@/lib/mediaUtils';
+import { useSavedUnitTypes } from '@/lib/savedUnitTypes';
+import { useSavedDevelopments } from '@/lib/savedDevelopments';
 import type {
   PublicDevelopmentSearchAvailability,
   PublicDevelopmentSearchDevelopmentType,
@@ -104,9 +118,21 @@ function updateIntentUrl(
 export default function DevelopmentsDemo() {
   const [location, setLocation] = useLocation();
   const search = useSearch();
-  const [showMobileFilters, setShowMobileFilters] = useState(false);
-  const [placeSelection, setPlaceSelection] = useState<CanonicalPlaceSelection | null>(null);
+  const savedUnitTypes = useSavedUnitTypes();
+  const savedDevelopments = useSavedDevelopments();
+  const [placeSelection, setPlaceSelection] = useState<CanonicalPlaceSelection | null | undefined>(
+    undefined,
+  );
   const [placeQueryUnselected, setPlaceQueryUnselected] = useState(false);
+  const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
+
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+    setLocation('/');
+  };
 
   const intent = useMemo(
     () =>
@@ -130,6 +156,19 @@ export default function DevelopmentsDemo() {
   const placeIds = searchParams.getAll('canonicalPlaceId').map(value => value.trim());
   const selectedCanonicalPlaceId =
     placeIds.length === 1 && isCanonicalPlaceId(placeIds[0]) ? placeIds[0] : undefined;
+  const resolvedPlaceQuery = trpc.placeAuthority.resolveSearchPlace.useQuery(
+    { placeId: selectedCanonicalPlaceId || '' },
+    {
+      enabled: Boolean(selectedCanonicalPlaceId),
+      refetchOnWindowFocus: false,
+      staleTime: 300_000,
+    },
+  );
+  const resolvedPlace = useMemo(
+    () => canonicalPlaceSelectionFromResolved(resolvedPlaceQuery.data),
+    [resolvedPlaceQuery.data],
+  );
+  const activePlace = placeSelection === undefined ? resolvedPlace : placeSelection;
   const hasRetiredGeography = [
     'province',
     'city',
@@ -147,6 +186,11 @@ export default function DevelopmentsDemo() {
     placeIds.length > 1 ||
     (placeIds.length === 1 && !selectedCanonicalPlaceId) ||
     placeQueryUnselected;
+
+  useEffect(() => {
+    setPlaceSelection(undefined);
+    setPlaceQueryUnselected(false);
+  }, [selectedCanonicalPlaceId]);
 
   const queryInput = useMemo(() => {
     const developmentType = DEVELOPMENT_TYPE_OPTIONS.find(
@@ -277,134 +321,303 @@ export default function DevelopmentsDemo() {
     });
   };
 
+  const activeFilterChips: Array<{ key: string; label: string }> = [];
+  const selectedDevelopmentType = DEVELOPMENT_TYPE_OPTIONS.find(
+    option => option.value === intent.filters.developmentType,
+  );
+  const selectedDevelopmentStatus = DEVELOPMENT_STATUS_OPTIONS.find(
+    option => option.value === intent.filters.developmentStatus,
+  );
+  const selectedTransaction = TRANSACTION_OPTIONS.find(
+    option => option.value === intent.filters.transactionType,
+  );
+  const selectedAvailability = AVAILABILITY_OPTIONS.find(
+    option => option.value === intent.filters.availability,
+  );
+  if (selectedDevelopmentType) {
+    activeFilterChips.push({ key: 'developmentType', label: selectedDevelopmentType.label });
+  }
+  if (selectedDevelopmentStatus) {
+    activeFilterChips.push({ key: 'developmentStatus', label: selectedDevelopmentStatus.label });
+  }
+  if (selectedTransaction) {
+    activeFilterChips.push({ key: 'transactionType', label: selectedTransaction.label });
+  }
+  if (typeof intent.filters.minPrice === 'number') {
+    activeFilterChips.push({
+      key: 'minPrice',
+      label: `From R ${intent.filters.minPrice.toLocaleString('en-ZA')}`,
+    });
+  }
+  if (typeof intent.filters.maxPrice === 'number') {
+    activeFilterChips.push({
+      key: 'maxPrice',
+      label: `Up to R ${intent.filters.maxPrice.toLocaleString('en-ZA')}`,
+    });
+  }
+  if (typeof intent.filters.minBedrooms === 'number') {
+    activeFilterChips.push({
+      key: 'minBedrooms',
+      label: `${intent.filters.minBedrooms}+ bedrooms`,
+    });
+  }
+  if (typeof intent.filters.maxBedrooms === 'number') {
+    activeFilterChips.push({
+      key: 'maxBedrooms',
+      label: `Up to ${intent.filters.maxBedrooms} bedrooms`,
+    });
+  }
+  if (selectedAvailability) {
+    activeFilterChips.push({ key: 'availability', label: selectedAvailability.label });
+  }
+  const activeFilterCount = activeFilterChips.length + Number(Boolean(activePlace));
+  const advancedFilterCount =
+    Number(Boolean(selectedDevelopmentStatus)) +
+    Number(Boolean(selectedTransaction)) +
+    Number(Boolean(selectedAvailability)) +
+    Number(typeof intent.filters.minPrice === 'number') +
+    Number(typeof intent.filters.maxPrice === 'number') +
+    Number(typeof intent.filters.minBedrooms === 'number') +
+    Number(typeof intent.filters.maxBedrooms === 'number');
+  const clearRefinements = () => {
+    setPlaceSelection(null);
+    setPlaceQueryUnselected(false);
+    updateIntentUrl(setLocation, intent, {
+      filters: removeTextLocationFilters({}),
+      geography: { level: 'country' },
+      resultState: { page: 0 },
+    });
+  };
+
   const filterPanel = (
-    <div className="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div>
-        <h2 className="text-sm font-bold uppercase tracking-wide text-slate-700">Refine results</h2>
-        <p className="mt-1 text-xs leading-5 text-slate-500">
-          Every control changes the server-owned development result set.
-        </p>
+    <section className="mb-4 rounded-xl border border-slate-200 bg-white p-3 shadow-sm sm:p-3.5">
+      <div className="grid grid-cols-2 items-end gap-2.5 lg:grid-cols-4 xl:grid-cols-[minmax(230px,1.35fr)_minmax(160px,.9fr)_minmax(150px,.85fr)_minmax(250px,1.35fr)_auto]">
+        <div className="relative col-span-2 min-w-0 xl:col-span-1">
+          <CanonicalPlaceSelector
+            value={activePlace}
+            onChange={selectPlace}
+            purpose="search"
+            label="Area"
+            placeholder="Suburb or city"
+            compact
+          />
+          {selectedCanonicalPlaceId ? (
+            <button
+              type="button"
+              onClick={clearPlace}
+              aria-label="Clear selected area"
+              title="Clear selected area"
+              className="absolute right-1 top-[23px] flex h-7 w-7 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+            >
+              <X className="h-3.5 w-3.5" aria-hidden="true" />
+            </button>
+          ) : null}
+          {hasLocationError ? (
+            <p className="mt-1 text-[11px] leading-4 text-amber-700" role="status">
+              {locationMessage || 'Choose one area from the suggestions.'}
+            </p>
+          ) : null}
+        </div>
+
+        <label className="block min-w-0 text-[11px] font-medium text-slate-600">
+          Development type
+          <select
+            value={intent.filters.developmentType || ''}
+            onChange={event => changeFilter('developmentType', event.target.value)}
+            className="mt-1 block h-10 w-full rounded-lg border border-slate-200 bg-white px-2.5 text-sm font-medium text-slate-800"
+          >
+            <option value="">Any type</option>
+            {DEVELOPMENT_TYPE_OPTIONS.map(option => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="hidden min-w-0 text-[11px] font-medium text-slate-600 sm:block">
+          Bedrooms
+          <select
+            value={intent.filters.minBedrooms ?? ''}
+            onChange={event => changeFilter('minBedrooms', event.target.value)}
+            className="mt-1 block h-10 w-full rounded-lg border border-slate-200 bg-white px-2.5 text-sm font-medium text-slate-800"
+          >
+            <option value="">Any bedrooms</option>
+            {[1, 2, 3, 4, 5].map(value => (
+              <option key={value} value={value}>
+                {value}+ bedrooms
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <div className="col-span-2 hidden min-w-0 sm:block xl:col-span-1">
+          <span className="text-[11px] font-medium text-slate-600">Price range</span>
+          <div className="mt-1 flex items-center gap-2">
+            <Input
+              aria-label="Minimum price"
+              type="number"
+              min="0"
+              value={intent.filters.minPrice ?? ''}
+              onChange={event => changeFilter('minPrice', event.target.value)}
+              placeholder="Min price"
+              className="h-10 min-w-0 px-2.5 text-sm"
+            />
+            <span aria-hidden="true" className="text-xs text-slate-400">
+              to
+            </span>
+            <Input
+              aria-label="Maximum price"
+              type="number"
+              min="0"
+              value={intent.filters.maxPrice ?? ''}
+              onChange={event => changeFilter('maxPrice', event.target.value)}
+              placeholder="Max price"
+              className="h-10 min-w-0 px-2.5 text-sm"
+            />
+          </div>
+        </div>
+
+        <button
+          type="button"
+          aria-expanded={advancedFiltersOpen}
+          aria-controls="development-advanced-filters"
+          onClick={() => setAdvancedFiltersOpen(open => !open)}
+          className="inline-flex h-10 min-w-0 items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-2 text-xs font-semibold text-slate-700 transition-colors hover:border-blue-300 hover:bg-blue-50 hover:text-blue-800 sm:gap-2 sm:px-3 sm:text-sm"
+        >
+          <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+          <span className="truncate">More filters</span>
+          {advancedFilterCount > 0 && (
+            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-100 px-1 text-[11px] text-blue-800">
+              {advancedFilterCount}
+            </span>
+          )}
+          <ChevronDown
+            className={`h-4 w-4 transition-transform ${advancedFiltersOpen ? 'rotate-180' : ''}`}
+            aria-hidden="true"
+          />
+        </button>
       </div>
 
-      <label className="block text-sm font-medium text-slate-700">
-        Development type
-        <select
-          value={intent.filters.developmentType || ''}
-          onChange={event => changeFilter('developmentType', event.target.value)}
-          className="mt-1.5 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
+      {advancedFiltersOpen && (
+        <div
+          id="development-advanced-filters"
+          className="mt-3 grid gap-2.5 border-t border-slate-100 pt-3 sm:grid-cols-2 lg:grid-cols-3"
         >
-          <option value="">Any type</option>
-          {DEVELOPMENT_TYPE_OPTIONS.map(option => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
+          <label className="block min-w-0 text-[11px] font-medium text-slate-600 sm:hidden">
+            Bedrooms
+            <select
+              value={intent.filters.minBedrooms ?? ''}
+              onChange={event => changeFilter('minBedrooms', event.target.value)}
+              className="mt-1 block h-10 w-full rounded-lg border border-slate-200 bg-white px-2.5 text-sm font-medium text-slate-800"
+            >
+              <option value="">Any bedrooms</option>
+              {[1, 2, 3, 4, 5].map(value => (
+                <option key={value} value={value}>
+                  {value}+ bedrooms
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="min-w-0 sm:hidden">
+            <span className="text-[11px] font-medium text-slate-600">Price range</span>
+            <div className="mt-1 flex items-center gap-2">
+              <Input
+                aria-label="Minimum price"
+                type="number"
+                min="0"
+                value={intent.filters.minPrice ?? ''}
+                onChange={event => changeFilter('minPrice', event.target.value)}
+                placeholder="Min price"
+                className="h-10 min-w-0 px-2.5 text-sm"
+              />
+              <span aria-hidden="true" className="text-xs text-slate-400">
+                to
+              </span>
+              <Input
+                aria-label="Maximum price"
+                type="number"
+                min="0"
+                value={intent.filters.maxPrice ?? ''}
+                onChange={event => changeFilter('maxPrice', event.target.value)}
+                placeholder="Max price"
+                className="h-10 min-w-0 px-2.5 text-sm"
+              />
+            </div>
+          </div>
+          <label className="block min-w-0 text-[11px] font-medium text-slate-600">
+            Development stage
+            <select
+              value={intent.filters.developmentStatus || ''}
+              onChange={event => changeFilter('developmentStatus', event.target.value)}
+              className="mt-1 block h-10 w-full rounded-lg border border-slate-200 bg-white px-2.5 text-sm font-medium text-slate-800"
+            >
+              <option value="">Any stage</option>
+              {DEVELOPMENT_STATUS_OPTIONS.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block min-w-0 text-[11px] font-medium text-slate-600">
+            Buy or rent
+            <select
+              value={intent.filters.transactionType || ''}
+              onChange={event => changeFilter('transactionType', event.target.value)}
+              className="mt-1 block h-10 w-full rounded-lg border border-slate-200 bg-white px-2.5 text-sm font-medium text-slate-800"
+            >
+              <option value="">Sale or rent</option>
+              {TRANSACTION_OPTIONS.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block min-w-0 text-[11px] font-medium text-slate-600">
+            Availability
+            <select
+              value={intent.filters.availability || ''}
+              onChange={event => changeFilter('availability', event.target.value)}
+              className="mt-1 block h-10 w-full rounded-lg border border-slate-200 bg-white px-2.5 text-sm font-medium text-slate-800"
+            >
+              <option value="">Any availability</option>
+              {AVAILABILITY_OPTIONS.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      )}
+
+      {activeFilterChips.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-slate-100 pt-2.5">
+          {activeFilterChips.map(chip => (
+            <button
+              key={chip.key}
+              type="button"
+              onClick={() => changeFilter(chip.key, '')}
+              aria-label={`Remove ${chip.label} filter`}
+              className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-800 hover:bg-blue-100"
+            >
+              {chip.label} <X className="h-3 w-3" aria-hidden="true" />
+            </button>
           ))}
-        </select>
-      </label>
-
-      <label className="block text-sm font-medium text-slate-700">
-        Status
-        <select
-          value={intent.filters.developmentStatus || ''}
-          onChange={event => changeFilter('developmentStatus', event.target.value)}
-          className="mt-1.5 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
-        >
-          <option value="">Any status</option>
-          {DEVELOPMENT_STATUS_OPTIONS.map(option => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <label className="block text-sm font-medium text-slate-700">
-        Transaction
-        <select
-          value={intent.filters.transactionType || ''}
-          onChange={event => changeFilter('transactionType', event.target.value)}
-          className="mt-1.5 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
-        >
-          <option value="">Sale or rent</option>
-          {TRANSACTION_OPTIONS.map(option => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <div className="grid grid-cols-2 gap-3">
-        <label className="block text-sm font-medium text-slate-700">
-          Price from
-          <Input
-            type="number"
-            min="0"
-            value={intent.filters.minPrice ?? ''}
-            onChange={event => changeFilter('minPrice', event.target.value)}
-            placeholder="Any"
-            className="mt-1.5"
-          />
-        </label>
-        <label className="block text-sm font-medium text-slate-700">
-          Price to
-          <Input
-            type="number"
-            min="0"
-            value={intent.filters.maxPrice ?? ''}
-            onChange={event => changeFilter('maxPrice', event.target.value)}
-            placeholder="Any"
-            className="mt-1.5"
-          />
-        </label>
-      </div>
-
-      <label className="block text-sm font-medium text-slate-700">
-        Bedrooms
-        <select
-          value={intent.filters.minBedrooms ?? ''}
-          onChange={event => changeFilter('minBedrooms', event.target.value)}
-          className="mt-1.5 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
-        >
-          <option value="">Any bedroom count</option>
-          {[1, 2, 3, 4, 5].map(value => (
-            <option key={value} value={value}>
-              {value}+ bedrooms
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <label className="block text-sm font-medium text-slate-700">
-        Availability
-        <select
-          value={intent.filters.availability || ''}
-          onChange={event => changeFilter('availability', event.target.value)}
-          className="mt-1.5 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
-        >
-          <option value="">Any availability</option>
-          {AVAILABILITY_OPTIONS.map(option => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <Button
-        type="button"
-        variant="outline"
-        className="w-full"
-        onClick={() =>
-          updateIntentUrl(setLocation, intent, {
-            filters: removeTextLocationFilters({}),
-            resultState: { page: 0 },
-          })
-        }
-      >
-        Clear refinements
-      </Button>
-    </div>
+          {activeFilterCount > 0 && (
+            <button
+              type="button"
+              onClick={clearRefinements}
+              className="ml-auto text-xs font-semibold text-blue-700 hover:text-blue-900"
+            >
+              Clear all
+            </button>
+          )}
+        </div>
+      )}
+    </section>
   );
 
   return (
@@ -415,92 +628,56 @@ export default function DevelopmentsDemo() {
       />
       <EnhancedNavbar />
 
-      <div className="container mx-auto px-4 pb-12 pt-24 sm:px-6 lg:px-8">
-        <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-            <div className="min-w-0 flex-1">
-              <CanonicalPlaceSelector
-                value={placeSelection}
-                onChange={selectPlace}
-                purpose="search"
-                label="Area"
-                placeholder="Search areas"
-                hint="Only developments in this area match."
-              />
-            </div>
-            {selectedCanonicalPlaceId ? (
-              <div className="flex items-center gap-2 rounded-full bg-blue-50 px-3 py-2 text-sm font-medium text-blue-800">
-                <span>
-                  {placeSelection?.canonicalPlaceId === selectedCanonicalPlaceId
-                    ? `Searching ${placeSelection.label}`
-                    : 'Area filter active'}
-                </span>
-                <button
-                  type="button"
-                  onClick={clearPlace}
-                  aria-label="Clear area"
-                  className="rounded-full p-0.5 hover:bg-blue-100"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            ) : null}
-          </div>
-          {hasLocationError ? (
-            <p className="mt-3 text-sm font-medium text-amber-700" role="status">
-              {locationMessage || 'That area could not be used. Choose another area.'}
-            </p>
-          ) : null}
+      <div className="mx-auto w-full max-w-[1520px] px-4 pb-12 pt-12 sm:px-6 sm:pt-14 xl:px-8">
+        <div className="mb-2 flex items-center justify-between">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleBack}
+            className="-ml-2 text-slate-600 hover:text-slate-900"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" aria-hidden="true" />
+            Back
+          </Button>
+          <p className="text-xs font-medium text-slate-400">Home / New developments</p>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-8">
-          <aside className="hidden lg:col-span-3 lg:block">
-            <div className="sticky top-24">{filterPanel}</div>
-          </aside>
+        {filterPanel}
 
-          <main className="col-span-1 lg:col-span-9">
-            <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <h1 className="text-xl font-bold text-slate-800">
-                  {isLoading || (isFetching && !data) ? (
-                    <span className="text-slate-400">Finding developments…</span>
-                  ) : error || resultCount === 0 ? (
-                    'New developments'
-                  ) : (
-                    `${resultCount} New ${resultCount === 1 ? 'Development' : 'Developments'} Found`
-                  )}
-                </h1>
-                <p className="mt-1 text-sm text-slate-500">
-                  Development-first results with current unit, price, and availability facts.
-                </p>
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-12 xl:gap-6">
+          <main className="min-w-0 xl:col-span-9">
+            <div className="mb-3 flex flex-wrap items-end justify-between gap-3 px-1">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                  <h1 className="text-base font-bold leading-tight text-slate-900">
+                    New developments
+                  </h1>
+                  <span className="text-xs text-slate-500">
+                    {isLoading || (isFetching && !data)
+                      ? 'Finding developments…'
+                      : error || resultCount === 0
+                        ? 'No developments found'
+                        : `${resultCount} ${resultCount === 1 ? 'development' : 'developments'}${activePlace ? ` in ${activePlace.label}` : ''}`}
+                  </span>
+                </div>
               </div>
-
-              <div className="flex items-center gap-3">
-                <Button
-                  variant="outline"
-                  className="border-slate-200 text-slate-600 lg:hidden"
-                  onClick={() => setShowMobileFilters(value => !value)}
+              <label className="flex items-center gap-2 text-xs font-medium text-slate-500">
+                Sort
+                <select
+                  aria-label="Sort developments"
+                  value={intent.resultState.sort}
+                  onChange={event => changeSort(event.target.value)}
+                  className="h-9 rounded-lg border border-slate-200 bg-white px-2.5 text-sm font-medium text-slate-700"
                 >
-                  <List className="mr-2 h-4 w-4" /> Filters
-                </Button>
-                <label className="flex items-center gap-2 text-sm font-medium text-slate-600">
-                  <span className="hidden sm:inline">Sort by</span>
-                  <select
-                    value={intent.resultState.sort}
-                    onChange={event => changeSort(event.target.value)}
-                    className="h-9 rounded-lg border border-slate-200 bg-white px-2 text-sm"
-                  >
-                    <option value="relevance">Relevance</option>
-                    <option value="price_asc">Price: low to high</option>
-                    <option value="price_desc">Price: high to low</option>
-                    <option value="date_desc">Newest</option>
-                    <option value="date_asc">Oldest</option>
-                  </select>
-                </label>
-              </div>
+                  <option value="relevance">Relevance</option>
+                  <option value="price_asc">Price: low to high</option>
+                  <option value="price_desc">Price: high to low</option>
+                  <option value="date_desc">Newest</option>
+                  <option value="date_asc">Oldest</option>
+                </select>
+              </label>
             </div>
-
-            {showMobileFilters ? <div className="mb-6 lg:hidden">{filterPanel}</div> : null}
 
             {isLoading || (isFetching && !data) ? (
               <div className="flex items-center justify-center py-20">
@@ -529,59 +706,115 @@ export default function DevelopmentsDemo() {
                     them.
                   </p>
                 )}
-                <div className="flex flex-col gap-6">
-                  {data.items.map(development => (
-                    <DevelopmentCard
-                      key={development.id}
-                      id={String(development.id)}
-                      canonicalRoute={appendDevelopmentSearchReturn(
-                        development.canonicalRoute,
-                        searchReturnPath,
-                      )}
-                      title={development.name}
-                      rating={development.rating ?? undefined}
-                      location={development.locationLabels.join(', ') || 'Area to be confirmed'}
-                      description={development.description}
-                      image={development.images[0] || PROPERTY_IMAGE_FALLBACK}
-                      unitTypes={development.unitTypes.map(unit => ({
-                        bedrooms: unit.bedrooms,
-                        label: unit.label,
-                        priceFrom: unit.priceFrom,
-                      }))}
-                      highlights={development.highlights}
-                      developer={{
-                        name: development.publisher.name,
-                        isFeatured: development.isFeatured,
-                      }}
-                      imageCount={development.images.length}
-                      isFeatured={development.isFeatured}
-                      isNewBooking={false}
-                      transactionType={development.transactionType}
-                      status={development.status}
-                      availabilityState={development.availabilityState}
-                      nature={development.nature}
-                      primaryActionLabel="View development"
-                    />
-                  ))}
+                <div className="flex flex-col gap-4">
+                  {data.items.map(development => {
+                    const developmentId = String(development.id);
+                    const developmentRoute = appendDevelopmentSearchReturn(
+                      development.canonicalRoute,
+                      searchReturnPath,
+                    );
+                    const developmentLocation =
+                      development.locationLabels.join(', ') || 'Area to be confirmed';
+                    const developmentImage = development.images[0] || PROPERTY_IMAGE_FALLBACK;
+                    const publisherTrustLabel =
+                      development.publisher.authorityKind === 'developer_first_party'
+                        ? 'Direct developer'
+                        : development.publisher.lastVerifiedAt
+                          ? 'Source reviewed'
+                          : development.publisher.sourceAttribution
+                            ? 'Source cited'
+                            : undefined;
+                    const classificationLabel = DEVELOPMENT_TYPE_OPTIONS.find(
+                      option => option.value === development.developmentType,
+                    )?.label;
+
+                    return (
+                      <DevelopmentCard
+                        key={development.id}
+                        id={developmentId}
+                        canonicalRoute={developmentRoute}
+                        title={development.name}
+                        rating={development.rating ?? undefined}
+                        location={developmentLocation}
+                        description={development.description}
+                        image={developmentImage}
+                        publisherTrustLabel={publisherTrustLabel}
+                        classificationLabel={classificationLabel}
+                        unitTypes={development.unitTypes.map(unit => ({
+                          id: unit.id,
+                          bedrooms: unit.bedrooms,
+                          label: unit.label,
+                          priceFrom: unit.priceFrom,
+                          isSaved: unit.id ? savedUnitTypes.isSaved(String(unit.id)) : false,
+                        }))}
+                        onUnitTypeFavoriteClick={unit => {
+                          if (!unit.id) return;
+                          const nowSaved = savedUnitTypes.toggle({
+                            unitTypeId: String(unit.id),
+                            developmentId,
+                            href: developmentRoute,
+                            title: unit.label,
+                            developmentName: development.name,
+                          });
+                          toast.success(
+                            nowSaved
+                              ? 'Saved on this device. Sign-in sync for new developments is coming.'
+                              : 'Removed from saved home types.',
+                          );
+                        }}
+                        isFavorite={savedDevelopments.isSaved(developmentId)}
+                        onFavoriteClick={() => {
+                          const nowSaved = savedDevelopments.toggle({
+                            developmentId,
+                            href: developmentRoute,
+                            title: development.name,
+                            location: developmentLocation,
+                            image: developmentImage,
+                          });
+                          toast.success(
+                            nowSaved
+                              ? 'Development saved on this device.'
+                              : 'Development removed from saved.',
+                          );
+                        }}
+                        highlights={development.highlights}
+                        developer={{
+                          name: development.publisher.name,
+                          logoUrl: development.publisher.logoUrl,
+                          isFeatured: development.isFeatured,
+                        }}
+                        imageCount={development.images.length}
+                        isFeatured={development.isFeatured}
+                        isNewBooking={false}
+                        transactionType={development.transactionType}
+                        status={development.status}
+                        availabilityState={development.availabilityState}
+                        nature={development.nature}
+                        primaryActionLabel="View development"
+                      />
+                    );
+                  })}
                 </div>
 
-                <div className="mt-8 flex items-center justify-between border-t border-slate-200 pt-5">
-                  <Button
-                    variant="outline"
-                    disabled={!hasPreviousPage || isFetching}
-                    onClick={() => changePage(page - 1)}
-                  >
-                    <ChevronLeft className="mr-1 h-4 w-4" /> Previous
-                  </Button>
-                  <span className="text-sm text-slate-500">Page {page + 1}</span>
-                  <Button
-                    variant="outline"
-                    disabled={!hasNextPage || isFetching}
-                    onClick={() => changePage(page + 1)}
-                  >
-                    Next <ChevronRight className="ml-1 h-4 w-4" />
-                  </Button>
-                </div>
+                {(resultCount > PAGE_SIZE || page > 0 || hasNextPage) && (
+                  <div className="mt-5 flex items-center justify-between border-t border-slate-200 pt-4">
+                    <Button
+                      variant="outline"
+                      disabled={!hasPreviousPage || isFetching}
+                      onClick={() => changePage(page - 1)}
+                    >
+                      <ChevronLeft className="mr-1 h-4 w-4" /> Previous
+                    </Button>
+                    <span className="text-sm text-slate-500">Page {page + 1}</span>
+                    <Button
+                      variant="outline"
+                      disabled={!hasNextPage || isFetching}
+                      onClick={() => changePage(page + 1)}
+                    >
+                      Next <ChevronRight className="ml-1 h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
               </>
             ) : (
               <SectionEmptyState
@@ -596,6 +829,11 @@ export default function DevelopmentsDemo() {
               />
             )}
           </main>
+          <aside className="xl:col-span-3 xl:col-start-10">
+            <div className="xl:sticky xl:top-24">
+              <DevelopmentSearchAdRail />
+            </div>
+          </aside>
         </div>
       </div>
     </div>

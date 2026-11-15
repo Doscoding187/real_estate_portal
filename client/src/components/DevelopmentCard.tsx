@@ -1,9 +1,17 @@
-import { Heart, Star, MapPin } from 'lucide-react';
+import { BadgeCheck, Heart, Star, MapPin } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { useLocation } from 'wouter';
 import { ResponsiveHighlights } from './ResponsiveHighlights';
 import { PROPERTY_IMAGE_FALLBACK } from '@/lib/mediaUtils';
+
+export interface DevelopmentCardUnitType {
+  id?: string | null;
+  bedrooms: number | null;
+  label: string;
+  priceFrom: number | null;
+  isSaved?: boolean;
+}
 
 export interface DevelopmentCardProps {
   id: string;
@@ -13,25 +21,26 @@ export interface DevelopmentCardProps {
   location: string;
   description: string | null;
   image: string;
-  unitTypes: {
-    bedrooms: number | null;
-    label: string;
-    priceFrom: number | null;
-  }[];
+  unitTypes: DevelopmentCardUnitType[];
   highlights?: string[];
   developer: {
     name: string;
+    logoUrl?: string | null;
     isFeatured?: boolean;
   };
   imageCount?: number;
   isFeatured?: boolean;
   isNewBooking?: boolean;
+  publisherTrustLabel?: string;
+  classificationLabel?: string;
   transactionType?: 'for_sale' | 'for_rent';
   status?: 'launching-soon' | 'selling' | 'sold-out';
   availabilityState?: 'available' | 'sold_out' | 'not_stated';
   nature?: 'new' | 'phase' | 'extension' | 'redevelopment';
   primaryActionLabel?: string;
+  isFavorite?: boolean;
   onFavoriteClick?: () => void;
+  onUnitTypeFavoriteClick?: (unitType: DevelopmentCardUnitType) => void;
   onContactClick?: () => void;
 }
 
@@ -46,32 +55,49 @@ export function DevelopmentCard({
   unitTypes = [],
   highlights = [],
   developer = { name: '', isFeatured: false },
-  imageCount = 15,
+  imageCount = 0,
   isFeatured = false,
   isNewBooking = false,
+  publisherTrustLabel,
+  classificationLabel,
   transactionType = 'for_sale',
   status,
   availabilityState,
   nature,
   primaryActionLabel = 'Contact Agent',
+  isFavorite = false,
   onFavoriteClick,
+  onUnitTypeFavoriteClick,
   onContactClick,
 }: DevelopmentCardProps) {
   const [, setLocation] = useLocation();
   const developmentRoute = canonicalRoute || `/development/${id}`;
+  const sortedUnitTypes = [...unitTypes].sort((left, right) => {
+    const leftPrice =
+      typeof left.priceFrom === 'number' && left.priceFrom > 0 ? left.priceFrom : null;
+    const rightPrice =
+      typeof right.priceFrom === 'number' && right.priceFrom > 0 ? right.priceFrom : null;
+    if (leftPrice === null && rightPrice !== null) return 1;
+    if (rightPrice === null && leftPrice !== null) return -1;
+    if (leftPrice !== null && rightPrice !== null && leftPrice !== rightPrice) {
+      return leftPrice - rightPrice;
+    }
+    return left.label.localeCompare(right.label, undefined, { numeric: true, sensitivity: 'base' });
+  });
 
   const formatPrice = (price: number) => {
-    if (price >= 1000000) {
-      return `R${(price / 1000000).toFixed(1)}m`;
-    }
-    return `R${(price / 1000).toFixed(0)}k`;
+    const compactPrice = new Intl.NumberFormat('en-US', {
+      notation: 'compact',
+      maximumFractionDigits: 3,
+    }).format(price);
+    return `R${compactPrice.toLowerCase()}`;
   };
 
   return (
-    <div className="group relative bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col md:flex-row h-auto mx-auto w-full">
-      {/* Image Section (Left) - 40% width */}
+    <article className="group relative mx-auto flex h-auto w-full flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-shadow duration-200 hover:shadow-md lg:min-h-[286px] lg:flex-row">
+      {/* Image Section (Left) */}
       <div
-        className="relative w-full md:w-[40%] h-64 md:h-auto md:min-h-[320px] shrink-0 overflow-hidden cursor-pointer"
+        className="relative aspect-[2/1] w-full shrink-0 cursor-pointer overflow-hidden lg:aspect-auto lg:min-h-[264px] lg:w-[38%]"
         onClick={() => setLocation(developmentRoute)}
       >
         <img
@@ -87,11 +113,16 @@ export function DevelopmentCard({
         />
 
         {/* Top Badges */}
-        <div className="absolute top-3 left-3">
+        <div className="absolute left-3 top-3 flex max-w-[calc(100%_-_3.5rem)] flex-wrap gap-1.5">
           {isFeatured && (
             <Badge className="bg-slate-800/90 backdrop-blur-sm hover:bg-slate-800 text-white border-0 uppercase text-xs font-semibold">
               Featured
             </Badge>
+          )}
+          {classificationLabel && (
+            <span className="inline-flex items-center rounded-md border border-white/70 bg-white/95 px-2 py-1 text-[10px] font-semibold leading-none text-slate-700 shadow-sm backdrop-blur-sm">
+              {classificationLabel}
+            </span>
           )}
         </div>
 
@@ -100,13 +131,17 @@ export function DevelopmentCard({
           <Button
             variant="ghost"
             size="icon"
-            className="absolute top-3 right-3 rounded-full bg-white/80 hover:bg-white text-slate-700 backdrop-blur-sm h-9 w-9"
+            aria-label={
+              isFavorite ? `Remove ${title} from saved developments` : `Save ${title} development`
+            }
+            aria-pressed={isFavorite}
+            className={`absolute top-3 right-3 h-9 w-9 rounded-full bg-white/90 text-slate-700 shadow-sm backdrop-blur-sm hover:bg-white ${isFavorite ? 'text-rose-600 hover:text-rose-700' : ''}`}
             onClick={e => {
               e.stopPropagation();
               onFavoriteClick();
             }}
           >
-            <Heart className="h-5 w-5" />
+            <Heart className="h-5 w-5" fill={isFavorite ? 'currentColor' : 'none'} />
           </Button>
         )}
 
@@ -123,26 +158,38 @@ export function DevelopmentCard({
         )}
       </div>
 
-      {/* Content Section (Right) - 60% width */}
-      <div className="flex-1 p-5 sm:p-6 lg:p-8 flex flex-col justify-between min-w-0">
-        <div>
+      {/* Content Section (Right) */}
+      <div className="flex min-w-0 flex-1 flex-col justify-between gap-4 p-4 sm:p-5">
+        <div className="space-y-3">
           {/* Header */}
-          <div className="mb-5">
-            <div className="flex items-start justify-between mb-2">
-              <h3
-                className="text-xl sm:text-2xl font-bold text-slate-900 hover:text-primary transition-colors cursor-pointer flex items-center gap-2 leading-tight"
-                onClick={() => setLocation(developmentRoute)}
-              >
-                {title}
-                {typeof rating === 'number' && rating > 0 && (
-                  <span className="flex items-center gap-1 text-sm font-normal">
-                    <Star className="h-4 w-4 fill-green-600 text-green-600" />
-                    <span className="text-slate-700">{rating.toFixed(1)}</span>
+          <div>
+            <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <h3
+                  className="flex cursor-pointer items-center gap-2 text-xl font-bold leading-tight text-slate-950 transition-colors hover:text-primary sm:text-2xl"
+                  onClick={() => setLocation(developmentRoute)}
+                >
+                  {title}
+                  {typeof rating === 'number' && rating > 0 && (
+                    <span className="flex items-center gap-1 text-sm font-normal">
+                      <Star className="h-4 w-4 fill-green-600 text-green-600" />
+                      <span className="text-slate-700">{rating.toFixed(1)}</span>
+                    </span>
+                  )}
+                </h3>
+                {publisherTrustLabel && (
+                  <span
+                    role="img"
+                    aria-label={publisherTrustLabel}
+                    title={publisherTrustLabel}
+                    className="inline-flex shrink-0 items-center justify-center"
+                  >
+                    <BadgeCheck className="h-5 w-5 fill-blue-600 text-white" aria-hidden="true" />
                   </span>
                 )}
-              </h3>
+              </div>
 
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-1.5">
                 {/* Nature Badge */}
                 {nature === 'phase' && (
                   <Badge variant="outline" className="border-blue-200 text-blue-700 bg-blue-50">
@@ -189,69 +236,140 @@ export function DevelopmentCard({
               </div>
             </div>
 
-            <div className="flex items-center text-slate-600 text-sm mb-3">
-              <MapPin className="h-3.5 w-3.5 mr-1" />
+            <div className="flex items-center text-xs text-slate-600">
+              <MapPin className="mr-1 h-3.5 w-3.5 shrink-0 text-slate-400" />
               {location}
             </div>
           </div>
 
           {/* Unit Types with Pricing */}
-          <div className="flex gap-3 mb-5 overflow-x-auto pb-2 -mx-2 px-2 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
-            {unitTypes.map((unit, index) => {
-              const price = typeof unit.priceFrom === 'number' ? unit.priceFrom : null;
-              return (
-                <div
-                  key={index}
-                  className="flex-none w-[160px] sm:w-[180px] border border-slate-200 rounded-lg p-3 hover:border-blue-400 hover:bg-blue-50/50 transition-colors bg-slate-50/30"
-                >
-                  <div className="text-xs text-slate-600 mb-1 truncate" title={unit.label || ''}>
-                    {unit.label || ''}
-                  </div>
-                  {price !== null && price > 0 ? (
-                    <div className="text-lg font-bold text-[#1e1b4b]">
-                      From {formatPrice(price)}
-                      {transactionType === 'for_rent' ? ' / month' : ''}
+          {sortedUnitTypes.length > 0 && (
+            <section aria-label="Home types and starting prices">
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <h4 className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                  {sortedUnitTypes.length} home types
+                </h4>
+                <span className="text-[10px] text-slate-500">Starting prices · low to high</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {sortedUnitTypes.slice(0, 3).map((unit, index) => {
+                  const price = typeof unit.priceFrom === 'number' ? unit.priceFrom : null;
+                  return (
+                    <div
+                      key={unit.id || index}
+                      className="relative min-w-0 rounded-lg border border-slate-200 bg-slate-50/50 px-2.5 py-2 transition-colors hover:border-blue-300 hover:bg-blue-50/50"
+                    >
+                      <div
+                        className="truncate pr-6 text-[10px] text-slate-500"
+                        title={unit.label || ''}
+                      >
+                        {unit.label || ''}
+                      </div>
+                      {price !== null && price > 0 ? (
+                        <div className="truncate text-xs font-bold text-[#1e1b4b]">
+                          {formatPrice(price)}
+                          {transactionType === 'for_rent' ? ' / month' : ''}
+                        </div>
+                      ) : (
+                        <div className="truncate text-[11px] font-semibold text-slate-500">
+                          {transactionType === 'for_rent'
+                            ? 'Monthly rent on request'
+                            : 'Price on request'}
+                        </div>
+                      )}
+                      {unit.id && onUnitTypeFavoriteClick && (
+                        <button
+                          type="button"
+                          aria-label={
+                            unit.isSaved
+                              ? `Remove ${unit.label} at ${title} from saved home types`
+                              : `Save ${unit.label} at ${title}`
+                          }
+                          aria-pressed={Boolean(unit.isSaved)}
+                          onClick={() => onUnitTypeFavoriteClick(unit)}
+                          className={`absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${unit.isSaved ? 'text-rose-600' : 'text-slate-400 hover:text-rose-600'}`}
+                        >
+                          <Heart
+                            className="h-3.5 w-3.5"
+                            fill={unit.isSaved ? 'currentColor' : 'none'}
+                            aria-hidden="true"
+                          />
+                        </button>
+                      )}
                     </div>
-                  ) : (
-                    <div className="text-sm font-semibold text-slate-500">
-                      {transactionType === 'for_rent'
-                        ? 'Monthly rent on request'
-                        : 'Price on request'}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Description */}
-          <p className="text-sm sm:text-base text-slate-600 line-clamp-2 mb-5">
-            {description || 'Description not provided.'}
-          </p>
-
-          {/* Highlights */}
-          {highlights.length > 0 && (
-            <div className="mb-5">
-              <span className="text-sm font-semibold text-slate-700 block mb-1">Highlights :</span>
-              <ResponsiveHighlights items={highlights} />
-            </div>
+                  );
+                })}
+                {sortedUnitTypes.length > 3 && (
+                  <button
+                    type="button"
+                    onClick={() => setLocation(developmentRoute)}
+                    aria-label={`View all ${sortedUnitTypes.length} home types in ${title}`}
+                    title={sortedUnitTypes
+                      .slice(3)
+                      .map(unit => {
+                        const price =
+                          typeof unit.priceFrom === 'number'
+                            ? formatPrice(unit.priceFrom)
+                            : 'Price on request';
+                        return `${unit.label}: ${price}`;
+                      })
+                      .join('\n')}
+                    className="flex min-h-[44px] items-center justify-center rounded-lg border border-dashed border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-600 transition-colors hover:border-blue-400 hover:bg-blue-50 hover:text-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
+                  >
+                    +{sortedUnitTypes.length - 3} more types
+                  </button>
+                )}
+              </div>
+            </section>
           )}
+
+          <div>
+            {/* Description */}
+            <p className="line-clamp-3 text-xs leading-5 text-slate-600">
+              {description || 'Description not provided.'}
+            </p>
+
+            {/* Highlights */}
+            {highlights.length > 0 && (
+              <div className="mt-2.5">
+                <ResponsiveHighlights
+                  items={highlights}
+                  maxVisible={2}
+                  singleLine
+                  onClick={() => setLocation(developmentRoute)}
+                  actionLabel={`View ${title} development details from highlights`}
+                />
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Footer */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-4 border-t border-slate-100">
-          <div>
-            {developer.isFeatured && (
-              <Badge className="bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold mb-1">
-                FEATURED DEVELOPER
-              </Badge>
+        <div className="flex flex-col items-start justify-between gap-2.5 border-t border-slate-100 pt-3.5 sm:flex-row sm:items-center">
+          <div className="flex min-w-0 items-center gap-2.5">
+            {developer.logoUrl && (
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-white p-1.5">
+                <img
+                  src={developer.logoUrl}
+                  alt={`${developer.name} logo`}
+                  loading="lazy"
+                  className="max-h-full max-w-full object-contain"
+                />
+              </span>
             )}
-            <div className="text-sm font-medium text-slate-900">{developer.name}</div>
+            <div className="min-w-0">
+              {developer.isFeatured && (
+                <Badge className="mb-1 bg-orange-500 text-xs font-semibold text-white hover:bg-orange-600">
+                  FEATURED DEVELOPER
+                </Badge>
+              )}
+              <div className="truncate text-xs font-semibold text-slate-700">{developer.name}</div>
+            </div>
           </div>
 
           <Button
             variant="conversion"
-            className="font-semibold px-6 py-2.5 w-full sm:w-auto"
+            className="h-9 w-full px-5 font-semibold sm:w-auto"
             onClick={e => {
               e.stopPropagation();
               if (onContactClick) {
@@ -266,6 +384,6 @@ export function DevelopmentCard({
           </Button>
         </div>
       </div>
-    </div>
+    </article>
   );
 }
