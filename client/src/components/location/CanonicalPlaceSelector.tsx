@@ -39,6 +39,10 @@ export interface CanonicalPlaceDiscovery {
 }
 
 const factualTypeLabel = (type: string) => type.replace(/_/g, ' ');
+const displayTypeLabel = (type: string) => {
+  const label = factualTypeLabel(type);
+  return label.charAt(0).toUpperCase() + label.slice(1);
+};
 
 export interface CanonicalPlaceDisplayOption {
   option: CanonicalPlaceOption;
@@ -245,7 +249,7 @@ export function CanonicalPlaceSelectorView({
       </p>
       {value && (
         <p className={compact ? 'sr-only' : 'text-sm'}>
-          {factualTypeLabel(value.placeType)}
+          {displayTypeLabel(value.placeType)}
           {value.administrativeContext ? ` · ${value.administrativeContext}` : ''}
         </p>
       )}
@@ -271,7 +275,7 @@ export function CanonicalPlaceSelectorView({
               >
                 <span className="block font-medium">{option.preferredPublicLabel}</span>
                 <span className="block text-muted-foreground">
-                  {factualTypeLabel(option.placeType)}
+                  {displayTypeLabel(option.placeType)}
                   {option.context.administrativeContext
                     ? ` · ${option.context.administrativeContext}`
                     : ''}

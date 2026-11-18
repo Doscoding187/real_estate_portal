@@ -3,6 +3,9 @@ import { useState, useMemo, useEffect } from 'react';
 import { useLocation, useSearch } from 'wouter';
 import { focusListingNavbarLocationInput } from '@/components/ListingNavbar';
 import { SidebarFilters } from '@/components/SidebarFilters';
+import { NearbyAreaRefinement } from '@/components/search/NearbyAreaRefinement';
+import { SearchResultsSponsorSlot } from '@/components/search/SearchResultsSponsorSlot';
+import { summariseSelectedAreas } from '@/lib/searchAreaSelection';
 import { GooglePropertyMap } from '@/components/maps/GooglePropertyMap';
 import { getPrimaryListingBadge } from '@/lib/listingBadges';
 import { PROPERTY_IMAGE_FALLBACK } from '@/lib/mediaUtils';
@@ -39,6 +42,7 @@ import {
 import {
   Breadcrumbs,
   ResultsHeader,
+  ResultsHeaderActions,
   MobileFilterDrawer,
   MobileStickyControls,
   ViewMode,
@@ -185,7 +189,13 @@ export default function SearchResults() {
     const rentFilters = isRentSearch ? toRentPublicSearchFilters(filters) : undefined;
 
     return {
-      canonicalPlaceId: searchIntent.geography.canonicalPlaceId,
+      // One Place, or several (nearby-area refinement) as a list; never both.
+      canonicalPlaceId: searchIntent.geography.canonicalPlaceIds?.length
+        ? undefined
+        : searchIntent.geography.canonicalPlaceId,
+      canonicalPlaceIds: searchIntent.geography.canonicalPlaceIds?.length
+        ? searchIntent.geography.canonicalPlaceIds
+        : undefined,
       // Keep an unsupported direct Rent URL visible to the server validation
       // boundary rather than silently widening it to all rental inventory.
       propertyType: isBuySearch
@@ -220,6 +230,7 @@ export default function SearchResults() {
     limit,
     page,
     searchIntent.geography.canonicalPlaceId,
+    searchIntent.geography.canonicalPlaceIds,
     searchIntent.transactionType,
     sortBy,
   ]);
@@ -235,7 +246,14 @@ export default function SearchResults() {
     retry: false,
     enabled: isTransactionalJourney && !searchIntent.validation,
   });
-  const resolvedPlaceLabel = publicSearchResults?.canonicalPlaceContext?.label;
+  // The names the search authority resolved: "Sandton" for one area,
+  // "Sandton and 9 surrounding areas" once nearby areas were added.
+  const resolvedPlaceLabel = summariseSelectedAreas(
+    publicSearchResults?.canonicalPlaceContexts?.map(context => context.label) ??
+      (publicSearchResults?.canonicalPlaceContext?.label
+        ? [publicSearchResults.canonicalPlaceContext.label]
+        : []),
+  );
   const breadcrumbs = useMemo(
     () => generateBreadcrumbs(filters, resolvedPlaceLabel),
     [filters, resolvedPlaceLabel],
@@ -260,9 +278,9 @@ export default function SearchResults() {
   // the name the search authority resolved, so the chip never disagrees with the results.
   const selectedLocationChip = useMemo(() => {
     const canonicalPlaceContext = publicSearchResults?.canonicalPlaceContext;
-    const label = canonicalPlaceContext?.label;
+    const label = resolvedPlaceLabel;
     if (!label) return undefined;
-    const contextLabel = canonicalPlaceContext
+    const contextLabel = canonicalPlaceContext && !publicSearchResults?.canonicalPlaceContexts
       ? canonicalPlaceContext.scope === 'locality'
         ? canonicalPlaceContext.city || undefined
         : canonicalPlaceContext.scope === 'metro_city'
@@ -277,7 +295,12 @@ export default function SearchResults() {
       onRemove: () =>
         setLocation(generateIntentUrl({ ...searchIntent, geography: { level: 'country' } })),
     };
-  }, [publicSearchResults?.canonicalPlaceContext, searchIntent]);
+  }, [
+    publicSearchResults?.canonicalPlaceContext,
+    publicSearchResults?.canonicalPlaceContexts,
+    resolvedPlaceLabel,
+    searchIntent,
+  ]);
 
   const pageNeedsNormalization = Boolean(publicSearchResults && effectivePage !== page);
 
@@ -288,12 +311,9 @@ export default function SearchResults() {
 
     return buildZeroResultDescription({
       transactionType: searchIntent.transactionType,
-      locationName: publicSearchResults?.canonicalPlaceContext?.label,
+      locationName: resolvedPlaceLabel,
     });
-  }, [
-    publicSearchResults?.canonicalPlaceContext?.label,
-    searchIntent.transactionType,
-  ]);
+  }, [resolvedPlaceLabel, searchIntent.transactionType]);
 
   useEffect(() => {
     if (!publicSearchResults || effectivePage === page) return;
@@ -443,6 +463,11 @@ export default function SearchResults() {
   const handleSaveSearch = () => {
     if (!isAuthenticated) {
       toast.error('Please login to save searches');
+      return;
+    }
+    if (searchIntent.geography.canonicalPlaceIds?.length) {
+      // A saved search stores one Place; saving only the first would silently narrow it.
+      toast.info('Saved searches cover one area. Remove the extra nearby areas to save this search.');
       return;
     }
     setSaveSearchName(current => current.trim() || suggestedSaveSearchName);
@@ -602,9 +627,7 @@ export default function SearchResults() {
     () => generateMetaDescription(filters, undefined, resolvedPlaceLabel),
     [filters, resolvedPlaceLabel],
   );
-  const discoveryLocationLabel =
-    publicSearchResults?.canonicalPlaceContext?.label ||
-    'South Africa';
+  const discoveryLocationLabel = resolvedPlaceLabel || 'South Africa';
   const propertyTypeCopy = filters.propertyType
     ? DISCOVERY_PROPERTY_TYPE_COPY[String(filters.propertyType)]
     : undefined;
@@ -613,7 +636,8 @@ export default function SearchResults() {
   } in ${discoveryLocationLabel}`;
   const discoveryScopeLabels = [
     isRentSearch ? 'To rent' : 'For sale',
-    discoveryLocationLabel,
+    // The removable location chip already names the location.
+    ...(selectedLocationChip ? [] : [discoveryLocationLabel]),
     ...(propertyTypeCopy ? [propertyTypeCopy.chip] : []),
   ];
   const totalPages = getPublicSearchReachablePageCount(resultCount, limit);
@@ -659,9 +683,44 @@ export default function SearchResults() {
         context={publicSearchResults?.canonicalPlaceContext}
       />
 
+      {isTransactionalJourney && (
+        <div className="sticky top-[76px] z-30 hidden lg:block">
+          <SidebarFilters
+            variant="toolbar"
+            filters={filters}
+            filterCounts={filterCounts as any}
+            onFilterChange={handleFilterChange}
+            onSaveSearch={handleSaveSearch}
+            allowedPropertyTypes={
+              isBuySearch
+                ? HOMES_BUY_SELECTABLE_PROPERTY_TYPES
+                : isRentSearch
+                  ? HOMES_RENT_SELECTABLE_PROPERTY_TYPES
+                  : undefined
+            }
+            listingType={isBuySearch ? 'sale' : isRentSearch ? 'rent' : undefined}
+            // Public Buy/Rent inventory does not yet expose an authoritative amenities
+            // predicate; do not render a control the public query would ignore.
+            showAmenities={false}
+          />
+          <div className="border-b border-slate-200 bg-[#f7f8fa]">
+            <div className="mx-auto flex min-h-[56px] max-w-[1240px] items-center justify-between gap-4 px-4 py-2 sm:px-6 lg:px-8">
+              <ResultsHeaderActions
+                viewMode={viewMode}
+                sortBy={sortBy}
+                onViewModeChange={setViewMode}
+                onSortChange={handleSortChange}
+                onSaveSearch={handleSaveSearch}
+                className="lg:shrink-0"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* prettier-ignore */}
       <main id="main-content" tabIndex={-1} className="outline-none">
-      <div className="mx-auto w-full max-w-[1480px] px-4 pb-32 pt-6 sm:px-6 md:pt-24 lg:px-8 lg:pb-16">
+      <div className="mx-auto w-full max-w-[1240px] px-4 pb-32 pt-6 sm:px-6 md:pt-8 lg:px-8 lg:pb-16">
         <div className="w-full">
           {/* Header Section */}
           <div className="mb-5">
@@ -681,38 +740,20 @@ export default function SearchResults() {
               onViewModeChange={setViewMode}
               onSortChange={handleSortChange}
               onSaveSearch={handleSaveSearch}
+              hideDesktopActions={isTransactionalJourney}
             />
           </div>
 
-          {/* Content Section */}
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[292px_minmax(0,1fr)] lg:items-start lg:gap-7 xl:grid-cols-[308px_minmax(0,1fr)] xl:gap-8">
-            {/* LEFT SIDEBAR - FILTERS */}
-            <div className="hidden lg:block">
-              <div className="sticky top-24">
-                <SidebarFilters
-                  filters={filters}
-                  filterCounts={filterCounts as any}
-                  onFilterChange={handleFilterChange}
-                  onSaveSearch={handleSaveSearch}
-                  allowedPropertyTypes={
-                    isBuySearch
-                      ? HOMES_BUY_SELECTABLE_PROPERTY_TYPES
-                      : isRentSearch
-                        ? HOMES_RENT_SELECTABLE_PROPERTY_TYPES
-                        : undefined
-                  }
-                  listingType={isBuySearch ? 'sale' : isRentSearch ? 'rent' : undefined}
-                  // Public Buy/Rent inventory does not yet expose an
-                  // authoritative amenities predicate. Do not render a
-                  // Rent control that would be accepted by the URL but
-                  // ignored by the public query.
-                  showAmenities={false}
-                />
-              </div>
+          {isTransactionalJourney && viewMode === 'list' ? (
+            <div className="lg:hidden">
+              <NearbyAreaRefinement intent={searchIntent} />
             </div>
+          ) : null}
 
+          {/* Content Section */}
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_300px] lg:items-start lg:gap-7 xl:gap-8">
             {/* Main Content - Results */}
-            <div className="col-span-1">
+            <div className="order-1 min-w-0">
               {/* Results Grid */}
               <div className="">
                 {displayState === 'loading' ? (
@@ -787,6 +828,7 @@ export default function SearchResults() {
                                 location: card.location,
                                 price: card.price,
                                 image: resolveCardImage(card),
+                                description: card.description,
                                 imageCount: card.imageCount,
                                 listingType: card.listingType,
                                 development: card.development,
@@ -889,6 +931,18 @@ export default function SearchResults() {
                 )}
               </div>
             </div>
+
+            {/* Right rail: sticky for the length of the results. The sponsored slot is
+                billboard-ready and renders nothing until a campaign is supplied. */}
+            <aside
+              className="order-2 hidden self-start flex-col gap-6 lg:sticky lg:top-[188px] lg:flex"
+              aria-label="Nearby areas and sponsored content"
+            >
+              {isTransactionalJourney && viewMode === 'list' ? (
+                <NearbyAreaRefinement intent={searchIntent} />
+              ) : null}
+              <SearchResultsSponsorSlot sponsor={undefined} />
+            </aside>
           </div>
         </div>
       </div>

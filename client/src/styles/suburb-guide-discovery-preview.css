@@ -1,0 +1,1210 @@
+/* One spacing scale for the whole guide. */
+.suburb-discovery-hero,
+.suburb-discovery-intent,
+.suburb-discovery-main {
+  --sd-container: 1240px;
+  --sd-gutter: 2rem;
+  --sd-section-gap: 32px;
+  --sd-heading-gap: 16px;
+  --sd-radius: 14px;
+  --sd-card-pad: 16px;
+  --sd-panel-pad: 20px;
+  --sd-grid-gap: 12px;
+}
+
+.suburb-discovery-intent.suburb-guide-rail,
+.suburb-discovery-main.suburb-guide-rail,
+.suburb-discovery-hero .suburb-guide-rail {
+  width: min(100% - var(--sd-gutter), var(--sd-container));
+  margin-inline: auto;
+}
+
+.suburb-discovery-hero__bg-link {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.suburb-discovery-hero__bg-link > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.suburb-discovery-hero {
+  position: relative;
+  display: flex;
+  min-height: 340px;
+  overflow: hidden;
+  align-items: center;
+  background: #102b51;
+  color: #fff;
+}
+
+.suburb-discovery-hero > img,
+.suburb-discovery-hero__shade {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.suburb-discovery-hero > img {
+  object-fit: cover;
+}
+
+.suburb-discovery-hero__shade {
+  pointer-events: none;
+  background: linear-gradient(90deg, rgb(7 28 57 / 88%) 0%, rgb(9 41 77 / 67%) 48%, rgb(8 35 69 / 23%) 100%),
+    linear-gradient(0deg, rgb(8 28 55 / 38%), transparent 58%);
+}
+
+.suburb-discovery-hero__content {
+  position: relative;
+  z-index: 1;
+  padding-top: 52px;
+  padding-bottom: 62px;
+}
+
+.suburb-discovery-hero__topline {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.suburb-discovery-preview-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 25px;
+  border: 1px solid rgb(255 255 255 / 42%);
+  border-radius: 999px;
+  padding: 3px 10px;
+  background: rgb(12 36 67 / 48%);
+  color: #e6f2ff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .02em;
+}
+
+.suburb-discovery-hero h1 {
+  max-width: 760px;
+  margin: 5px 0 8px;
+  color: #fff;
+  font-size: clamp(2.7rem, 6vw, 4.6rem);
+  font-weight: 750;
+  letter-spacing: -.045em;
+  line-height: .98;
+}
+
+.suburb-discovery-hero__intro {
+  max-width: 590px;
+  margin: 14px 0 18px;
+  color: rgb(255 255 255 / 88%);
+  font-size: clamp(1rem, 1.6vw, 1.18rem);
+  line-height: 1.55;
+}
+
+.suburb-discovery-hero__scope {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px 18px;
+  color: rgb(255 255 255 / 88%);
+  font-size: 13px;
+}
+
+.suburb-discovery-hero__scope span:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgb(255 255 255 / 38%);
+  border-radius: 999px;
+  padding: 6px 11px;
+  background: rgb(9 31 60 / 42%);
+  color: #fff;
+  font-weight: 700;
+}
+
+.suburb-discovery-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 19px;
+}
+
+.suburb-discovery-intent {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px 20px;
+  margin-top: -25px;
+  border: 1px solid rgb(203 213 225 / 90%);
+  border-radius: var(--sd-radius);
+  padding: 12px 14px;
+  background: rgb(255 255 255 / 97%);
+  box-shadow: 0 15px 35px -24px rgb(15 23 42 / 40%);
+}
+
+.suburb-discovery-intent__label {
+  min-width: 122px;
+  padding-left: 3px;
+}
+
+.suburb-discovery-intent__label > span {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+.suburb-discovery-intent__label p {
+  margin: 2px 0 0;
+  color: #64748b;
+  font-size: 11px;
+}
+
+.suburb-discovery-intent__pills {
+  display: flex;
+  flex: 1 1 520px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.suburb-discovery-intent__pill {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid transparent;
+  border-radius: 13px;
+  padding: 8px 13px;
+  background: transparent;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: background-color .16s ease, color .16s ease, box-shadow .16s ease;
+}
+
+.suburb-discovery-intent__pill:hover {
+  background: #eff6ff;
+  color: #1457bd;
+}
+
+.suburb-discovery-intent__pill:focus-visible {
+  outline: 2px solid #1d4ed8;
+  outline-offset: 2px;
+}
+
+.suburb-discovery-intent__pill.is-selected {
+  background: #164de5;
+  color: #fff;
+  box-shadow: 0 7px 14px -8px rgb(30 64 175 / 65%);
+}
+
+.suburb-discovery-next-steps {
+  display: grid;
+  grid-template-columns: minmax(220px, .85fr) minmax(0, 2fr);
+  align-items: center;
+  gap: 16px 24px;
+  margin-top: 12px;
+  border: 1px solid #dce5f0;
+  border-radius: 17px;
+  padding: 16px 18px;
+  background: #fff;
+  box-shadow: 0 10px 25px -24px rgb(15 23 42 / 45%);
+}
+
+.suburb-discovery-next-steps__intro h2 {
+  margin: 3px 0 4px;
+  color: #102b51;
+  font-size: 17px;
+  font-weight: 750;
+  line-height: 1.25;
+}
+
+.suburb-discovery-next-steps__intro p:last-child {
+  margin: 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.suburb-discovery-next-steps__types,
+.suburb-discovery-next-steps__cards {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.suburb-discovery-next-step {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+  border: 1px solid #d7e3f2;
+  border-radius: 11px;
+  padding: 9px 12px;
+  background: #f8fbff;
+  color: #174577;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: border-color .16s ease, background-color .16s ease, box-shadow .16s ease;
+}
+
+.suburb-discovery-next-steps__types .suburb-discovery-next-step {
+  flex: 1 1 155px;
+  min-width: 145px;
+}
+
+.suburb-discovery-next-steps__cards .suburb-discovery-next-step {
+  flex: 1 1 180px;
+  min-height: 66px;
+}
+
+.suburb-discovery-next-step > span {
+  display: grid;
+  gap: 4px;
+}
+
+.suburb-discovery-next-step strong {
+  color: #12345d;
+  font-size: 12px;
+}
+
+.suburb-discovery-next-step small {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.suburb-discovery-next-step:hover {
+  border-color: #8ebaf0;
+  background: #eff6ff;
+  box-shadow: 0 4px 12px -10px rgb(30 64 175 / 50%);
+}
+
+.suburb-discovery-next-step--quiet {
+  background: #fff;
+  color: #475569;
+}
+
+.suburb-discovery-next-step--unavailable {
+  cursor: not-allowed;
+  border-style: dashed;
+  background: #f8fafc;
+  color: #64748b;
+}
+
+.suburb-discovery-next-step__status {
+  border-radius: 999px;
+  padding: 3px 7px;
+  background: #e2e8f0;
+  color: #475569;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.suburb-discovery-next-step:focus-visible {
+  outline: 2px solid #1d4ed8;
+  outline-offset: 2px;
+}
+
+.suburb-discovery-main {
+  display: grid;
+  gap: var(--sd-section-gap);
+  padding-top: var(--sd-section-gap);
+  padding-bottom: 72px;
+}
+
+.suburb-discovery-section {
+  min-width: 0;
+}
+
+.suburb-discovery-section__heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--sd-heading-gap);
+  margin-bottom: var(--sd-heading-gap);
+}
+
+.suburb-discovery-section__heading h2,
+.suburb-discovery-context h2 {
+  margin: 2px 0 4px;
+  color: #102b51;
+  font-size: clamp(1.3rem, 2.3vw, 1.8rem);
+  font-weight: 750;
+  letter-spacing: -.025em;
+  line-height: 1.15;
+}
+
+.suburb-discovery-section__heading p:last-child {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.suburb-discovery-scope-note {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #dbeafe;
+  border-radius: 999px;
+  padding: 7px 11px;
+  background: #fff;
+  color: #245a92;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.suburb-discovery-snapshot {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.suburb-discovery-snapshot__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px 12px;
+  color: #64748b;
+  font-size: 11px;
+}
+
+.suburb-discovery-snapshot-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(225px, 1fr);
+  align-items: start;
+  gap: 14px;
+}
+
+.suburb-discovery-snapshot-layout .suburb-discovery-snapshot {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-content: start;
+  gap: 10px;
+}
+
+.suburb-discovery-metric {
+  display: grid;
+  min-height: 148px;
+  align-content: start;
+  gap: 7px;
+  border: 1px solid #dce5f0;
+  border-radius: 12px;
+  padding: 13px 14px;
+  background: #fff;
+  box-shadow: 0 5px 18px -18px rgb(15 23 42 / 40%);
+}
+
+.suburb-discovery-market-glance {
+  min-width: 0;
+  border: 1px solid #dce5f0;
+  border-radius: 14px;
+  padding: 12px 13px;
+  background: linear-gradient(145deg, #eff6ff 0%, #f8fbff 100%);
+}
+
+.suburb-discovery-market-glance h3 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 8px;
+  color: #17345e;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.suburb-discovery-market-glance ul {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.suburb-discovery-market-glance li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border-top: 1px solid #dbe7f5;
+  padding: 7px 0;
+  color: #52647c;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.suburb-discovery-market-glance li > svg {
+  flex: 0 0 auto;
+  color: #1766c0;
+}
+
+.suburb-discovery-market-glance li > span {
+  flex: 1 1 auto;
+}
+
+.suburb-discovery-market-glance li strong {
+  flex: 0 0 auto;
+  color: #17345e;
+  font-size: 11px;
+  font-weight: 750;
+  text-align: right;
+}
+
+.suburb-discovery-market-glance__empty,
+.suburb-discovery-market-glance__footnote {
+  margin: 0;
+  color: #64748b;
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.suburb-discovery-market-signal {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border-top: 1px solid #dbe7f5;
+  padding: 9px 0;
+}
+
+.suburb-discovery-market-signal__icon {
+  display: grid;
+  width: 25px;
+  height: 25px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  background: #dceeff;
+  color: #1766c0;
+}
+
+.suburb-discovery-market-signal strong {
+  color: #17345e;
+  font-size: 11px;
+  line-height: 1.4;
+  text-transform: capitalize;
+}
+
+.suburb-discovery-market-glance__signals {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.suburb-discovery-market-glance__signals li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  border-top: 1px solid #dbe7f5;
+  padding: 7px 0;
+  color: #52647c;
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+.suburb-discovery-market-glance__signals strong {
+  flex: 0 0 auto;
+  color: #64748b;
+  font-size: 9px;
+  font-weight: 650;
+  text-align: right;
+}
+
+.suburb-discovery-market-glance__empty {
+  display: grid;
+  gap: 4px;
+  border-top: 1px solid #dbe7f5;
+  padding: 10px 0;
+}
+
+.suburb-discovery-market-glance__empty strong {
+  color: #17345e;
+  font-size: 11px;
+}
+
+.suburb-discovery-metric__icon {
+  display: inline-flex;
+  width: 30px;
+  height: 30px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: #edf5ff;
+  color: #1766c0;
+}
+
+.suburb-discovery-metric > span:nth-child(2) {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.suburb-discovery-metric strong {
+  color: #102b51;
+  font-size: 24px;
+  font-weight: 780;
+  letter-spacing: -.03em;
+  line-height: 1;
+}
+
+.suburb-discovery-metric small {
+  color: #718096;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.suburb-discovery-data-note {
+  margin: 10px 0 0;
+  color: #718096;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.suburb-discovery-area-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.suburb-discovery-market-comparison-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--sd-grid-gap);
+}
+
+.suburb-discovery-market-comparison-card {
+  display: grid;
+  min-height: 0;
+  align-content: start;
+  gap: 0;
+  border: 1px solid #dce5f0;
+  overflow: hidden;
+  border-radius: var(--sd-radius);
+  border-top: 3px solid #2774ae;
+  padding: 0;
+  background: #fff;
+  box-shadow: 0 5px 18px -18px rgb(15 23 42 / 40%);
+  color: inherit;
+  text-decoration: none;
+  transition: border-color .15s ease, transform .15s ease, box-shadow .15s ease;
+}
+
+.suburb-discovery-market-comparison-card:hover,
+.suburb-discovery-market-comparison-card:focus-visible {
+  transform: translateY(-2px);
+  border-color: #9cc7f4;
+  box-shadow: 0 13px 25px -21px rgb(15 23 42 / 45%);
+}
+
+.suburb-discovery-market-comparison-card:focus-visible {
+  outline: 2px solid #1d4ed8;
+  outline-offset: 2px;
+}
+
+.suburb-discovery-market-comparison-card__body {
+  display: grid;
+  gap: 8px;
+  padding: var(--sd-card-pad);
+}
+
+.suburb-discovery-market-comparison-card__distance {
+  color: #52647c;
+  font-size: 11px;
+}
+
+.suburb-discovery-market-comparison-card__row {
+  display: grid;
+  gap: 1px;
+  padding-top: 7px;
+  border-top: 1px solid #e6edf6;
+  color: #52647c;
+  font-size: 11px;
+}
+
+.suburb-discovery-market-comparison-card__row b {
+  color: #17345e;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.suburb-discovery-market-comparison-card__row small {
+  color: #6b7c93;
+  font-size: 10.5px;
+}
+
+.suburb-discovery-market-comparison-card__scope {
+  color: #2774ae;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.suburb-discovery-market-comparison-card__body > strong {
+  color: #102b51;
+  font-size: 17px;
+}
+
+.suburb-discovery-market-comparison-card__inventory {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  color: #52647c;
+  font-size: 12px;
+}
+
+.suburb-discovery-market-comparison-card__inventory b {
+  color: #17345e;
+  font-size: 14px;
+}
+
+.suburb-discovery-market-comparison-card__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 3px;
+  color: #1766c0;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.suburb-discovery-neighbourhood-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--sd-grid-gap);
+}
+
+.suburb-discovery-neighbourhood-card {
+  display: block;
+  overflow: hidden;
+  border: 1px solid #dce5f0;
+  border-radius: var(--sd-radius);
+  background: #fff;
+  color: inherit;
+  text-decoration: none;
+  box-shadow: 0 5px 18px -18px rgb(15 23 42 / 40%);
+  transition: border-color .15s ease, transform .15s ease, box-shadow .15s ease;
+}
+
+.suburb-discovery-neighbourhood-card:hover,
+.suburb-discovery-neighbourhood-card:focus-visible {
+  transform: translateY(-2px);
+  border-color: #9cc7f4;
+  box-shadow: 0 13px 25px -21px rgb(15 23 42 / 45%);
+}
+
+.suburb-discovery-neighbourhood-card__image {
+  display: block;
+  height: 98px;
+  overflow: hidden;
+  background: linear-gradient(120deg, #dcecff, #f0f7ff 58%, #d7f3f4);
+}
+
+.suburb-discovery-neighbourhood-card__image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.suburb-discovery-neighbourhood-card__body {
+  display: grid;
+  gap: 4px;
+  padding: 8px 10px 10px;
+}
+
+.suburb-discovery-neighbourhood-card__body strong {
+  color: #102b51;
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.suburb-discovery-neighbourhood-card__body > span {
+  color: #52647c;
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.suburb-discovery-area-card {
+  overflow: hidden;
+  border: 1px solid #dce5f0;
+  border-radius: 14px;
+  background: #fff;
+  color: inherit;
+  text-decoration: none;
+  transition: border-color .15s ease, transform .15s ease, box-shadow .15s ease;
+}
+
+.suburb-discovery-area-card:hover {
+  transform: translateY(-2px);
+  border-color: #9cc7f4;
+  box-shadow: 0 13px 25px -21px rgb(15 23 42 / 45%);
+}
+
+.suburb-discovery-area-card__visual {
+  display: flex;
+  min-height: 72px;
+  align-items: center;
+  gap: 9px;
+  padding: 13px 15px;
+  background: linear-gradient(120deg, #dcecff, #f0f7ff 58%, #d7f3f4);
+  color: #1766c0;
+}
+
+.suburb-discovery-area-card__visual span {
+  color: #52718e;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.suburb-discovery-area-card__body {
+  display: grid;
+  gap: 5px;
+  padding: 12px 14px 14px;
+}
+
+.suburb-discovery-area-card__body > strong {
+  color: #102b51;
+  font-size: 15px;
+}
+
+.suburb-discovery-area-card__body > small {
+  color: #64748b;
+  font-size: 11px;
+}
+
+.suburb-discovery-area-card__counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 12px;
+  margin-top: 5px;
+  color: #475569;
+  font-size: 11px;
+}
+
+.suburb-discovery-area-card__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 6px;
+  color: #1766c0;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.suburb-discovery-opportunities {
+  border: 1px solid #dce5f0;
+  border-radius: var(--sd-radius);
+  padding: var(--sd-panel-pad);
+  background: #f1f6fc;
+}
+
+.suburb-discovery-opportunities .suburb-discovery-section__heading {
+  margin-bottom: 17px;
+}
+
+.suburb-discovery-start-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--sd-grid-gap);
+}
+
+.suburb-discovery-start-card {
+  position: relative;
+  display: grid;
+  min-height: 136px;
+  align-content: start;
+  gap: 7px;
+  border: 1px solid #dce5f0;
+  border-radius: 13px;
+  padding: 13px;
+  background: #fff;
+  color: #102b51;
+  text-align: left;
+}
+
+.suburb-discovery-start-card:hover {
+  border-color: #96c2ef;
+  background: #fbfdff;
+}
+
+.suburb-discovery-start-card > span {
+  display: inline-flex;
+  width: 31px;
+  height: 31px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  background: #edf5ff;
+  color: #1766c0;
+}
+
+.suburb-discovery-start-card strong {
+  font-size: 13px;
+}
+
+.suburb-discovery-start-card small {
+  max-width: 240px;
+  color: #64748b;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.suburb-discovery-start-card > svg:last-child {
+  position: absolute;
+  top: 16px;
+  right: 14px;
+  color: #64748b;
+}
+
+.suburb-discovery-feed__section {
+  min-height: 150px;
+  border: 1px solid #dce5f0;
+  border-radius: 14px;
+  padding: 16px;
+  background: #fff;
+}
+
+.suburb-discovery-feed__section > div:first-child {
+  margin-bottom: 12px;
+}
+
+.suburb-discovery-development-showcase {
+  overflow: hidden;
+  border: 1px solid #c9ddf5;
+  border-radius: var(--sd-radius);
+  padding: var(--sd-panel-pad);
+  background:
+    radial-gradient(ellipse at 100% 0%, rgb(213 238 255 / 80%), transparent 42%),
+    linear-gradient(135deg, #f1f7ff 0%, #fff 52%, #edf9fb 100%);
+  box-shadow: 0 16px 36px -32px rgb(15 45 85 / 55%);
+}
+
+.suburb-discovery-development-showcase .suburb-discovery-section__heading {
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.suburb-discovery-development-showcase__feed {
+  min-height: 0;
+  border: 0;
+  border-radius: 15px;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.suburb-discovery-development-showcase__feed [role='status'] {
+  border-color: #b8cde4;
+  background: rgb(255 255 255 / 82%);
+  color: #52647c;
+}
+
+.suburb-discovery-development-showcase [class*='group/carousel'] > button {
+  opacity: 1;
+  background: rgb(255 255 255 / 96%);
+}
+
+
+.suburb-discovery-listing-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: -3px 0 12px;
+}
+
+.suburb-discovery-listing-tab {
+  min-height: 34px;
+  border: 1px solid #d8e3f1;
+  border-radius: 999px;
+  padding: 6px 14px;
+  background: #fff;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.suburb-discovery-listing-tab:hover,
+.suburb-discovery-listing-tab:focus-visible {
+  border-color: #9cc7f4;
+  color: #1457bd;
+}
+
+.suburb-discovery-listing-tab:focus-visible {
+  outline: 2px solid #1d4ed8;
+  outline-offset: 2px;
+}
+
+.suburb-discovery-listing-tab.is-selected {
+  border-color: #164de5;
+  background: #164de5;
+  color: #fff;
+}
+
+.suburb-discovery-empty {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px dashed #bfccda;
+  border-radius: 14px;
+  padding: 22px;
+  background: #fff;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.suburb-discovery-empty--insights {
+  align-items: flex-start;
+  color: #315d89;
+}
+
+.suburb-discovery-empty--insights > svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: #1766c0;
+}
+
+.suburb-discovery-empty--insights strong {
+  color: #102b51;
+}
+
+.suburb-discovery-empty--insights p {
+  margin: 5px 0 0;
+  color: #64748b;
+}
+
+.suburb-discovery-empty-cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+  border: 1px solid #dce5f0;
+  border-radius: 14px;
+  padding: 14px;
+  background: #fff;
+}
+
+.suburb-discovery-empty-cta > div:first-child {
+  flex: 1 1 270px;
+}
+
+.suburb-discovery-empty-cta strong {
+  color: #102b51;
+  font-size: 13px;
+}
+
+.suburb-discovery-empty-cta p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.suburb-discovery-empty-cta > a {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 6px;
+  border-radius: 9px;
+  padding: 8px 12px;
+  background: #164de5;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.suburb-discovery-map {
+  overflow: hidden;
+  border: 1px solid #dce5f0;
+  border-radius: var(--sd-radius);
+  background: #edf4fb;
+}
+
+.suburb-discovery-context {
+  border: 1px solid #dce5f0;
+  border-radius: var(--sd-radius);
+  padding: var(--sd-panel-pad);
+  background: #fff;
+}
+
+.suburb-discovery-context p {
+  max-width: 850px;
+  color: #475569;
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.suburb-discovery-context__scope {
+  border-left: 3px solid #72b3ed;
+  padding: 7px 0 7px 12px;
+  background: #f4f9ff;
+}
+
+.suburb-discovery-people {
+  display: grid;
+  gap: var(--sd-section-gap);
+}
+
+.suburb-discovery-next-link {
+  margin-top: 16px;
+}
+
+.suburb-discovery-next-link a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #1766c0;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+@media (max-width: 900px) {
+  .suburb-discovery-market-comparison-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .suburb-discovery-intent {
+    align-items: flex-start;
+  }
+
+  .suburb-discovery-intent__label {
+    flex: 1 1 100%;
+  }
+
+  .suburb-discovery-intent__pills {
+    flex-basis: 100%;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 3px;
+  }
+
+  .suburb-discovery-next-steps {
+    grid-template-columns: 1fr;
+    gap: 11px;
+  }
+
+  .suburb-discovery-next-steps__types .suburb-discovery-next-step {
+    flex-basis: 100%;
+  }
+
+  .suburb-discovery-snapshot,
+  .suburb-discovery-area-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .suburb-discovery-snapshot-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .suburb-discovery-snapshot-layout .suburb-discovery-snapshot {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .suburb-discovery-start-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .suburb-discovery-hero {
+    min-height: 330px;
+  }
+
+  .suburb-discovery-hero__content {
+    padding-top: 38px;
+    padding-bottom: 55px;
+  }
+
+  .suburb-discovery-hero__topline {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .suburb-discovery-hero h1 {
+    font-size: clamp(2.65rem, 13vw, 3.7rem);
+  }
+
+  .suburb-discovery-hero,
+  .suburb-discovery-intent,
+  .suburb-discovery-main {
+    --sd-gutter: 1.25rem;
+    --sd-section-gap: 24px;
+    --sd-panel-pad: 14px;
+  }
+
+  .suburb-discovery-intent__pill {
+    min-height: 39px;
+    padding: 7px 11px;
+    font-size: 12px;
+  }
+
+
+  .suburb-discovery-section__heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .suburb-discovery-snapshot,
+  .suburb-discovery-snapshot-layout .suburb-discovery-snapshot,
+  .suburb-discovery-area-grid,
+  .suburb-discovery-start-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .suburb-discovery-metric {
+    min-height: auto;
+  }
+
+}
+
+@media (max-width: 640px) {
+  .suburb-discovery-neighbourhood-grid,
+  .suburb-discovery-market-comparison-grid {
+    display: flex;
+    gap: var(--sd-grid-gap);
+    overflow-x: auto;
+    padding-bottom: 6px;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 0;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+
+  .suburb-discovery-neighbourhood-grid > *,
+  .suburb-discovery-market-comparison-grid > * {
+    flex: 0 0 min(80%, 280px);
+    scroll-snap-align: start;
+  }
+
+  .suburb-discovery-neighbourhood-grid:focus-visible,
+  .suburb-discovery-market-comparison-grid:focus-visible {
+    outline: 2px solid #1d4ed8;
+    outline-offset: 2px;
+  }
+
+  .suburb-discovery-feed [aria-roledescription="slide"] {
+    flex-basis: 86%;
+  }
+}

@@ -10,7 +10,10 @@ import {
 import { loadCanonicalPlaceSearchProjection } from './services/canonicalPlaceSearchService';
 import { placeIndexability } from './services/placeIndexabilityService';
 import { isPlaceIndexAllowlistedPath } from '../shared/placeIndexAllowlist';
-import { isCanonicalPlaceId } from '../shared/placeAuthority';
+import { placeGuideService } from './services/placeGuideService';
+import { nearbyPlacesService } from './services/nearbyPlacesService';
+import { MULTI_LOCATION_MAX } from '../shared/searchScope';
+import { PLACE_ID_REGEX, isCanonicalPlaceId } from '../shared/placeAuthority';
 import {
   PLACE_DISCOVERY_KINDS,
   isPublishable,
@@ -91,6 +94,32 @@ export const placeAuthorityRouter = router({
         verificationStatus: entry.verification_status,
       };
     }),
+
+  /**
+   * Public place guide: stats, neighbourhoods and nearby markets for one place.
+   * Returns null when the place is unknown, unpublished or not a city/locality.
+   */
+  getPlaceGuide: publicProcedure
+    .input(z.object({ canonicalPlaceId: z.string().trim().regex(PLACE_ID_REGEX) }).strict())
+    .query(({ input }) => placeGuideService.getPlaceGuide(input.canonicalPlaceId)),
+
+  /**
+   * Searchable suburbs of the same city nearest to the selected suburbs (results-page
+   * "nearby areas" chooser). Empty unless every selected Place is a suburb with a known
+   * centre in one city.
+   */
+  getNearbyPlaces: publicProcedure
+    .input(
+      z
+        .object({
+          canonicalPlaceIds: z
+            .array(z.string().trim().regex(PLACE_ID_REGEX))
+            .min(1)
+            .max(MULTI_LOCATION_MAX),
+        })
+        .strict(),
+    )
+    .query(({ input }) => nearbyPlacesService.getNearbyPlaces([...new Set(input.canonicalPlaceIds)])),
 
   /** Resolve a selected Place identity for canonical search controls. */
   resolveSearchPlace: publicProcedure

@@ -22,6 +22,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Card } from '@/components/ui/card';
 import { X } from 'lucide-react';
 import type { PropertyType } from '@/../../shared/listing-types';
+import { LISTING_TITLE_MAX_LENGTH } from '@/lib/listingTitleLimit';
 
 const BasicInfoStep: React.FC = () => {
   const store: any = useListingWizardStore();
@@ -65,11 +66,13 @@ const BasicInfoStep: React.FC = () => {
           id="title"
           value={title}
           onChange={e => setTitle(e.target.value)}
-          placeholder="e.g., Luxury 3-Bedroom Apartment in Cape Town CBD"
+          placeholder="e.g., 2-Bed Apartment in Sandton"
           className="text-lg"
-          maxLength={255}
+          maxLength={LISTING_TITLE_MAX_LENGTH}
         />
-        <p className="text-xs text-gray-500">{title.length}/255 characters (minimum 10 required)</p>
+        <p className="text-xs text-gray-500">
+          {title.length}/{LISTING_TITLE_MAX_LENGTH} characters (minimum 10 required)
+        </p>
       </div>
 
       {/* Description */}

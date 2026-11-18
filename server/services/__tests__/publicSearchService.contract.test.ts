@@ -353,6 +353,88 @@ describe('publicSearchService unit_type development result shape', () => {
     expect(mockSearchDevelopments.mock.calls[0][0]).not.toHaveProperty('includeUnitSize');
   });
 
+  describe('multi-Place search (canonicalPlaceIds)', () => {
+    const PLACE_B = 'pl-place-01-000000000000000000000003';
+    const multiProjection = (scopeB: 'province' | 'locality' = 'locality') => {
+      const base = projection('locality');
+      base.executions.set(PLACE_B, {
+        placeId: PLACE_B,
+        scope: scopeB,
+        provincePlaceId: 'pl-place-01-000000000000000000000002',
+        cityPlaceId: null,
+        localityPlaceId: PLACE_B,
+        contextAncestorPlaceIds: [],
+      } as never);
+      base.labels.set(PLACE_B, {
+        canonicalPlaceId: PLACE_B,
+        label: 'Second Place',
+        scope: scopeB,
+        province: 'Gauteng',
+        city: '',
+        locality: '',
+      } as never);
+      return base;
+    };
+
+    it('passes every selected Place to the manual filter and skips developments', async () => {
+      mockLoadPlaceProjection.mockResolvedValueOnce(multiProjection());
+      const result = await publicSearchService.searchInventory({
+        canonicalPlaceIds: [PLACE_ID, PLACE_B],
+        listingType: 'sale',
+      });
+      expect(mockLoadPlaceProjection).toHaveBeenCalledWith(undefined, {
+        placeIds: [PLACE_ID, PLACE_B],
+      });
+      const [filters, , , , options] = mockSearchProperties.mock.calls[0];
+      expect(filters.canonicalPlaceIds).toEqual([PLACE_ID, PLACE_B]);
+      expect(options.provincePlaceId).toBeUndefined();
+      expect(mockSearchDevelopments).not.toHaveBeenCalled();
+      expect(result.locationState).toBe('resolved');
+      expect(result.canonicalPlaceContexts?.map(context => context.label)).toEqual([
+        'Approved Place',
+        'Second Place',
+      ]);
+    });
+
+    it('treats a one-item list as the single-Place search', async () => {
+      await publicSearchService.searchInventory({
+        canonicalPlaceIds: [PLACE_ID],
+        listingType: 'sale',
+      });
+      expect(mockSearchDevelopments).toHaveBeenCalledWith(
+        expect.objectContaining({ canonicalPlaceId: PLACE_ID }),
+      );
+    });
+
+    it('fails closed for a province member or an unresolved member', async () => {
+      mockLoadPlaceProjection.mockResolvedValueOnce(multiProjection('province'));
+      const withProvince = await publicSearchService.searchInventory({
+        canonicalPlaceIds: [PLACE_ID, PLACE_B],
+        listingType: 'sale',
+      });
+      expect(withProvince).toMatchObject({ cards: [], locationState: 'unavailable' });
+
+      mockLoadPlaceProjection.mockResolvedValueOnce(projection('locality'));
+      const unresolved = await publicSearchService.searchInventory({
+        canonicalPlaceIds: [PLACE_ID, PLACE_B],
+        listingType: 'sale',
+      });
+      expect(unresolved).toMatchObject({ cards: [], locationState: 'unavailable' });
+      expect(mockSearchProperties).not.toHaveBeenCalled();
+    });
+
+    it('rejects combining the single and list inputs before searching', async () => {
+      await expect(
+        publicSearchService.searchInventory({
+          canonicalPlaceId: PLACE_ID,
+          canonicalPlaceIds: [PLACE_ID, PLACE_B],
+          listingType: 'sale',
+        }),
+      ).rejects.toThrow('either one canonical Place or a list');
+      expect(mockSearchProperties).not.toHaveBeenCalled();
+    });
+  });
+
   it('ignores the shape when no place is given (no development source)', async () => {
     mockSearchProperties.mockResolvedValue({ cards: [card('property', 'p-1', 1)], total: 1 });
     const result = await publicSearchService.searchInventory({

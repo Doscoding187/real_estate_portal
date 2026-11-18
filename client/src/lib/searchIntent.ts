@@ -1,4 +1,5 @@
 import { isCanonicalPlaceId } from '../../../shared/placeAuthority';
+import { MULTI_LOCATION_MAX } from '../../../shared/searchScope';
 import {
   validatePublicSearchInput,
   type PublicSearchInputValidationIssue,
@@ -37,7 +38,13 @@ export interface SearchIntentValidation {
 
 export interface GeographyIntent {
   level: GeographyLevel;
+  /** The selected Place; for a multi-area search, the first selected Place. */
   canonicalPlaceId?: string;
+  /**
+   * Every selected Place (2..MULTI_LOCATION_MAX, first is canonicalPlaceId) for a multi-area
+   * Buy/Rent search. Carried in the URL as repeated canonicalPlaceId parameters.
+   */
+  canonicalPlaceIds?: string[];
 }
 
 export interface SearchDefaults {
@@ -203,14 +210,19 @@ export function resolveSearchIntent(
     validation ||= createSearchIntentValidation('invalid-place-authority');
   }
 
-  if (placeIds.length > 1) {
-    validation ||= createSearchIntentValidation('invalid-place-authority');
-  } else if (placeIds.length === 1) {
-    if (!isCanonicalPlaceId(placeIds[0])) {
+  if (placeIds.length > 0) {
+    const multiAllowed = transactionType === 'for-sale' || transactionType === 'to-rent';
+    const valid =
+      placeIds.every(isCanonicalPlaceId) &&
+      new Set(placeIds).size === placeIds.length &&
+      placeIds.length <= MULTI_LOCATION_MAX &&
+      (placeIds.length === 1 || multiAllowed);
+    if (!valid) {
       validation ||= createSearchIntentValidation('invalid-place-authority');
     } else {
       geography.level = 'canonical_place';
       geography.canonicalPlaceId = placeIds[0];
+      if (placeIds.length > 1) geography.canonicalPlaceIds = placeIds;
     }
   }
 
@@ -346,11 +358,17 @@ export function generateIntentUrl(intent: SearchIntent): string {
   });
 
   appendTransactionalResultState(queryParams, intent.resultState);
-  const issue: PublicSearchInputValidationIssue | undefined = validatePublicSearchInput({
-    canonicalPlaceId: geography.canonicalPlaceId,
-  });
+  const issue: PublicSearchInputValidationIssue | undefined = validatePublicSearchInput(
+    geography.canonicalPlaceIds?.length
+      ? { canonicalPlaceIds: geography.canonicalPlaceIds }
+      : { canonicalPlaceId: geography.canonicalPlaceId },
+  );
   if (issue) throw new Error(issue.message);
-  if (geography.canonicalPlaceId) queryParams.set('canonicalPlaceId', geography.canonicalPlaceId);
+  if (geography.canonicalPlaceIds?.length) {
+    geography.canonicalPlaceIds.forEach(placeId => queryParams.append('canonicalPlaceId', placeId));
+  } else if (geography.canonicalPlaceId) {
+    queryParams.set('canonicalPlaceId', geography.canonicalPlaceId);
+  }
   if (intent.validation) queryParams.set('searchError', intent.validation.code);
 
   const query = queryParams.toString();
