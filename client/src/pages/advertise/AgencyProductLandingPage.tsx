@@ -791,9 +791,7 @@ export function AgencyCommercialLandingPage({ preview = false }: { preview?: boo
 
   return (
     <div className="min-h-screen bg-[var(--surface)] text-slate-950">
-      {preview ? (
-        null
-      ) : (
+      {preview ? null : (
         <SEOHead
           title="Property Listify for Agencies | Operating Workspace & Marketplace"
           description="Property Listify gives property agencies a shared operating workspace for people, inventory, enquiries and business visibility, with eligible published inventory able to participate in Property Listify marketplace discovery."

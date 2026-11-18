@@ -169,7 +169,7 @@ const agentFaqs = [
   {
     question: 'What is Agent Launch Access?',
     answer:
-      'It is a paid, once-off 90-day term for the complete supported Agent workspace. The current offer is R499 and includes up to 50 active listings, with no automatic renewal.',
+      'It is a paid, once-off 90-day term for the complete supported Agent workspace. The current price, term and active-listing limit are confirmed from the current price list, and access does not renew automatically.',
   },
   {
     question: 'What do I get during Launch Access?',
@@ -260,7 +260,7 @@ export default function AdvertiseAgentJourneyPreviewPage() {
                 <div className="mt-7 flex flex-wrap gap-x-5 gap-y-2 text-sm font-semibold text-blue-100">
                   <span className="inline-flex items-center gap-2">
                     <CircleDollarSign className="h-4 w-4 text-[#f1c34e]" aria-hidden="true" />
-                    {price?.kind === 'fixed' ? price.label : 'R499'} once-off
+                    {price?.kind === 'fixed' ? `${price.label} once-off` : 'Assisted access'}
                   </span>
                   <span className="inline-flex items-center gap-2">
                     <Check className="h-4 w-4 text-[#f1c34e]" aria-hidden="true" />
@@ -332,8 +332,14 @@ export default function AdvertiseAgentJourneyPreviewPage() {
                     </p>
                     <ul className="mt-5 space-y-2 border-t border-slate-100 pt-4">
                       {pillar.details.map(detail => (
-                        <li key={detail} className="flex items-start gap-2 text-xs leading-5 text-slate-600">
-                          <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#0f3d7c]" aria-hidden="true" />
+                        <li
+                          key={detail}
+                          className="flex items-start gap-2 text-xs leading-5 text-slate-600"
+                        >
+                          <Check
+                            className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#0f3d7c]"
+                            aria-hidden="true"
+                          />
                           {detail}
                         </li>
                       ))}
@@ -438,13 +444,14 @@ export default function AdvertiseAgentJourneyPreviewPage() {
                   Agent Launch Access
                 </p>
                 <h2 className="mt-3 font-serif text-3xl font-semibold leading-tight tracking-[-0.04em] text-[#092b59] sm:text-4xl">
-                  {price?.kind === 'fixed' ? price.label : 'R499'} once-off.{' '}
-                  {term?.label || '90 days'} of the complete Agent experience.
+                  {price?.kind === 'fixed'
+                    ? `${price.label} once-off. ${term?.label || '90 days'} of the complete Agent experience.`
+                    : 'Assisted access to the complete Agent experience.'}
                 </h2>
                 <p className="mt-4 text-base leading-7 text-slate-600">
                   Use every supported Agent workspace feature during your access term—from your
-                  professional profile and listings to enquiry follow-up and activity views, with
-                  up to {listingLimit ?? 50} active listings and no automatic renewal.
+                  professional profile and listings to enquiry follow-up and activity views, with up
+                  to {listingLimit ?? 50} active listings and no automatic renewal.
                 </p>
                 <div className="mt-6 space-y-3 text-sm leading-6 text-slate-700">
                   <p className="flex items-start gap-3">
@@ -496,8 +503,12 @@ export default function AdvertiseAgentJourneyPreviewPage() {
                     </div>
                   ) : (
                     <div>
-                      <p className="text-4xl font-bold tracking-[-0.05em] text-[#092b59]">R499</p>
-                      <p className="mt-1 text-sm font-medium text-slate-500">once-off</p>
+                      <p className="text-2xl font-bold tracking-[-0.03em] text-[#092b59]">
+                        Assisted access path
+                      </p>
+                      <p className="mt-1 text-sm font-medium text-slate-500">
+                        Contact Property Listify to confirm the current price and access term.
+                      </p>
                     </div>
                   )}
                   <div className="mt-6 grid gap-3 sm:grid-cols-2">
@@ -526,7 +537,10 @@ export default function AdvertiseAgentJourneyPreviewPage() {
                     </h4>
                     <ul className="mt-3 divide-y divide-slate-100">
                       {launchAccessIncludes.map(feature => (
-                        <li key={feature} className="flex items-start gap-3 py-3 text-sm leading-5 text-slate-700">
+                        <li
+                          key={feature}
+                          className="flex items-start gap-3 py-3 text-sm leading-5 text-slate-700"
+                        >
                           <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-700">
                             <Check className="h-3.5 w-3.5" aria-hidden="true" />
                           </span>
