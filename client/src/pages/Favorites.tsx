@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { getLoginUrl } from '@/const';
 import { useSavedUnitTypes } from '@/lib/savedUnitTypes';
 import { useSavedDevelopments } from '@/lib/savedDevelopments';
+import { isInternalHref } from '@/lib/developmentListingNavigation';
 
 export default function Favorites() {
   const { isAuthenticated, loading } = useAuth();
@@ -100,28 +101,30 @@ export default function Favorites() {
               These are kept in this browser only and are not part of your account yet.
             </p>
             <ul className="mt-4 divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white">
-              {deviceSaved.items.map(item => (
-                <li
-                  key={item.unitTypeId}
-                  className="flex items-center justify-between gap-3 px-4 py-3"
-                >
-                  <a href={item.href} className="min-w-0 text-sm font-semibold text-[#2774AE]">
-                    {item.title}
-                    <span className="block truncate text-xs font-normal text-slate-600">
-                      {item.developmentName}
-                    </span>
-                  </a>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="min-h-11 shrink-0"
-                    aria-label={`Remove ${item.title} at ${item.developmentName} from saved`}
-                    onClick={() => deviceSaved.toggle(item)}
+              {deviceSaved.items
+                .filter(item => isInternalHref(item.href))
+                .map(item => (
+                  <li
+                    key={item.unitTypeId}
+                    className="flex items-center justify-between gap-3 px-4 py-3"
                   >
-                    Remove
-                  </Button>
-                </li>
-              ))}
+                    <a href={item.href} className="min-w-0 text-sm font-semibold text-[#2774AE]">
+                      {item.title}
+                      <span className="block truncate text-xs font-normal text-slate-600">
+                        {item.developmentName}
+                      </span>
+                    </a>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="min-h-11 shrink-0"
+                      aria-label={`Remove ${item.title} at ${item.developmentName} from saved`}
+                      onClick={() => deviceSaved.toggle(item)}
+                    >
+                      Remove
+                    </Button>
+                  </li>
+                ))}
             </ul>
           </section>
         ) : null}
@@ -135,37 +138,39 @@ export default function Favorites() {
               These are saved in this browser only and are not part of your account.
             </p>
             <ul className="mt-4 divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white">
-              {savedDevelopments.items.map(item => (
-                <li
-                  key={item.developmentId}
-                  className="flex items-center justify-between gap-3 px-4 py-3"
-                >
-                  <a href={item.href} className="flex min-w-0 items-center gap-3 text-[#2774AE]">
-                    <img
-                      src={item.image}
-                      alt=""
-                      aria-hidden="true"
-                      loading="lazy"
-                      className="h-14 w-20 shrink-0 rounded-md object-cover"
-                    />
-                    <span className="min-w-0 text-sm font-semibold">
-                      {item.title}
-                      <span className="block truncate text-xs font-normal text-slate-600">
-                        {item.location}
-                      </span>
-                    </span>
-                  </a>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="min-h-11 shrink-0"
-                    aria-label={`Remove ${item.title} from saved developments`}
-                    onClick={() => savedDevelopments.toggle(item)}
+              {savedDevelopments.items
+                .filter(item => isInternalHref(item.href))
+                .map(item => (
+                  <li
+                    key={item.developmentId}
+                    className="flex items-center justify-between gap-3 px-4 py-3"
                   >
-                    Remove
-                  </Button>
-                </li>
-              ))}
+                    <a href={item.href} className="flex min-w-0 items-center gap-3 text-[#2774AE]">
+                      <img
+                        src={item.image}
+                        alt=""
+                        aria-hidden="true"
+                        loading="lazy"
+                        className="h-14 w-20 shrink-0 rounded-md object-cover"
+                      />
+                      <span className="min-w-0 text-sm font-semibold">
+                        {item.title}
+                        <span className="block truncate text-xs font-normal text-slate-600">
+                          {item.location}
+                        </span>
+                      </span>
+                    </a>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="min-h-11 shrink-0"
+                      aria-label={`Remove ${item.title} from saved developments`}
+                      onClick={() => savedDevelopments.toggle(item)}
+                    >
+                      Remove
+                    </Button>
+                  </li>
+                ))}
             </ul>
           </section>
         ) : null}

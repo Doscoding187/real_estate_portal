@@ -233,7 +233,13 @@ export function CanonicalPlaceSelectorView({
       <p
         id={statusId}
         role="status"
-        className={compact ? 'sr-only' : 'text-sm text-muted-foreground'}
+        className={
+          compact
+            ? value
+              ? 'sr-only'
+              : 'text-xs leading-4 text-muted-foreground'
+            : 'text-sm text-muted-foreground'
+        }
       >
         {status}
       </p>

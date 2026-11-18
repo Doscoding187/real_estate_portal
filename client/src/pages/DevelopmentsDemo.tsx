@@ -34,6 +34,8 @@ import { isCanonicalPlaceId } from '@shared/placeAuthority';
 import { PROPERTY_IMAGE_FALLBACK } from '@/lib/mediaUtils';
 import { useSavedUnitTypes } from '@/lib/savedUnitTypes';
 import { useSavedDevelopments } from '@/lib/savedDevelopments';
+import { hasInSiteHistory } from '@/lib/developmentListingNavigation';
+import type { DevelopmentSearchSponsor } from '@/components/developments/DevelopmentSearchAdRail';
 import type {
   PublicDevelopmentSearchAvailability,
   PublicDevelopmentSearchDevelopmentType,
@@ -126,12 +128,15 @@ export default function DevelopmentsDemo() {
   const [placeQueryUnselected, setPlaceQueryUnselected] = useState(false);
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
 
+  // No sponsor is wired yet; the rail renders nothing and results use the full width.
+  const developmentSearchSponsor: DevelopmentSearchSponsor | undefined = undefined;
+
   const handleBack = () => {
-    if (window.history.length > 1) {
+    if (hasInSiteHistory()) {
       window.history.back();
       return;
     }
-    setLocation('/');
+    setLocation('/new-developments');
   };
 
   const intent = useMemo(
@@ -646,7 +651,9 @@ export default function DevelopmentsDemo() {
         {filterPanel}
 
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-12 xl:gap-6">
-          <main className="min-w-0 xl:col-span-9">
+          <main
+            className={`min-w-0 ${developmentSearchSponsor ? 'xl:col-span-9' : 'xl:col-span-12'}`}
+          >
             <div className="mb-3 flex flex-wrap items-end justify-between gap-3 px-1">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
@@ -758,19 +765,25 @@ export default function DevelopmentsDemo() {
                           });
                           toast.success(
                             nowSaved
-                              ? 'Saved on this device. Sign-in sync for new developments is coming.'
+                              ? 'Saved on this device only.'
                               : 'Removed from saved home types.',
                           );
                         }}
                         isFavorite={savedDevelopments.isSaved(developmentId)}
                         onFavoriteClick={() => {
-                          const nowSaved = savedDevelopments.toggle({
+                          const { saved: nowSaved, persisted } = savedDevelopments.toggle({
                             developmentId,
                             href: developmentRoute,
                             title: development.name,
                             location: developmentLocation,
                             image: developmentImage,
                           });
+                          if (!persisted) {
+                            toast.error(
+                              'Could not save this on your device. Your browser blocked storage.',
+                            );
+                            return;
+                          }
                           toast.success(
                             nowSaved
                               ? 'Development saved on this device.'
@@ -829,11 +842,13 @@ export default function DevelopmentsDemo() {
               />
             )}
           </main>
-          <aside className="xl:col-span-3 xl:col-start-10">
-            <div className="xl:sticky xl:top-24">
-              <DevelopmentSearchAdRail />
+          {developmentSearchSponsor && (
+            <div className="xl:col-span-3 xl:col-start-10">
+              <div className="xl:sticky xl:top-24">
+                <DevelopmentSearchAdRail sponsor={developmentSearchSponsor} />
+              </div>
             </div>
-          </aside>
+          )}
         </div>
       </div>
     </div>

@@ -50,14 +50,16 @@ export function readSavedDevelopments(): SavedDevelopment[] {
   }
 }
 
-function writeSavedDevelopments(items: SavedDevelopment[]): void {
+/** Returns false when the browser refused the write (storage unavailable or full). */
+export function writeSavedDevelopments(items: SavedDevelopment[]): boolean {
   try {
-    getStorage()?.setItem(
-      SAVED_DEVELOPMENTS_KEY,
-      JSON.stringify(items.slice(0, SAVED_DEVELOPMENTS_CAP)),
-    );
+    const storage = getStorage();
+    if (!storage) return false;
+    storage.setItem(SAVED_DEVELOPMENTS_KEY, JSON.stringify(items.slice(0, SAVED_DEVELOPMENTS_CAP)));
+    return true;
   } catch {
-    // Keep the in-memory choice available for this page session if storage is unavailable.
+    // The in-memory choice stays available for this page session.
+    return false;
   }
 }
 
@@ -95,13 +97,19 @@ export function useSavedDevelopments() {
     [items],
   );
 
-  const toggle = useCallback((development: SavedDevelopmentInput): boolean => {
-    const next = toggleSavedDevelopment(itemsRef.current, development);
-    writeSavedDevelopments(next);
-    itemsRef.current = next;
-    setItems(next);
-    return next.some(item => item.developmentId === development.developmentId);
-  }, []);
+  const toggle = useCallback(
+    (development: SavedDevelopmentInput): { saved: boolean; persisted: boolean } => {
+      const next = toggleSavedDevelopment(itemsRef.current, development);
+      const persisted = writeSavedDevelopments(next);
+      itemsRef.current = next;
+      setItems(next);
+      return {
+        saved: next.some(item => item.developmentId === development.developmentId),
+        persisted,
+      };
+    },
+    [],
+  );
 
   return { items, isSaved, toggle };
 }

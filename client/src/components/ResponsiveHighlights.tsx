@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { Badge } from '@/components/ui/badge';
 
 interface ResponsiveHighlightsProps {
@@ -15,6 +16,7 @@ export function ResponsiveHighlights({
   onClick,
   actionLabel = 'Open development details from highlights',
 }: ResponsiveHighlightsProps) {
+  const actionDescriptionId = useId();
   // Ensure items is an array before using it
   const safeItems = Array.isArray(items) ? items : [];
 
@@ -52,10 +54,13 @@ export function ResponsiveHighlights({
           <button
             type="button"
             onClick={onClick}
-            aria-label={actionLabel}
+            aria-describedby={actionDescriptionId}
             className="flex w-full min-w-0 items-center gap-1.5 rounded-md text-left transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
           >
             {highlightItems}
+            <span id={actionDescriptionId} className="sr-only">
+              {actionLabel}
+            </span>
           </button>
         );
       }

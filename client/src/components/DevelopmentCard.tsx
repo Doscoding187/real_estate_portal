@@ -1,4 +1,4 @@
-import { BadgeCheck, Heart, Star, MapPin } from 'lucide-react';
+import { BadgeCheck, FileText, Heart, Star, MapPin } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { useLocation } from 'wouter';
@@ -166,7 +166,7 @@ export function DevelopmentCard({
             <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
               <div className="flex min-w-0 flex-wrap items-center gap-2">
                 <h3
-                  className="flex cursor-pointer items-center gap-2 text-xl font-bold leading-tight text-slate-950 transition-colors hover:text-primary sm:text-2xl"
+                  className="flex min-w-0 cursor-pointer items-center gap-2 break-words text-xl font-bold leading-tight text-slate-950 transition-colors hover:text-primary sm:text-2xl"
                   onClick={() => setLocation(developmentRoute)}
                 >
                   {title}
@@ -184,7 +184,11 @@ export function DevelopmentCard({
                     title={publisherTrustLabel}
                     className="inline-flex shrink-0 items-center justify-center"
                   >
-                    <BadgeCheck className="h-5 w-5 fill-blue-600 text-white" aria-hidden="true" />
+                    {publisherTrustLabel === 'Direct developer' ? (
+                      <BadgeCheck className="h-5 w-5 fill-blue-600 text-white" aria-hidden="true" />
+                    ) : (
+                      <FileText className="h-5 w-5 text-slate-500" aria-hidden="true" />
+                    )}
                   </span>
                 )}
               </div>
