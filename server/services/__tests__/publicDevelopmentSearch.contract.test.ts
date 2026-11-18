@@ -77,7 +77,9 @@ describe('public Developments search authority', () => {
       'return publicDevelopmentDetailService.getBySlugOrId(slugOrId);',
     );
     expect(detail).toContain('const publicFacts = dev.publicFacts;');
-    expect(detail).toContain('activeLeadUnit.publicFacts?.priceFrom');
+    expect(detail).toContain('const toDevelopmentLeadUnitContext = (unit: any | null) =>');
+    expect(detail).toContain('Number(unit.publicFacts?.priceFrom) > 0');
+    expect(detail).toContain('unitContext={toDevelopmentLeadUnitContext(activeLeadUnit)}');
     expect(detail).toContain("listingType={isRentalDevelopment ? 'rent' : 'sale'}");
     expect(unitDetail).toContain('const publicFacts = dev.publicFacts;');
     expect(unitDetail).toContain('selectedUnit?.publicFacts?.priceFrom');
