@@ -26,6 +26,7 @@ export interface ListingResultCardData {
   location: string;
   price: number;
   image: string;
+  description?: string;
   imageCount?: number;
   development?: {
     id?: string | number | null;
@@ -129,6 +130,10 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
       ? `/agents/${canonicalIdentity.agentSlug}`
       : null;
   const highlights = Array.isArray(data.highlights) ? data.highlights.slice(0, 3) : [];
+  const description = data.description?.trim();
+  const hasYardSize = typeof data.yardSize === 'number' && data.yardSize > 0;
+  // Rentals keep their explicit parking fact (known value or "to confirm"); sale cards show a
+  // parking count only when there is no erf/yard size to show instead.
   const rentalParking = isRentalListing
     ? (data.parking ?? {
         key: 'parking',
@@ -138,6 +143,12 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
         status: 'not_supplied' as const,
       })
     : undefined;
+  const parkingCount =
+    !isRentalListing && !hasYardSize && data.parking?.status === 'known'
+      ? Number(data.parking.compactValue)
+      : undefined;
+  const showParkingCount =
+    parkingCount !== undefined && Number.isFinite(parkingCount) && parkingCount > 0;
   const rentalSnapshot = isRentalListing
     ? (Array.isArray(data.rentalSnapshot) ? data.rentalSnapshot : [])
         .filter(
@@ -147,18 +158,18 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
     : [];
 
   return (
-    <article className="group relative w-full overflow-hidden rounded-[24px] border border-slate-200/90 bg-white shadow-[0_16px_40px_-30px_rgba(15,23,42,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_48px_-24px_rgba(15,23,42,0.35)] sm:h-[312px] lg:rounded-[26px]">
+    <article className="group relative w-full overflow-hidden rounded-[12px] border border-slate-200/90 bg-white shadow-[0_16px_40px_-30px_rgba(15,23,42,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_48px_-24px_rgba(15,23,42,0.35)] sm:h-[328px] lg:rounded-[13px]">
       <Link
         href={listingHref}
         onClick={data.onOpen}
         aria-label={`View ${data.title}`}
-        className="absolute inset-0 z-10 rounded-[24px] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-blue-500/35 lg:rounded-[26px]"
+        className="absolute inset-0 z-10 rounded-[12px] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-blue-500/35 lg:rounded-[13px]"
       >
         <span className="sr-only">View {data.title}</span>
       </Link>
 
-      <div className="flex flex-col sm:h-[312px] sm:flex-row">
-        <div className="relative h-[196px] flex-shrink-0 overflow-hidden sm:h-[312px] sm:w-[43%] lg:w-[44%]">
+      <div className="flex flex-col sm:h-[328px] sm:flex-row">
+        <div className="relative h-[196px] flex-shrink-0 overflow-hidden sm:h-[328px] sm:w-[43%] lg:w-[44%]">
           <img
             src={resolvedImage}
             alt={data.title}
@@ -177,9 +188,9 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
           )}
         </div>
 
-        <div className="flex min-w-0 flex-1 flex-col overflow-hidden px-4 py-4 sm:h-[312px] sm:px-5 lg:px-6">
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden px-4 py-4 sm:h-[328px] sm:px-5 sm:py-5 lg:px-6">
           <div className="flex min-w-0 items-center justify-between gap-4">
-            <p className="min-w-0 text-xl font-bold tracking-tight text-blue-600 sm:text-[22px]">
+            <p className="min-w-0 text-[22px] font-bold tracking-tight text-blue-900 sm:text-[26px]">
               {formatPrice(data.price, {
                 from: isDevelopmentListing,
                 listingType: data.listingType,
@@ -189,10 +200,10 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
               <div className="relative z-20 flex shrink-0 items-center gap-1 sm:gap-2">
                 {data.onSave && (
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
-                    className={`h-8 gap-1.5 rounded-lg px-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 ${
-                      data.isSaved ? 'text-red-600' : ''
+                    className={`h-9 gap-1.5 rounded-full border-slate-200 bg-slate-50 px-3 text-slate-700 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700 ${
+                      data.isSaved ? 'border-rose-200 bg-rose-50 text-rose-700' : ''
                     }`}
                     onClick={event => {
                       event.stopPropagation();
@@ -201,17 +212,20 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
                     aria-label={data.isSaved ? 'Remove property from saved homes' : 'Save property'}
                     aria-pressed={data.isSaved}
                   >
-                    <Heart className="h-4 w-4" fill={data.isSaved ? 'currentColor' : 'none'} />
-                    <span className="hidden xl:inline">Save</span>
+                    <Heart
+                      className="h-4 w-4 text-blue-600"
+                      fill={data.isSaved ? 'currentColor' : 'none'}
+                    />
+                    <span className="hidden sm:inline">Save</span>
                   </Button>
                 )}
                 {compareHandler && data.propertyId && (
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
                     disabled={data.compareDisabled}
-                    className={`h-8 gap-1.5 rounded-lg px-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 ${
-                      data.isCompared ? 'text-blue-700' : ''
+                    className={`h-9 gap-1.5 rounded-full border-blue-200 bg-blue-50 px-3 text-blue-700 hover:border-blue-300 hover:bg-blue-100 hover:text-blue-800 ${
+                      data.isCompared ? 'border-blue-300 bg-blue-100 text-blue-800' : ''
                     }`}
                     onClick={event => {
                       event.stopPropagation();
@@ -222,23 +236,27 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
                     }
                     aria-pressed={data.isCompared}
                   >
-                    <GitCompareArrows className="h-4 w-4" />
-                    <span className="hidden xl:inline">Compare</span>
+                    <GitCompareArrows className="h-4 w-4 text-blue-600" />
+                    <span className="hidden sm:inline">Compare</span>
                   </Button>
                 )}
               </div>
             )}
           </div>
-          <h3 className="mt-1 line-clamp-2 text-[17px] font-bold leading-5 text-slate-800">
+          {/* Long titles on older listings are clamped visually to two lines. */}
+          <h3
+            className="mt-4 line-clamp-2 text-[17px] font-bold leading-5 text-slate-800"
+            title={data.title}
+          >
             {data.title}
           </h3>
           <p className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[13px] text-muted-foreground">
-            <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <MapPin className="h-3.5 w-3.5 shrink-0 text-blue-600" aria-hidden="true" />
             <span className="truncate">{data.location || '-'}</span>
           </p>
           {developmentName && (
             <p className="mt-1 flex min-w-0 items-center gap-1.5 text-[11px] text-muted-foreground">
-              <Building2 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              <Building2 className="h-3.5 w-3.5 shrink-0 text-blue-600" aria-hidden="true" />
               {developmentHref ? (
                 <Link
                   href={developmentHref}
@@ -258,19 +276,19 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
                 className="flex items-center gap-1.5 text-[13px] font-medium text-slate-600"
                 aria-label={`Internal area ${data.area} square metres`}
               >
-                <FloorSizeIcon className="h-[18px] w-[18px]" aria-hidden="true" />
+                <FloorSizeIcon className="h-[18px] w-[18px] text-blue-600" aria-hidden="true" />
                 {data.area}m²
               </span>
             )}
             {typeof data.bedrooms === 'number' && data.bedrooms > 0 && (
               <span className="flex items-center gap-1.5 text-[13px] font-medium text-slate-600">
-                <BedroomIcon className="h-[18px] w-[18px]" aria-hidden="true" />
+                <BedroomIcon className="h-[18px] w-[18px] text-blue-600" aria-hidden="true" />
                 {data.bedrooms} {data.bedrooms === 1 ? 'bed' : 'beds'}
               </span>
             )}
             {typeof data.bathrooms === 'number' && data.bathrooms > 0 && (
               <span className="flex items-center gap-1.5 text-[13px] font-medium text-slate-600">
-                <BathroomIcon className="h-[18px] w-[18px]" aria-hidden="true" />
+                <BathroomIcon className="h-[18px] w-[18px] text-blue-600" aria-hidden="true" />
                 {data.bathrooms} {data.bathrooms === 1 ? 'bath' : 'baths'}
               </span>
             )}
@@ -279,25 +297,34 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
                 className="flex items-center gap-1.5 text-[13px] font-medium text-slate-600"
                 aria-label={`${rentalParking.label}: ${rentalParking.value}`}
               >
-                <ParkingIcon className="h-[18px] w-[18px]" aria-hidden="true" />
+                <ParkingIcon className="h-[18px] w-[18px] text-blue-600" aria-hidden="true" />
                 <span className={rentalParking.status === 'known' ? undefined : 'text-slate-500'}>
                   {rentalParking.status === 'known' ? rentalParking.value : 'Parking to confirm'}
                 </span>
               </span>
             )}
-            {typeof data.yardSize === 'number' && data.yardSize > 0 && (
+            {hasYardSize && (
               <span
                 className="flex items-center gap-1.5 text-[13px] font-medium text-slate-600"
                 aria-label={`Erf or yard area ${data.yardSize} square metres`}
               >
-                <YardSizeIcon className="h-[18px] w-[18px]" aria-hidden="true" />
+                <YardSizeIcon className="h-[18px] w-[18px] text-blue-600" aria-hidden="true" />
                 {data.yardSize}m²
+              </span>
+            )}
+            {showParkingCount && (
+              <span
+                className="flex items-center gap-1.5 text-[13px] font-medium text-slate-600"
+                aria-label={`${parkingCount} parking spaces`}
+              >
+                <ParkingIcon className="h-[18px] w-[18px] text-blue-600" aria-hidden="true" />
+                {parkingCount}
               </span>
             )}
           </div>
 
           {highlights.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-2" aria-label="Property highlights">
+            <div className="mt-4 flex flex-wrap gap-2" aria-label="Property highlights">
               {highlights.map(highlight => {
                 const HighlightIcon = getListingHighlightIcon(highlight.iconKey);
                 return (
@@ -315,6 +342,12 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
                 );
               })}
             </div>
+          )}
+
+          {description && (
+            <p className="mt-3 line-clamp-2 pr-3 text-[13px] leading-5 text-muted-foreground">
+              {description}
+            </p>
           )}
 
           {rentalSnapshot.length > 0 && (
@@ -383,7 +416,7 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
             <Link
               href={listingHref}
               onClick={data.onOpen}
-              className="relative z-20 inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+              className="relative z-20 inline-flex h-10 shrink-0 items-center gap-2 rounded-full bg-blue-600 px-4 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2"
               aria-label={`View property: ${data.title}`}
             >
               View property

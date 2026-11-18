@@ -19,6 +19,7 @@ import {
   when,
   type ValidationContext,
 } from './ValidationEngine';
+import { LISTING_TITLE_MAX_LENGTH } from '../listingTitleLimit';
 
 /**
  * Create validation engine for Listing Wizard
@@ -56,7 +57,10 @@ export const createListingValidationEngine = (): ValidationEngine => {
     validator: compose(
       required('Property title is required'),
       minLength(10, 'Title must be at least 10 characters'),
-      maxLength(255, 'Title must not exceed 255 characters'),
+      maxLength(
+        LISTING_TITLE_MAX_LENGTH,
+        `Title must not exceed ${LISTING_TITLE_MAX_LENGTH} characters`,
+      ),
     ),
     message: 'Invalid title',
     trigger: 'blur',

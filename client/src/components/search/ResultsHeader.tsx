@@ -30,6 +30,7 @@ interface ResultsHeaderProps {
   onViewModeChange: (mode: ViewMode) => void;
   onSortChange: (sort: SortOption) => void;
   onSaveSearch?: () => void;
+  hideDesktopActions?: boolean;
 }
 export function ResultsHeader({
   title = 'Properties',
@@ -43,6 +44,7 @@ export function ResultsHeader({
   onViewModeChange,
   onSortChange,
   onSaveSearch,
+  hideDesktopActions = false,
 }: ResultsHeaderProps) {
   const hasSettledCount = !isLoading && !hasError && typeof resultCount === 'number';
   const countLabel = isLoading
@@ -84,53 +86,79 @@ export function ResultsHeader({
         </div>
 
         {!isLoading && !hasError ? (
-          <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
-            {onSaveSearch ? (
-              <Button
-                type="button"
-                variant="outline"
-                className="hidden h-10 rounded-lg border-slate-200 bg-white text-slate-700 hover:bg-slate-50 lg:inline-flex"
-                onClick={onSaveSearch}
-              >
-                <Bell className="mr-2 h-4 w-4" aria-hidden="true" />
-                Save search
-              </Button>
-            ) : null}
-
-            <div className="hidden items-center rounded-lg border border-slate-200 bg-white p-1 sm:flex">
-              <ViewButton
-                label="List"
-                icon={List}
-                selected={viewMode === 'list'}
-                onClick={() => onViewModeChange('list')}
-              />
-              <ViewButton
-                label="Map"
-                icon={MapIcon}
-                selected={viewMode === 'map'}
-                onClick={() => onViewModeChange('map')}
-              />
-            </div>
-
-            <Select value={sortBy} onValueChange={value => onSortChange(value as SortOption)}>
-              <SelectTrigger
-                aria-label="Sort properties"
-                className="h-10 min-w-[170px] flex-1 rounded-lg border-slate-200 bg-white font-semibold text-slate-700 shadow-none sm:flex-none"
-              >
-                <SelectValue placeholder="Recommended" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="relevance">Recommended</SelectItem>
-                <SelectItem value="price_asc">Lowest price</SelectItem>
-                <SelectItem value="price_desc">Highest price</SelectItem>
-                <SelectItem value="date_desc">Newest listed</SelectItem>
-                <SelectItem value="date_asc">Oldest listed</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <ResultsHeaderActions
+            viewMode={viewMode}
+            sortBy={sortBy}
+            onViewModeChange={onViewModeChange}
+            onSortChange={onSortChange}
+            onSaveSearch={onSaveSearch}
+            className={hideDesktopActions ? 'lg:hidden' : undefined}
+          />
         ) : null}
       </div>
     </header>
+  );
+}
+
+export function ResultsHeaderActions({
+  viewMode,
+  sortBy,
+  onViewModeChange,
+  onSortChange,
+  onSaveSearch,
+  className = '',
+}: Pick<
+  ResultsHeaderProps,
+  'viewMode' | 'sortBy' | 'onViewModeChange' | 'onSortChange' | 'onSaveSearch'
+> & {
+  className?: string;
+}) {
+  return (
+    <div className={`flex flex-wrap items-center gap-2 sm:flex-nowrap ${className}`}>
+      {onSaveSearch ? (
+        <Button
+          type="button"
+          variant="outline"
+          className="hidden h-10 rounded-lg border-slate-200 bg-white text-slate-700 hover:bg-slate-50 lg:inline-flex"
+          onClick={onSaveSearch}
+        >
+          <Bell className="mr-2 h-4 w-4" aria-hidden="true" />
+          Save search
+        </Button>
+      ) : null}
+
+      <div className="hidden h-10 items-center rounded-lg border border-slate-200 bg-white p-1 sm:flex">
+        <ViewButton
+          label="List"
+          icon={List}
+          selected={viewMode === 'list'}
+          onClick={() => onViewModeChange('list')}
+        />
+        <ViewButton
+          label="Map"
+          icon={MapIcon}
+          selected={viewMode === 'map'}
+          onClick={() => onViewModeChange('map')}
+        />
+      </div>
+
+      <Select value={sortBy} onValueChange={value => onSortChange(value as SortOption)}>
+        <SelectTrigger
+          aria-label="Sort properties"
+          className="h-10 min-w-[190px] flex-1 rounded-lg border-slate-200 bg-white font-semibold text-slate-700 shadow-none sm:flex-none"
+        >
+          <span className="mr-1 shrink-0 text-slate-500">Sort by</span>
+          <SelectValue placeholder="Recommended" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="relevance">Recommended</SelectItem>
+          <SelectItem value="price_asc">Lowest price</SelectItem>
+          <SelectItem value="price_desc">Highest price</SelectItem>
+          <SelectItem value="date_desc">Newest listed</SelectItem>
+          <SelectItem value="date_asc">Oldest listed</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
   );
 }
 
