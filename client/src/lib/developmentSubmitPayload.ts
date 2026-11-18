@@ -45,6 +45,7 @@ export type SubmitUnitType = {
   totalUnits?: number;
   availableUnits?: number;
   reservedUnits?: number;
+  availabilityNotProvided?: boolean;
   isActive?: boolean;
   structuralType?: string;
   unitCategory?: 'house' | 'apartment';
@@ -408,11 +409,25 @@ export function normalizeSubmitUnitTypes(
       auctionEndDate,
       auctionStatus,
       features: typeof unit?.features === 'object' && unit?.features ? unit.features : undefined,
-      totalUnits: unit?.totalUnits != null ? Math.max(0, toInt(unit.totalUnits, 0)) : undefined,
+      totalUnits:
+        unit?.availabilityNotProvided === true
+          ? undefined
+          : unit?.totalUnits != null
+            ? Math.max(0, toInt(unit.totalUnits, 0))
+            : undefined,
       availableUnits:
-        unit?.availableUnits != null ? Math.max(0, toInt(unit.availableUnits, 0)) : undefined,
+        unit?.availabilityNotProvided === true
+          ? undefined
+          : unit?.availableUnits != null
+            ? Math.max(0, toInt(unit.availableUnits, 0))
+            : undefined,
       reservedUnits:
-        unit?.reservedUnits != null ? Math.max(0, toInt(unit.reservedUnits, 0)) : undefined,
+        unit?.availabilityNotProvided === true
+          ? undefined
+          : unit?.reservedUnits != null
+            ? Math.max(0, toInt(unit.reservedUnits, 0))
+            : undefined,
+      availabilityNotProvided: unit?.availabilityNotProvided === true,
       isActive: typeof unit?.isActive === 'boolean' ? unit.isActive : undefined,
       structuralType: unit?.structuralType,
       unitCategory,
@@ -471,7 +486,7 @@ function buildFeatureTags(input: DevelopmentSubmitPayloadInput): string[] {
 }
 
 function getInventory(units: SubmitUnitType[], isLand: boolean) {
-  if (isLand || units.length === 0) {
+  if (isLand || units.length === 0 || units.some(unit => unit.availabilityNotProvided)) {
     return { totalUnits: undefined, availableUnits: undefined };
   }
   return {

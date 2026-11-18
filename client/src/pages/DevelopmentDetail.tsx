@@ -986,7 +986,8 @@ export default function DevelopmentDetail() {
   const isPlatformReference = publisher.authorityKind === 'platform_reference';
 
   // 1. RAW DATA EXTRACTION
-  const rawImages = parseJSON(dev.images);
+  const publicImageMedia = Array.isArray(dev.imageMedia) ? dev.imageMedia : [];
+  const rawImages = publicImageMedia.length ? publicImageMedia : parseJSON(dev.images);
   const rawVideos = parseJSON(dev.videos);
   const rawFloorPlans = parseJSON(dev.floorPlans);
 
@@ -1669,7 +1670,7 @@ export default function DevelopmentDetail() {
             showQuickNav ? 'fixed top-0 left-0 right-0 z-[999]' : 'relative'
           }`}
         >
-          <div className="container max-w-7xl mx-auto h-16 flex items-center">
+          <div className="container mx-auto flex h-16 w-full min-w-0 max-w-7xl items-center">
             <SectionNav />
           </div>
         </div>

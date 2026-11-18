@@ -183,7 +183,7 @@ export default function DeveloperPublisherPage() {
             Back to developer directory
           </Link>
           <div className="flex flex-col items-start gap-5 md:flex-row">
-            <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/20 bg-white/10 p-2 md:h-24 md:w-24">
+            <div className="flex h-20 w-40 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/70 bg-white p-3 md:h-24 md:w-56">
               {profile.logo ? (
                 <img
                   src={profile.logo}
@@ -212,7 +212,7 @@ export default function DeveloperPublisherPage() {
               {profile.address && (
                 <p className="mb-3 flex items-start gap-2 text-sm text-indigo-100">
                   <MapPin className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-                  <span>Head office: {profile.address}</span>
+                  <span>Office: {profile.address}</span>
                 </p>
               )}
               {profile.description && (

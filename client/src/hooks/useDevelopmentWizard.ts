@@ -225,6 +225,7 @@ export interface UnitType {
   totalUnits: number; // Total units of this type
   availableUnits: number; // Currently available
   reservedUnits: number; // Under offer / held
+  availabilityNotProvided?: boolean; // Curated draft source has no verified counts yet
   // soldUnits = totalUnits - availableUnits - reservedUnits (calculated)
 
   // Legacy compatibility (deprecated, use priceFrom/priceTo)
@@ -1200,20 +1201,6 @@ const createActions = (
             errors.push('Please select at least one ownership type');
           }
           if (
-            (state.developmentData?.status === 'launching-soon' ||
-              state.developmentData?.status === 'selling') &&
-            !state.developmentData?.launchDate
-          ) {
-            errors.push('Launch date is required for this status');
-          }
-          if (
-            (state.developmentData?.status === 'launching-soon' ||
-              state.developmentData?.status === 'selling') &&
-            !state.developmentData?.completionDate
-          ) {
-            errors.push('Expected completion date is required for this status');
-          }
-          if (
             state.developmentData?.handoverDuringConstruction &&
             !state.developmentData?.expectedFirstHandoverDate
           ) {
@@ -1301,15 +1288,6 @@ const createActions = (
       const status = wizardData.status ?? state.developmentData.status;
       if (!status) {
         errors.push('Development status is required');
-      }
-
-      if (status === 'launching-soon' || status === 'selling') {
-        if (!wizardData.launchDate) {
-          errors.push('Launch date is required for this status');
-        }
-        if (!wizardData.completionDate) {
-          errors.push('Expected completion date is required for this status');
-        }
       }
 
       const ownershipTypes =
@@ -1939,6 +1917,7 @@ const createActions = (
               availableUnits: Number(u.availableUnits ?? 0),
               reservedUnits: Number(u.reservedUnits ?? 0),
               totalUnits: Number(u.totalUnits ?? 0),
+              availabilityNotProvided: u.availabilityNotProvided === true,
               completionDate: u.completionDate || undefined,
 
               // Complex fields

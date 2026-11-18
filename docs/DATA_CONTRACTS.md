@@ -27,8 +27,8 @@ but it never authorizes geography.
 | Nature (IdentityPhase) | `nature` | `developments.nature` | Optional | Publish validation in `server/developerRouter.ts` only accepts `new` or `phase`. |
 | Marketing role (IdentityPhase + listingIdentity) | `marketingRole` | `developments.marketing_role` | Optional | Passed on create payload. |
 | Status (IdentityPhase) | `status` | `developments.status` | Optional (UI-required) | DB default is `launching-soon` in `drizzle/schema.ts`; not enforced in `assertPublishable`. |
-| Completion date (IdentityPhase) | `completionDate` | `developments.completion_date` | Optional | String date. |
-| Launch date (IdentityPhase) | `launchDate` | `developments.launch_date` | Schema drift | `launchDate` is used in `server/services/developmentService.ts` update payload, but `developments.launch_date` is not present in `drizzle/schema.ts` (only `development_phases.launch_date` exists). |
+| Completion date (IdentityPhase) | `completionDate` | `developments.completion_date` | Optional | Optional timing information for launching-soon and selling developments; omission does not block publication. |
+| Launch date (IdentityPhase) | `launchDate` | `developments.launch_date` | Optional | Optional timing information for launching-soon and selling developments; omission does not block publication. |
 | Description (OverviewPhase) | `description` | `developments.description` | Optional | UI shows length guidance in `client/src/components/development-wizard/phases/OverviewPhase.tsx`; no server-side validation found. |
 | Highlights (OverviewPhase) | `highlights` | `developments.highlights` | Optional | Stored as JSON string in `server/services/developmentService.ts`. |
 | Amenities (AmenitiesPhase) | `amenities` | `developments.amenities` | Optional | Stored as JSON string in `server/services/developmentService.ts` (TEXT column in `drizzle/schema.ts`). |
