@@ -141,6 +141,13 @@ const DeveloperPublisherPage = lazy(() => import('./pages/DeveloperPublisherPage
 // Import Comparison Page
 const CompareProperties = lazy(() => import('./pages/CompareProperties'));
 const AdvertiseWithUs = lazy(() => import('./pages/AdvertiseWithUs'));
+const AdvertisePartnerPreviewPage = lazy(() => import('./pages/AdvertisePartnerPreviewPage'));
+const AdvertiseAgentJourneyPreviewPage = lazy(
+  () => import('./pages/AdvertiseAgentJourneyPreviewPage'),
+);
+const AdvertiseAgencyJourneyPreviewPage = lazy(
+  () => import('./pages/AdvertiseAgencyJourneyPreviewPage'),
+);
 const AdvertiseSellPage = lazy(() => import('./pages/advertise/AdvertiseSellPage'));
 const AdvertiseFinancePage = lazy(() => import('./pages/advertise/AdvertiseFinancePage'));
 const AdvertiseServicesPage = lazy(() => import('./pages/advertise/AdvertiseServicesPage'));
@@ -635,6 +642,15 @@ function Router() {
           <Route path="/advertise/finance/originators" component={OriginatorFunnelPage} />
           <Route path="/advertise/finance" component={AdvertiseFinancePage} />
           <Route path="/advertise/services" component={AdvertiseServicesPage} />
+          <Route
+            path="/advertise/partner-preview/agencies"
+            component={AdvertiseAgencyJourneyPreviewPage}
+          />
+          <Route
+            path="/advertise/partner-preview/agents"
+            component={AdvertiseAgentJourneyPreviewPage}
+          />
+          <Route path="/advertise/partner-preview" component={AdvertisePartnerPreviewPage} />
           <Route path="/advertise" component={AdvertiseWithUs} />
           <Route
             path="/advertise-with-us"
