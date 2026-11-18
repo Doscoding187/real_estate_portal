@@ -29,6 +29,9 @@ interface DevelopmentLeadDialogProps {
   mode: LeadDialogMode;
   listingType?: 'sale' | 'rent';
   ctaLocation?: string;
+  initialEmail?: string;
+  initialName?: string;
+  initialPhone?: string;
   unitContext?: {
     id?: number | string | null;
     name?: string | null;
@@ -100,7 +103,7 @@ const MODE_COPY: Record<
   viewing: {
     title: 'Request a Viewing',
     description:
-      'Share your details and the rental team will follow up about a suitable viewing time.',
+      'Share your details and the sales team will follow up about a suitable viewing time.',
     submitLabel: 'Request a Viewing',
     leadSource: 'development_detail_viewing',
     successMessage: 'Your viewing request has been sent.',
@@ -159,6 +162,14 @@ function getModeCopy(
 
   if (!isRentalListing) return copy;
 
+  if (mode === 'viewing') {
+    return {
+      ...copy,
+      description:
+        'Share your details and the rental team will follow up about a suitable viewing time.',
+    };
+  }
+
   if (mode === 'contact') {
     return {
       ...copy,
@@ -194,6 +205,9 @@ export function DevelopmentLeadDialog({
   mode,
   listingType = 'sale',
   ctaLocation,
+  initialEmail,
+  initialName,
+  initialPhone,
   unitContext,
   development,
   affordabilityData,
@@ -225,12 +239,61 @@ export function DevelopmentLeadDialog({
     }
   }, [open]);
 
+  useEffect(() => {
+    if (open) {
+      const name = initialName?.trim();
+      const email = initialEmail?.trim();
+      const phone = initialPhone?.trim();
+      if (name || email || phone) {
+        setForm(current => ({
+          ...current,
+          ...(name ? { name } : {}),
+          ...(email ? { email } : {}),
+          ...(phone ? { phone } : {}),
+        }));
+      }
+    }
+  }, [initialEmail, initialName, initialPhone, open]);
+
   const isRentalListing =
     (development.transactionType ?? (listingType === 'rent' ? 'for_rent' : 'for_sale')) ===
     'for_rent';
   const isPlatformReference = development.publisherAuthorityKind === 'platform_reference';
   const isSoldOut = development.isSoldOut === true;
-  const copy = getModeCopy(mode, isRentalListing, isPlatformReference, isSoldOut);
+  const baseCopy = getModeCopy(mode, isRentalListing, isPlatformReference, isSoldOut);
+  const isDevelopmentUpdatesRequest = ctaLocation === 'development_updates_preview';
+  const isDevelopmentPriceListRequest = ctaLocation === 'development_preview_price_list';
+  const isBrochureAvailable = Boolean(development.brochureUrl);
+  let copy = baseCopy;
+  if (mode === 'brochure' && !isBrochureAvailable) {
+    copy = {
+        ...baseCopy,
+        title: 'Request Brochure',
+        description: isPlatformReference
+          ? `Share your details with Property Listify and we’ll review the available brochure information for ${development.name}.`
+          : `Share your details and the ${isRentalListing ? 'rental' : 'sales'} team will send the brochure for ${development.name}.`,
+        submitLabel: 'Request Brochure',
+        successMessage: 'Your brochure request has been sent.',
+      };
+  } else if (isDevelopmentPriceListRequest) {
+    copy = {
+        ...baseCopy,
+        title: isRentalListing ? 'Request rental price list' : 'Request price list',
+        description: isPlatformReference
+          ? `Share your details with Property Listify to request the latest pricing and available home types for ${development.name}.`
+          : `Share your details to receive the latest ${isRentalListing ? 'rental pricing' : 'pricing'} and available home types for ${development.name}.`,
+        submitLabel: 'Request price list',
+        successMessage: 'Your price list request has been sent.',
+      };
+  } else if (isDevelopmentUpdatesRequest) {
+    copy = {
+        ...baseCopy,
+        title: 'Register for development updates',
+        description: `Share your details to request updates about new homes, availability and pricing at ${development.name}.`,
+        submitLabel: 'Request Updates',
+        successMessage: 'Your request for development updates has been sent.',
+      };
+  }
   const custodyDescription = isPlatformReference
     ? 'Property Listify manages this enquiry and will review the request with the development and unit context. It is not a direct message to an external developer.'
     : `This enquiry will be routed with the right development and unit context so the ${isRentalListing ? 'rental' : 'sales'} team can follow up with the correct information.`;
@@ -245,11 +308,14 @@ export function DevelopmentLeadDialog({
     const subject = resolvedUnitName?.trim()
       ? `${resolvedUnitName} at ${development.name}`
       : development.name;
+    const affordabilityNote = affordabilityData?.monthlyIncome
+      ? ` My BuyAbility estimate uses gross household income of ${formatSARandShort(affordabilityData.monthlyIncome)}${affordabilityData.maxAffordable ? ` and indicates buying power of ${formatSARandShort(affordabilityData.maxAffordable)}` : ''}.`
+      : '';
 
     if (mode === 'brochure') {
       return isRentalListing
-        ? `Please send me the brochure and latest monthly rent details for ${subject}.`
-        : `Please send me the brochure and latest pricing for ${subject}.`;
+        ? `Please send me the brochure and latest monthly rent details for ${subject}.${affordabilityNote}`
+        : `Please send me the brochure and latest pricing for ${subject}.${affordabilityNote}`;
     }
 
     if (mode === 'qualification') {
@@ -267,22 +333,28 @@ export function DevelopmentLeadDialog({
     }
 
     if (mode === 'viewing') {
-      return `I would like to request a viewing for ${subject}. Please contact me to discuss a suitable time.`;
+      return `I would like to request a viewing for ${subject}. Please contact me to discuss a suitable time.${affordabilityNote}`;
     }
 
     if (mode === 'info') {
+      if (ctaLocation === 'development_updates_preview') {
+        return `Please send me updates about new homes, availability, and pricing for ${development.name}.`;
+      }
+      if (ctaLocation === 'development_preview_price_list') {
+        return `Please send me the current price list and available home types for ${subject}.${affordabilityNote}`;
+      }
       return isRentalListing
-        ? `Please send me more information about ${subject}, including monthly rent, specifications, and availability.`
-        : `Please send me more information about ${subject}, including pricing, specifications, and available options.`;
+        ? `Please send me more information about ${subject}, including monthly rent, specifications, and availability.${affordabilityNote}`
+        : `Please send me more information about ${subject}, including pricing, specifications, and available options.${affordabilityNote}`;
     }
 
     return isRentalListing
-      ? `I am interested in renting ${subject}. Please contact me with monthly rent, availability, and next steps.`
+      ? `I am interested in renting ${subject}. Please contact me with monthly rent, availability, and next steps.${affordabilityNote}`
       : isPlatformReference && isSoldOut
-        ? `I would like to register my interest in ${subject}. Please review my request with the available development and unit information.`
+        ? `I would like to register my interest in ${subject}. Please review my request with the available development and unit information.${affordabilityNote}`
         : isPlatformReference
-          ? `I am interested in ${subject}. Please review my enquiry with the latest available pricing, availability, and next steps.`
-          : `I am interested in ${subject}. Please contact me with pricing, availability, and next steps.`;
+          ? `I am interested in ${subject}. Please review my enquiry with the latest available pricing, availability, and next steps.${affordabilityNote}`
+          : `I am interested in ${subject}. Please contact me with pricing, availability, and next steps.${affordabilityNote}`;
   }, [
     affordabilityData?.availableDeposit,
     affordabilityData?.maxAffordable,
@@ -293,6 +365,7 @@ export function DevelopmentLeadDialog({
     isPlatformReference,
     isSoldOut,
     resolvedUnitName,
+    ctaLocation,
   ]);
 
   const createLead = trpc.developer.createLead.useMutation({

@@ -6,6 +6,10 @@ import { MediaLightbox } from '@/components/MediaLightbox';
 import { DevelopmentGallery } from '@/components/DevelopmentGallery';
 import { DeveloperOverview } from '@/components/development/DeveloperOverview';
 import { DevelopmentLeadDialog } from '@/components/development/DevelopmentLeadDialog';
+import {
+  DevelopmentDetailPage,
+  type DevelopmentInlineLeadRequest,
+} from '@/components/development/DevelopmentDetailPage';
 import { StatCard } from '@/components/development/StatCard';
 import { SectionNav } from '@/components/development/SectionNav';
 import { DevelopmentOverviewCard } from '@/components/DevelopmentOverviewCard';
@@ -53,7 +57,6 @@ import { NearbyLandmarks } from '@/components/property/NearbyLandmarks';
 import { MetaControl } from '@/components/seo/MetaControl';
 import { Breadcrumbs } from '@/components/search/Breadcrumbs';
 import { Footer } from '@/components/Footer';
-import { HouseMeasureIcon } from '@/components/icons/HouseMeasureIcon';
 import {
   AMENITY_CATEGORIES,
   AMENITY_REGISTRY,
@@ -62,10 +65,10 @@ import {
 import {
   getDevelopmentHeroMedia,
   buildDevelopmentGalleryImages,
-  getGalleryStartIndex,
-  getDevelopmentAmenityTileImage,
-  getDevelopmentOutdoorsTileImage,
+  getDevelopmentGalleryTiles,
+  getDevelopmentGalleryRemainderTileImage,
   getDevelopmentViewGalleryTileImage,
+  getVideoThumbnail,
   type DevelopmentMedia,
 } from '@/lib/media-logic';
 import { resolveMediaUrl } from '@/lib/mediaUtils';
@@ -181,22 +184,39 @@ const formatExactRand = (value: unknown): string | null => {
 
 const formatParkingLabel = (parking?: string | number, parkingBays?: number): string | null => {
   const parkingValue = parking ?? undefined;
-  const baysValue = parseNumber(parkingBays);
+  const baysValue = parseNumber(parkingBays ?? parkingValue);
 
   if (typeof parkingValue === 'string') {
     const trimmed = parkingValue.trim();
     if (trimmed === '' || trimmed === 'none' || trimmed === '0') {
-      return baysValue && baysValue > 0 ? `${baysValue} Bay${baysValue === 1 ? '' : 's'}` : null;
+      return baysValue && baysValue > 0
+        ? `${baysValue} Parking`
+        : null;
     }
     if (/^\d+$/.test(trimmed)) {
       const bays = Number(trimmed);
-      return bays > 0 ? `${bays} Bay${bays === 1 ? '' : 's'}` : null;
+      return bays > 0 ? `${bays} Parking` : null;
     }
     const normalized = trimmed.replace(/[_-]+/g, ' ');
+    if (baysValue && baysValue > 0) {
+      if (/\b(single|double|triple)\b.*\bgarage\b/i.test(normalized)) {
+        return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+      }
+      if (/garage/i.test(normalized)) {
+        return `${baysValue} Garage${baysValue === 1 ? '' : 's'}`;
+      }
+      if (/carport/i.test(normalized)) {
+        return `${baysValue} Carport`;
+      }
+      if (/parking/i.test(normalized)) {
+        return `${baysValue} Parking`;
+      }
+      return `${baysValue} ${normalized}`;
+    }
     return normalized.charAt(0).toUpperCase() + normalized.slice(1);
   }
 
-  return baysValue && baysValue > 0 ? `${baysValue} Bay${baysValue === 1 ? '' : 's'}` : null;
+  return baysValue && baysValue > 0 ? `${baysValue} Parking` : null;
 };
 
 const DEFAULT_DEPOSIT_PERCENTAGE = 0;
@@ -656,11 +676,37 @@ function DevelopmentActionPanel({
   );
 }
 
+const toDevelopmentLeadUnitContext = (unit: any | null) => {
+  if (!unit) return null;
+  return {
+    unitId: String(unit.id),
+    unitName: String(unit.name || '').trim() || undefined,
+    unitPriceFrom:
+      Number.isFinite(Number(unit.publicFacts?.priceFrom)) && Number(unit.publicFacts?.priceFrom) > 0
+        ? Number(unit.publicFacts.priceFrom)
+        : undefined,
+    unitBedrooms:
+      typeof unit.publicFacts?.bedrooms === 'number' &&
+      Number.isFinite(unit.publicFacts.bedrooms) &&
+      unit.publicFacts.bedrooms >= 0
+        ? unit.publicFacts.bedrooms
+        : undefined,
+    unitBathrooms:
+      typeof unit.publicFacts?.bathrooms === 'number' &&
+      Number.isFinite(unit.publicFacts.bathrooms) &&
+      unit.publicFacts.bathrooms >= 0
+        ? unit.publicFacts.bathrooms
+        : undefined,
+  };
+};
+
 export default function DevelopmentDetail() {
   const { slug } = useParams();
   const [, setLocation] = useLocation();
   const search = useSearch();
   const returnToResults = getDevelopmentSearchReturn(search);
+  const isLegacyDevelopmentLayout =
+    new URLSearchParams(search.replace(/^\?/, '')).get('preview') === 'legacy';
   const withSearchReturn = (path: string) => appendDevelopmentSearchReturn(path, returnToResults);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxTitle, setLightboxTitle] = useState('');
@@ -669,8 +715,14 @@ export default function DevelopmentDetail() {
   const [quickIncome, setQuickIncome] = useState('');
   const [quickDeposit, setQuickDeposit] = useState('');
   const [leadDialogOpen, setLeadDialogOpen] = useState(false);
+  const [leadEmailPrefill, setLeadEmailPrefill] = useState('');
+  const [leadNamePrefill, setLeadNamePrefill] = useState('');
+  const [leadPhonePrefill, setLeadPhonePrefill] = useState('');
+  const [leadAffordabilityData, setLeadAffordabilityData] = useState<
+    DevelopmentInlineLeadRequest['affordabilityData'] | undefined
+  >(undefined);
   const [leadDialogMode, setLeadDialogMode] = useState<
-    'brochure' | 'contact' | 'qualification' | 'info'
+    'brochure' | 'contact' | 'qualification' | 'info' | 'viewing'
   >('qualification');
   const [leadDialogLocation, setLeadDialogLocation] = useState('unknown');
   const [activeLeadUnit, setActiveLeadUnit] = useState<any | null>(null);
@@ -729,32 +781,51 @@ export default function DevelopmentDetail() {
   };
 
   const openLeadDialog = (
-    mode: 'brochure' | 'contact' | 'qualification' | 'info',
+    mode: 'brochure' | 'contact' | 'qualification' | 'info' | 'viewing',
     ctaLocation: string,
     unit: any | null = null,
+    initialEmail = '',
+    initialContact: { name?: string; phone?: string } = {},
+    affordabilityData?: DevelopmentInlineLeadRequest['affordabilityData'],
   ) => {
     setLeadDialogMode(mode);
     setLeadDialogLocation(ctaLocation);
     setActiveLeadUnit(unit);
+    setLeadEmailPrefill(initialEmail);
+    setLeadNamePrefill(initialContact.name || '');
+    setLeadPhonePrefill(initialContact.phone || '');
+    setLeadAffordabilityData(affordabilityData);
     setLeadDialogOpen(true);
     trackCTAClick({
       ctaLabel:
-        mode === 'brochure'
-          ? 'Download Brochure'
-          : mode === 'contact'
-            ? 'Contact Sales Team'
-            : mode === 'qualification'
-              ? 'Start Qualification'
-              : 'Request Information',
+        ctaLocation === 'development_updates_preview'
+          ? 'Request Development Updates'
+          : ctaLocation === 'development_preview_price_list'
+            ? 'Request Development Price List'
+            : ctaLocation === 'development_preview_viewing'
+              ? 'Book a Development Viewing'
+          : mode === 'brochure'
+            ? 'Download Brochure'
+            : mode === 'contact'
+              ? 'Contact Sales Team'
+              : mode === 'qualification'
+                ? 'Start Qualification'
+                : 'Request Information',
       ctaLocation,
       ctaHref: typeof window !== 'undefined' ? window.location.href : '',
     });
   };
 
-  const navigateToQualification = (ctaLocation: string) => {
+  const navigateToQualification = (
+    ctaLocation: string,
+    inputs?: { grossMonthlyIncome?: number; deposit?: number; unitId?: string },
+  ) => {
     const params = new URLSearchParams();
-    if (parsedQuickIncome > 0) params.set('income', `${parsedQuickIncome}`);
-    if (quickDepositAmount > 0) params.set('deposit', `${quickDepositAmount}`);
+    const incomeToCarry = inputs?.grossMonthlyIncome ?? parsedQuickIncome;
+    const depositToCarry = inputs?.deposit ?? quickDepositAmount;
+    if (incomeToCarry > 0) params.set('income', `${incomeToCarry}`);
+    if (depositToCarry > 0) params.set('deposit', `${depositToCarry}`);
+    if (inputs?.unitId) params.set('unit', inputs.unitId);
     const qualificationPath = withSearchReturn(
       `/development/${slug}/qualification${params.toString() ? `?${params.toString()}` : ''}`,
     );
@@ -948,16 +1019,6 @@ export default function DevelopmentDetail() {
     return groups;
   }
 
-  // Get unit type label
-  const getUnitTypeLabel = (unitTypes: any[]) => {
-    if (!unitTypes || unitTypes.length === 0) return '-';
-    if (unitTypes.length === 1) {
-      const name = unitTypes[0]?.name;
-      return name ? String(name) : '1 Unit Type';
-    }
-    return `${unitTypes.length} Types`;
-  };
-
   const parseOwnershipTypes = (value: unknown): string[] => {
     if (!value) return [];
     if (Array.isArray(value)) return value.filter(Boolean).map(String);
@@ -968,6 +1029,7 @@ export default function DevelopmentDetail() {
       } catch {
         return [value];
       }
+      return [value];
     }
     return [];
   };
@@ -978,6 +1040,60 @@ export default function DevelopmentDetail() {
     if (ownershipTypes.length === 1) return formatLabel(ownershipTypes[0]);
     if (ownershipTypes.length > 1) return 'Multiple';
     if (estate?.ownershipType) return formatLabel(estate.ownershipType);
+    return '-';
+  };
+
+  const getUnitTypeLabel = (unitTypes: any[]) => {
+    if (!unitTypes || unitTypes.length === 0) return '-';
+    if (unitTypes.length === 1) {
+      const name = unitTypes[0]?.name;
+      return name ? String(name) : '1 Unit Type';
+    }
+    return `${unitTypes.length} Types`;
+  };
+
+  const parseOwnershipValues = (value: unknown): string[] => {
+    if (!value) return [];
+    if (Array.isArray(value)) return value.flatMap(parseOwnershipValues);
+    if (typeof value !== 'string') return [];
+    try {
+      const parsed = JSON.parse(value);
+      if (parsed !== value) return parseOwnershipValues(parsed);
+    } catch {
+      // Plain text ownership values can be delimited in older public records.
+    }
+    return value
+      .split(/[|,]/)
+      .map(item => item.trim())
+      .filter(Boolean);
+  };
+
+  const getConceptOwnershipLabel = (devData: any, estate: any, unitTypes: any[] = []) => {
+    const ownershipTypes = [
+      ...parseOwnershipValues(devData?.ownershipTypes),
+      ...parseOwnershipValues(devData?.ownershipType),
+      ...unitTypes.flatMap(unit => parseOwnershipValues(unit?.ownershipType)),
+      ...parseOwnershipValues(estate?.ownershipType),
+    ];
+    const labels = [...new Set(
+      ownershipTypes.map(value => {
+        const normalized = value.trim().toLowerCase().replace(/[_\s]+/g, '-');
+        if (/^(full-title|freehold)$/.test(normalized)) return 'Full Title';
+        if (normalized === 'sectional-title') return 'Sectional Title';
+        return formatLabel(value);
+      }),
+    )];
+    const hasFullTitle = labels.includes('Full Title');
+    const hasSectionalTitle = labels.includes('Sectional Title');
+
+    if (hasFullTitle && hasSectionalTitle) {
+      const otherLabels = labels.filter(label => label !== 'Full Title' && label !== 'Sectional Title');
+      return otherLabels.length
+        ? `Sectional & Full Title · ${otherLabels.join(' · ')}`
+        : 'Sectional & Full Title';
+    }
+    if (labels.length === 1) return labels[0];
+    if (labels.length > 1) return labels.join(' & ');
     return '-';
   };
 
@@ -1033,11 +1149,13 @@ export default function DevelopmentDetail() {
   // 3. APPLY CANONICAL LOGIC (Pure Decisions)
   const heroMedia = getDevelopmentHeroMedia(mediaData);
   const galleryImages = buildDevelopmentGalleryImages(mediaData);
-
-  // Bento Tiles
-  const amenityTile = getDevelopmentAmenityTileImage(mediaData);
-  const outdoorTile = getDevelopmentOutdoorsTileImage(mediaData);
   const viewGalleryTile = getDevelopmentViewGalleryTileImage(mediaData);
+  const galleryTiles = getDevelopmentGalleryTiles(galleryImages, mediaData.featuredImage);
+  const galleryRemainderTile = getDevelopmentGalleryRemainderTileImage(
+    galleryImages,
+    mediaData.featuredImage,
+    galleryTiles,
+  );
 
   // Missing declaration restoration
   const floorPlans: any[] = normalizedFloorPlans;
@@ -1092,9 +1210,6 @@ export default function DevelopmentDetail() {
   };
 
   const galleryIndices = {
-    general: 0,
-    amenities: getGalleryStartIndex(galleryImages, 'amenities'),
-    outdoors: getGalleryStartIndex(galleryImages, 'outdoors'),
     videos: findUnifiedMediaIndex(
       normalizedVideos.map((video: any) => video?.url).filter((url): url is string => !!url),
     ),
@@ -1137,9 +1252,9 @@ export default function DevelopmentDetail() {
     heroMedia: heroMedia,
     galleryImages: galleryImages,
 
-    // Tiles
-    amenityTile: amenityTile,
-    outdoorTile: outdoorTile,
+    // The gallery's two side cards are selected from the available categorized photos.
+    galleryTiles,
+    galleryRemainderTile,
     viewGalleryTile: viewGalleryTile,
 
     // Counts & Lists
@@ -1169,7 +1284,13 @@ export default function DevelopmentDetail() {
         normalizedOwnership: finalLabel,
         normalizedType: formatLabel(u.structuralType || u.type || 'Unit type'),
         floorSize: u.unitSize,
+        yardSize: u.yardSize ?? null,
         landSize: u.erfSize || u.yardSize,
+        floorPlanAvailable: Boolean(resolveUnitFloorPlanUrl(u)),
+        parkingLabel: formatParkingLabel(
+          u.parkingType ?? u.parking,
+          parseNumber(u.parkingBays ?? u.parkingCount ?? u.publicFacts?.parkingCount) ?? undefined,
+        ),
       };
     }),
 
@@ -1181,6 +1302,28 @@ export default function DevelopmentDetail() {
     for (const item of brochureItems) {
       const url = resolveDocumentUrl(item);
       if (url) return url;
+    }
+    return null;
+  })();
+  const specificationSheetUrl = (() => {
+    const brochureItems = Array.isArray((dev as any).brochures) ? (dev as any).brochures : [];
+    for (const item of brochureItems) {
+      const url = resolveDocumentUrl(item);
+      if (!url) continue;
+      const metadata =
+        item && typeof item === 'object'
+          ? [
+              item.name,
+              item.title,
+              item.label,
+              item.fileName,
+              item.filename,
+              item.category,
+              item.documentType,
+              url,
+            ].filter(Boolean).join(' ')
+          : `${item} ${url}`;
+      if (/spec(?:ification)?|finish(?:es)?|fitting/i.test(metadata)) return url;
     }
     return null;
   })();
@@ -1225,6 +1368,30 @@ export default function DevelopmentDetail() {
       : priceToDisplay
         ? `${formatPriceCompact(derivedPriceFrom)} - ${formatPriceCompact(priceToDisplay)}`
         : `${formatPriceCompact(derivedPriceFrom)}${isRentalDevelopment ? ' / month' : ''}`;
+  const developmentStartingPriceLabel =
+    derivedPriceFrom === null
+      ? isRentalDevelopment
+        ? 'Monthly rent on request'
+        : 'Price on request'
+      : `${formatPriceCompact(derivedPriceFrom)}${isRentalDevelopment ? ' / month' : ''}`;
+  const lowestPublishedHomePrice = development.units.reduce<number | null>((lowest, unit) => {
+    const candidate = parseNumber(unit.publicFacts?.priceFrom ?? unit.priceFrom);
+    if (candidate === null || candidate <= 0) return lowest;
+    return lowest === null || candidate < lowest ? candidate : lowest;
+  }, null);
+  const conceptFinancingPrice = lowestPublishedHomePrice ?? derivedPriceFrom;
+  const conceptMonthlyBondEstimate =
+    !isRentalDevelopment && conceptFinancingPrice !== null && conceptFinancingPrice > 0
+      ? calculateMonthlyRepayment(
+          conceptFinancingPrice,
+          SA_PRIME_RATE,
+          DEFAULT_BOND_TERM_YEARS,
+        )
+      : null;
+  const conceptMinimumGrossIncome =
+    conceptMonthlyBondEstimate !== null
+      ? Math.round(conceptMonthlyBondEstimate * QUICK_QUALIFICATION_PAYMENT_RATIO)
+      : null;
 
   const parsedQuickIncome = Number(quickIncome.replace(/[^\d.]/g, ''));
   const parsedQuickDeposit = Number(quickDeposit.replace(/[^\d.]/g, ''));
@@ -1286,6 +1453,195 @@ export default function DevelopmentDetail() {
   const relatedPublicDevelopments: any[] = [];
   const developerProjectCount: number | null = development.developerPublishedDevelopmentCount;
 
+  if (!isLegacyDevelopmentLayout) {
+    const matchesConceptHomeFeature = (item: { key: string; label: string }) =>
+      /(geyser|gas[_\s-]*stove|backup[_\s-]*power|fibre|fiber|private.*garden|pet[_\s-]*friendly)/i.test(
+        `${item.key} ${item.label}`,
+      );
+    const matchesConceptRecreation = (item: { key: string; label: string }) =>
+      /(soccer|football|sport.*field|court|pool|play|jungle|gym|clubhouse)/i.test(
+        `${item.key} ${item.label}`,
+      );
+    const conceptLabelList = (items: { label: string }[]) =>
+      [...new Set(items.map(item => item.label))];
+    const customHomeFeatures = amenityGroups.other.filter(matchesConceptHomeFeature);
+    const customRecreationFeatures = amenityGroups.other.filter(matchesConceptRecreation);
+    const conceptHomeFeatures = conceptLabelList([
+      ...amenityGroups.convenience.filter(matchesConceptHomeFeature),
+      ...customHomeFeatures,
+    ]);
+    const conceptRecreationFeatures = conceptLabelList([
+      ...amenityGroups.lifestyle,
+      ...amenityGroups.family,
+      ...customRecreationFeatures,
+    ]);
+    const conceptAdditionalFeatures = conceptLabelList([
+      ...amenityGroups.sustainability,
+      ...amenityGroups.convenience.filter(item => !matchesConceptHomeFeature(item)),
+      ...amenityGroups.other.filter(
+        item => !matchesConceptHomeFeature(item) && !matchesConceptRecreation(item),
+      ),
+    ]);
+    const previewHeroImage =
+      development.heroMedia.type === 'image'
+        ? development.heroMedia.image?.url
+        : development.viewGalleryTile?.url ||
+          development.galleryImages[0]?.url ||
+          development.heroMedia.video.thumbnailUrl;
+
+    return (
+      <>
+        <MetaControl
+          title={`${development.name} | ${development.developer}`}
+          description={development.description || undefined}
+          image={previewHeroImage || undefined}
+        />
+        <DevelopmentDetailPage
+          name={development.name}
+          location={development.location}
+          description={development.description}
+          heroSubtitle={
+            development.name.trim().toLowerCase() === 'baltimore lifestyle estate'
+              ? 'Contemporary family homes in a secure residential community in North Riding.'
+              : null
+          }
+          heroImage={previewHeroImage}
+          priceFrom={derivedPriceFrom}
+          priceLabel={developmentPriceLabel}
+          startingPriceLabel={developmentStartingPriceLabel}
+          status={normalizedStatus}
+          developmentType={formatLabel(publicFacts.developmentType)}
+          ownership={getConceptOwnershipLabel(dev, estateSpecs, development.units)}
+          monthlyBondEstimate={conceptMonthlyBondEstimate}
+          minimumGrossIncome={conceptMinimumGrossIncome}
+          amenities={amenityList.map(getAmenityLabel)}
+          amenityGroups={{
+            security: amenityGroups.security.map(item => item.label),
+            recreation: conceptRecreationFeatures,
+            homeFeatures: conceptHomeFeatures,
+            additional: conceptAdditionalFeatures,
+          }}
+          developmentDocumentUrl={specificationSheetUrl}
+          galleryImages={development.galleryImages.map((image: any, index: number) => ({
+            ...image,
+            index,
+          }))}
+          photoCount={development.totalPhotos}
+          videoCount={development.totalVideos}
+          floorPlanCount={development.floorPlans.length}
+          developerName={development.developer}
+          brochureAvailable={Boolean(brochureUrl)}
+          videoTitle={development.videoList[0]?.title}
+          videoThumbnailUrl={
+            development.videoList[0]
+              ? getVideoThumbnail(development.videoList[0]) || previewHeroImage
+              : previewHeroImage
+          }
+          videoGalleryIndex={development.indices.videos}
+          units={development.units}
+          locationContent={
+            dev.latitude && dev.longitude ? (
+              <NearbyLandmarks
+                variant="compact"
+                property={{
+                  id: publicFacts.id,
+                  title: publicFacts.name,
+                  latitude: dev.latitude,
+                  longitude: dev.longitude,
+                }}
+              />
+            ) : null
+          }
+          developerContent={
+            <DeveloperOverview
+              variant="concept"
+              developerName={development.developer}
+              developerLogo={development.developerLogo}
+              developerDescription={development.developerDescription}
+              developerWebsite={development.developerWebsite}
+              developerSlug={development.developerSlug}
+              authorityKind={publisher?.authorityKind ?? null}
+              sourceAttribution={publisher?.sourceAttribution ?? null}
+              lastVerifiedAt={publisher?.lastVerifiedAt ?? null}
+              headOfficeLocation={(publisher as any)?.headOfficeLocation || null}
+              projectCount={developerProjectCount}
+              foundedYear={(publisher as any)?.foundedYear || null}
+              isVerified={development.isVerified}
+            />
+          }
+          overlayContent={
+            <>
+              <DevelopmentLeadDialog
+                open={leadDialogOpen}
+                onOpenChange={open => {
+                  setLeadDialogOpen(open);
+                  if (!open) {
+                    setActiveLeadUnit(null);
+                    setLeadEmailPrefill('');
+                    setLeadNamePrefill('');
+                    setLeadPhonePrefill('');
+                    setLeadAffordabilityData(undefined);
+                  }
+                }}
+                mode={leadDialogMode}
+                listingType={isRentalDevelopment ? 'rent' : 'sale'}
+                ctaLocation={leadDialogLocation}
+                initialEmail={leadEmailPrefill}
+                initialName={leadNamePrefill}
+                initialPhone={leadPhonePrefill}
+                development={{
+                  id: development.id,
+                  name: development.name,
+                  cataloguePublisherId: publicFacts.publisher.id,
+                  brochureUrl,
+                  transactionType: publicFacts.transactionType,
+                  publisherAuthorityKind: publicFacts.publisher.authorityKind,
+                  isSoldOut,
+                }}
+                unitContext={toDevelopmentLeadUnitContext(activeLeadUnit)}
+                affordabilityData={leadAffordabilityData ?? null}
+              />
+              <MediaLightbox
+                media={development.unifiedMedia}
+                initialIndex={lightboxIndex}
+                isOpen={lightboxOpen}
+                onClose={() => setLightboxOpen(false)}
+                title={lightboxTitle}
+              />
+            </>
+          }
+          onOpenGallery={openLightbox}
+          onOpenUnit={handleUnitFloorPlan}
+          onEnquireUnit={handleUnitCallback}
+          onDevelopmentLeadRequest={(request: DevelopmentInlineLeadRequest) => {
+            const selectedUnit = request.unitId
+              ? development.units.find(unit => String(unit.id) === request.unitId) ?? null
+              : null;
+            openLeadDialog(
+              request.mode,
+              request.ctaLocation,
+              selectedUnit,
+              '',
+              { name: request.name, phone: request.phone },
+              request.affordabilityData,
+            );
+          }}
+          onRequestFullAssessment={(grossMonthlyIncome, unitId) =>
+            navigateToQualification('buyability_preview', {
+              grossMonthlyIncome,
+              deposit: 0,
+              unitId,
+            })
+          }
+          onRequestUpdates={email =>
+            openLeadDialog('info', 'development_updates_preview', null, email)
+          }
+          onEnquire={() => openLeadDialog('contact', 'development_sticky_nav')}
+        />
+      </>
+    );
+  }
+
   return (
     <>
       <MetaControl
@@ -1340,8 +1696,8 @@ export default function DevelopmentDetail() {
             <div className="relative w-full overflow-hidden">
               <DevelopmentGallery
                 featuredMedia={development.heroMedia}
-                amenityTileImage={development.amenityTile}
-                outdoorsTileImage={development.outdoorTile}
+                galleryTiles={development.galleryTiles}
+                galleryRemainderTileImage={development.galleryRemainderTile}
                 viewGalleryTileImage={development.viewGalleryTile}
                 totalPhotos={development.totalPhotos}
                 totalVideos={development.totalVideos}
@@ -2169,11 +2525,20 @@ export default function DevelopmentDetail() {
         open={leadDialogOpen}
         onOpenChange={open => {
           setLeadDialogOpen(open);
-          if (!open) setActiveLeadUnit(null);
+          if (!open) {
+            setActiveLeadUnit(null);
+            setLeadEmailPrefill('');
+            setLeadNamePrefill('');
+            setLeadPhonePrefill('');
+            setLeadAffordabilityData(undefined);
+          }
         }}
         mode={leadDialogMode}
         listingType={isRentalDevelopment ? 'rent' : 'sale'}
         ctaLocation={leadDialogLocation}
+        initialEmail={leadEmailPrefill}
+        initialName={leadNamePrefill}
+        initialPhone={leadPhonePrefill}
         development={{
           id: development.id,
           name: development.name,
@@ -2183,40 +2548,18 @@ export default function DevelopmentDetail() {
           publisherAuthorityKind: publicFacts.publisher.authorityKind,
           isSoldOut,
         }}
-        unitContext={
-          activeLeadUnit
-            ? {
-                unitId: String(activeLeadUnit.id),
-                unitName: String(activeLeadUnit.name || '').trim() || undefined,
-                unitPriceFrom:
-                  Number.isFinite(Number(activeLeadUnit.publicFacts?.priceFrom)) &&
-                  Number(activeLeadUnit.publicFacts?.priceFrom) > 0
-                    ? Number(activeLeadUnit.publicFacts.priceFrom)
-                    : undefined,
-                unitBedrooms:
-                  typeof activeLeadUnit.publicFacts?.bedrooms === 'number' &&
-                  Number.isFinite(activeLeadUnit.publicFacts.bedrooms) &&
-                  activeLeadUnit.publicFacts.bedrooms >= 0
-                    ? activeLeadUnit.publicFacts.bedrooms
-                    : undefined,
-                unitBathrooms:
-                  typeof activeLeadUnit.publicFacts?.bathrooms === 'number' &&
-                  Number.isFinite(activeLeadUnit.publicFacts.bathrooms) &&
-                  activeLeadUnit.publicFacts.bathrooms >= 0
-                    ? activeLeadUnit.publicFacts.bathrooms
-                    : undefined,
-              }
-            : null
-        }
+        unitContext={toDevelopmentLeadUnitContext(activeLeadUnit)}
         affordabilityData={
-          quickQualification
-            ? {
-                monthlyIncome: hasQuickIncome ? parsedQuickIncome : undefined,
-                availableDeposit: quickDepositAmount > 0 ? quickDepositAmount : undefined,
-                maxAffordable: quickQualification.buyingPower,
-                calculatedAt: new Date().toISOString(),
-              }
-            : null
+          leadAffordabilityData !== undefined
+            ? leadAffordabilityData
+            : quickQualification
+              ? {
+                  monthlyIncome: hasQuickIncome ? parsedQuickIncome : undefined,
+                  availableDeposit: quickDepositAmount > 0 ? quickDepositAmount : undefined,
+                  maxAffordable: quickQualification.buyingPower,
+                  calculatedAt: new Date().toISOString(),
+                }
+              : null
         }
       />
 

@@ -30,6 +30,17 @@ import { usePublisherContext } from '@/hooks/usePublisherContext';
 import { SortableMediaGrid } from '@/components/media/SortableMediaGrid';
 import type { MediaItem as GridMediaItem } from '@/components/media/SortableMediaGrid';
 
+const DEVELOPMENT_IMAGE_CATEGORY_OPTIONS: Array<{
+  value: NonNullable<GridMediaItem['category']>;
+  label: string;
+}> = [
+  { value: 'outdoors', label: 'Exterior & Outdoors' },
+  { value: 'general', label: 'Development Overview' },
+  { value: 'amenities', label: 'Amenities' },
+  { value: 'photo', label: 'Location & Views' },
+  { value: 'render', label: 'Aerial & Drone' },
+];
+
 export function MediaPhase() {
   const { developmentData, saveWorkflowStepData, stepData: allStepData } = useDevelopmentWizard();
   const editingDevelopmentId = useDevelopmentWizard(state => state.editingId);
@@ -134,6 +145,24 @@ export function MediaPhase() {
         documents.filter(d => d.id !== id),
       );
     }
+  };
+
+  const handleChangePhotoCategory = (
+    id: string,
+    category: NonNullable<GridMediaItem['category']>,
+  ) => {
+    const target = photos.find(photo => photo.id === id);
+    if (!target || target.category === category) return;
+
+    persistMedia(
+      photos.map(photo => (photo.id === id ? { ...photo, category } : photo)),
+      undefined,
+      undefined,
+    );
+    const label =
+      DEVELOPMENT_IMAGE_CATEGORY_OPTIONS.find(option => option.value === category)?.label ??
+      'the selected section';
+    toast.success(`Moved image to ${label}. Save the development to publish the change.`);
   };
 
   const handleReorderMedia = (newItems: MediaItem[]) => {
@@ -487,6 +516,16 @@ export function MediaPhase() {
                       displayOrder: item.displayOrder ?? idx,
                     }) as GridMediaItem,
                 )}
+                categoryOptions={
+                  !isHero && category !== 'videos' && category !== 'document'
+                    ? DEVELOPMENT_IMAGE_CATEGORY_OPTIONS
+                    : undefined
+                }
+                onChangeCategory={
+                  !isHero && category !== 'videos' && category !== 'document'
+                    ? handleChangePhotoCategory
+                    : undefined
+                }
                 onReorder={reordered => {
                   // Map back to MediaItem
                   const asMediaItems = reordered.map(
@@ -522,7 +561,8 @@ export function MediaPhase() {
         <div className="space-y-2">
           <h2 className="text-2xl md:text-3xl font-bold text-slate-900">Development Media</h2>
           <p className="text-slate-600">
-            Visuals are critical for engagement. Start with a stunning hero image.
+            Use this gallery for the whole development: exteriors, shared amenities, and site plans.
+            Add kitchens, bedrooms, and finishes under each unit type.
           </p>
         </div>
 
@@ -603,7 +643,8 @@ export function MediaPhase() {
               <h3 className="text-lg font-semibold text-slate-900">Media Gallery</h3>
               <p className="mt-1 text-sm text-slate-500">
                 Category-specific photos are optional. The public page uses a labeled placeholder
-                when amenity or outdoor photos are not supplied.
+                when amenity or outdoor photos are not supplied. Use the category menu on a photo
+                to move it between sections without uploading it again.
               </p>
             </div>
             <TabsList className="bg-slate-100">
@@ -631,8 +672,8 @@ export function MediaPhase() {
                 />
                 <UploadSection
                   category="general"
-                  title="Interior & Living"
-                  description="Living areas, bedrooms, and finishes."
+                  title="Development Overview"
+                  description="Site maps, master plan images, and other development-wide visuals."
                   icon={ImageIcon}
                 />
                 <UploadSection

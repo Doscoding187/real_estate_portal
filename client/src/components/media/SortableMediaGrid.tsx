@@ -56,6 +56,11 @@ export interface SortableMediaGridProps {
   media: MediaItem[];
   onReorder: (media: MediaItem[]) => void;
   onRemove: (id: string) => void;
+  categoryOptions?: Array<{
+    value: NonNullable<MediaItem['category']>;
+    label: string;
+  }>;
+  onChangeCategory?: (id: string, category: NonNullable<MediaItem['category']>) => void;
   onSetPrimary?: (id: string) => void;
   onPreview?: (id: string) => void;
   className?: string;
@@ -66,6 +71,8 @@ export interface SortableMediaGridProps {
 interface SortableMediaItemProps {
   item: MediaItem;
   onRemove: (id: string) => void;
+  categoryOptions?: SortableMediaGridProps['categoryOptions'];
+  onChangeCategory?: SortableMediaGridProps['onChangeCategory'];
   onSetPrimary?: (id: string) => void;
   onPreview?: (id: string) => void;
   dragFromPreview?: boolean;
@@ -77,6 +84,8 @@ interface SortableMediaItemProps {
 const SortableMediaItem: React.FC<SortableMediaItemProps> = ({
   item,
   onRemove,
+  categoryOptions,
+  onChangeCategory,
   onSetPrimary,
   onPreview,
   dragFromPreview = false,
@@ -227,6 +236,24 @@ const SortableMediaItem: React.FC<SortableMediaItemProps> = ({
         </div>
       </div>
 
+      {categoryOptions && onChangeCategory && item.type === 'image' && (
+        <select
+          aria-label={`Category for ${item.fileName || 'image'}`}
+          value={item.category ?? categoryOptions[0]?.value ?? ''}
+          onChange={event =>
+            onChangeCategory(item.id, event.target.value as NonNullable<MediaItem['category']>)
+          }
+          onClick={event => event.stopPropagation()}
+          className="absolute bottom-2 right-2 z-10 max-w-[85%] cursor-pointer truncate rounded-md border border-slate-200 bg-white/95 px-2 py-1 text-xs font-medium text-slate-800 shadow-sm"
+        >
+          {categoryOptions.map(option => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      )}
+
       {/* Primary Badge (always visible when not hovering) */}
       {item.isPrimary && (
         <div
@@ -250,6 +277,8 @@ export const SortableMediaGrid: React.FC<SortableMediaGridProps> = ({
   media,
   onReorder,
   onRemove,
+  categoryOptions,
+  onChangeCategory,
   onSetPrimary,
   onPreview,
   className,
@@ -298,6 +327,8 @@ export const SortableMediaGrid: React.FC<SortableMediaGridProps> = ({
               key={item.id}
               item={item}
               onRemove={onRemove}
+              categoryOptions={categoryOptions}
+              onChangeCategory={onChangeCategory}
               onSetPrimary={onSetPrimary}
               onPreview={onPreview}
               dragFromPreview={dragFromPreview}

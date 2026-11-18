@@ -240,8 +240,10 @@ export default function DevelopmentQualificationPage() {
       `Development: ${dev.name}`,
       selectedUnit?.name ? `Unit: ${selectedUnit.name}` : null,
       `Estimated affordability range: ${formatSARandShort(comfortFloor)} - ${formatSARandShort(maxAffordable)}`,
-      `Monthly income: ${formatSARandShort(monthlyIncome)}`,
-      coApplicantIncome > 0 ? `Co-applicant income: ${formatSARandShort(coApplicantIncome)}` : null,
+      `Gross monthly income: ${formatSARandShort(monthlyIncome)}`,
+      coApplicantIncome > 0
+        ? `Co-applicant gross monthly income: ${formatSARandShort(coApplicantIncome)}`
+        : null,
       monthlyExpenses > 0 ? `Monthly expenses: ${formatSARandShort(monthlyExpenses)}` : null,
       monthlyDebts > 0 ? `Monthly debts: ${formatSARandShort(monthlyDebts)}` : null,
       availableDeposit > 0 ? `Available deposit: ${formatSARandShort(availableDeposit)}` : null,
@@ -440,7 +442,7 @@ export default function DevelopmentQualificationPage() {
                         </p>
                         <p className="mt-1 text-sm text-slate-700">
                           {step === 1
-                            ? 'Household income'
+                            ? 'Gross household income'
                             : step === 2
                               ? 'Monthly commitments'
                               : 'Result and lead submission'}
@@ -492,12 +494,12 @@ export default function DevelopmentQualificationPage() {
                   {step === 1 && (
                     <Card className="border-slate-200 shadow-sm">
                       <CardHeader>
-                        <CardTitle>Household Income</CardTitle>
+                        <CardTitle>Gross Household Income</CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-5">
                         <div className="grid gap-5 md:grid-cols-2">
                           <div className="space-y-2">
-                            <Label htmlFor="monthlyIncome">Primary monthly income</Label>
+                            <Label htmlFor="monthlyIncome">Primary gross monthly income</Label>
                             <Input
                               id="monthlyIncome"
                               inputMode="numeric"
@@ -510,7 +512,9 @@ export default function DevelopmentQualificationPage() {
                           </div>
 
                           <div className="space-y-2">
-                            <Label htmlFor="coApplicantIncome">Co-applicant monthly income</Label>
+                            <Label htmlFor="coApplicantIncome">
+                              Co-applicant gross monthly income
+                            </Label>
                             <Input
                               id="coApplicantIncome"
                               inputMode="numeric"
@@ -528,7 +532,8 @@ export default function DevelopmentQualificationPage() {
 
                         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                           <p className="text-sm font-medium text-slate-700">
-                            This check starts with income so we can estimate whether homes from{' '}
+                            This check starts with gross monthly income before deductions so we can
+                            estimate whether homes from{' '}
                             {formatSARandShort(targetPrice)} are in range.
                           </p>
                         </div>
