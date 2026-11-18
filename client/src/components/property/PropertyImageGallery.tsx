@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import {
@@ -22,13 +23,22 @@ interface PropertyImage {
   displayOrder?: number;
 }
 
+interface PropertyVideo {
+  id?: number | string;
+  url: string;
+  label?: string | null;
+  thumbnailUrl?: string | null;
+  previewUrl?: string | null;
+}
+
 interface PropertyImageGalleryProps {
   images: PropertyImage[];
   propertyTitle: string;
-  videoCount?: number;
+  videos?: PropertyVideo[];
   hasVirtualTour?: boolean;
   hasFloorPlan?: boolean;
-  onOpenVideos?: () => void;
+  joinedToSummary?: boolean;
+  overlayActions?: ReactNode;
   onOpenVirtualTour?: () => void;
   onOpenFloorPlan?: () => void;
 }
@@ -36,15 +46,17 @@ interface PropertyImageGalleryProps {
 export function PropertyImageGallery({
   images,
   propertyTitle,
-  videoCount = 0,
+  videos = [],
   hasVirtualTour = false,
   hasFloorPlan = false,
-  onOpenVideos,
+  joinedToSummary = false,
+  overlayActions,
   onOpenVirtualTour,
   onOpenFloorPlan,
 }: PropertyImageGalleryProps) {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [isVideoPlayerOpen, setIsVideoPlayerOpen] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [activeMediaTab, setActiveMediaTab] = useState<'photos' | 'videos' | 'virtual' | 'plan'>(
     'photos',
@@ -93,7 +105,7 @@ export function PropertyImageGallery({
   const mediaTabs = [
     {
       id: 'photos' as const,
-      label: 'Photos',
+      label: 'View gallery',
       icon: Images,
       meta: String(sortedImages.length),
       enabled: true,
@@ -106,12 +118,12 @@ export function PropertyImageGallery({
       id: 'videos' as const,
       label: 'Videos',
       icon: Play,
-      meta: String(videoCount || 0),
-      enabled: videoCount > 0 && Boolean(onOpenVideos),
+      meta: String(videos.length),
+      enabled: videos.length > 0,
       action: () => {
-        if (videoCount > 0 && onOpenVideos) {
+        if (videos.length > 0) {
           setActiveMediaTab('videos');
-          onOpenVideos();
+          setIsVideoPlayerOpen(true);
         }
       },
     },
@@ -164,7 +176,9 @@ export function PropertyImageGallery({
 
   if (sortedImages.length === 0) {
     return (
-      <div className="flex min-h-[280px] w-full flex-col items-center justify-center rounded-2xl border border-slate-200 bg-slate-100 px-6 text-center md:min-h-[500px]">
+      <div
+        className={`flex min-h-[280px] w-full flex-col items-center justify-center border border-slate-200 bg-slate-100 px-6 text-center md:min-h-[470px] ${joinedToSummary ? 'rounded-none border-0' : 'rounded-2xl'}`}
+      >
         <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white text-slate-400 shadow-sm">
           <ImageOff className="h-6 w-6" aria-hidden="true" />
         </span>
@@ -180,11 +194,13 @@ export function PropertyImageGallery({
   return (
     <div className="flex h-full flex-col gap-3">
       {/* Main Image */}
-      <div className="group relative aspect-[4/3] min-h-[260px] flex-1 overflow-hidden rounded-2xl bg-slate-100 md:aspect-auto md:min-h-[520px]">
+      <div
+        className={`group relative aspect-[4/3] min-h-[260px] flex-1 overflow-hidden bg-slate-100 md:aspect-auto md:min-h-[470px] ${joinedToSummary ? 'rounded-none' : 'rounded-2xl'}`}
+      >
         <button
           type="button"
           aria-label={`Open photo gallery for ${propertyTitle}`}
-          className="absolute inset-0 h-full w-full cursor-zoom-in rounded-2xl text-left focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-blue-500/60"
+          className={`absolute inset-0 h-full w-full cursor-zoom-in text-left focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-blue-500/60 ${joinedToSummary ? 'rounded-none' : 'rounded-2xl'}`}
           onClick={() => setIsLightboxOpen(true)}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
@@ -193,14 +209,16 @@ export function PropertyImageGallery({
           <img
             src={sortedImages[selectedImageIndex].imageUrl}
             alt={`${propertyTitle} - Image ${selectedImageIndex + 1}`}
-            className="h-full min-h-[260px] w-full object-cover transition-transform hover:scale-[1.02] md:min-h-[520px]"
+            className="h-full min-h-[260px] w-full object-cover transition-transform hover:scale-[1.02] md:min-h-[470px]"
           />
         </button>
 
-        {/* Desktop Image Counter */}
-        <div className="absolute bottom-4 left-4 hidden items-center gap-1.5 rounded-full bg-slate-950/75 px-3 py-1.5 text-xs font-semibold text-white shadow-sm backdrop-blur md:inline-flex">
-          <Camera className="h-3.5 w-3.5" />
-          {selectedImageIndex + 1} / {sortedImages.length}
+        <div className="absolute bottom-3 left-3 z-10 flex max-w-[calc(100%-1.5rem)] items-center gap-1 sm:bottom-4 sm:left-4 sm:gap-1.5">
+          <div className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-slate-950/75 px-2.5 text-xs font-semibold text-white shadow-sm backdrop-blur sm:px-3">
+            <Camera className="h-3.5 w-3.5" />
+            {selectedImageIndex + 1} / {sortedImages.length}
+          </div>
+          {overlayActions}
         </div>
 
         {/*
@@ -232,8 +250,8 @@ export function PropertyImageGallery({
           </>
         )}
 
-        {/* Desktop media controls live in the canvas when that media exists. */}
-        <div className="absolute bottom-4 right-4 z-10 hidden max-w-[calc(100%-8rem)] items-center justify-end gap-2 md:flex">
+        {/* Keep gallery controls at the image's upper-left, away from the contact actions. */}
+        <div className="absolute left-3 top-3 z-10 flex max-w-[calc(100%-1.5rem)] items-center gap-2 sm:left-4 sm:top-4">
           {visibleMediaTabs.map(tab => {
             const Icon = tab.icon;
             return (
@@ -244,15 +262,15 @@ export function PropertyImageGallery({
                 aria-pressed={activeMediaTab === tab.id}
                 disabled={!tab.enabled}
                 onClick={tab.action}
-                className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-2 text-xs font-semibold shadow-sm backdrop-blur transition ${
+                className={`inline-flex items-center gap-2 whitespace-nowrap rounded-lg border px-4 py-2.5 text-sm font-semibold shadow-sm backdrop-blur transition ${
                   activeMediaTab === tab.id
                     ? 'border-blue-200 bg-white text-blue-700'
                     : 'border-white/30 bg-slate-950/70 text-white hover:bg-slate-950/90'
                 } ${!tab.enabled ? 'cursor-not-allowed opacity-45' : ''}`}
               >
-                <Icon className="h-3.5 w-3.5" />
+                <Icon className="h-4 w-4" />
                 {tab.label}
-                <span className="text-[10px] opacity-75">{tab.meta}</span>
+                <span className="text-xs opacity-75">{tab.meta}</span>
               </button>
             );
           })}
@@ -261,7 +279,9 @@ export function PropertyImageGallery({
 
       {/* Media Tabs - Mobile */}
       <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 md:hidden">
-        {visibleMediaTabs.map(tab => {
+        {visibleMediaTabs
+          .filter(tab => tab.id !== 'photos')
+          .map(tab => {
           const Icon = tab.icon;
           return (
             <button
@@ -271,15 +291,15 @@ export function PropertyImageGallery({
               aria-pressed={activeMediaTab === tab.id}
               disabled={!tab.enabled}
               onClick={tab.action}
-              className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+              className={`inline-flex items-center gap-2 whitespace-nowrap rounded-lg px-4 py-2.5 text-base font-semibold transition-colors ${
                 activeMediaTab === tab.id
                   ? 'bg-blue-600 text-white'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               } ${!tab.enabled ? 'cursor-not-allowed opacity-45 hover:bg-slate-100' : ''}`}
             >
-              <Icon className="h-3.5 w-3.5" />
+              <Icon className="h-4 w-4" />
               {tab.label}
-              <span className="rounded-full bg-white/70 px-1.5 py-0.5 text-[10px] font-bold text-slate-500">
+              <span className="rounded-full bg-white/70 px-2 py-1 text-xs font-bold text-slate-500">
                 {tab.meta}
               </span>
             </button>
@@ -450,6 +470,29 @@ export function PropertyImageGallery({
               </div>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isVideoPlayerOpen} onOpenChange={setIsVideoPlayerOpen}>
+        <DialogContent className="max-w-5xl border-0 bg-slate-950 p-3 sm:p-5">
+          <DialogTitle className="pr-10 text-base font-semibold text-white">
+            {videos[0]?.label || `Property video · ${propertyTitle}`}
+          </DialogTitle>
+          <DialogDescription className="sr-only">
+            Play the property walkthrough video.
+          </DialogDescription>
+          {videos[0] && (
+            <video
+              key={videos[0].id ?? videos[0].url}
+              className="mt-2 max-h-[75vh] w-full rounded-lg bg-black"
+              controls
+              autoPlay
+              playsInline
+              preload="metadata"
+              poster={videos[0].thumbnailUrl || videos[0].previewUrl || undefined}
+              src={videos[0].url}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </div>
