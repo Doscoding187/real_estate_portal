@@ -1,0 +1,38 @@
+.location-area-focus-marker {
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.location-area-focus-marker__pin {
+  position: absolute;
+  top: 4px;
+  left: 5px;
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  transform: rotate(-45deg);
+  border: 2px solid #fff;
+  border-radius: 50% 50% 50% 0;
+  background: #164de5;
+  box-shadow: 0 2px 8px rgb(15 23 42 / 40%);
+}
+
+.location-area-focus-marker__pin > span {
+  width: 8px;
+  height: 8px;
+  transform: rotate(45deg);
+  border-radius: 50%;
+  background: #fff;
+}
+
+.leaflet-tooltip.location-area-focus-tooltip {
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  padding: 4px 9px;
+  background: #fff;
+  color: #12345d;
+  font-size: 12px;
+  font-weight: 750;
+  box-shadow: 0 4px 12px rgb(15 23 42 / 16%);
+}
