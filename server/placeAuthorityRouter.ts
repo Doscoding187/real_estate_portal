@@ -10,7 +10,8 @@ import {
 import { loadCanonicalPlaceSearchProjection } from './services/canonicalPlaceSearchService';
 import { placeIndexability } from './services/placeIndexabilityService';
 import { isPlaceIndexAllowlistedPath } from '../shared/placeIndexAllowlist';
-import { isCanonicalPlaceId } from '../shared/placeAuthority';
+import { placeGuideService } from './services/placeGuideService';
+import { PLACE_ID_REGEX, isCanonicalPlaceId } from '../shared/placeAuthority';
 import {
   PLACE_DISCOVERY_KINDS,
   isPublishable,
@@ -91,6 +92,14 @@ export const placeAuthorityRouter = router({
         verificationStatus: entry.verification_status,
       };
     }),
+
+  /**
+   * Public place guide: stats, neighbourhoods and nearby markets for one place.
+   * Returns null when the place is unknown, unpublished or not a city/locality.
+   */
+  getPlaceGuide: publicProcedure
+    .input(z.object({ canonicalPlaceId: z.string().trim().regex(PLACE_ID_REGEX) }).strict())
+    .query(({ input }) => placeGuideService.getPlaceGuide(input.canonicalPlaceId)),
 
   /** Resolve a selected Place identity for canonical search controls. */
   resolveSearchPlace: publicProcedure
