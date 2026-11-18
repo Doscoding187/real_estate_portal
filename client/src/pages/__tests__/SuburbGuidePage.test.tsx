@@ -30,6 +30,7 @@ vi.mock('@/components/location/SuburbLocalProfessionals', () => ({
 }));
 vi.mock('@/components/location/SuburbListingAlert', () => ({ SuburbListingAlert: () => null }));
 
+import { suburbGuideCoverageFaq, suburbGuideH1, suburbGuideIntro } from '@shared/suburbGuideCopy';
 import SuburbGuidePage from '../SuburbGuidePage';
 
 const PLACE_ID = 'pl-place-01-000000000000000000000001';
@@ -139,6 +140,18 @@ describe('SuburbGuidePage', () => {
     // Labels come from the server as given.
     expect(container.textContent).toContain('Nearby suburb');
     expect(container.textContent).toContain('Suburb · No listings yet');
+  });
+
+  it('renders the shared static text the prerendered HTML also uses', () => {
+    getPlaceGuide.mockReturnValue({ data: guide, isLoading: false, isError: false });
+    const { container } = render(
+      <SuburbGuidePage place={resolved} indexable fallback={<p>fallback</p>} />,
+    );
+    const faq = suburbGuideCoverageFaq('Linden');
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(suburbGuideH1('Linden'));
+    expect(container.textContent).toContain(suburbGuideIntro('Linden'));
+    expect(container.textContent).toContain(faq.question);
+    expect(container.textContent).toContain(faq.answer);
   });
 
   it('takes robots from the place-page indexability', () => {

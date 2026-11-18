@@ -2,6 +2,20 @@ import { COMMERCIAL_ACTIVATION_STATE } from '../../shared/commercialActivation';
 import { COUNTRY_DISCOVERY_PATH } from '../../shared/countryDiscovery';
 import { isPlaceIndexAllowlistedPath } from '../../shared/placeIndexAllowlist';
 import { placePageDescription, placePageTitle } from '../../shared/placePageSeo';
+import {
+  SUBURB_GUIDE_EXPLORER_INTRO,
+  SUBURB_GUIDE_NEIGHBOURHOODS_INTRO,
+  SUBURB_GUIDE_PEOPLE_INTRO,
+  SUBURB_GUIDE_SEARCH_RENT_LABEL,
+  SUBURB_GUIDE_SEARCH_SALE_LABEL,
+  suburbGuideCoverageFaq,
+  suburbGuideExplorerHeading,
+  suburbGuideFaqHeading,
+  suburbGuideH1,
+  suburbGuideIntro,
+  suburbGuideNeighbourhoodsHeading,
+  suburbGuidePeopleHeading,
+} from '../../shared/suburbGuideCopy';
 import { landingPages, NAV_LANDING_ALIASES } from '../../client/src/lib/navLandingPages';
 import {
   buildOrganizationStructuredData,
@@ -58,6 +72,7 @@ function bodyBlock(parts: {
   h1: string;
   paragraphs?: string[];
   links?: { href: string; label: string }[];
+  sections?: { heading: string; paragraph?: string }[];
 }): string {
   return [
     '<main data-prerendered="true">',
@@ -69,6 +84,12 @@ function bodyBlock(parts: {
           .map(link => `<li><a href="${escapeHtml(link.href)}">${escapeHtml(link.label)}</a></li>`)
           .join('')}</ul>`
       : '',
+    ...(parts.sections ?? []).map(
+      section =>
+        `<section><h2>${escapeHtml(section.heading)}</h2>${
+          section.paragraph ? `<p>${escapeHtml(section.paragraph)}</p>` : ''
+        }</section>`,
+    ),
     '</main>',
   ].join('');
 }
@@ -120,8 +141,70 @@ function placeFamily(entry: PlaceEntry): PrerenderPlaceFamily {
   return 'locality';
 }
 
+/**
+ * Mirrors the parts of client/src/pages/SuburbGuidePage.tsx that render without API data.
+ * No counts, prices, listings or neighbourhood rankings: those come from the live guide.
+ */
+function localityPage(entry: PlaceEntry): PrerenderPage {
+  const label = entry.preferred_public_name;
+  const breadcrumb =
+    '<nav aria-label="Breadcrumb">' +
+    '<a href="/">Home</a> / ' +
+    `<a href="/${escapeHtml(entry.province_slug)}">${escapeHtml(entry.province_name)}</a> / ` +
+    `<span aria-current="page">${escapeHtml(label)}</span></nav>`;
+  const placeQuery = new URLSearchParams({ canonicalPlaceId: entry.place_id });
+  const faq = suburbGuideCoverageFaq(label);
+  return {
+    path: entry.path,
+    family: 'locality',
+    title: placePageTitle(label),
+    description: placePageDescription(label, entry.province_name),
+    canonicalPath: entry.path,
+    robots: 'index, follow',
+    structuredData: [
+      ...placeStructuredData(entry.path),
+      {
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: [
+          {
+            '@type': 'Question',
+            name: faq.question,
+            acceptedAnswer: { '@type': 'Answer', text: faq.answer },
+          },
+        ],
+      },
+    ],
+    bodyHtml: bodyBlock({
+      breadcrumb,
+      h1: suburbGuideH1(label),
+      paragraphs: [suburbGuideIntro(label)],
+      links: [
+        {
+          href: `/property-for-sale?${placeQuery}`,
+          label: SUBURB_GUIDE_SEARCH_SALE_LABEL,
+        },
+        {
+          href: `/property-to-rent?${placeQuery}`,
+          label: SUBURB_GUIDE_SEARCH_RENT_LABEL,
+        },
+      ],
+      sections: [
+        {
+          heading: suburbGuideNeighbourhoodsHeading(label),
+          paragraph: SUBURB_GUIDE_NEIGHBOURHOODS_INTRO,
+        },
+        { heading: suburbGuideExplorerHeading(label), paragraph: SUBURB_GUIDE_EXPLORER_INTRO },
+        { heading: suburbGuidePeopleHeading(label), paragraph: SUBURB_GUIDE_PEOPLE_INTRO },
+        { heading: suburbGuideFaqHeading(label), paragraph: `${faq.question} ${faq.answer}` },
+      ],
+    }),
+  };
+}
+
 /** Mirrors client/src/pages/CanonicalPlacePage.tsx for a published, indexable place. */
 function placePage(entry: PlaceEntry): PrerenderPage {
+  if (placeFamily(entry) === 'locality') return localityPage(entry);
   const label = entry.preferred_public_name;
   const broad = entry.search_scope === 'province' || entry.search_scope === 'metro_city';
   const context = entry.path_context

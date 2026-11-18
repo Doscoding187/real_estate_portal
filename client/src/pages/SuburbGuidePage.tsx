@@ -9,6 +9,7 @@ import { isHomepageHeroJourneyEnabled } from '@/lib/publicNavigation';
 import { buildDevelopmentsSearchUrl } from '@/lib/heroJourneySearch';
 import { placeGuideHeroImage } from '@/lib/placeGuideImage';
 import { placePageDescription, placePageTitle } from '@shared/placePageSeo';
+import { suburbGuideCoverageFaq } from '@shared/suburbGuideCopy';
 import type { LocationNode } from '@/types/location';
 import '@/styles/suburb-guide.css';
 
@@ -79,10 +80,7 @@ function buildFaqs(guide: PlaceGuide) {
       question: `What is the median asking price in ${name}?`,
       answer: priceParts.join(' '),
     },
-    {
-      question: `Does Property Listify list every property in ${name}?`,
-      answer: `No. Counts and medians cover only eligible listings published on Property Listify at the snapshot time shown on this page. They are not a census of all homes in ${name} and do not measure buyer demand. Medians use published asking prices, never completed sale prices.`,
-    },
+    suburbGuideCoverageFaq(name),
     {
       question: `How do I get notified about new listings in ${name}?`,
       answer: `Use the listing alert in the Properties in ${name} section of this page to save a weekly search for ${name}. You can choose email and in-app notifications, and manage saved searches from your dashboard.`,
