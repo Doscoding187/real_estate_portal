@@ -28,13 +28,9 @@ import {
 } from '../../shared/transactionalSearchState';
 import { getDb } from '../db-connection';
 import { buildDevelopmentRootPath } from './developmentRouteAuthority';
-import {
-  canonicalPlaceSearchMembers,
-  loadCanonicalPlaceSearchProjection,
-} from './canonicalPlaceSearchService';
 import { publicDevelopmentEligibilityConditions } from './publicDevelopmentEligibility';
 import {
-  listDevelopmentIdsForCanonicalPlaces,
+  listDevelopmentIdsForCanonicalPlace,
   listDevelopmentPlaceGeography,
   type DevelopmentPlaceGeography,
 } from './developmentPlaceAssignmentService';
@@ -84,7 +80,7 @@ export interface PublicDevelopmentSearchResult {
 type LocationResolution = {
   locationState: PublicDevelopmentSearchResult['locationState'];
   locationMessage?: string;
-  matchingPlaceIds?: string[];
+  canonicalPlaceId?: string;
   locationContext?: PublicDevelopmentSearchLocationContext;
 };
 
@@ -247,29 +243,9 @@ async function resolveSearchLocation(
       locationMessage: 'The selected canonical Place is invalid.',
     };
   }
-  // Province scope uses governed Place membership. Finer scopes remain exact;
-  // display labels never decide which developments enter the result set.
-  const projection = await loadCanonicalPlaceSearchProjection(undefined, {
-    placeIds: [input.canonicalPlaceId],
-    includeProvinceMembers: true,
-  });
-  const selected = projection.executions.get(input.canonicalPlaceId);
-  if (!selected || !projection.labels.has(input.canonicalPlaceId)) {
-    return {
-      locationState: 'unavailable',
-      locationMessage: 'The selected Place cannot currently be searched. Choose another Place.',
-    };
-  }
-  const matchingPlaceIds = canonicalPlaceSearchMembers(selected, projection);
-  if (!matchingPlaceIds.length) {
-    return {
-      locationState: 'unavailable',
-      locationMessage: 'The selected Place has no approved search scope. Choose another Place.',
-    };
-  }
   return {
     locationState: 'resolved',
-    matchingPlaceIds,
+    canonicalPlaceId: input.canonicalPlaceId,
     locationContext: { canonicalPlaceId: input.canonicalPlaceId },
   };
 }
@@ -343,7 +319,7 @@ export class PublicDevelopmentSearchService {
       throw new Error(COMMERCIAL_PUBLIC_JOURNEY_HANDOFF_MESSAGE);
     }
     const location = await resolveSearchLocation(input);
-    if (location.locationState !== 'resolved' && location.locationState !== 'not_requested') {
+    if (location.locationState === 'unresolved') {
       return emptyResult(input, location);
     }
 
@@ -351,9 +327,9 @@ export class PublicDevelopmentSearchService {
     if (!db) throw new Error('Database not available');
 
     const conditions: SQL[] = [publicDevelopmentEligibilityConditions()];
-    if (location.matchingPlaceIds) {
-      const matchingDevelopmentIds = await listDevelopmentIdsForCanonicalPlaces(
-        location.matchingPlaceIds,
+    if (location.canonicalPlaceId) {
+      const matchingDevelopmentIds = await listDevelopmentIdsForCanonicalPlace(
+        location.canonicalPlaceId,
       );
       conditions.push(
         matchingDevelopmentIds.length

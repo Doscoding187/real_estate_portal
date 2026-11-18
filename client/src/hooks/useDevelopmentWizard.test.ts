@@ -126,6 +126,41 @@ describe('useDevelopmentWizard Validation Logic', () => {
   });
 
   describe('Final Publish Validation', () => {
+    it('allows publishing without optional launch and completion dates', () => {
+      const { result } = renderHook(() => useDevelopmentWizard());
+
+      act(() => {
+        result.current.setIdentity({
+          name: 'Optional Dates Development',
+          status: 'selling',
+          transactionType: 'for_sale',
+          ownershipTypes: ['sectional-title'],
+          launchDate: null,
+          completionDate: null,
+          expectedFirstHandoverDate: null,
+          handoverDuringConstruction: false,
+          location: {
+            address: '123 Main Road',
+            city: 'Cape Town',
+            province: 'Western Cape',
+            latitude: '-33.9',
+            longitude: '18.4',
+          },
+          highlights: ['Secure access', 'Modern homes', 'Close to transport'],
+          description:
+            'A completed development description with enough detail to satisfy the required minimum length.',
+        });
+        result.current.setClassification({ type: 'land' });
+        result.current.addMedia({
+          type: 'image',
+          category: 'featured',
+          url: 'https://example.com/hero.jpg',
+        });
+      });
+
+      expect(result.current.validateForPublish()).toEqual({ isValid: true, errors: [] });
+    });
+
     it('should enforce image requirement', () => {
       const { result } = renderHook(() => useDevelopmentWizard());
 

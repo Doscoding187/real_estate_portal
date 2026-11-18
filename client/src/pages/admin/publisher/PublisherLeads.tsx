@@ -29,6 +29,7 @@ function leadMatchesSearch(lead: any, searchTerm: string): boolean {
 
 function csvCell(value: unknown): string {
   let content = value === null || value === undefined ? '' : String(value);
+  // eslint-disable-next-line no-control-regex -- CSV formula-injection guard
   if (/^[\s\u0000-\u001f]*[=+\-@]/.test(content)) content = `'${content}`;
   return `"${content.replace(/"/g, '""')}"`;
 }
