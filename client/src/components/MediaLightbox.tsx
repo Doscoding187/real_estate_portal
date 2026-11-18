@@ -76,7 +76,7 @@ export function MediaLightbox({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center"
+      className="fixed inset-0 z-[1000] bg-black/95 flex items-center justify-center"
       onClick={onClose}
     >
       {/* Header */}

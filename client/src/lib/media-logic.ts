@@ -1,7 +1,7 @@
 export type ImageCategory =
   | 'featured'
-  | 'general' // often maps to 'interior'
-  | 'interior'
+  | 'general' // Development-wide visuals and site plans.
+  | 'interior' // Legacy development category; unit interiors belong to unit galleries.
   | 'amenities'
   | 'outdoors'
   | 'photo' // location/neighborhood
@@ -16,6 +16,7 @@ export type ImageMedia = {
 export type VideoMedia = {
   url: string;
   title?: string; // Optional title for thumbnail overlays
+  thumbnailUrl?: string;
 };
 
 export type DevelopmentMedia = {
@@ -24,14 +25,35 @@ export type DevelopmentMedia = {
   videos: VideoMedia[];
 };
 
-const getUniqueImages = (media: DevelopmentMedia): ImageMedia[] => {
+export type DevelopmentGalleryTile = {
+  image: ImageMedia;
+  label: string;
+  index: number;
+};
+
+const DEVELOPMENT_IMAGE_CATEGORY_LABELS: Record<ImageCategory, string> = {
+  featured: 'Featured',
+  general: 'Development Overview',
+  interior: 'Interior',
+  amenities: 'Amenities',
+  outdoors: 'Exterior & Outdoors',
+  photo: 'Location & Views',
+  render: 'Aerial & Drone',
+};
+
+const getUniqueDevelopmentImages = (media: DevelopmentMedia): ImageMedia[] => {
   const seen = new Set<string>();
   return [media.featuredImage, ...media.images].filter((img): img is ImageMedia => {
-    if (!img?.url || seen.has(img.url)) return false;
+    // Older development records may still contain interiors. Keep those assets
+    // stored, but do not repeat unit-specific room imagery on the development page.
+    if (!img?.url || img.category === 'interior' || seen.has(img.url)) return false;
     seen.add(img.url);
     return true;
   });
 };
+
+const getFeaturedDevelopmentImage = (media: DevelopmentMedia): ImageMedia | undefined =>
+  media.featuredImage?.category === 'interior' ? undefined : media.featuredImage;
 
 const pickFirstByCategory = (
   images: ImageMedia[],
@@ -45,7 +67,7 @@ const pickFallbackImage = (
   categoryOrder: ImageCategory[][],
   excludedUrls: Set<string> = new Set(),
 ): ImageMedia | undefined => {
-  const images = getUniqueImages(media);
+  const images = getUniqueDevelopmentImages(media);
 
   for (const categoryGroup of categoryOrder) {
     const match = pickFirstByCategory(images, categoryGroup, excludedUrls);
@@ -68,36 +90,34 @@ const pickFallbackImage = (
  * Videos strictly forbidden.
  */
 export function getDevelopmentCardImage(media: DevelopmentMedia): ImageMedia | undefined {
-  return media.featuredImage || getUniqueImages(media)[0];
+  return getFeaturedDevelopmentImage(media) || getUniqueDevelopmentImages(media)[0];
 }
 
 /**
  * The main hero slot on the Details page.
- * Logic: Video > Featured Image.
+ * Use the first available development video as the hero; fall back to the selected photo.
  */
 export function getDevelopmentHeroMedia(
   media: DevelopmentMedia,
 ): { type: 'video'; video: VideoMedia } | { type: 'image'; image: ImageMedia | undefined } {
-  if (media.videos.length > 0) {
-    return {
-      type: 'video',
-      video: media.videos[0],
-    };
+  const featuredVideo = media.videos.find(video => Boolean(video.url));
+  if (featuredVideo) {
+    return { type: 'video', video: featuredVideo };
   }
 
   return {
     type: 'image',
-    image: media.featuredImage || getUniqueImages(media)[0],
+    image: getFeaturedDevelopmentImage(media) || getUniqueDevelopmentImages(media)[0],
   };
 }
 
 /**
  * Builds the canonical ordered array of images for the lightbox.
- * Order: Featured -> Interior/General -> Amenities -> Outdoors -> Rest.
+ * Order: Featured -> Development Overview -> Amenities -> Outdoors -> Rest.
  * STRICTLY images only. No videos.
  */
 export function buildDevelopmentGalleryImages(media: DevelopmentMedia): ImageMedia[] {
-  const uniqueImages = getUniqueImages(media);
+  const uniqueImages = getUniqueDevelopmentImages(media);
   const featured = media.featuredImage
     ? uniqueImages.filter(img => img.url === media.featuredImage?.url)
     : [];
@@ -109,7 +129,6 @@ export function buildDevelopmentGalleryImages(media: DevelopmentMedia): ImageMed
 
   // Approximate category grouping (stable sort)
   const categoryPriority: Record<string, number> = {
-    interior: 1,
     general: 1,
     amenities: 2,
     outdoors: 3,
@@ -127,54 +146,71 @@ export function buildDevelopmentGalleryImages(media: DevelopmentMedia): ImageMed
 }
 
 /**
- * Finds the index of the first image in a specific category.
+ * Select up to two distinct gallery photos for the detail-page side cards.
+ * Prefer category variety, then fill any remaining slot with another photo.
  */
-export function getGalleryStartIndex(gallery: ImageMedia[], category: ImageCategory): number {
-  if (!gallery.length) return 0;
+export function getDevelopmentGalleryTiles(
+  gallery: ImageMedia[],
+  featuredImage?: ImageMedia,
+): DevelopmentGalleryTile[] {
+  const excludedUrls = new Set(featuredImage?.url ? [featuredImage.url] : []);
+  const candidates = gallery.filter(
+    image => image.url && image.category !== 'interior' && !excludedUrls.has(image.url),
+  );
+  const selected: ImageMedia[] = [];
+  const selectedUrls = new Set<string>();
+  const seenCategories = new Set<ImageCategory>();
 
-  if (category === 'interior') {
-    const idx = gallery.findIndex(img => img.category === 'interior' || img.category === 'general');
-    return idx !== -1 ? idx : 0;
+  for (const image of candidates) {
+    if (seenCategories.has(image.category)) continue;
+    selected.push(image);
+    selectedUrls.add(image.url);
+    seenCategories.add(image.category);
+    if (selected.length === 2) break;
   }
 
-  const index = gallery.findIndex(img => img.category === category);
-  return index !== -1 ? index : 0;
+  if (selected.length < 2) {
+    for (const image of candidates) {
+      if (selectedUrls.has(image.url)) continue;
+      selected.push(image);
+      selectedUrls.add(image.url);
+      if (selected.length === 2) break;
+    }
+  }
+
+  return selected.flatMap(image => {
+    const index = gallery.findIndex(candidate => candidate.url === image.url);
+    if (index < 0) return [];
+    return [{ image, label: DEVELOPMENT_IMAGE_CATEGORY_LABELS[image.category], index }];
+  });
 }
 
-/**
- * Logic for the "View Gallery" tile (usually bottom right or large tile).
- */
+export function getDevelopmentGalleryRemainderTileImage(
+  gallery: ImageMedia[],
+  featuredImage: ImageMedia | undefined,
+  tiles: DevelopmentGalleryTile[],
+): ImageMedia | undefined {
+  const excludedUrls = new Set([
+    ...(featuredImage?.url ? [featuredImage.url] : []),
+    ...tiles.map(tile => tile.image.url),
+  ]);
+  return gallery.find(image => image.url && !excludedUrls.has(image.url));
+}
+
+/** Selects the still photo shown beside the hero video or behind video previews. */
 export function getDevelopmentViewGalleryTileImage(
   media: DevelopmentMedia,
 ): ImageMedia | undefined {
   if (media.videos.length > 0) {
-    return media.featuredImage || getUniqueImages(media)[0];
+    return getFeaturedDevelopmentImage(media) || getUniqueDevelopmentImages(media)[0];
   }
-  const excludedUrls = new Set<string>(media.featuredImage?.url ? [media.featuredImage.url] : []);
-  return (
-    pickFallbackImage(
-      media,
-      [['interior', 'general'], ['amenities'], ['outdoors'], ['photo'], ['render']],
-      excludedUrls,
-    ) ??
-    media.featuredImage ??
-    getUniqueImages(media)[0]
+  const featuredImage = getFeaturedDevelopmentImage(media);
+  const excludedUrls = new Set<string>(featuredImage?.url ? [featuredImage.url] : []);
+  return pickFallbackImage(
+    media,
+    [['general'], ['amenities'], ['outdoors'], ['photo'], ['render']],
+    excludedUrls,
   );
-}
-
-/**
- * Category tiles are literal jump points. Never borrow a featured or unrelated
- * image, because the tile label must describe the photo it shows.
- */
-export function getDevelopmentAmenityTileImage(media: DevelopmentMedia): ImageMedia | undefined {
-  return pickFirstByCategory(getUniqueImages(media), ['amenities']);
-}
-
-/**
- * Outdoors Tile
- */
-export function getDevelopmentOutdoorsTileImage(media: DevelopmentMedia): ImageMedia | undefined {
-  return pickFirstByCategory(getUniqueImages(media), ['outdoors']);
 }
 
 // =============================================================================
@@ -209,6 +245,7 @@ export function getUnitTypeCardImage(media: UnitTypeMedia): UnitImage | undefine
  */
 export function getVideoThumbnail(video: VideoMedia): string | undefined {
   if (!video.url) return undefined;
+  if (video.thumbnailUrl) return video.thumbnailUrl;
 
   if (video.url.includes('youtube') || video.url.includes('youtu.be')) {
     const match = video.url.match(/(?:youtu\.be\/|youtube\.com\/.*v=)([^&]+)/);

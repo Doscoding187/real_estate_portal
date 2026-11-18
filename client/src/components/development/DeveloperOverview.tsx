@@ -1,8 +1,9 @@
-import { Building2, ChevronRight } from 'lucide-react';
+import { Building2, ChevronRight, Home, Trophy } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
 interface DeveloperOverviewProps {
+  variant?: 'default' | 'concept';
   developerName: string;
   developerLogo?: string | null;
   developerDescription?: string | null;
@@ -18,6 +19,7 @@ interface DeveloperOverviewProps {
 }
 
 export function DeveloperOverview({
+  variant = 'default',
   developerName,
   developerLogo,
   developerDescription,
@@ -43,6 +45,87 @@ export function DeveloperOverview({
       ? null
       : date.toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' });
   })();
+
+  if (variant === 'concept') {
+    const developerRegion = headOfficeLocation?.split(',').pop()?.trim();
+
+    return (
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+        <div className="flex items-center gap-2.5">
+          <Building2 className="h-5 w-5 text-blue-600" aria-hidden="true" />
+          <h2 className="text-lg font-extrabold tracking-tight text-slate-900">
+            {isPlatformReference ? 'About this development' : 'Meet the Developer'}
+          </h2>
+        </div>
+
+        <div className="mt-3 grid gap-4 sm:grid-cols-[154px_minmax(0,1fr)] sm:items-center">
+          <div className="flex h-[112px] items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white p-3">
+            {developerLogo ? (
+              <img
+                src={developerLogo}
+                alt={`${developerName} logo`}
+                className="h-full w-full object-contain"
+              />
+            ) : (
+              <Building2 className="h-9 w-9 text-slate-400" aria-hidden="true" />
+            )}
+          </div>
+
+          <div className="min-w-0">
+            <h3 className="text-base font-extrabold text-slate-900">{developerName}</h3>
+            <p className="mt-0.5 text-xs font-medium text-slate-500">
+              {isPlatformReference ? 'Development publisher' : 'Property Developer'}
+              {developerRegion ? ` · ${developerRegion}` : ''}
+            </p>
+            <p className="mt-3 line-clamp-3 text-xs leading-relaxed text-slate-600">
+              {developerDescription?.trim()
+                ? developerDescription
+                : isPlatformReference
+                  ? 'No additional publisher description has been provided.'
+                  : 'No public developer description has been provided.'}
+            </p>
+            {!isPlatformReference && developerSlug ? (
+              <a
+                href={`/developer/${developerSlug}`}
+                className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-blue-700 hover:text-blue-900"
+              >
+                View Developer Profile <ChevronRight className="h-3.5 w-3.5" />
+              </a>
+            ) : null}
+            {isPlatformReference && (sourceAttribution || formattedLastVerifiedAt) ? (
+              <p className="mt-2 text-[10px] leading-relaxed text-slate-500">
+                Marketplace information maintained by Property Listify
+                {formattedLastVerifiedAt ? ` · Reviewed ${formattedLastVerifiedAt}` : ''}
+              </p>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="mt-4 grid grid-cols-3 divide-x divide-blue-200 rounded-xl bg-blue-50/80 px-2 py-3 text-center">
+          <div className="flex flex-col items-center justify-center px-1">
+            <span className="text-lg font-extrabold leading-tight text-blue-950">
+              {yearsExperience ? `${yearsExperience}+` : '—'}
+            </span>
+            <span className="mt-1 text-[10px] font-medium leading-tight text-slate-600">
+              Years of Experience
+            </span>
+          </div>
+          <div className="flex flex-col items-center justify-center gap-1 px-1 text-blue-600">
+            <Trophy className="h-5 w-5" aria-hidden="true" />
+            <span className="text-[10px] font-medium leading-tight text-slate-600">
+              Completed Projects
+            </span>
+          </div>
+          <div className="flex flex-col items-center justify-center gap-1 px-1 text-blue-600">
+            <Home className="h-5 w-5 fill-current" aria-hidden="true" />
+            <span className="text-[10px] font-medium leading-tight text-slate-600">
+              Current Projects
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-xl border border-slate-200 bg-slate-50 p-6 shadow-sm">

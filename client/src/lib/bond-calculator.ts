@@ -3,17 +3,17 @@
  * Uses SA Prime Rate and bank-specific margins
  */
 
-// Current SA Prime Rate (as of 2025) - Update periodically
-export const SA_PRIME_RATE = 11.75; // SARB prime lending rate
+// Current SA prime lending rate effective 25 September 2026. Refresh after MPC changes.
+export const SA_PRIME_RATE = 10.75;
 
 // Major SA Banks and their typical bond rate margins above prime
 export const SA_BANKS = {
-  'Standard Bank': { margin: 0, minRate: 11.75 },
-  FNB: { margin: 0, minRate: 11.75 },
-  Absa: { margin: 0, minRate: 11.75 },
-  Nedbank: { margin: 0, minRate: 11.75 },
-  Capitec: { margin: 0, minRate: 11.75 },
-  Other: { margin: 0, minRate: 11.75 },
+  'Standard Bank': { margin: 0, minRate: SA_PRIME_RATE },
+  FNB: { margin: 0, minRate: SA_PRIME_RATE },
+  Absa: { margin: 0, minRate: SA_PRIME_RATE },
+  Nedbank: { margin: 0, minRate: SA_PRIME_RATE },
+  Capitec: { margin: 0, minRate: SA_PRIME_RATE },
+  Other: { margin: 0, minRate: SA_PRIME_RATE },
 } as const;
 
 // Standard bond terms in SA (years)

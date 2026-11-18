@@ -1,9 +1,20 @@
 import { useState } from 'react';
-import { Bus, Footprints, Heart, MapPin, School, ShoppingBag, Ticket } from 'lucide-react';
+import {
+  ArrowRight,
+  Bus,
+  Car,
+  Footprints,
+  Heart,
+  MapPin,
+  School,
+  ShoppingBag,
+  Ticket,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { trpc } from '@/lib/trpc';
 
 interface NearbyLandmarksProps {
+  variant?: 'default' | 'compact';
   property: {
     id: number;
     title: string;
@@ -52,7 +63,8 @@ const formatDistanceOnly = (rawDistance: unknown) => {
  * new public consumer; Location Intelligence V1 will replace this with a
  * governed location-context contract.
  */
-export function NearbyLandmarks({ property }: NearbyLandmarksProps) {
+export function NearbyLandmarks({ property, variant = 'default' }: NearbyLandmarksProps) {
+  const isCompact = variant === 'compact';
   const [activeTab, setActiveTab] = useState('Education');
   const [isMapPreviewUnavailable, setIsMapPreviewUnavailable] = useState(!googleMapsBrowserKey);
   const latitude =
@@ -72,8 +84,12 @@ export function NearbyLandmarks({ property }: NearbyLandmarksProps) {
       latitude: latitude || 0,
       longitude: longitude || 0,
       radius: 5000,
-      categories: activeTabConfig ? [activeTabConfig.category] : [],
-      limit: 5,
+      categories: isCompact
+        ? TABS.map(tab => tab.category)
+        : activeTabConfig
+          ? [activeTabConfig.category]
+          : [],
+      limit: isCompact ? 4 : 5,
     },
     {
       enabled: Boolean(activeTabConfig) && hasValidCoordinates,
@@ -91,6 +107,86 @@ export function NearbyLandmarks({ property }: NearbyLandmarksProps) {
     );
   };
 
+  const mapPreview = (
+    <div
+      className={`group relative overflow-hidden rounded-xl border border-slate-200 ${isCompact ? 'h-[170px] sm:h-[190px]' : 'mt-5 h-[190px] sm:h-[240px]'}`}
+    >
+      {isMapPreviewUnavailable ? (
+        <div
+          role="status"
+          className="absolute inset-0 flex flex-col items-center justify-center bg-slate-50 px-6 text-center text-slate-600"
+        >
+          <MapPin className="mb-2 h-8 w-8 text-slate-300" aria-hidden="true" />
+          <p className="text-sm font-medium text-slate-700">Map preview unavailable</p>
+          <p className="mt-1 text-xs text-slate-500">Open the property area in Google Maps.</p>
+        </div>
+      ) : (
+        <img
+          src={`https://maps.googleapis.com/maps/api/staticmap?center=${latitude},${longitude}&zoom=14&size=800x400&maptype=roadmap&markers=color:red%7C${latitude},${longitude}&key=${googleMapsBrowserKey}`}
+          alt={`Map preview of ${property.title}`}
+          className="absolute inset-0 h-full w-full object-cover"
+          onError={() => setIsMapPreviewUnavailable(true)}
+        />
+      )}
+      {!isCompact ? (
+        <div className="absolute inset-0 flex items-center justify-center opacity-100 md:pointer-events-none md:opacity-0 md:transition-opacity md:group-hover:pointer-events-auto md:group-hover:opacity-100 md:group-focus-within:pointer-events-auto md:group-focus-within:opacity-100">
+          <Button
+            onClick={handleOpenMap}
+            className="rounded-full bg-blue-600 px-5 text-white shadow-lg hover:bg-blue-700"
+          >
+            <MapPin className="mr-2 h-4 w-4" />
+            Open in Google Maps
+          </Button>
+        </div>
+      ) : null}
+    </div>
+  );
+
+  if (isCompact) {
+    return (
+      <div className="grid gap-4 md:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] md:items-center">
+        <div>
+          {mapPreview}
+          <button
+            type="button"
+            onClick={handleOpenMap}
+            className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-blue-700 hover:text-blue-900"
+          >
+            View larger map <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
+        </div>
+        <div className="divide-y divide-slate-100">
+          {connectedPOIs.length > 0 ? (
+            connectedPOIs.slice(0, 4).map((poi, index) => {
+              const Icon =
+                poi.category === 'shopping'
+                  ? Car
+                  : TABS.find(tab => tab.category === poi.category)?.icon || MapPin;
+              return (
+                <div
+                  key={poi.id || index}
+                  className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0"
+                >
+                  <Icon className="h-4 w-4 shrink-0 text-blue-700" aria-hidden="true" />
+                  <p className="min-w-0 flex-1 truncate text-xs font-semibold text-slate-800">
+                    {poi.name}
+                  </p>
+                  <span className="shrink-0 text-[10px] font-semibold text-slate-500">
+                    {formatDistanceOnly(poi.distance)}
+                  </span>
+                </div>
+              );
+            })
+          ) : (
+            <p className="py-3 text-xs leading-relaxed text-slate-500">
+              Nearby destinations are not available for this location yet.
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <section
       className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
@@ -104,36 +200,7 @@ export function NearbyLandmarks({ property }: NearbyLandmarksProps) {
           Use the public listing location to explore the surrounding area.
         </p>
 
-        <div className="group relative mt-5 h-[190px] overflow-hidden rounded-xl border border-slate-200 sm:h-[240px]">
-          {isMapPreviewUnavailable ? (
-            <div
-              role="status"
-              className="absolute inset-0 flex flex-col items-center justify-center bg-slate-50 px-6 text-center text-slate-600"
-            >
-              <MapPin className="mb-2 h-8 w-8 text-slate-300" aria-hidden="true" />
-              <p className="text-sm font-medium text-slate-700">Map preview unavailable</p>
-              <p className="mt-1 text-xs text-slate-500">
-                Open the property area in Google Maps instead.
-              </p>
-            </div>
-          ) : (
-            <img
-              src={`https://maps.googleapis.com/maps/api/staticmap?center=${latitude},${longitude}&zoom=14&size=800x400&maptype=roadmap&markers=color:red%7C${latitude},${longitude}&key=${googleMapsBrowserKey}`}
-              alt={`Map preview of ${property.title}`}
-              className="absolute inset-0 h-full w-full object-cover"
-              onError={() => setIsMapPreviewUnavailable(true)}
-            />
-          )}
-          <div className="absolute inset-0 flex items-center justify-center opacity-100 md:pointer-events-none md:opacity-0 md:transition-opacity md:group-hover:pointer-events-auto md:group-hover:opacity-100 md:group-focus-within:pointer-events-auto md:group-focus-within:opacity-100">
-            <Button
-              onClick={handleOpenMap}
-              className="rounded-full bg-blue-600 px-5 text-white shadow-lg hover:bg-blue-700"
-            >
-              <MapPin className="mr-2 h-4 w-4" />
-              Open in Google Maps
-            </Button>
-          </div>
-        </div>
+        {mapPreview}
 
         {hasCredibleNearbyPlaces && (
           <div className="mt-5">
