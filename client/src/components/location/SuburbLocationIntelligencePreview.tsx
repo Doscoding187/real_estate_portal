@@ -896,7 +896,13 @@ export function SuburbLocationIntelligencePreview({
                   ) : null}
                   <SuburbListingAlert suburbName={suburbName} canonicalPlaceId={canonicalPlaceId} />
                 </div>
-              ) : null}
+              ) : (
+                <SuburbListingAlert
+                  variant="inline"
+                  suburbName={suburbName}
+                  canonicalPlaceId={canonicalPlaceId}
+                />
+              )}
             </div>
           </section>
         ) : null}

@@ -83,6 +83,10 @@ function buildFaqs(guide: PlaceGuide) {
       question: `Does Property Listify list every property in ${name}?`,
       answer: `No. Counts and medians cover only eligible listings published on Property Listify at the snapshot time shown on this page. They are not a census of all homes in ${name} and do not measure buyer demand. Medians use published asking prices, never completed sale prices.`,
     },
+    {
+      question: `How do I get notified about new listings in ${name}?`,
+      answer: `Use the listing alert in the Properties in ${name} section of this page to save a weekly search for ${name}. You can choose email and in-app notifications, and manage saved searches from your dashboard.`,
+    },
   ];
 }
 

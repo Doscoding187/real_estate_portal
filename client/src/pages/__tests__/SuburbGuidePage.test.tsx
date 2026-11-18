@@ -134,6 +134,11 @@ describe('SuburbGuidePage', () => {
     expect(container.textContent).not.toContain('Sandton');
     expect(container.textContent).not.toContain('Design preview');
     expect(container.querySelector('img[role="img"]')).toBeNull();
+    expect(container.querySelectorAll('.suburb-guide-faqs__item')).toHaveLength(6);
+    expect(container.textContent).toContain('How do I get notified about new listings in Linden?');
+    // Labels come from the server as given.
+    expect(container.textContent).toContain('Nearby suburb');
+    expect(container.textContent).toContain('Suburb · No listings yet');
   });
 
   it('takes robots from the place-page indexability', () => {
