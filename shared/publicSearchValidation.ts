@@ -1,4 +1,5 @@
 import { isCanonicalPlaceId } from './placeAuthority';
+import { MULTI_LOCATION_MAX } from './searchScope';
 import { BUY_PUBLIC_PROPERTY_TYPES, RENT_PUBLIC_PROPERTY_TYPES } from './property-taxonomy';
 
 export interface PublicSearchInputValidationIssue {
@@ -8,6 +9,8 @@ export interface PublicSearchInputValidationIssue {
 
 interface PublicSearchInputLike {
   canonicalPlaceId?: string;
+  /** Several selected Places (1..MULTI_LOCATION_MAX), exclusive with canonicalPlaceId. */
+  canonicalPlaceIds?: readonly string[];
   listingType?: 'sale' | 'rent';
   propertyType?: string;
   minPrice?: number;
@@ -47,7 +50,6 @@ export function validatePublicSearchInput(
     'locationId',
     'factualLocationId',
     'locationIds',
-    'canonicalPlaceIds',
     'searchAreaIds',
     'searchAreaId',
   ]) {
@@ -146,6 +148,28 @@ export function validatePublicSearchInput(
       return {
         path: 'minLat',
         message: 'Map bounds must be complete and ordered within geographic limits.',
+      };
+    }
+  }
+
+  if (input.canonicalPlaceIds !== undefined) {
+    if (input.canonicalPlaceId !== undefined) {
+      return {
+        path: 'canonicalPlaceIds',
+        message: 'Use either one canonical Place or a list of canonical Places, not both.',
+      };
+    }
+    const ids = input.canonicalPlaceIds as unknown;
+    if (
+      !Array.isArray(ids) ||
+      ids.length < 1 ||
+      ids.length > MULTI_LOCATION_MAX ||
+      !ids.every(id => typeof id === 'string' && isCanonicalPlaceId(id)) ||
+      new Set(ids).size !== ids.length
+    ) {
+      return {
+        path: 'canonicalPlaceIds',
+        message: `Choose between 1 and ${MULTI_LOCATION_MAX} distinct valid canonical Places.`,
       };
     }
   }
