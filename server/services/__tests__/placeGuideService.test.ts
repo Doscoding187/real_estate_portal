@@ -32,6 +32,7 @@ import {
 import {
   orderNeighbourhoods,
   percentDelta,
+  pickNearbyMarkets,
   placeGuideService,
   selectPlaceGuideCandidates,
 } from '../placeGuideService';
@@ -66,9 +67,9 @@ const LAYOUT: Array<[string, number, string]> = [
   ['N5', 5 * STEP, CITY],
   ['N6', 6 * STEP, CITY],
   ['N7', 7 * STEP, CITY],
-  ['X1', 0.005, OTHER_CITY],
-  ['X2', -0.025, OTHER_CITY],
-  ['X3', -0.045, OTHER_CITY],
+  ['X1', 0.065, OTHER_CITY],
+  ['X2', 0.075, OTHER_CITY],
+  ['X3', 0.08, OTHER_CITY],
   ['X4', -0.2, OTHER_CITY],
 ];
 
@@ -113,12 +114,12 @@ function install(rows: FactRow[], opts: { ineligible?: number[] } = {}) {
     const executions = new Map();
     const labels = new Map();
     for (const id of options.placeIds) {
-      const parent = id === SELF || id.startsWith('N') ? CITY : OTHER_CITY;
       executions.set(id, {
         placeId: id,
         scope: id === CITY || id === OTHER_CITY ? 'metro_city' : 'locality',
         provincePlaceId: 'prov',
-        cityPlaceId: parent,
+        // Real authority data: localities under a municipality carry no cityPlaceId.
+        cityPlaceId: id === CITY || id === OTHER_CITY ? id : null,
       });
       labels.set(id, { label: id });
     }
@@ -229,15 +230,17 @@ describe('selectPlaceGuideCandidates and orderNeighbourhoods', () => {
       'N7',
     ]);
     expect(marketPool.map(item => item.entry.canonicalPlaceId)).toEqual([
-      'X1',
       'N1',
       'N2',
-      'X2',
       'N3',
       'N4',
-      'X3',
       'N5',
       'N6',
+      'X1',
+      'N7',
+      'X2',
+      'X3',
+      'X4',
     ]);
   });
 
@@ -308,11 +311,15 @@ describe('placeGuideService.getPlaceGuide', () => {
     expect(guide.neighbourhoods.every(item => item.coverImageUrl === null)).toBe(true);
     expect(guide.neighbourhoods[0]).toMatchObject({ typeLabel: 'Suburb', distanceKm: 3.3 });
     const marketIds = guide.nearbyMarkets.map(item => item.placeId);
-    expect(marketIds).toEqual(['X1', 'X2', 'X3', 'N6']);
+    // Outside the city and not closer than the farthest chosen neighbourhood (N5, 5.6 km).
+    expect(marketIds).toEqual(['X1', 'X2', 'X3', 'X4']);
     expect(marketIds).not.toContain(SELF);
     for (const id of guide.neighbourhoods.map(item => item.placeId))
       expect(marketIds).not.toContain(id);
-    expect(guide.nearbyMarkets.map(item => item.distanceKm)).toEqual([0.6, 2.8, 5, 6.7]);
+    expect(guide.nearbyMarkets.map(item => item.distanceKm)).toEqual([7.2, 8.3, 8.9, 22.2]);
+    const farthest = Math.max(...guide.neighbourhoods.map(item => item.distanceKm as number));
+    for (const market of guide.nearbyMarkets)
+      expect(market.distanceKm).toBeGreaterThanOrEqual(farthest);
   });
 
   it('computes deltas only when both sides meet the threshold, with sign and rounding', async () => {
@@ -384,6 +391,69 @@ describe('placeGuideService.getPlaceGuide', () => {
     expect(guide.neighbourhoods[1].distanceKm).toBe(1.1);
     expect(guide.nearbyMarkets.map(item => item.placeId)).toEqual([OTHER_CITY]);
     expect(guide.nearbyMarkets[0].levelLabel).toBe('Town');
+  });
+
+  it('regression (real data): Sandton gets same-area neighbourhoods that are not repeated as markets', async () => {
+    install([]);
+    const projectionFile = JSON.parse(
+      readFileSync(resolve(process.cwd(), 'data/place-url-projection-national-v0.1.json'), 'utf8'),
+    ) as { entries: Array<Record<string, any>> };
+    const byId = new Map(projectionFile.entries.map(item => [item.place_id as string, item]));
+    mockPlaceUrl.mockImplementation((id: string) => byId.get(id) ?? null);
+    // As in the real authority, localities under a municipality have no cityPlaceId.
+    mockLoadProjection.mockImplementation(async (_db: unknown, options: { placeIds: string[] }) => {
+      const executions = new Map();
+      const labels = new Map();
+      for (const id of options.placeIds) {
+        const found = byId.get(id);
+        if (!found) continue;
+        executions.set(id, {
+          placeId: id,
+          scope: found.search_scope,
+          provincePlaceId: found.province_place_id,
+          cityPlaceId: found.search_scope === 'metro_city' ? id : null,
+        });
+        labels.set(id, { label: found.preferred_public_name });
+      }
+      return { executions, labels };
+    });
+    const sandton = 'pl-place-01-dee61758ef3bda7cd1a258ad'; // /gauteng/city-of-johannesburg/sandton
+    const guide = (await placeGuideService.getPlaceGuide(sandton))!;
+    const names = guide.neighbourhoods.map(item => item.name);
+    expect(guide.place.centre).not.toBeNull();
+    expect(guide.neighbourhoods.length).toBeGreaterThanOrEqual(3);
+    expect(names).toEqual(expect.arrayContaining(['Sandown', 'Atholl Gardens']));
+    const neighbourIds = new Set(guide.neighbourhoods.map(item => item.placeId));
+    for (const market of guide.nearbyMarkets) expect(neighbourIds.has(market.placeId)).toBe(false);
+    const farthest = Math.max(...guide.neighbourhoods.map(item => item.distanceKm as number));
+    for (const market of guide.nearbyMarkets)
+      expect(market.distanceKm).toBeGreaterThanOrEqual(farthest);
+    // No internal words leak into labels.
+    for (const label of [
+      ...guide.neighbourhoods.map(item => item.typeLabel),
+      ...guide.nearbyMarkets.map(item => item.levelLabel),
+    ]) {
+      expect(label).toMatch(/^(Suburb|Neighbourhood|Village|Town|City|Area)$/);
+    }
+  });
+
+  it('pickNearbyMarkets fills with same-city places beyond the neighbours when nothing else exists', () => {
+    const candidate = (id: string, km: number, parent: string | null) => ({
+      entry: { canonicalPlaceId: id, parentCityPlaceId: parent } as PlaceCentroidEntry,
+      distanceKm: km,
+    });
+    const picked = pickNearbyMarkets(
+      [
+        candidate('a', 1, CITY),
+        candidate('b', 3, CITY),
+        candidate('c', 4, CITY),
+        candidate('d', 5, OTHER_CITY),
+      ],
+      new Set(['a']),
+      2,
+      CITY,
+    );
+    expect(picked.map(item => item.entry.canonicalPlaceId)).toEqual(['b', 'c', 'd']);
   });
 
   it('returns null for an unknown or unpublished place', async () => {
