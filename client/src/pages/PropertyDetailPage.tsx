@@ -45,6 +45,10 @@ import { getPropertySearchReturn } from '@/lib/searchReturnState';
 import { PropertyContactModal } from '@/components/property/PropertyContactModal';
 import { PropertyShareModal } from '@/components/property/PropertyShareModal';
 import { PropertyLocationOverview } from '@/components/property/PropertyLocationOverview';
+import { PurchaseUnderstandingPanel } from '@/components/property/PurchaseUnderstandingPanel';
+import { MarketInsightsPanel } from '@/components/property/MarketInsightsPanel';
+import { PropertyAgentProfileCard } from '@/components/property/PropertyAgentProfileCard';
+import { CanYouAffordPanel } from '@/components/property/CanYouAffordPanel';
 import {
   DeveloperBrandSection,
   type DeveloperBrandData,
@@ -98,6 +102,10 @@ interface PropertyPayload {
   zipCode?: string;
   price?: number | string;
   propertyType?: string;
+  bedrooms?: number | string;
+  bathrooms?: number | string;
+  internalAreaM2?: number | string;
+  area?: number | string;
   featured?: number;
   developerBrand?: DeveloperBrandLite;
   development?: DevelopmentLite;
@@ -111,12 +119,6 @@ interface PropertyDetailResponse {
   images?: PropertyImageLike[];
   media?: PublicPropertyMedia[];
 }
-
-type RelatedPropertyFact = {
-  key: string;
-  label: string;
-  Icon: React.ElementType;
-};
 
 const detailIcons: Record<PublicPropertyDetailIcon, React.ElementType> = {
   area: PROPERTY_FACT_ICONS.residentialSize,
@@ -151,7 +153,7 @@ function DetailFactGrid({
   variant,
 }: {
   facts: PublicPropertyDetailFact[];
-  variant: 'hero' | 'checks' | 'context';
+  variant: 'hero' | 'checks' | 'context' | 'contextInline';
 }) {
   if (facts.length === 0) return null;
 
@@ -214,6 +216,29 @@ function DetailFactGrid({
     );
   }
 
+  if (variant === 'contextInline') {
+    return (
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        {facts.map(item => {
+          const Icon = detailIcons[item.icon];
+          return (
+            <div
+              key={item.key}
+              title={`${item.label}: ${item.value}`}
+              className="inline-flex min-w-0 items-center gap-1.5 border-r border-slate-200 pr-4 last:border-r-0 last:pr-0"
+            >
+              <Icon className="h-4 w-4 shrink-0 text-blue-600" aria-hidden="true" />
+              <span className="whitespace-nowrap text-xs text-slate-500">{item.label}</span>
+              <span className={cn('whitespace-nowrap text-xs font-bold', textForStatus(item))}>
+                {item.compactValue || item.value}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
   return (
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
       {facts.map(item => {
@@ -245,6 +270,7 @@ export default function PropertyDetailPage({ propertyId: propPropertyId }: Prope
 
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [activeComparableIndex, setActiveComparableIndex] = useState(0);
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [contactInitialMessage, setContactInitialMessage] = useState('');
   const [contactIntent, setContactIntent] = useState<'enquiry' | 'whatsapp'>('enquiry');
@@ -259,6 +285,34 @@ export default function PropertyDetailPage({ propertyId: propPropertyId }: Prope
     { id: propertyId },
     { enabled: propertyId > 0 },
   );
+  const publicIdentityForAgent = data?.property?.publicIdentity;
+  const listedAgentId = Number(publicIdentityForAgent?.agentId || 0);
+  const listedAgentSlug = String(publicIdentityForAgent?.agentSlug || '').trim();
+  const listedAgentRouteQuery = trpc.agent.getPublicProfileRouteById.useQuery(
+    { agentId: listedAgentId || 1 },
+    {
+      enabled: publicIdentityForAgent?.role === 'agent' && !listedAgentSlug && listedAgentId > 0,
+      retry: false,
+      staleTime: 300000,
+    },
+  );
+  const resolvedAgentSlug = listedAgentSlug || listedAgentRouteQuery.data?.slug || '';
+  const publicAgentProfileQuery = trpc.agent.getPublicProfileBySlug.useQuery(
+    { slug: resolvedAgentSlug || 'not-found' },
+    {
+      enabled: publicIdentityForAgent?.role === 'agent' && Boolean(resolvedAgentSlug),
+      retry: false,
+      staleTime: 300000,
+    },
+  );
+  const publicAgentInventoryQuery = trpc.agent.getPublicInventoryPageForAgent.useQuery(
+    { slug: resolvedAgentSlug || 'not-found', limit: 6, sort: 'newest' },
+    {
+      enabled: publicIdentityForAgent?.role === 'agent' && Boolean(resolvedAgentSlug),
+      retry: false,
+      staleTime: 300000,
+    },
+  );
   const { data: favorites = [] } = trpc.properties.getFavorites.useQuery(undefined, {
     enabled: isAuthenticated,
   });
@@ -272,6 +326,11 @@ export default function PropertyDetailPage({ propertyId: propPropertyId }: Prope
   const canonicalPlaceQuery = trpc.placeAuthority.resolveSearchPlace.useQuery(
     { placeId: detailPlaceId },
     { enabled: Boolean(detailPlaceId) },
+  );
+  // Market insights come from the listing's own place guide (null for places without one).
+  const marketGuideQuery = trpc.placeAuthority.getPlaceGuide.useQuery(
+    { canonicalPlaceId: detailPlaceId },
+    { enabled: Boolean(detailPlaceId), retry: false, staleTime: 300000 },
   );
 
   const utils = trpc.useUtils();
@@ -437,6 +496,7 @@ export default function PropertyDetailPage({ propertyId: propPropertyId }: Prope
     typeof window !== 'undefined' ? `${window.location.origin}${canonicalPath}` : canonicalPath;
   const canonicalPlace = canonicalPlaceQuery.data;
   const canonicalPlaceLabel = canonicalPlace?.label;
+  const marketGuide = marketGuideQuery.data ?? null;
   const displayAddress =
     presentation.location.precision === 'exact' && typeof property.publicAddress === 'string'
       ? property.publicAddress.trim()
@@ -525,6 +585,54 @@ export default function PropertyDetailPage({ propertyId: propPropertyId }: Prope
       })
     : null;
   const similarProperties = similarPropertiesData ?? [];
+  const currentBedrooms = Number(property.bedrooms || 0);
+  const currentBathrooms = Number(property.bathrooms || 0);
+  const currentArea = Number(property.internalAreaM2 ?? property.area ?? 0);
+  const currentPrice = Number(property.price || 0);
+  const rankedSimilarProperties = [...similarProperties]
+    .map((candidate, index) => {
+      const candidatePrice = Number(candidate.price || 0);
+      const candidateBedrooms = Number(candidate.bedrooms || 0);
+      const candidateBathrooms = Number(candidate.bathrooms || 0);
+      const candidateArea = Number(candidate.internalAreaM2 ?? candidate.area ?? 0);
+      let score = index / 1000;
+      if (currentPrice > 0 && candidatePrice > 0)
+        score += Math.abs(Math.log(candidatePrice / currentPrice)) * 20;
+      if (currentBedrooms > 0 && candidateBedrooms > 0)
+        score += Math.abs(candidateBedrooms - currentBedrooms) * 24;
+      if (currentBathrooms > 0 && candidateBathrooms > 0)
+        score += Math.abs(candidateBathrooms - currentBathrooms) * 12;
+      if (currentArea > 0 && candidateArea > 0)
+        score += Math.abs(Math.log(candidateArea / currentArea)) * 18;
+      return { property: candidate, score };
+    })
+    .sort((left, right) => left.score - right.score)
+    .slice(0, 4)
+    .map(({ property: candidate }) => candidate);
+  const currentPerSquareMetre = currentArea > 0 && currentPrice > 0 ? currentPrice / currentArea : 0;
+  const safeComparableIndex = Math.min(
+    activeComparableIndex,
+    Math.max(rankedSimilarProperties.length - 1, 0),
+  );
+  const activeComparable = rankedSimilarProperties[safeComparableIndex];
+  const activeComparablePrice = Number(activeComparable?.price || 0);
+  const activeComparableArea = Number(
+    activeComparable?.internalAreaM2 ?? activeComparable?.area ?? 0,
+  );
+  const activeComparablePerSquareMetre =
+    activeComparableArea > 0 && activeComparablePrice > 0
+      ? activeComparablePrice / activeComparableArea
+      : 0;
+  const activePriceDifferencePercent =
+    activeComparablePerSquareMetre > 0 && currentPerSquareMetre > 0
+      ? Math.round((currentPerSquareMetre / activeComparablePerSquareMetre - 1) * 100)
+      : null;
+  const comparableAskingPrices = rankedSimilarProperties
+    .map(candidate => Number(candidate.price || 0))
+    .filter(value => value > 0);
+  const averageComparableAskingPrice = comparableAskingPrices.length
+    ? comparableAskingPrices.reduce((sum, value) => sum + value, 0) / comparableAskingPrices.length
+    : 0;
 
   const handleToggleComparison = () => {
     if (isRentalListing) return;
@@ -771,16 +879,81 @@ export default function PropertyDetailPage({ propertyId: propPropertyId }: Prope
           <section
             ref={overviewSectionRef}
             id="overview"
-            className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(340px,0.9fr)] lg:gap-8"
+            className="grid overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_12px_28px_rgba(15,23,42,0.08)] lg:grid-cols-[minmax(0,1.45fr)_minmax(360px,1fr)]"
           >
             <div className="min-w-0">
               <PropertyImageGallery
                 images={propertyGalleryImages}
                 propertyTitle={property.title}
-                videoCount={presentation.media.videoCount}
+                joinedToSummary
+                overlayActions={
+                  <div className="flex min-w-0 items-center gap-1 sm:gap-1.5">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={event => {
+                        event.stopPropagation();
+                        handleFavoriteClick();
+                      }}
+                      aria-label={isFavorite ? 'Remove from saved homes' : 'Save property'}
+                      aria-pressed={isFavorite}
+                      className="h-8 min-w-0 rounded-full border border-white/25 bg-slate-950/75 px-2 text-xs text-white shadow-sm backdrop-blur hover:bg-slate-950/90 hover:text-white sm:px-2.5"
+                    >
+                      <Heart
+                        className="mr-1 h-3.5 w-3.5 shrink-0"
+                        fill={isFavorite ? 'currentColor' : 'none'}
+                      />
+                      <span className="max-[360px]:hidden">Save</span>
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={event => {
+                        event.stopPropagation();
+                        setIsShareModalOpen(true);
+                      }}
+                      aria-label="Share property"
+                      className="h-8 min-w-0 rounded-full border border-white/25 bg-slate-950/75 px-2 text-xs text-white shadow-sm backdrop-blur hover:bg-slate-950/90 hover:text-white sm:px-2.5"
+                    >
+                      <Share2 className="mr-1 h-3.5 w-3.5 shrink-0" />
+                      <span className="max-[360px]:hidden">Share</span>
+                    </Button>
+                    {!isRentalListing && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={event => {
+                          event.stopPropagation();
+                          handleToggleComparison();
+                        }}
+                        aria-label={
+                          isCompared ? 'Remove property from comparison' : 'Compare property'
+                        }
+                        aria-pressed={isCompared}
+                        className="h-8 min-w-0 rounded-full border border-white/25 bg-slate-950/75 px-2 text-xs text-white shadow-sm backdrop-blur hover:bg-slate-950/90 hover:text-white sm:px-2.5"
+                      >
+                        <GitCompareArrows className="mr-1 h-3.5 w-3.5 shrink-0" />
+                        <span className="max-[360px]:hidden">
+                          {isCompared ? 'Compared' : 'Compare'}
+                        </span>
+                      </Button>
+                    )}
+                  </div>
+                }
+                videos={propertyMedia
+                  .filter(item => item.mediaType === 'video')
+                  .map(item => ({
+                    id: item.id,
+                    url: item.url,
+                    label: item.presentationLabel,
+                    thumbnailUrl: item.thumbnailUrl,
+                    previewUrl: item.previewUrl,
+                  }))}
                 hasVirtualTour={presentation.media.hasVirtualTour}
                 hasFloorPlan={presentation.media.floorPlanCount > 0}
-                onOpenVideos={() => scrollToSection('property-video')}
                 onOpenVirtualTour={() => scrollToSection('virtual-tour')}
                 onOpenFloorPlan={() => scrollToSection('floor-plans')}
               />
@@ -788,8 +961,9 @@ export default function PropertyDetailPage({ propertyId: propPropertyId }: Prope
 
             <aside
               aria-label={isRentalListing ? 'Rental decision summary' : 'Property decision summary'}
+              className="border-t border-slate-200 lg:border-l lg:border-t-0"
             >
-              <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_12px_28px_rgba(15,23,42,0.08)]">
+              <div className="h-full bg-white">
                 <div className="space-y-5 p-5 sm:p-6">
                   <div className="flex items-start justify-between gap-4">
                     <div>
@@ -863,23 +1037,23 @@ export default function PropertyDetailPage({ propertyId: propPropertyId }: Prope
                             <span className="truncate">{whatsappActionLabel}</span>
                           </Button>
                         )}
+                        {!whatsappNumber && (
+                          <Button
+                            className="h-11 min-w-0 bg-blue-600 px-2 font-semibold text-white hover:bg-blue-700"
+                            onClick={handleOpenStandardEnquiry}
+                          >
+                            {enquiryLabel}
+                          </Button>
+                        )}
                         <Button
-                          className={cn(
-                            'h-11 min-w-0 bg-blue-600 px-2 font-semibold text-white hover:bg-blue-700',
-                            !whatsappNumber && 'col-span-2',
-                          )}
-                          onClick={handleOpenStandardEnquiry}
+                          variant="outline"
+                          className="h-11 min-w-0 border-blue-200 px-2 text-blue-700 hover:bg-blue-50"
+                          onClick={handleRequestViewing}
                         >
-                          {enquiryLabel}
+                          <CalendarDays className="mr-1.5 h-4 w-4 shrink-0" />
+                          <span className="truncate">Request a viewing</span>
                         </Button>
                       </div>
-                      <Button
-                        variant="outline"
-                        className="h-11 w-full border-blue-200 text-blue-700 hover:bg-blue-50"
-                        onClick={handleRequestViewing}
-                      >
-                        Request a viewing
-                      </Button>
                       <p className="text-center text-[11px] leading-relaxed text-slate-500">
                         A viewing request is not a confirmed appointment. The representative can
                         contact you to arrange a suitable time.
@@ -926,19 +1100,22 @@ export default function PropertyDetailPage({ propertyId: propPropertyId }: Prope
                           WhatsApp
                         </Button>
                       )}
-                      <Button
-                        size="sm"
-                        className="bg-blue-600 hover:bg-blue-700"
-                        onClick={handleOpenStandardEnquiry}
-                      >
-                        {enquiryLabel}
-                      </Button>
+                      {!whatsappNumber && (
+                        <Button
+                          size="sm"
+                          className="bg-blue-600 hover:bg-blue-700"
+                          onClick={handleOpenStandardEnquiry}
+                        >
+                          {enquiryLabel}
+                        </Button>
+                      )}
                       <Button
                         size="sm"
                         variant="outline"
                         className="border-blue-200 text-blue-700 hover:bg-blue-50"
                         onClick={handleRequestViewing}
                       >
+                        <CalendarDays className="mr-1.5 h-3.5 w-3.5" />
                         Request viewing
                       </Button>
                     </div>
@@ -950,6 +1127,44 @@ export default function PropertyDetailPage({ propertyId: propPropertyId }: Prope
 
           <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
             <div className="min-w-0 space-y-5">
+              {!isRentalListing && (
+                <PurchaseUnderstandingPanel
+                  price={property.price}
+                  runningCosts={presentation.runningCosts}
+                />
+              )}
+
+              {!isRentalListing && (
+                <CanYouAffordPanel
+                  price={property.price}
+                  runningCosts={presentation.runningCosts}
+                  onShareWithAgent={message =>
+                    openContactModal({
+                      initialMessage: `${message} ${canonicalUrl}`,
+                      intent: 'whatsapp',
+                    })
+                  }
+                />
+              )}
+
+              {presentation.propertyContext.length > 0 && (
+                <section
+                  id="property-context"
+                  className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"
+                  aria-labelledby="context-heading"
+                >
+                  <h2 id="context-heading" className="text-lg font-bold text-slate-950">
+                    Property context
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    What this property is, kept distinct from its lifestyle features.
+                  </p>
+                  <div className="mt-5">
+                    <DetailFactGrid facts={presentation.propertyContext} variant="contextInline" />
+                  </div>
+                </section>
+              )}
+
               {description.trim() && (
                 <section
                   className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"
@@ -1003,40 +1218,80 @@ export default function PropertyDetailPage({ propertyId: propPropertyId }: Prope
                   <p className="mt-1 text-sm text-slate-500">
                     Grouped around how the property is used, not a flat list of generic tags.
                   </p>
-                  <div className="mt-5 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-                    {presentation.featureGroups.map(group => (
-                      <div
-                        key={group.key}
-                        className="min-w-0 border-l border-slate-200 pl-4 first:border-l-0 first:pl-0 sm:first:border-l sm:first:pl-4 xl:first:border-l-0 xl:first:pl-0"
-                      >
-                        <h3 className="text-sm font-bold text-slate-800">{group.title}</h3>
-                        <ul className="mt-2 space-y-1.5 text-sm text-slate-600">
-                          {group.items.map(item => (
-                            <li key={item.key}>{item.label}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
+                  <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    {presentation.featureGroups.map(group => {
+                      const groupIcons: Record<string, React.ElementType> = {
+                        living: Home,
+                        kitchen: House,
+                        outdoor: SunMedium,
+                        other: Building2,
+                        resilience: Wifi,
+                        security: ShieldCheck,
+                        highlights: CircleCheckBig,
+                      };
+                      const GroupIcon = groupIcons[group.key] || Home;
+                      return (
+                        <article
+                          key={group.key}
+                          className="min-w-0 rounded-xl border border-slate-200 bg-slate-50/70 p-4"
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-700">
+                              <GroupIcon className="h-4 w-4" aria-hidden="true" />
+                            </span>
+                            <h3 className="text-sm font-bold text-slate-800">{group.title}</h3>
+                          </div>
+                          <ul className="mt-3 space-y-2">
+                            {group.items.map(item => (
+                              <li
+                                key={item.key}
+                                className="flex items-start gap-2 text-sm text-slate-600"
+                              >
+                                <CircleCheckBig
+                                  className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600"
+                                  aria-hidden="true"
+                                />
+                                <span>{item.label}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </article>
+                      );
+                    })}
                   </div>
                 </section>
               )}
 
-              {presentation.propertyContext.length > 0 && (
-                <section
-                  id="property-context"
-                  className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"
-                  aria-labelledby="context-heading"
-                >
-                  <h2 id="context-heading" className="text-lg font-bold text-slate-950">
-                    Property context
-                  </h2>
-                  <p className="mt-1 text-sm text-slate-500">
-                    What this property is, kept distinct from its lifestyle features.
-                  </p>
-                  <div className="mt-5">
-                    <DetailFactGrid facts={presentation.propertyContext} variant="context" />
-                  </div>
-                </section>
+              {!isRentalListing && detailPlaceId && (marketGuideQuery.isLoading || marketGuide) && (
+                <MarketInsightsPanel
+                  placeName={marketGuide?.place.name || canonicalPlaceLabel || 'this area'}
+                  guide={marketGuide}
+                  loading={marketGuideQuery.isLoading}
+                />
+              )}
+
+              {contactMode === 'agent' && agentProfileHref && (
+                <PropertyAgentProfileCard
+                  href={agentProfileHref}
+                  name={publicAgentProfileQuery.data?.displayName || contactName}
+                  role={
+                    publicAgentProfileQuery.data?.role === 'principal_agent'
+                      ? 'Principal Property Practitioner'
+                      : publicAgentProfileQuery.data?.role === 'broker'
+                        ? 'Property Broker'
+                        : contactRoleLabel || 'Property practitioner'
+                  }
+                  agency={publicAgentProfileQuery.data?.agency?.name || contactOrganization}
+                  image={publicAgentProfileQuery.data?.profileImage || contactImage}
+                  bio={publicAgentProfileQuery.data?.bio}
+                  yearsExperience={publicAgentProfileQuery.data?.yearsExperience}
+                  isVerified={publicAgentProfileQuery.data?.isVerified === 1}
+                  activeListings={publicAgentInventoryQuery.data?.items.length}
+                  listingsMayContinue={publicAgentInventoryQuery.data?.nextCursor != null}
+                  listingsLoading={
+                    listedAgentRouteQuery.isLoading || publicAgentInventoryQuery.isLoading
+                  }
+                />
               )}
 
               {presentation.runningCosts.length > 0 && (
@@ -1069,6 +1324,146 @@ export default function PropertyDetailPage({ propertyId: propPropertyId }: Prope
                   propertyTitle={property.title}
                 />
               </section>
+
+              {activeComparable && (
+                <section
+                  className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"
+                  aria-labelledby="related-heading"
+                >
+                  <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                      <h2 id="related-heading" className="text-lg font-bold text-slate-950">
+                        {canonicalPlaceLabel
+                          ? `How it compares in ${canonicalPlaceLabel}`
+                          : 'How it compares nearby'}
+                      </h2>
+                      <p className="mt-1 text-sm text-slate-500">
+                        Compare this home with the closest matching listing.
+                      </p>
+                    </div>
+                    {similarListingsHref && (
+                      <Button
+                        asChild
+                        variant="outline"
+                        className="border-blue-200 text-blue-700 hover:bg-blue-50"
+                      >
+                        <Link href={similarListingsHref}>View all matching listings</Link>
+                      </Button>
+                    )}
+                  </div>
+
+                  <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2">
+                    <PropertyComparisonCard
+                      id={property.id}
+                      title={
+                        property.propertyType
+                          ? `This ${property.propertyType.toLowerCase()}`
+                          : 'This home'
+                      }
+                      image={propertyGalleryImages[0]?.imageUrl}
+                      price={currentPrice}
+                      bedrooms={currentBedrooms}
+                      bathrooms={currentBathrooms}
+                      area={currentArea}
+                      isCurrent
+                      isRental={isRentalListing}
+                    />
+                    <PropertyComparisonCard
+                      key={activeComparable.id}
+                      id={Number(activeComparable.id)}
+                      href={activeComparable.href}
+                      title={activeComparable.title}
+                      image={activeComparable.image || activeComparable.images[0]?.url}
+                      price={activeComparablePrice}
+                      bedrooms={Number(activeComparable.bedrooms || 0)}
+                      bathrooms={Number(activeComparable.bathrooms || 0)}
+                      area={activeComparableArea}
+                      isCurrent={false}
+                      isRental={isRentalListing}
+                    />
+
+                    <article className="min-w-[210px] max-w-[230px] flex-1 snap-start rounded-xl border border-blue-100 bg-blue-50/70 p-3">
+                      <h3 className="text-xs font-extrabold text-slate-900">
+                        How this home stacks up
+                      </h3>
+                      <div className="mt-2 space-y-2 text-[11px]">
+                        {!isRentalListing &&
+                          currentPerSquareMetre > 0 &&
+                          activeComparablePerSquareMetre > 0 && (
+                            <div>
+                              <p className="font-semibold text-slate-500">Price per m²</p>
+                              <p className="mt-0.5 font-bold text-slate-900">
+                                {formatCurrency(currentPerSquareMetre)} vs{' '}
+                                {formatCurrency(activeComparablePerSquareMetre)}
+                              </p>
+                              {activePriceDifferencePercent !== null && (
+                                <p
+                                  className={`mt-0.5 font-semibold ${activePriceDifferencePercent <= 0 ? 'text-emerald-700' : 'text-orange-700'}`}
+                                >
+                                  {activePriceDifferencePercent === 0
+                                    ? 'In line with this listing'
+                                    : `${Math.abs(activePriceDifferencePercent)}% ${activePriceDifferencePercent < 0 ? 'lower' : 'higher'} per m²`}
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        {currentArea > 0 && activeComparableArea > 0 && (
+                          <ComparisonFact
+                            label="Size"
+                            value={`${currentArea.toLocaleString('en-ZA')} vs ${activeComparableArea.toLocaleString('en-ZA')} m²`}
+                          />
+                        )}
+                        {averageComparableAskingPrice > 0 && (
+                          <div className="border-t border-blue-100 pt-2">
+                            <p className="font-semibold text-slate-500">
+                              Avg. asking price of similar listings
+                            </p>
+                            <p className="mt-0.5 font-extrabold text-slate-900">
+                              {formatCurrency(averageComparableAskingPrice)}
+                            </p>
+                            <p className="text-[10px] text-slate-500">
+                              From {comparableAskingPrices.length} similar listings
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                      <div className="mt-3 flex items-center justify-between gap-1 border-t border-blue-100 pt-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 border-blue-200 px-2 text-[11px] text-blue-700 hover:bg-white"
+                          disabled={rankedSimilarProperties.length < 2}
+                          onClick={() =>
+                            setActiveComparableIndex(
+                              index =>
+                                (index - 1 + rankedSimilarProperties.length) %
+                                rankedSimilarProperties.length,
+                            )
+                          }
+                        >
+                          <ArrowLeft className="mr-1 h-3.5 w-3.5" aria-hidden="true" /> Previous
+                        </Button>
+                        <span className="text-[10px] font-semibold text-slate-500">
+                          {safeComparableIndex + 1}/{rankedSimilarProperties.length}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 border-blue-200 px-2 text-[11px] text-blue-700 hover:bg-white"
+                          disabled={rankedSimilarProperties.length < 2}
+                          onClick={() =>
+                            setActiveComparableIndex(
+                              index => (index + 1) % rankedSimilarProperties.length,
+                            )
+                          }
+                        >
+                          Next <ChevronRight className="ml-1 h-3.5 w-3.5" aria-hidden="true" />
+                        </Button>
+                      </div>
+                    </article>
+                  </div>
+                </section>
+              )}
             </div>
 
             <aside id="agent" className="space-y-4 lg:sticky lg:top-24 lg:self-start">
@@ -1138,32 +1533,29 @@ export default function PropertyDetailPage({ propertyId: propPropertyId }: Prope
                     <p className="mt-1 text-sm leading-5 text-slate-500">{contactIntro}</p>
                   </div>
                   <div className="space-y-2 p-5">
-                    <div className="grid grid-cols-2 gap-2">
-                      {whatsappNumber && (
-                        <Button
-                          variant="outline"
-                          className="h-11 min-w-0 border-emerald-200 px-2 text-emerald-700 hover:bg-emerald-50"
-                          onClick={handleWhatsAppContact}
-                        >
-                          <MessageCircle className="mr-1.5 h-4 w-4 shrink-0" />
-                          <span className="truncate">{whatsappActionLabel}</span>
-                        </Button>
-                      )}
+                    {whatsappNumber ? (
                       <Button
-                        className={cn(
-                          'h-11 min-w-0 bg-blue-600 px-2 hover:bg-blue-700',
-                          !whatsappNumber && 'col-span-2',
-                        )}
+                        variant="outline"
+                        className="h-11 w-full border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                        onClick={handleWhatsAppContact}
+                      >
+                        <MessageCircle className="mr-1.5 h-4 w-4 shrink-0" />
+                        {whatsappActionLabel}
+                      </Button>
+                    ) : (
+                      <Button
+                        className="h-11 w-full bg-blue-600 hover:bg-blue-700"
                         onClick={handleOpenStandardEnquiry}
                       >
                         {enquiryLabel}
                       </Button>
-                    </div>
+                    )}
                     <Button
                       variant="outline"
                       className="h-11 w-full border-blue-200 text-blue-700 hover:bg-blue-50"
                       onClick={handleRequestViewing}
                     >
+                      <CalendarDays className="mr-1.5 h-4 w-4 shrink-0" />
                       Request a viewing
                     </Button>
                   </div>
@@ -1189,115 +1581,6 @@ export default function PropertyDetailPage({ propertyId: propPropertyId }: Prope
             </aside>
           </div>
 
-          {similarProperties.length > 0 && (
-            <section
-              className="mt-8 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"
-              aria-labelledby="related-heading"
-            >
-              <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                  <h2 id="related-heading" className="text-lg font-bold text-slate-950">
-                    {isRentalListing
-                      ? canonicalPlaceLabel
-                        ? `Explore more rentals in ${canonicalPlaceLabel}`
-                        : 'Explore more rentals'
-                      : canonicalPlaceLabel
-                        ? `Still comparing? Explore more in ${canonicalPlaceLabel}`
-                        : 'Still comparing?'}
-                  </h2>
-                  <p className="mt-1 text-sm text-slate-500">
-                    Relevant public alternatives keep the next discovery decision in the
-                    marketplace.
-                  </p>
-                </div>
-                {similarListingsHref && (
-                  <Button
-                    asChild
-                    variant="outline"
-                    className="border-blue-200 text-blue-700 hover:bg-blue-50"
-                  >
-                    <Link href={similarListingsHref}>View all matching listings</Link>
-                  </Button>
-                )}
-              </div>
-              <div className="flex snap-x gap-4 overflow-x-auto pb-2">
-                {similarProperties.map(prop => {
-                  const relatedPrice = Number(prop.price || 0);
-                  const relatedFactCandidates: Array<RelatedPropertyFact | null> = [
-                    Number(prop.bedrooms) > 0
-                      ? {
-                          key: 'bedrooms',
-                          label: `${Number(prop.bedrooms)} bed`,
-                          Icon: PROPERTY_FACT_ICONS.bedrooms,
-                        }
-                      : null,
-                    Number(prop.bathrooms) > 0
-                      ? {
-                          key: 'bathrooms',
-                          label: `${Number(prop.bathrooms)} bath`,
-                          Icon: PROPERTY_FACT_ICONS.bathrooms,
-                        }
-                      : null,
-                    Number(prop.internalAreaM2 ?? prop.area) > 0
-                      ? {
-                          key: 'floor-size',
-                          label: `${Number(prop.internalAreaM2 ?? prop.area).toLocaleString('en-ZA')} m²`,
-                          Icon: PROPERTY_FACT_ICONS.residentialSize,
-                        }
-                      : null,
-                  ];
-                  const relatedFacts = relatedFactCandidates.filter(
-                    (fact): fact is RelatedPropertyFact => Boolean(fact),
-                  );
-                  return (
-                    <Link
-                      key={prop.id}
-                      href={prop.href}
-                      aria-label={`Open ${prop.title}`}
-                      className="group min-w-[250px] snap-start overflow-hidden rounded-xl border border-slate-200 bg-white transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md sm:min-w-[280px]"
-                    >
-                      <div className="h-36 overflow-hidden bg-slate-100">
-                        {prop.image || prop.images[0]?.url ? (
-                          <img
-                            src={prop.image || prop.images[0]?.url}
-                            alt={prop.title}
-                            className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-                          />
-                        ) : (
-                          <div className="flex h-full items-center justify-center text-slate-400">
-                            <Home className="h-6 w-6" />
-                          </div>
-                        )}
-                      </div>
-                      <div className="p-4">
-                        <p className="text-base font-extrabold text-slate-950">
-                          {relatedPrice > 0
-                            ? `${formatCurrency(relatedPrice)}${isRentalListing ? ' / month' : ''}`
-                            : 'Price on request'}
-                        </p>
-                        <h3 className="mt-2 line-clamp-2 text-sm font-semibold text-slate-800">
-                          {prop.title}
-                        </h3>
-                        <p className="mt-1 text-xs text-slate-500">
-                          {[prop.suburb, prop.city].filter(Boolean).join(', ')}
-                        </p>
-                        {relatedFacts.length > 0 && (
-                          <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1.5 border-t border-slate-100 pt-3 text-xs font-semibold text-slate-600">
-                            {relatedFacts.map(({ key, label, Icon }) => (
-                              <span key={key} className="inline-flex items-center gap-1.5">
-                                <Icon className="h-3.5 w-3.5 text-blue-600" aria-hidden="true" />
-                                {label}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            </section>
-          )}
         </div>
 
         {hasPrimaryContactAction && isStickyNavVisible && (
@@ -1305,12 +1588,7 @@ export default function PropertyDetailPage({ propertyId: propPropertyId }: Prope
             aria-label="Property enquiry actions"
             className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-12px_32px_rgba(15,23,42,0.12)] backdrop-blur-md lg:hidden"
           >
-            <div
-              className={cn(
-                'mx-auto grid max-w-lg items-center gap-2',
-                whatsappNumber ? 'grid-cols-3' : 'grid-cols-2',
-              )}
-            >
+            <div className="mx-auto grid max-w-lg grid-cols-2 items-center gap-2">
               {whatsappNumber && (
                 <Button
                   variant="outline"
@@ -1322,12 +1600,14 @@ export default function PropertyDetailPage({ propertyId: propPropertyId }: Prope
                   <span className="truncate">WhatsApp</span>
                 </Button>
               )}
-              <Button
-                className="h-11 min-w-0 bg-blue-600 px-2 text-xs hover:bg-blue-700"
-                onClick={handleOpenStandardEnquiry}
-              >
-                Enquire
-              </Button>
+              {!whatsappNumber && (
+                <Button
+                  className="h-11 min-w-0 bg-blue-600 px-2 text-xs hover:bg-blue-700"
+                  onClick={handleOpenStandardEnquiry}
+                >
+                  Enquire
+                </Button>
+              )}
               <Button
                 variant="outline"
                 className="h-11 min-w-0 border-blue-200 px-2 text-xs text-blue-700 hover:bg-blue-50"
@@ -1387,6 +1667,97 @@ export default function PropertyDetailPage({ propertyId: propPropertyId }: Prope
           © {new Date().getFullYear()} Property Listify. All rights reserved.
         </div>
       </footer>
+    </div>
+  );
+}
+
+function PropertyComparisonCard({
+  id,
+  href,
+  title,
+  image,
+  price,
+  bedrooms,
+  bathrooms,
+  area,
+  isCurrent,
+  isRental,
+}: {
+  id: number;
+  href?: string;
+  title: string;
+  image?: string;
+  price: number;
+  bedrooms: number;
+  bathrooms: number;
+  area: number;
+  isCurrent: boolean;
+  isRental: boolean;
+}) {
+  const pricePerSquareMetre = price > 0 && area > 0 ? price / area : 0;
+  const cardClassName = `group min-w-[210px] max-w-[230px] flex-1 snap-start overflow-hidden rounded-xl bg-white transition hover:-translate-y-0.5 hover:shadow-md ${
+    isCurrent ? 'border-2 border-blue-600' : 'border border-slate-200 hover:border-blue-200'
+  }`;
+  const content = (
+    <>
+      <div className="relative h-28 overflow-hidden bg-slate-100">
+        {image ? (
+          <img
+            src={image}
+            alt={title}
+            loading="lazy"
+            className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center text-slate-400">
+            <Home className="h-6 w-6" aria-hidden="true" />
+          </div>
+        )}
+        {isCurrent && (
+          <span className="absolute bottom-2 left-2 rounded-full bg-blue-700 px-2.5 py-1 text-[10px] font-bold text-white">
+            This home
+          </span>
+        )}
+      </div>
+      <div className="p-3">
+        <h3 className="line-clamp-1 text-xs font-bold text-slate-800">{title}</h3>
+        <p className="mt-0.5 truncate text-base font-extrabold text-slate-950">
+          {price > 0
+            ? `${formatCurrency(price)}${isRental ? ' / month' : ''}`
+            : 'Price on request'}
+        </p>
+        <div className="mt-2 space-y-1.5 border-t border-slate-100 pt-2 text-[11px]">
+          {area > 0 && <ComparisonFact label="Size" value={`${area.toLocaleString('en-ZA')} m²`} />}
+          {(bedrooms > 0 || bathrooms > 0) && (
+            <ComparisonFact
+              label="Beds · baths"
+              value={`${bedrooms > 0 ? bedrooms : '—'} · ${bathrooms > 0 ? bathrooms : '—'}`}
+            />
+          )}
+          {!isRental && pricePerSquareMetre > 0 && (
+            <ComparisonFact label="Price per m²" value={formatCurrency(pricePerSquareMetre)} />
+          )}
+        </div>
+      </div>
+    </>
+  );
+
+  return isCurrent ? (
+    <article className={cardClassName} aria-label="Current property comparison">
+      {content}
+    </article>
+  ) : (
+    <Link href={href || `/property/${id}`} aria-label={`Open ${title}`} className={cardClassName}>
+      {content}
+    </Link>
+  );
+}
+
+function ComparisonFact({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-start justify-between gap-2 text-slate-600">
+      <span>{label}</span>
+      <span className="shrink-0 text-right font-bold text-slate-900">{value}</span>
     </div>
   );
 }
