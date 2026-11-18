@@ -7,6 +7,13 @@ import {
   renderPrerenderedHtml,
   type PrerenderPage,
 } from '../_core/prerenderPages';
+import {
+  SUBURB_GUIDE_SEARCH_RENT_LABEL,
+  SUBURB_GUIDE_SEARCH_SALE_LABEL,
+  suburbGuideCoverageFaq,
+  suburbGuideH1,
+  suburbGuideIntro,
+} from '../../shared/suburbGuideCopy';
 import { PLACE_INDEX_ALLOWLIST_PATHS } from '../../shared/placeIndexAllowlist';
 import { publishedCanonicalPlaceUrls } from '../services/canonicalPlaceUrlService';
 
@@ -106,6 +113,39 @@ describe('prerendered head and body', () => {
     expect(html).toContain('"@type":"BreadcrumbList"');
     expect(html).toContain('<div id="root"><main data-prerendered="true">');
     expect(html).toContain('/assets/index-abc.js');
+  });
+
+  it('gives a locality the suburb guide text, search links and a data-free FAQPage', () => {
+    const localities = pages.filter(item => item.family === 'locality');
+    expect(localities.length).toBeGreaterThan(0);
+    for (const locality of localities) {
+      const name = /<h1>(.*?)<\/h1>/.exec(locality.bodyHtml)?.[1] ?? '';
+      const label = name.replace(/^Explore /, '');
+      expect(name).toBe(suburbGuideH1(label));
+      expect(locality.bodyHtml).toContain(`>${SUBURB_GUIDE_SEARCH_SALE_LABEL}</a>`);
+      expect(locality.bodyHtml).toContain(`>${SUBURB_GUIDE_SEARCH_RENT_LABEL}</a>`);
+      expect(locality.bodyHtml).toContain(escapeHtml(suburbGuideIntro(label)));
+      expect(locality.bodyHtml).not.toContain('canonical place');
+      expect(locality.title).toBe(`${label} property search | Property Listify`);
+      expect(locality.robots).toBe('index, follow');
+
+      const text = locality.bodyHtml
+        .replace(/<a href="[^"]*">/g, '<a>')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(label, '');
+      expect(text).not.toMatch(/[0-9]|R\s|ZAR/);
+
+      const types = locality.structuredData.map(item => item['@type']);
+      expect(types).toEqual(['BreadcrumbList', 'Place', 'FAQPage']);
+      const faq = suburbGuideCoverageFaq(label);
+      expect(JSON.stringify(locality.structuredData[2])).toContain(JSON.stringify(faq.answer));
+    }
+  });
+
+  it('keeps province and city pages on the original body', () => {
+    for (const item of pages.filter(p => p.family === 'province' || p.family === 'city')) {
+      expect(item.structuredData.map(entry => entry['@type'])).not.toContain('FAQPage');
+    }
   });
 
   it('marks the canonical and JSON-LD as client-managed so boot updates them in place', () => {

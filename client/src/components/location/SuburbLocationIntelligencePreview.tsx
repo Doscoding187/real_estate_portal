@@ -22,6 +22,19 @@ import { SuburbLocalProfessionals } from '@/components/location/SuburbLocalProfe
 import { buildBuySearchUrl, buildPropertySearchUrl } from '@/lib/heroJourneySearch';
 import { buildConsumerJourneyUrl } from '@/lib/consumerJourneyRouter';
 import { formatZARCompact } from '@/lib/utils';
+import {
+  SUBURB_GUIDE_EXPLORER_INTRO,
+  SUBURB_GUIDE_NEIGHBOURHOODS_INTRO,
+  SUBURB_GUIDE_PEOPLE_INTRO,
+  SUBURB_GUIDE_SEARCH_RENT_LABEL,
+  SUBURB_GUIDE_SEARCH_SALE_LABEL,
+  suburbGuideExplorerHeading,
+  suburbGuideFaqHeading,
+  suburbGuideH1,
+  suburbGuideIntro,
+  suburbGuideNeighbourhoodsHeading,
+  suburbGuidePeopleHeading,
+} from '@shared/suburbGuideCopy';
 import type { LocationNode } from '@/types/location';
 import type { RouterOutputs } from '@/lib/trpc';
 import '@/styles/suburb-guide-discovery-preview.css';
@@ -238,10 +251,8 @@ export function SuburbLocationIntelligencePreview({
           <div className="suburb-discovery-hero__topline">
             <p className="suburb-guide-eyebrow">{regionLabel} · Location discovery</p>
           </div>
-          <h1>Explore {suburbName}</h1>
-          <p className="suburb-discovery-hero__intro">
-            Compare current property options, areas and local information around {suburbName}.
-          </p>
+          <h1>{suburbGuideH1(suburbName)}</h1>
+          <p className="suburb-discovery-hero__intro">{suburbGuideIntro(suburbName)}</p>
           <div className="suburb-discovery-hero__scope">
             <span>
               <MapPin size={15} aria-hidden="true" /> {suburbName} property results
@@ -520,9 +531,9 @@ export function SuburbLocationIntelligencePreview({
                 EXPLORE NEIGHBOURHOODS
               </p>
               <h2 id="suburb-discovery-neighbourhoods-title">
-                Find your perfect {suburbName} neighbourhood
+                {suburbGuideNeighbourhoodsHeading(suburbName)}
               </h2>
-              <p>Explore nearby areas, ranked by current published listings.</p>
+              <p>{SUBURB_GUIDE_NEIGHBOURHOODS_INTRO}</p>
             </div>
             {cityName && cityGuideHref ? (
               <Link className="suburb-guide-section-link" href={cityGuideHref}>
@@ -831,7 +842,9 @@ export function SuburbLocationIntelligencePreview({
                 className="suburb-guide-section-link"
                 href={listingTab === 'buy' ? buyHref : rentHref}
               >
-                {listingTab === 'buy' ? 'Search homes for sale' : 'Search rentals'}{' '}
+                {listingTab === 'buy'
+                  ? SUBURB_GUIDE_SEARCH_SALE_LABEL
+                  : SUBURB_GUIDE_SEARCH_RENT_LABEL}{' '}
                 <ArrowRight size={15} aria-hidden="true" />
               </Link>
             </div>
@@ -916,12 +929,9 @@ export function SuburbLocationIntelligencePreview({
             <div>
               <p className="suburb-guide-eyebrow suburb-guide-eyebrow--blue">LOCATION EXPLORER</p>
               <h2 id="suburb-discovery-intelligence-title">
-                Understand the area around {suburbName}
+                {suburbGuideExplorerHeading(suburbName)}
               </h2>
-              <p>
-                Use the map for orientation. Nearby points and approximate area centres are not
-                property boundaries.
-              </p>
+              <p>{SUBURB_GUIDE_EXPLORER_INTRO}</p>
             </div>
           </div>
           {place.centre ? (
@@ -970,8 +980,8 @@ export function SuburbLocationIntelligencePreview({
           <div className="suburb-discovery-section__heading">
             <div>
               <p className="suburb-guide-eyebrow suburb-guide-eyebrow--blue">LOCAL CONNECTIONS</p>
-              <h2 id="suburb-discovery-people-title">People and projects in {suburbName}</h2>
-              <p>Published developers, agencies and public agents connected to this exact area.</p>
+              <h2 id="suburb-discovery-people-title">{suburbGuidePeopleHeading(suburbName)}</h2>
+              <p>{SUBURB_GUIDE_PEOPLE_INTRO}</p>
             </div>
           </div>
           <SuburbDevelopers
@@ -991,7 +1001,7 @@ export function SuburbLocationIntelligencePreview({
               <p className="suburb-guide-eyebrow suburb-guide-eyebrow--blue">
                 LOCATION INTELLIGENCE
               </p>
-              <h2 id="suburb-discovery-faq-title">Common questions about {suburbName}</h2>
+              <h2 id="suburb-discovery-faq-title">{suburbGuideFaqHeading(suburbName)}</h2>
             </div>
           </div>
           <div className="suburb-guide-faqs__list">
