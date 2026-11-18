@@ -199,7 +199,7 @@ describe('Canonical Place customer selection', () => {
       />,
     );
     fireEvent.focus(screen.getByRole('combobox'));
-    expect(screen.getByRole('option')).toHaveTextContent('village · Limpopo / Local Municipality');
+    expect(screen.getByRole('option')).toHaveTextContent('Village · Limpopo / Local Municipality');
     expect(screen.queryByText(/provisional|unverified/i)).not.toBeInTheDocument();
   });
 

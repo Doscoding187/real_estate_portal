@@ -636,7 +636,8 @@ export default function SearchResults() {
   } in ${discoveryLocationLabel}`;
   const discoveryScopeLabels = [
     isRentSearch ? 'To rent' : 'For sale',
-    discoveryLocationLabel,
+    // The removable location chip already names the location.
+    ...(selectedLocationChip ? [] : [discoveryLocationLabel]),
     ...(propertyTypeCopy ? [propertyTypeCopy.chip] : []),
   ];
   const totalPages = getPublicSearchReachablePageCount(resultCount, limit);
