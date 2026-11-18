@@ -773,7 +773,7 @@ function AgencyFaqSection({ faqs }: { faqs: readonly AgencyFaq[] }) {
   );
 }
 
-export function AgencyCommercialLandingPage() {
+export function AgencyCommercialLandingPage({ preview = false }: { preview?: boolean } = {}) {
   const catalog = useCommercialCatalog('agency');
   const product = catalog.data?.products.find(
     item => item.productKey === 'agency_launch_access' && item.term.kind === 'paid_launch_access',
@@ -791,11 +791,15 @@ export function AgencyCommercialLandingPage() {
 
   return (
     <div className="min-h-screen bg-[var(--surface)] text-slate-950">
-      <SEOHead
-        title="Property Listify for Agencies | Operating Workspace & Marketplace"
-        description="Property Listify gives property agencies a shared operating workspace for people, inventory, enquiries and business visibility, with eligible published inventory able to participate in Property Listify marketplace discovery."
-        canonicalUrl="/advertise/sell/agencies"
-      />
+      {preview ? (
+        null
+      ) : (
+        <SEOHead
+          title="Property Listify for Agencies | Operating Workspace & Marketplace"
+          description="Property Listify gives property agencies a shared operating workspace for people, inventory, enquiries and business visibility, with eligible published inventory able to participate in Property Listify marketplace discovery."
+          canonicalUrl="/advertise/sell/agencies"
+        />
+      )}
       <EnhancedNavbar />
 
       <main id="main-content">
@@ -806,11 +810,11 @@ export function AgencyCommercialLandingPage() {
           />
           <div className="mx-auto max-w-screen-2xl px-4 pb-20 pt-10 sm:px-6 lg:px-8 lg:pb-32 lg:pt-14">
             <a
-              href="/advertise"
+              href={preview ? '/advertise/partner-preview' : '/advertise'}
               className="inline-flex items-center gap-2 text-sm font-semibold text-slate-400 transition hover:text-white"
             >
               <ArrowRight className="h-4 w-4 rotate-180" aria-hidden="true" />
-              Back to Advertise
+              {preview ? 'Back to business paths' : 'Back to Advertise'}
             </a>
 
             <div className="mt-14 grid items-center gap-12 xl:grid-cols-[.82fr_1.18fr] xl:gap-14 2xl:gap-16">
