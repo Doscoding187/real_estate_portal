@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import type { PropertyType } from '@/../../shared/listing-types';
+import { LISTING_TITLE_MAX_LENGTH } from '@/lib/listingTitleLimit';
 
 const PropertyInformationStep: React.FC = () => {
   const store: any = useListingWizardStore();
@@ -70,12 +71,12 @@ const PropertyInformationStep: React.FC = () => {
               id="title"
               value={title}
               onChange={e => setTitle(e.target.value)}
-              placeholder="e.g., Luxury 3-Bedroom Apartment in Cape Town CBD"
+              placeholder="e.g., 2-Bed Apartment in Sandton"
               className="text-lg border-blue-200 focus:border-blue-400 focus:ring-blue-400"
-              maxLength={255}
+              maxLength={LISTING_TITLE_MAX_LENGTH}
             />
             <p className="text-xs text-gray-500">
-              {title.length}/255 characters (minimum 10 required)
+              {title.length}/{LISTING_TITLE_MAX_LENGTH} characters (minimum 10 required)
             </p>
           </div>
 

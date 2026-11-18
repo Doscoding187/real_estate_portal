@@ -16,6 +16,7 @@ import {
 import { InlineError } from '@/components/ui/InlineError';
 import { useFieldValidation } from '@/hooks/useFieldValidation';
 import type { ListingAction, PropertyType } from '@/../../shared/listing-types';
+import { LISTING_TITLE_MAX_LENGTH } from '@/lib/listingTitleLimit';
 import {
   FARM_LAND_AREA_UNITS,
   getCorePropertyFieldDefinitions,
@@ -259,14 +260,16 @@ const BasicInformationStep: React.FC = () => {
                 titleValidation.clearError();
               }}
               onBlur={titleValidation.onBlur}
-              placeholder="Enter property title (minimum 10 characters)"
+              placeholder="e.g., 2-Bed Apartment in Sandton"
               className="mt-1"
-              maxLength={255}
+              maxLength={LISTING_TITLE_MAX_LENGTH}
               aria-invalid={!!titleValidation.error}
             />
             <div className="flex items-center justify-between mt-1">
               <InlineError error={titleValidation.error} show={!!titleValidation.error} size="sm" />
-              <p className="text-xs text-slate-500">{title.length}/255 characters</p>
+              <p className="text-xs text-slate-500">
+                {title.length}/{LISTING_TITLE_MAX_LENGTH} characters
+              </p>
             </div>
           </div>
           <div>

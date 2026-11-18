@@ -10,6 +10,7 @@ import { protectedProcedure, publicProcedure, router } from './_core/trpc';
 import * as db from './db';
 import { TRPCError } from '@trpc/server';
 import { isPlaceId } from '../drizzle/schema/placeAuthority';
+import { MULTI_LOCATION_MAX } from '../shared/searchScope';
 import { adminRouter } from './adminRouter';
 import { agencyRouter } from './agencyRouter';
 import { canvassingRouter } from './canvassingRouter';
@@ -274,6 +275,12 @@ const appRouterConfig = {
               .trim()
               .max(40)
               .refine(isPlaceId, 'Choose an approved canonical Place')
+              .optional(),
+            // Several selected Places (nearby-area refinement); exclusive with canonicalPlaceId.
+            canonicalPlaceIds: z
+              .array(z.string().trim().max(40).refine(isPlaceId, 'Choose an approved canonical Place'))
+              .min(1)
+              .max(MULTI_LOCATION_MAX)
               .optional(),
             propertyType: z.enum(PUBLIC_PROPERTY_TYPES).optional(),
             listingType: z.enum(['sale', 'rent']).optional(),

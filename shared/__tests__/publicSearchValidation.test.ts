@@ -24,10 +24,33 @@ describe('public Buy/Rent search geography validation', () => {
     ['province', { province: 'Gauteng' }],
     ['locationId', { locationId: '12' }],
     ['locationIds', { locationIds: [PLACE_ID, 'pl-place-01-000000000000000000000002'] }],
-    ['canonicalPlaceIds', { canonicalPlaceIds: [PLACE_ID] }],
     ['searchAreaId', { searchAreaId: 'johannesburg-sandton' }],
   ])('rejects retired geography input %s', (path, geography) => {
     expect(validatePublicSearchInput(geography as never)).toMatchObject({ path });
+  });
+
+  describe('canonicalPlaceIds (multi-area)', () => {
+    const idAt = (index: number) => `pl-place-01-${String(index).padStart(24, '0')}`;
+    const ids = (count: number) => Array.from({ length: count }, (_, index) => idAt(index + 1));
+
+    it('accepts 1 to 10 distinct valid Places', () => {
+      expect(validatePublicSearchInput({ canonicalPlaceIds: ids(1) })).toBeUndefined();
+      expect(validatePublicSearchInput({ canonicalPlaceIds: ids(10) })).toBeUndefined();
+    });
+
+    it('rejects an empty list, more than 10, duplicates and malformed ids', () => {
+      for (const canonicalPlaceIds of [[], ids(11), [idAt(1), idAt(1)], [idAt(1), 'city:12']]) {
+        expect(validatePublicSearchInput({ canonicalPlaceIds })).toMatchObject({
+          path: 'canonicalPlaceIds',
+        });
+      }
+    });
+
+    it('is exclusive with the single canonicalPlaceId', () => {
+      expect(
+        validatePublicSearchInput({ canonicalPlaceId: PLACE_ID, canonicalPlaceIds: ids(2) }),
+      ).toMatchObject({ path: 'canonicalPlaceIds' });
+    });
   });
 
   it('rejects unsupported runtime journeys instead of normalizing them to Rent', () => {
