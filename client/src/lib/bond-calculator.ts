@@ -3,8 +3,12 @@
  * Uses SA Prime Rate and bank-specific margins
  */
 
-// Current SA prime lending rate effective 25 September 2026. Refresh after MPC changes.
+import { estimateTransferDuty } from './transferDuty';
+
+// Example default rate for illustrations only. Not a statement of the current prime rate.
+// Wherever it is shown, label it with SA_PRIME_RATE_LABEL and let the user edit it.
 export const SA_PRIME_RATE = 10.75;
+export const SA_PRIME_RATE_LABEL = 'Example rate — check the current rate with your bank';
 
 // Major SA Banks and their typical bond rate margins above prime
 export const SA_BANKS = {
@@ -192,15 +196,8 @@ export function calculateTransferCosts(propertyPrice: number): {
   bondAttorney: number;
   total: number;
 } {
-  // SA Transfer Duty rates (2025 rates)
-  let transferDuty = 0;
-  if (propertyPrice > 1_100_000) {
-    transferDuty = (propertyPrice - 1_100_000) * 0.13;
-  } else if (propertyPrice > 1_500_000) {
-    transferDuty = 52_000 + (propertyPrice - 1_500_000) * 0.11;
-  } else if (propertyPrice > 2_250_000) {
-    transferDuty = 134_500 + (propertyPrice - 2_250_000) * 0.13;
-  }
+  // Shared SARS bracket estimate (see transferDuty.ts)
+  const transferDuty = estimateTransferDuty(propertyPrice);
 
   // Bond registration (roughly 1% of bond amount, min R10,000)
   const bondRegistration = Math.max(propertyPrice * 0.01, 10_000);

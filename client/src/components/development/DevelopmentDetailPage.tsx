@@ -47,7 +47,7 @@ import {
 } from '@/components/ui/carousel';
 import { HouseMeasureIcon } from '@/components/icons/HouseMeasureIcon';
 import { formatPriceCompact } from '@/lib/formatPrice';
-import { calculateAffordablePrice, calculateMonthlyRepayment, formatSARandShort, SA_PRIME_RATE } from '@/lib/bond-calculator';
+import { calculateAffordablePrice, calculateMonthlyRepayment, formatSARandShort, SA_PRIME_RATE, SA_PRIME_RATE_LABEL } from '@/lib/bond-calculator';
 import type { ImageMedia } from '@/lib/media-logic';
 import { agentProfilePhoneError } from '@shared/agentProfilePhone';
 
@@ -604,6 +604,15 @@ function BuyabilityAssessment({
 }) {
   const [grossIncome, setGrossIncome] = useState('');
   const [rateStressOffset, setRateStressOffset] = useState<number>(0);
+  const [baseRateText, setBaseRateText] = useState(String(SA_PRIME_RATE));
+  const parsedBaseRate = Number(baseRateText);
+  const baseRate =
+    baseRateText.trim() !== '' &&
+    Number.isFinite(parsedBaseRate) &&
+    parsedBaseRate >= 1 &&
+    parsedBaseRate <= 30
+      ? parsedBaseRate
+      : SA_PRIME_RATE;
   const [bondTerm, setBondTerm] = useState<(typeof BUYABILITY_BOND_TERMS)[number]>(30);
   const pricedUnits = useMemo(
     () =>
@@ -621,7 +630,7 @@ function BuyabilityAssessment({
   const selectedUnit =
     pricedUnits.find(unit => String(unit.id) === selectedUnitId) ?? pricedUnits[0] ?? null;
   const selectedPrice = selectedUnit?.publicFacts?.priceFrom ?? priceFrom ?? null;
-  const selectedRate = SA_PRIME_RATE + rateStressOffset;
+  const selectedRate = baseRate + rateStressOffset;
   const grossIncomeAmount = parseAmount(grossIncome);
   const monthlyBondEstimate =
     selectedPrice !== null && selectedPrice > 0
@@ -689,11 +698,32 @@ function BuyabilityAssessment({
             />
 
             <div>
+              <label htmlFor="buyability-base-rate" className="text-xs font-semibold text-slate-800">
+                Interest rate (% per year)
+              </label>
+              <input
+                id="buyability-base-rate"
+                type="number"
+                inputMode="decimal"
+                min={1}
+                max={30}
+                step={0.05}
+                value={baseRateText}
+                onChange={event => setBaseRateText(event.target.value)}
+                aria-describedby="buyability-base-rate-note"
+                className="mt-2 h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-base font-semibold text-slate-900"
+              />
+              <p id="buyability-base-rate-note" className="mt-1.5 text-[11px] leading-relaxed text-slate-500">
+                {SA_PRIME_RATE_LABEL}
+              </p>
+            </div>
+
+            <div>
               <p className="text-xs font-semibold text-slate-800">Interest rate stress test</p>
               <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4" role="group" aria-label="Interest rate stress test">
                 {BUYABILITY_RATE_STRESS_OFFSETS.map(offset => {
                   const selected = rateStressOffset === offset;
-                  const rate = SA_PRIME_RATE + offset;
+                  const rate = baseRate + offset;
                   const optionClass = selected
                     ? 'border-blue-600 bg-blue-600 text-white shadow-sm'
                     : 'border-slate-300 bg-white text-slate-800 hover:border-blue-400';
@@ -704,9 +734,9 @@ function BuyabilityAssessment({
                       aria-pressed={selected}
                       onClick={() => setRateStressOffset(offset)}
                       className={'flex min-h-12 flex-col items-center justify-center rounded-xl border px-2 py-2 transition ' + optionClass}
-                      title={offset === 0 ? 'Current prime rate' : 'Prime plus ' + offset.toFixed(1) + ' percentage points'}
+                      title={offset === 0 ? 'The interest rate above' : 'The interest rate above plus ' + offset.toFixed(1) + ' percentage points'}
                     >
-                      <span className="text-xs font-bold leading-tight">{offset === 0 ? 'Prime' : '+' + offset.toFixed(1) + '%'}</span>
+                      <span className="text-xs font-bold leading-tight">{offset === 0 ? 'Rate' : '+' + offset.toFixed(1) + '%'}</span>
                       <span className="mt-0.5 text-[11px] font-semibold leading-tight">{rate.toFixed(2)}%</span>
                     </button>
                   );
