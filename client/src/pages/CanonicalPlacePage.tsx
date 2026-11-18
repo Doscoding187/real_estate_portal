@@ -7,6 +7,7 @@ import { PageFrame, PageHeader } from '@/components/ui/page-frame';
 import NotFound from '@/pages/NotFound';
 import { isLandPublicDiscoveryAvailable } from '@shared/landLaunchPolicy';
 import { useSearch } from 'wouter';
+import SuburbGuidePage from '@/pages/SuburbGuidePage';
 
 type PropertyGuideMode = 'sale' | 'rent';
 
@@ -78,7 +79,7 @@ export default function CanonicalPlacePage() {
   const indexable = place.indexable;
   const origin = typeof window === 'undefined' ? '' : window.location.origin;
 
-  return (
+  const page = (
     <PageFrame>
       <MetaControl
         title={placePageTitle(place.label)}
@@ -286,4 +287,10 @@ export default function CanonicalPlacePage() {
       </div>
     </PageFrame>
   );
+
+  // Localities render the place guide; province and city pages keep the page above.
+  if (place.searchScope === 'locality') {
+    return <SuburbGuidePage place={place} indexable={indexable} fallback={page} />;
+  }
+  return page;
 }

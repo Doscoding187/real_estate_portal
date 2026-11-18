@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { PropertyImageGallery } from './PropertyImageGallery';
 
 describe('PropertyImageGallery buyer media states', () => {
@@ -20,27 +20,41 @@ describe('PropertyImageGallery buyer media states', () => {
       />,
     );
 
-    expect(screen.getAllByRole('button', { name: 'Photos, 1' })).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: 'View gallery, 1' })).toHaveLength(1);
     expect(screen.queryByRole('button', { name: /Videos/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /3D Tour/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Floor Plan/i })).not.toBeInTheDocument();
   });
 
-  it('shows and invokes a supported video action', () => {
-    const onOpenVideos = vi.fn();
+  it('shows a supported video action and plays the first video in a dialog', () => {
     render(
       <PropertyImageGallery
         images={[{ id: 1, imageUrl: '/property.jpg', isPrimary: 1 }]}
         propertyTitle="Media property"
-        videoCount={2}
-        onOpenVideos={onOpenVideos}
+        videos={[
+          { id: 1, url: '/walkthrough.mp4', label: 'Walkthrough' },
+          { id: 2, url: '/second.mp4' },
+        ]}
       />,
     );
 
     const videoButtons = screen.getAllByRole('button', { name: 'Videos, 2' });
     expect(videoButtons).toHaveLength(2);
     fireEvent.click(videoButtons[0]);
-    expect(onOpenVideos).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('Walkthrough')).toBeInTheDocument();
+    expect(document.querySelector('video')).toHaveAttribute('src', '/walkthrough.mp4');
+  });
+
+  it('renders overlay actions beside the photo counter', () => {
+    render(
+      <PropertyImageGallery
+        images={[{ id: 1, imageUrl: '/property.jpg', isPrimary: 1 }]}
+        propertyTitle="Overlay property"
+        overlayActions={<button type="button">Save</button>}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
   });
 
   it('keeps carousel chevrons hidden until intentional desktop hover or keyboard focus', () => {

@@ -39,6 +39,8 @@ export type PublicInventorySortOption = SearchResultSortOption | 'trending';
 
 export interface PublicSearchInventoryInput {
   canonicalPlaceId?: string;
+  /** 1..MULTI_LOCATION_MAX selected Places; exclusive with canonicalPlaceId. Manual listings only. */
+  canonicalPlaceIds?: string[];
   propertyType?: string;
   listingType?: 'sale' | 'rent';
   listingSource?: 'manual' | 'development';
@@ -79,6 +81,8 @@ export interface PublicSearchInventoryResult {
   pageSize: number;
   hasMore: boolean;
   canonicalPlaceContext?: CanonicalPlaceSearchLabel & { scopePolicy: string };
+  /** Every selected Place, in request order, when several were requested. */
+  canonicalPlaceContexts?: Array<CanonicalPlaceSearchLabel & { scopePolicy: string }>;
   locationState: 'not_requested' | 'resolved' | 'unresolved' | 'ambiguous' | 'unavailable';
   locationMessage?: string;
   sourceCounts: {
@@ -305,13 +309,23 @@ function sourceSort(sortOption: PublicInventorySortOption): ManualPropertySortOp
 }
 
 export class PublicSearchService {
-  async searchInventory(input: PublicSearchInventoryInput): Promise<PublicSearchInventoryResult> {
-    if (isCommercialMarketingPropertyType(input.propertyType)) {
+  async searchInventory(
+    requestedInput: PublicSearchInventoryInput,
+  ): Promise<PublicSearchInventoryResult> {
+    if (isCommercialMarketingPropertyType(requestedInput.propertyType)) {
       throw new Error(COMMERCIAL_PUBLIC_JOURNEY_HANDOFF_MESSAGE);
     }
 
-    const validationIssue = validatePublicSearchInput(input);
+    const validationIssue = validatePublicSearchInput(requestedInput);
     if (validationIssue) throw new Error(validationIssue.message);
+
+    // A one-item list is the single-Place search (so Developments stay included).
+    const { canonicalPlaceIds: requestedPlaceIds, ...inputWithoutList } = requestedInput;
+    const input: PublicSearchInventoryInput =
+      requestedPlaceIds?.length === 1
+        ? { ...inputWithoutList, canonicalPlaceId: requestedPlaceIds[0] }
+        : requestedInput;
+    const multiPlaceIds = input.canonicalPlaceIds;
 
     if (!input.listingType) {
       return emptyLocationResult(
@@ -346,8 +360,41 @@ export class PublicSearchService {
     let canonicalPlaceContext: PublicSearchInventoryResult['canonicalPlaceContext'];
     let placeMemberIds: string[] | undefined;
     let provincePlaceId: string | undefined;
+    let canonicalPlaceContexts: PublicSearchInventoryResult['canonicalPlaceContexts'];
 
-    if (input.canonicalPlaceId !== undefined) {
+    if (multiPlaceIds !== undefined) {
+      placeProjection = await loadCanonicalPlaceSearchProjection(undefined, {
+        placeIds: multiPlaceIds,
+      });
+      const selected = multiPlaceIds.map(placeId => ({
+        execution: placeProjection!.executions.get(placeId),
+        label: placeProjection!.labels.get(placeId),
+      }));
+      if (selected.some(item => !item.execution || !item.label)) {
+        return emptyLocationResult(
+          input,
+          'unavailable',
+          'One of the selected Places cannot currently be searched. Choose other approved Places.',
+        );
+      }
+      if (selected.some(item => item.execution!.scope === 'province')) {
+        return emptyLocationResult(
+          input,
+          'unavailable',
+          'A province cannot be combined with other Places. Choose cities or suburbs.',
+        );
+      }
+      placeMemberIds = [
+        ...new Set(
+          selected.flatMap(item => canonicalPlaceSearchMembers(item.execution!, placeProjection!)),
+        ),
+      ];
+      canonicalPlaceContexts = selected.map(item => ({
+        ...item.label!,
+        scopePolicy: PLACE_INVENTORY_SCOPE_POLICY,
+      }));
+      canonicalPlaceContext = canonicalPlaceContexts[0];
+    } else if (input.canonicalPlaceId !== undefined) {
       if (!isCanonicalPlaceId(input.canonicalPlaceId)) {
         return emptyLocationResult(
           input,
@@ -461,7 +508,8 @@ export class PublicSearchService {
       pageSize,
       hasMore: canAdvancePublicSearchPage(canonicalPage, total, pageSize),
       canonicalPlaceContext,
-      locationState: input.canonicalPlaceId ? 'resolved' : 'not_requested',
+      ...(canonicalPlaceContexts ? { canonicalPlaceContexts } : {}),
+      locationState: input.canonicalPlaceId || multiPlaceIds ? 'resolved' : 'not_requested',
       sourceCounts: {
         manual: manualTotal,
         development: developmentTotal,

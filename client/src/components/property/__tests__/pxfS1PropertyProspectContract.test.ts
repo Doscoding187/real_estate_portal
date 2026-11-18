@@ -153,8 +153,8 @@ describe('PXF-S1 property prospect contract', () => {
     expect(page).toContain('pb-[calc(0.75rem+env(safe-area-inset-bottom))]');
     expect(page).toContain('lg:hidden');
     expect(page).toContain('aria-label="Request a viewing"');
-    expect(page).toContain('href={prop.href}');
-    expect(page).toContain('aria-label={`Open ${prop.title}`}');
+    expect(page).toContain('href={activeComparable.href}');
+    expect(page).toContain('aria-label={`Open ${title}`}');
     expect(page).toContain('<Link href={similarListingsHref}>View all matching listings</Link>');
     expect(page).toContain(
       "import { PROPERTY_FACT_ICONS } from '@/components/icons/propertyFactIcons';",

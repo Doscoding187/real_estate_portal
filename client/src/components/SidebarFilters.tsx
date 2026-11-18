@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Check, Search, X } from 'lucide-react';
+import { Check, ChevronDown, Search, X } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +21,7 @@ interface SidebarFiltersProps {
   listingType?: 'sale' | 'rent';
   showAmenities?: boolean;
   showHeader?: boolean;
+  variant?: 'sidebar' | 'toolbar';
 }
 export const FALLBACK_PROPERTY_TYPES = [
   { value: 'house', label: 'Houses' },
@@ -68,6 +69,7 @@ export function SidebarFilters({
   allowedPropertyTypes,
   listingType,
   showHeader = true,
+  variant = 'sidebar',
 }: SidebarFiltersProps) {
   const priceCeiling = listingType === 'rent' ? RENT_FILTER_PRICE_CEILING : BUY_FILTER_PRICE_CEILING;
   const priceStep = listingType === 'rent' ? RENT_FILTER_PRICE_STEP : PRICE_STEP;
@@ -131,7 +133,129 @@ export function SidebarFilters({
   };
 
   return (
-    <aside className="w-full rounded-xl border border-slate-200 bg-white px-5 py-5 shadow-[0_18px_45px_-38px_rgba(15,23,42,0.45)]">
+    <aside
+      aria-label="Property filters"
+      className={
+        variant === 'toolbar'
+          ? 'w-full bg-[#2864c8] px-4 py-3 text-white sm:px-6 lg:px-8'
+          : 'w-full rounded-xl border border-slate-200 bg-white px-5 py-5 shadow-[0_18px_45px_-38px_rgba(15,23,42,0.45)]'
+      }
+    >
+      {variant === 'toolbar' ? (
+        <div className="mx-auto flex max-w-[1240px] flex-wrap items-center gap-2.5">
+          <span className="mr-1 hidden text-sm font-semibold text-white/90 sm:inline">Filter by</span>
+          <FilterSection title="Property type" variant="toolbar">
+            <div className="space-y-1">
+              <button
+                type="button"
+                onClick={() => selectPropertyType()}
+                className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+              >
+                <SelectionMark selected={!filters.propertyType} />
+                Any property type
+              </button>
+              {propertyTypeOptions.map(option => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => selectPropertyType(option.value)}
+                  className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                >
+                  <SelectionMark selected={filters.propertyType === option.value} />
+                  <span className="min-w-0 flex-1 truncate">{option.label}</span>
+                  {typeof option.count === 'number' ? (
+                    <span className="text-xs tabular-nums text-slate-400">
+                      {option.count.toLocaleString()}
+                    </span>
+                  ) : null}
+                </button>
+              ))}
+            </div>
+          </FilterSection>
+          <FilterSection title={listingType === 'rent' ? 'Monthly rent' : 'Price'} variant="toolbar">
+            <div className="mb-4 flex items-center justify-between text-xs font-semibold text-slate-700">
+              <span>{compactCurrency(priceRange[0])}</span>
+              <span>
+                {priceRange[1] >= priceCeiling
+                  ? `${compactCurrency(priceCeiling)}+`
+                  : compactCurrency(priceRange[1])}
+              </span>
+            </div>
+            <Slider
+              value={priceRange}
+              min={0}
+              max={priceCeiling}
+              step={priceStep}
+              onValueChange={value => setPriceRange([value[0], value[1]])}
+              onValueCommit={value => commitPrice([value[0], value[1]])}
+            />
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <LabeledNumberInput
+                label="Minimum price"
+                value={priceRange[0]}
+                step={priceStep}
+                onChange={value =>
+                  setPriceRange([Math.min(value ?? 0, priceRange[1]), priceRange[1]])
+                }
+                onBlur={() => commitPrice()}
+              />
+              <LabeledNumberInput
+                label="Maximum price"
+                value={priceRange[1]}
+                step={priceStep}
+                onChange={value =>
+                  setPriceRange([priceRange[0], Math.max(value ?? priceCeiling, priceRange[0])])
+                }
+                onBlur={() => commitPrice()}
+              />
+            </div>
+          </FilterSection>
+          <FilterSection title="Bedrooms" variant="toolbar">
+            <MinimumChoiceRow
+              values={[1, 2, 3, 4, 5]}
+              selected={filters.minBedrooms}
+              onSelect={value => selectMinimum('minBedrooms', value)}
+            />
+          </FilterSection>
+          <FilterSection title="Bathrooms" variant="toolbar">
+            <MinimumChoiceRow
+              values={[1, 2, 3, 4]}
+              selected={filters.minBathrooms}
+              onSelect={value => selectMinimum('minBathrooms', value)}
+            />
+          </FilterSection>
+          <FilterSection title="Home size" variant="toolbar">
+            <div className="grid grid-cols-2 gap-2">
+              <LabeledNumberInput
+                label="Minimum m²"
+                value={areaRange[0]}
+                step={10}
+                onChange={value => setAreaRange([Math.min(value ?? 0, areaRange[1]), areaRange[1]])}
+                onBlur={() => commitArea()}
+              />
+              <LabeledNumberInput
+                label="Maximum m²"
+                value={areaRange[1]}
+                step={10}
+                onChange={value =>
+                  setAreaRange([areaRange[0], Math.max(value ?? AREA_LIMIT, areaRange[0])])
+                }
+                onBlur={() => commitArea()}
+              />
+            </div>
+          </FilterSection>
+          <button
+            type="button"
+            onClick={() => onFilterChange({})}
+            className="ml-auto rounded-md px-3 py-2 text-sm font-semibold text-white/90 transition hover:bg-white/10 hover:text-white"
+          >
+            Reset all
+          </button>
+        </div>
+      ) : null}
+
+      {variant === 'sidebar' ? (
+        <>
       {showHeader ? (
         <div className="flex items-center justify-between border-b border-slate-100 pb-4">
           <div>
@@ -264,11 +388,38 @@ export function SidebarFilters({
           Save this search
         </Button>
       ) : null}
+        </>
+      ) : null}
     </aside>
   );
 }
 
-function FilterSection({ title, children }: { title: string; children: React.ReactNode }) {
+function FilterSection({
+  title,
+  children,
+  variant = 'sidebar',
+}: {
+  title: string;
+  children: React.ReactNode;
+  variant?: 'sidebar' | 'toolbar';
+}) {
+  if (variant === 'toolbar') {
+    return (
+      <details className="group relative shrink-0">
+        <summary className="flex h-10 min-w-[138px] cursor-pointer list-none items-center justify-between gap-3 rounded-md border border-white/30 bg-white/10 px-3 text-sm font-semibold text-white transition hover:bg-white/15 [&::-webkit-details-marker]:hidden">
+          {title}
+          <ChevronDown
+            className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180"
+            aria-hidden="true"
+          />
+        </summary>
+        <div className="absolute left-0 top-full z-50 mt-2 max-h-[70vh] w-[min(360px,calc(100vw-2rem))] overflow-y-auto rounded-xl border border-slate-200 bg-white p-4 text-slate-700 shadow-xl">
+          {children}
+        </div>
+      </details>
+    );
+  }
+
   return (
     <section className="border-b border-slate-100 py-5 last:border-b-0 last:pb-0">
       <h3 className="mb-3 text-sm font-bold text-slate-900">{title}</h3>
