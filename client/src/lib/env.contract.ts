@@ -19,8 +19,10 @@ export const BACKEND_HOSTS = {
   development: new Set([
     'localhost:3000',
     'localhost:5000',
+    'localhost:5070', // local parity preview (scripts/preview/local-parity.sh)
     '127.0.0.1:3000',
     '127.0.0.1:5000',
+    '127.0.0.1:5070',
   ]),
 } as const;
 
