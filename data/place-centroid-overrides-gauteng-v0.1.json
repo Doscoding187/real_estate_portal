@@ -1,0 +1,26 @@
+{
+  "version": "0.1",
+  "note": "Reviewed manual matches, used by scripts/build-place-centroids.ts only for natural keys no automatic tier resolved. Each canonicalPath must exist in data/place-url-projection-national-v0.1.json.",
+  "overrides": [
+    {
+      "naturalKey": "gauteng/rosebank",
+      "canonicalPath": "/gauteng/randburg/rosebank",
+      "reason": "Only Gauteng URL entry with slug and name Rosebank (locality); source row has no city parent so automatic tiers cannot match."
+    },
+    {
+      "naturalKey": "gauteng/fourways",
+      "canonicalPath": "/gauteng/city-of-johannesburg/fourways",
+      "reason": "Only Gauteng URL entry with slug and name Fourways (locality); source row has no city parent and no coordinates."
+    },
+    {
+      "naturalKey": "gauteng/greenside",
+      "canonicalPath": "/gauteng/randburg/greenside",
+      "reason": "Only Gauteng URL entry with slug and name Greenside (locality); source row has no city parent."
+    },
+    {
+      "naturalKey": "gauteng/parkhurst",
+      "canonicalPath": "/gauteng/randburg/parkhurst",
+      "reason": "Only Gauteng URL entry with slug and name Parkhurst (locality); source row has no city parent."
+    }
+  ]
+}

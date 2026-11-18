@@ -21,7 +21,9 @@ export type PlaceCentroidIndex = {
 
 let cached: PlaceCentroidIndex | undefined;
 
-export function buildPlaceCentroidIndex(entries: readonly PlaceCentroidEntry[]): PlaceCentroidIndex {
+export function buildPlaceCentroidIndex(
+  entries: readonly PlaceCentroidEntry[],
+): PlaceCentroidIndex {
   return { entries, byPlaceId: new Map(entries.map(entry => [entry.canonicalPlaceId, entry])) };
 }
 

@@ -2,12 +2,14 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { mockGetDb, mockLoadProjection, mockResolveEligibilities, mockPlaceUrl } = vi.hoisted(() => ({
-  mockGetDb: vi.fn(),
-  mockLoadProjection: vi.fn(),
-  mockResolveEligibilities: vi.fn(),
-  mockPlaceUrl: vi.fn(),
-}));
+const { mockGetDb, mockLoadProjection, mockResolveEligibilities, mockPlaceUrl } = vi.hoisted(
+  () => ({
+    mockGetDb: vi.fn(),
+    mockLoadProjection: vi.fn(),
+    mockResolveEligibilities: vi.fn(),
+    mockPlaceUrl: vi.fn(),
+  }),
+);
 
 vi.mock('../../db', () => ({ getDb: mockGetDb }));
 vi.mock('../canonicalPlaceSearchService', () => ({
@@ -156,8 +158,12 @@ function install(rows: FactRow[], opts: { ineligible?: number[] } = {}) {
   return selectWhere;
 }
 
-const many = (place: string, count: number, price = 1_000_000, area: number | null = null): FactRow[] =>
-  Array.from({ length: count }, () => ({ place, price, area }));
+const many = (
+  place: string,
+  count: number,
+  price = 1_000_000,
+  area: number | null = null,
+): FactRow[] => Array.from({ length: count }, () => ({ place, price, area }));
 
 beforeEach(() => {
   mockGetDb.mockReset();
@@ -214,10 +220,24 @@ describe('selectPlaceGuideCandidates and orderNeighbourhoods', () => {
       'suburb',
     );
     expect(neighbourhoodPool.map(item => item.entry.canonicalPlaceId)).toEqual([
-      'N1', 'N2', 'N3', 'N4', 'N5', 'N6', 'N7',
+      'N1',
+      'N2',
+      'N3',
+      'N4',
+      'N5',
+      'N6',
+      'N7',
     ]);
     expect(marketPool.map(item => item.entry.canonicalPlaceId)).toEqual([
-      'X1', 'N1', 'N2', 'X2', 'N3', 'N4', 'X3', 'N5', 'N6',
+      'X1',
+      'N1',
+      'N2',
+      'X2',
+      'N3',
+      'N4',
+      'X3',
+      'N5',
+      'N6',
     ]);
   });
 
@@ -275,7 +295,9 @@ describe('placeGuideService.getPlaceGuide', () => {
       city: { placeId: CITY, canonicalPath: `/gauteng/${CITY}` },
       province: { placeId: 'prov', name: 'Gauteng' },
     });
-    expect(guide!.stats.typeMix).toEqual([{ propertyType: 'house', listingCount: 6, sharePct: 100 }]);
+    expect(guide!.stats.typeMix).toEqual([
+      { propertyType: 'house', listingCount: 6, sharePct: 100 },
+    ]);
   });
 
   it('chooses neighbourhoods by listing count then distance, and markets by distance excluding them', async () => {
@@ -288,7 +310,8 @@ describe('placeGuideService.getPlaceGuide', () => {
     const marketIds = guide.nearbyMarkets.map(item => item.placeId);
     expect(marketIds).toEqual(['X1', 'X2', 'X3', 'N6']);
     expect(marketIds).not.toContain(SELF);
-    for (const id of guide.neighbourhoods.map(item => item.placeId)) expect(marketIds).not.toContain(id);
+    for (const id of guide.neighbourhoods.map(item => item.placeId))
+      expect(marketIds).not.toContain(id);
     expect(guide.nearbyMarkets.map(item => item.distanceKm)).toEqual([0.6, 2.8, 5, 6.7]);
   });
 
@@ -321,13 +344,46 @@ describe('placeGuideService.getPlaceGuide', () => {
     const guide = (await placeGuideService.getPlaceGuide(SELF, centroidIndex(null)))!;
     expect(guide.place.centre).toBeNull();
     expect(guide.nearbyMarkets).toEqual([]);
-    expect(guide.neighbourhoods.map(item => [item.placeId, item.listingCount, item.distanceKm])).toEqual([
+    expect(
+      guide.neighbourhoods.map(item => [item.placeId, item.listingCount, item.distanceKm]),
+    ).toEqual([
       ['N6', 3, null],
       ['N2', 2, null],
       ['N7', 1, null],
       ['N1', 0, null],
       ['N3', 0, null],
     ]);
+  });
+
+  it('for a city: neighbourhoods are its own member localities, markets are the nearest cities', async () => {
+    const index = buildPlaceCentroidIndex([
+      entry(CITY, 0, 0, null, 'city'),
+      entry(OTHER_CITY, 0.05, 0, null, 'city'),
+      // Members of CITY (parent = CITY), N2 has no coordinates; N7 belongs to OTHER_CITY.
+      entry('N1', 0.02, 0, CITY),
+      entry('N2', null, null, CITY),
+      entry('N3', 0.01, 0, CITY),
+      entry('N4', 0.03, 0, CITY),
+      entry('N5', 0.04, 0, CITY),
+      entry('N6', 0.05, 0, CITY),
+      entry('N7', 0.001, 0, OTHER_CITY),
+    ]);
+    install([
+      ...many('N6', 4),
+      ...many('N1', 2),
+      ...many('N3', 2),
+      ...many('N7', 9),
+      ...many('N2', 1),
+    ]);
+    const guide = (await placeGuideService.getPlaceGuide(CITY, index))!;
+    expect(guide.place.level).toBe('city');
+    expect(guide.place.city).toBeNull();
+    // Count desc, then distance to the city centre; N7 is another city's locality.
+    expect(guide.neighbourhoods.map(item => item.placeId)).toEqual(['N6', 'N3', 'N1', 'N2', 'N4']);
+    expect(guide.neighbourhoods.map(item => item.listingCount)).toEqual([4, 2, 2, 1, 0]);
+    expect(guide.neighbourhoods[1].distanceKm).toBe(1.1);
+    expect(guide.nearbyMarkets.map(item => item.placeId)).toEqual([OTHER_CITY]);
+    expect(guide.nearbyMarkets[0].levelLabel).toBe('Town');
   });
 
   it('returns null for an unknown or unpublished place', async () => {
@@ -340,7 +396,9 @@ describe('placeAuthority.getPlaceGuide input', () => {
   const caller = () => appRouter.createCaller({ req: { headers: {} }, res: {}, user: null } as any);
 
   it('rejects malformed ids and unknown keys', async () => {
-    await expect(caller().placeAuthority.getPlaceGuide({ canonicalPlaceId: 'nope' })).rejects.toThrow();
+    await expect(
+      caller().placeAuthority.getPlaceGuide({ canonicalPlaceId: 'nope' }),
+    ).rejects.toThrow();
     await expect(
       caller().placeAuthority.getPlaceGuide({ canonicalPlaceId: 'pl-place-01-XYZ' } as any),
     ).rejects.toThrow();
@@ -355,7 +413,9 @@ describe('placeAuthority.getPlaceGuide input', () => {
   it('accepts a well-formed id', async () => {
     install([]);
     await expect(
-      caller().placeAuthority.getPlaceGuide({ canonicalPlaceId: 'pl-place-01-dee61758ef3bda7cd1a258ad' }),
+      caller().placeAuthority.getPlaceGuide({
+        canonicalPlaceId: 'pl-place-01-dee61758ef3bda7cd1a258ad',
+      }),
     ).resolves.toBeNull();
   });
 });

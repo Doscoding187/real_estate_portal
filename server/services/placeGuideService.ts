@@ -131,7 +131,11 @@ export function selectPlaceGuideCandidates(
   selfId: string,
   cityPlaceId: string | null,
   level: 'city' | 'suburb',
-): { centre: { lat: number; lng: number } | null; neighbourhoodPool: Candidate[]; marketPool: Candidate[] } {
+): {
+  centre: { lat: number; lng: number } | null;
+  neighbourhoodPool: Candidate[];
+  marketPool: Candidate[];
+} {
   const self = index.byPlaceId.get(selfId);
   const centre =
     self && self.lat !== null && self.lng !== null ? { lat: self.lat, lng: self.lng } : null;
@@ -150,22 +154,34 @@ export function selectPlaceGuideCandidates(
   const sameLevel = index.entries.filter(
     entry => entry.level === level && entry.canonicalPlaceId !== selfId,
   );
+  // A suburb's neighbours are same-city suburbs; a city's are its own member localities.
   const sameCity =
-    level === 'suburb' && cityPlaceId
-      ? sameLevel.filter(entry => entry.parentCityPlaceId === cityPlaceId)
-      : [];
+    level === 'suburb'
+      ? cityPlaceId
+        ? sameLevel.filter(entry => entry.parentCityPlaceId === cityPlaceId)
+        : []
+      : index.entries.filter(
+          entry => entry.level === 'suburb' && entry.parentCityPlaceId === selfId,
+        );
 
   if (!centre) {
     // No centre: same-city places are all candidates (ordered by listing count later).
     return { centre: null, neighbourhoodPool: withDistance(sameCity), marketPool: [] };
   }
-  const neighbourhoodPool = withDistance(sameCity.filter(entry => entry.lat !== null))
-    .sort(byDistance)
-    .slice(0, PLACE_GUIDE_NEIGHBOURHOOD_CANDIDATES);
+  // City members are all kept (ranked by listing count); suburbs use the nearest 15.
+  const neighbourhoodPool =
+    level === 'city'
+      ? withDistance(sameCity).sort(byDistance)
+      : withDistance(sameCity.filter(entry => entry.lat !== null))
+          .sort(byDistance)
+          .slice(0, PLACE_GUIDE_NEIGHBOURHOOD_CANDIDATES);
   // Enough nearest places that removing up to 5 neighbourhoods still leaves 4 markets.
   const marketPool = withDistance(sameLevel.filter(entry => entry.lat !== null))
     .sort(byDistance)
-    .slice(0, PLACE_GUIDE_MAX_NEARBY_MARKETS + (level === 'suburb' ? PLACE_GUIDE_MAX_NEIGHBOURHOODS : 0));
+    .slice(
+      0,
+      PLACE_GUIDE_MAX_NEARBY_MARKETS + (level === 'suburb' ? PLACE_GUIDE_MAX_NEIGHBOURHOODS : 0),
+    );
   return { centre, neighbourhoodPool, marketPool };
 }
 
@@ -179,9 +195,9 @@ function summarisePlace(facts: SuburbMarketFact[], now: Date): PlaceFacts {
  * Orders neighbourhood candidates (listing count desc, then distance, then name)
  * and nearby markets (distance, excluding self and the chosen neighbourhoods).
  */
-export function orderNeighbourhoods<T extends { listingCount: number; distanceKm: number | null; name: string }>(
-  items: readonly T[],
-): T[] {
+export function orderNeighbourhoods<
+  T extends { listingCount: number; distanceKm: number | null; name: string },
+>(items: readonly T[]): T[] {
   return [...items]
     .sort(
       (left, right) =>
@@ -193,7 +209,10 @@ export function orderNeighbourhoods<T extends { listingCount: number; distanceKm
 }
 
 export const placeGuideService = {
-  async getPlaceGuide(placeId: string, index: PlaceCentroidIndex = loadPlaceCentroids()): Promise<PlaceGuide | null> {
+  async getPlaceGuide(
+    placeId: string,
+    index: PlaceCentroidIndex = loadPlaceCentroids(),
+  ): Promise<PlaceGuide | null> {
     const urlEntry = canonicalPlaceUrlByPlaceId(placeId);
     const canonicalPath = publishedPath(placeId);
     if (!urlEntry || !canonicalPath) return null;
@@ -224,17 +243,21 @@ export const placeGuideService = {
     );
 
     // Searchable (labelled) places only, exactly as search does.
-    const projection = await loadCanonicalPlaceSearchProjection(undefined, { placeIds: candidateIds });
+    const projection = await loadCanonicalPlaceSearchProjection(undefined, {
+      placeIds: candidateIds,
+    });
     const selfExecution = projection.executions.get(placeId);
     if (!selfExecution || !projection.labels.has(placeId) || selfExecution.scope !== scope) {
       return null;
     }
-    const usable = (item: Candidate, sameCityOnly: boolean) => {
+    const usable = (item: Candidate, neighbour: boolean) => {
       const id = item.entry.canonicalPlaceId;
       const execution = projection.executions.get(id);
+      // Neighbours are localities of the same city (for a city page: its own member localities).
+      const wantedScope = neighbour ? 'locality' : scope;
       return (
-        Boolean(execution && projection.labels.has(id) && execution.scope === scope) &&
-        (!sameCityOnly || execution!.cityPlaceId === (cityPlaceId ?? selfExecution.cityPlaceId)) &&
+        Boolean(execution && projection.labels.has(id) && execution.scope === wantedScope) &&
+        (!neighbour || execution!.cityPlaceId === (cityPlaceId ?? selfExecution.cityPlaceId)) &&
         publishedPath(id) !== null
       );
     };
@@ -259,6 +282,7 @@ export const placeGuideService = {
         id: properties.id,
         listingType: properties.listingType,
         canonicalPlaceId: properties.canonicalPlaceId,
+        // Internal floor area only (no COALESCE with `area` as homeMarketInsightsService does): gross/erf-style areas would understate price per m2.
         internalAreaM2: properties.internalAreaM2,
       })
       .from(properties)
@@ -292,7 +316,9 @@ export const placeGuideService = {
     const linkFor = (id: string | null | undefined): PlaceGuideLink | null => {
       const entry = id ? canonicalPlaceUrlByPlaceId(id) : null;
       const path = id ? publishedPath(id) : null;
-      return entry && path ? { placeId: entry.place_id, name: entry.preferred_public_name, canonicalPath: path } : null;
+      return entry && path
+        ? { placeId: entry.place_id, name: entry.preferred_public_name, canonicalPath: path }
+        : null;
     };
     const listingCountOf = (id: string) => {
       const { sale, rent } = summaryOf(id).insights;
@@ -364,7 +390,7 @@ export const placeGuideService = {
         typeMix: buildTypeMix(self.facts),
         asOf: self.insights.asOf,
       },
-      neighbourhoods: scope === 'metro_city' ? [] : chosen,
+      neighbourhoods: chosen,
       nearbyMarkets,
     };
   },

@@ -6,7 +6,10 @@
  "urlProjection": {
   "path": "data/place-url-projection-national-v0.1.json"
  },
- "generatedAt": "2026-11-18T13:57:59.293Z",
+ "overrides": {
+  "path": "data/place-centroid-overrides-gauteng-v0.1.json"
+ },
+ "generatedAt": "2026-11-18T14:13:06.719Z",
  "entries": [
   {
    "canonicalPlaceId": "pl-place-01-00a5071b3470f996c7856dd5",
@@ -7290,6 +7293,15 @@
    "matchMethod": "tier1_exact_path"
   },
   {
+   "canonicalPlaceId": "pl-place-01-9fc15514f34eed8f7cfee48c",
+   "naturalKey": "gauteng/greenside",
+   "level": "suburb",
+   "parentCityPlaceId": null,
+   "lat": -26.15575,
+   "lng": 28.014,
+   "matchMethod": "manual-reviewed"
+  },
+  {
    "canonicalPlaceId": "pl-place-01-9fc2cbf993f1ee0875056076",
    "naturalKey": "gauteng/johannesburg/richmond",
    "level": "suburb",
@@ -8730,6 +8742,15 @@
    "matchMethod": "tier1_exact_path"
   },
   {
+   "canonicalPlaceId": "pl-place-01-bbe8dbb14d11d1383a3a8d54",
+   "naturalKey": "gauteng/fourways",
+   "level": "suburb",
+   "parentCityPlaceId": null,
+   "lat": null,
+   "lng": null,
+   "matchMethod": "manual-reviewed"
+  },
+  {
    "canonicalPlaceId": "pl-place-01-bc3d574db98569086a92d532",
    "naturalKey": "gauteng/johannesburg/jabulani",
    "level": "suburb",
@@ -8926,6 +8947,15 @@
    "lat": -26.62521,
    "lng": 27.816821,
    "matchMethod": "tier3_slug_name_unique"
+  },
+  {
+   "canonicalPlaceId": "pl-place-01-c07bb29f37ad926848934844",
+   "naturalKey": "gauteng/rosebank",
+   "level": "suburb",
+   "parentCityPlaceId": null,
+   "lat": -26.145277777,
+   "lng": 28.0397487,
+   "matchMethod": "manual-reviewed"
   },
   {
    "canonicalPlaceId": "pl-place-01-c0cf8766d46c2181217c3894",
@@ -10708,6 +10738,15 @@
    "lat": -26.4240392,
    "lng": 28.4390999,
    "matchMethod": "tier3_slug_name_unique"
+  },
+  {
+   "canonicalPlaceId": "pl-place-01-e6f8febdb59e5f93586f58c0",
+   "naturalKey": "gauteng/parkhurst",
+   "level": "suburb",
+   "parentCityPlaceId": null,
+   "lat": -26.13864,
+   "lng": 28.018238,
+   "matchMethod": "manual-reviewed"
   },
   {
    "canonicalPlaceId": "pl-place-01-e6ff04b430c134c62fe2932d",

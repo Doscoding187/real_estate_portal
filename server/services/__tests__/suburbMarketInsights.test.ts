@@ -5,29 +5,32 @@ import { buildSuburbMarketInsights } from '../suburbMarketInsights';
 describe('buildSuburbMarketInsights', () => {
   it('keeps sale and rental samples separate and hides under-sized medians', () => {
     const calculatedAt = new Date('2026-10-15T12:00:00.000Z');
-    const insights = buildSuburbMarketInsights([
-      ...[
-        1_000_000, 2_000_000, 3_000_000, 4_000_000, 5_000_000, 6_000_000, 7_000_000, 8_000_000,
-        9_000_000, 10_000_000,
-      ].map((price, index) => ({
-        transactionType: 'sale' as const,
-        propertyType: 'house',
-        bedrooms: index === 9 ? 6 : 3,
-        price,
-      })),
-      ...[12_000, 14_000, 16_000, 18_000].map(price => ({
-        transactionType: 'rent' as const,
-        propertyType: 'apartment',
-        bedrooms: 2,
-        price,
-      })),
-      {
-        transactionType: 'other' as const,
-        propertyType: 'house',
-        bedrooms: 4,
-        price: 8_000_000,
-      },
-    ], calculatedAt);
+    const insights = buildSuburbMarketInsights(
+      [
+        ...[
+          1_000_000, 2_000_000, 3_000_000, 4_000_000, 5_000_000, 6_000_000, 7_000_000, 8_000_000,
+          9_000_000, 10_000_000,
+        ].map((price, index) => ({
+          transactionType: 'sale' as const,
+          propertyType: 'house',
+          bedrooms: index === 9 ? 6 : 3,
+          price,
+        })),
+        ...[12_000, 14_000, 16_000, 18_000].map(price => ({
+          transactionType: 'rent' as const,
+          propertyType: 'apartment',
+          bedrooms: 2,
+          price,
+        })),
+        {
+          transactionType: 'other' as const,
+          propertyType: 'house',
+          bedrooms: 4,
+          price: 8_000_000,
+        },
+      ],
+      calculatedAt,
+    );
 
     expect(insights.asOf).toBe('2026-10-15T12:00:00.000Z');
     expect(insights.minimumPriceSample).toBe(5);
