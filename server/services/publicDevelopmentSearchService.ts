@@ -28,9 +28,13 @@ import {
 } from '../../shared/transactionalSearchState';
 import { getDb } from '../db-connection';
 import { buildDevelopmentRootPath } from './developmentRouteAuthority';
+import {
+  canonicalPlaceSearchMembers,
+  loadCanonicalPlaceSearchProjection,
+} from './canonicalPlaceSearchService';
 import { publicDevelopmentEligibilityConditions } from './publicDevelopmentEligibility';
 import {
-  listDevelopmentIdsForCanonicalPlace,
+  listDevelopmentIdsForCanonicalPlaces,
   listDevelopmentPlaceGeography,
   type DevelopmentPlaceGeography,
 } from './developmentPlaceAssignmentService';
@@ -80,7 +84,7 @@ export interface PublicDevelopmentSearchResult {
 type LocationResolution = {
   locationState: PublicDevelopmentSearchResult['locationState'];
   locationMessage?: string;
-  canonicalPlaceId?: string;
+  matchingPlaceIds?: string[];
   locationContext?: PublicDevelopmentSearchLocationContext;
 };
 
@@ -172,6 +176,67 @@ function finiteNumber(value: unknown): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function parseStoredJson(value: unknown): unknown {
+  let current = value;
+  for (let depth = 0; depth < 2 && typeof current === 'string'; depth += 1) {
+    try {
+      current = JSON.parse(current);
+    } catch {
+      return current;
+    }
+  }
+  return current;
+}
+
+function safeUnitImageUrl(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const candidate = value.trim();
+  if (!candidate || candidate.length > 2048 || candidate.startsWith('//')) return null;
+  if (candidate.startsWith('/')) return candidate;
+
+  try {
+    const parsed = new URL(candidate);
+    if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password) {
+      return null;
+    }
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+}
+
+function projectUnitGalleryImages(value: unknown): string[] {
+  const parsed = parseStoredJson(value);
+  const record = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
+  const gallery = record && Array.isArray((record as Record<string, unknown>).gallery)
+    ? ((record as Record<string, unknown>).gallery as unknown[])
+    : [];
+  const projected = gallery.flatMap((entry, index) => {
+    if (typeof entry === 'string') {
+      const url = safeUnitImageUrl(entry);
+      return url ? [{ url, isPrimary: false, index }] : [];
+    }
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return [];
+    const image = entry as Record<string, unknown>;
+    if (image.type && image.type !== 'image') return [];
+    const url = safeUnitImageUrl(image.url ?? image.imageUrl ?? image.src);
+    return url ? [{ url, isPrimary: image.isPrimary === true, index }] : [];
+  });
+
+  const ordered = projected.sort(
+    (left, right) => Number(right.isPrimary) - Number(left.isPrimary) || left.index - right.index,
+  );
+  const seen = new Set<string>();
+  const urls: string[] = [];
+  for (const image of ordered) {
+    if (seen.has(image.url)) continue;
+    seen.add(image.url);
+    urls.push(image.url);
+    if (urls.length === 12) break;
+  }
+  return urls;
+}
+
 async function resolveSearchLocation(
   input: PublicDevelopmentSearchInput,
 ): Promise<LocationResolution> {
@@ -182,9 +247,29 @@ async function resolveSearchLocation(
       locationMessage: 'The selected canonical Place is invalid.',
     };
   }
+  // Province scope uses governed Place membership. Finer scopes remain exact;
+  // display labels never decide which developments enter the result set.
+  const projection = await loadCanonicalPlaceSearchProjection(undefined, {
+    placeIds: [input.canonicalPlaceId],
+    includeProvinceMembers: true,
+  });
+  const selected = projection.executions.get(input.canonicalPlaceId);
+  if (!selected || !projection.labels.has(input.canonicalPlaceId)) {
+    return {
+      locationState: 'unavailable',
+      locationMessage: 'The selected Place cannot currently be searched. Choose another Place.',
+    };
+  }
+  const matchingPlaceIds = canonicalPlaceSearchMembers(selected, projection);
+  if (!matchingPlaceIds.length) {
+    return {
+      locationState: 'unavailable',
+      locationMessage: 'The selected Place has no approved search scope. Choose another Place.',
+    };
+  }
   return {
     locationState: 'resolved',
-    canonicalPlaceId: input.canonicalPlaceId,
+    matchingPlaceIds,
     locationContext: { canonicalPlaceId: input.canonicalPlaceId },
   };
 }
@@ -222,6 +307,7 @@ function itemFromRows(
     ...unit,
     id: String(unit.id),
     name: unit.name,
+    images: projectUnitGalleryImages(unit.baseMedia),
   }));
 
   return projectPublicDevelopmentFacts(projectionDevelopment, projectionUnits);
@@ -257,7 +343,7 @@ export class PublicDevelopmentSearchService {
       throw new Error(COMMERCIAL_PUBLIC_JOURNEY_HANDOFF_MESSAGE);
     }
     const location = await resolveSearchLocation(input);
-    if (location.locationState === 'unresolved') {
+    if (location.locationState !== 'resolved' && location.locationState !== 'not_requested') {
       return emptyResult(input, location);
     }
 
@@ -265,9 +351,9 @@ export class PublicDevelopmentSearchService {
     if (!db) throw new Error('Database not available');
 
     const conditions: SQL[] = [publicDevelopmentEligibilityConditions()];
-    if (location.canonicalPlaceId) {
-      const matchingDevelopmentIds = await listDevelopmentIdsForCanonicalPlace(
-        location.canonicalPlaceId,
+    if (location.matchingPlaceIds) {
+      const matchingDevelopmentIds = await listDevelopmentIdsForCanonicalPlaces(
+        location.matchingPlaceIds,
       );
       conditions.push(
         matchingDevelopmentIds.length
@@ -339,6 +425,7 @@ export class PublicDevelopmentSearchService {
             yardSize: unitTypes.yardSize,
             parkingBays: unitTypes.parkingBays,
             structuralType: unitTypes.structuralType,
+            baseMedia: unitTypes.baseMedia,
           })
           .from(unitTypes)
           .where(and(inArray(unitTypes.developmentId, developmentIds), eq(unitTypes.isActive, 1)))

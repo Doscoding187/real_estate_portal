@@ -18,6 +18,8 @@ export type PublicDevelopmentSearchAvailabilityState = 'available' | 'sold_out' 
 export interface PublicDevelopmentSearchUnit {
   id?: string | null;
   label: string;
+  /** Unit-specific gallery images, with the selected primary image first. */
+  images?: string[];
   bedrooms: number | null;
   bathrooms: number | null;
   priceFrom: number | null;
@@ -179,6 +181,8 @@ export interface PublicDevelopmentProjectionUnit {
   totalUnits?: unknown;
   availableUnits?: unknown;
   reservedUnits?: unknown;
+  /** Already-projected public image URLs from this unit type's gallery. */
+  images?: unknown;
 }
 
 function projectionFiniteNumber(value: unknown): number | null {
@@ -289,10 +293,12 @@ export function projectPublicDevelopmentFacts(
 
     const bedrooms = projectionFiniteNumber(unit.bedrooms);
     const bathrooms = projectionFiniteNumber(unit.bathrooms);
+    const images = projectionImages(unit.images);
 
     return {
       id: unit.id,
       label: String(unit.name || unit.label || '').trim() || 'Unit type',
+      ...(images.length ? { images } : {}),
       bedrooms,
       bathrooms,
       priceFrom,

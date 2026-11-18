@@ -52,8 +52,10 @@ function finitePositive(value: unknown): number | null {
 /**
  * One card per available unit type of a development. A unit type is available
  * when the shared projection (the same one the development page reads) states
- * availabilityState 'available'; unpriced unit types, other transaction types
- * and, when requirePhoto is set, developments without an image yield no card.
+ * availabilityState 'available'; unpriced unit types and other transaction
+ * types yield no card. Unit gallery images are preferred, with the development
+ * gallery used only when the unit type has no image. With requirePhoto set, a
+ * card needs an image from either gallery.
  * Prices are already transaction-aware in the projection (basePriceFrom for
  * sale, monthlyRentFrom for rent).
  */
@@ -63,8 +65,6 @@ export function developmentUnitTypeCards(
 ): DevelopmentUnitTypeCard[] {
   const expected = options.listingType === 'rent' ? 'for_rent' : 'for_sale';
   if (item.transactionType !== expected) return [];
-  const firstImage = item.images[0] ?? '';
-  if (options.requirePhoto && !firstImage) return [];
 
   const location = item.locationLabels.join(', ');
   const publisherRole =
@@ -77,6 +77,11 @@ export function developmentUnitTypeCards(
     if (unit.availabilityState !== 'available') continue;
     const price = finitePositive(unit.priceFrom);
     if (price === null || !unit.id) continue;
+    const unitImages = (unit.images ?? [])
+      .filter((url): url is string => typeof url === 'string' && Boolean(url.trim()))
+      .map(url => url.trim());
+    const cardImages = unitImages.length ? unitImages : item.images;
+    if (options.requirePhoto && cardImages.length === 0) continue;
     const unitSize = finitePositive(unit.unitSize);
     const title =
       unit.bedrooms !== null && unit.bedrooms !== undefined
@@ -95,8 +100,8 @@ export function developmentUnitTypeCards(
       ...(item.canonicalPlaceId ? { canonicalPlaceId: item.canonicalPlaceId } : {}),
       locationLabels: item.locationLabels,
       price,
-      image: firstImage,
-      images: item.images.map(url => ({ url })),
+      image: cardImages[0] ?? '',
+      images: cardImages.map(url => ({ url })),
       bedrooms: unit.bedrooms ?? undefined,
       bathrooms: unit.bathrooms ?? undefined,
       ...(unitSize !== null ? { area: unitSize, internalAreaM2: unitSize } : {}),
@@ -126,7 +131,7 @@ export function developmentUnitTypeCards(
       },
       highlights: [],
       badges: [item.status],
-      imageCount: item.images.length,
+      imageCount: cardImages.length,
       transactionType: item.transactionType,
       listedDate: item.createdAt ? new Date(item.createdAt) : new Date(0),
       developmentId: item.id,
@@ -154,41 +159,33 @@ export function developmentUnitTypeCards(
 
 export interface MixListingsAndUnitTypesOptions {
   limit: number;
-  maxPerDevelopment: number;
-  maxUnitTypesWhenListingsAtLeast6: number;
 }
 
 /**
  * Mix ordinary listings with development unit-type cards for the Trending rail.
- * - at most maxPerDevelopment unit types per development;
- * - when 6 or more listings exist, at most maxUnitTypesWhenListingsAtLeast6
- *   unit types; with fewer listings the rail may be mostly unit types;
- * - listings keep their given order, unit types keep theirs, and unit types are
- *   spread evenly through the result instead of piling at the end.
+ * The rail limit is the only card cap. When both sources have more results than
+ * fit, allocate slots in proportion to the eligible source counts, while
+ * retaining each source's order and spreading unit types through the result.
  */
-export function mixListingsAndUnitTypes<L, U extends { developmentId?: number }>(
+export function mixListingsAndUnitTypes<L, U>(
   listings: readonly L[],
   unitTypes: readonly U[],
   options: MixListingsAndUnitTypesOptions,
 ): Array<L | U> {
   const limit = Math.max(0, Math.floor(options.limit));
-  const perDevelopment = new Map<number | undefined, number>();
-  const eligible: U[] = [];
-  for (const unit of unitTypes) {
-    const used = perDevelopment.get(unit.developmentId) ?? 0;
-    if (used >= options.maxPerDevelopment) continue;
-    perDevelopment.set(unit.developmentId, used + 1);
-    eligible.push(unit);
-  }
+  const eligibleCount = listings.length + unitTypes.length;
+  let unitCount = Math.min(unitTypes.length, limit);
+  let listingCount = Math.min(listings.length, limit - unitCount);
 
-  let unitCount: number;
-  let listingCount: number;
-  if (listings.length >= 6) {
-    unitCount = Math.min(eligible.length, options.maxUnitTypesWhenListingsAtLeast6, limit);
+  if (eligibleCount > limit && listings.length > 0 && unitTypes.length > 0 && limit > 1) {
+    unitCount = Math.max(
+      1,
+      Math.min(limit - 1, unitTypes.length, Math.round((limit * unitTypes.length) / eligibleCount)),
+    );
     listingCount = Math.min(listings.length, limit - unitCount);
-  } else {
-    listingCount = Math.min(listings.length, limit);
-    unitCount = Math.min(eligible.length, limit - listingCount);
+    if (listingCount < limit - unitCount) {
+      unitCount = Math.min(unitTypes.length, limit - listingCount);
+    }
   }
 
   const total = listingCount + unitCount;
@@ -198,9 +195,9 @@ export function mixListingsAndUnitTypes<L, U extends { developmentId?: number }>
   for (let slot = 0; slot < total; slot++) {
     const takeUnit =
       Math.floor(((slot + 1) * unitCount) / total) > Math.floor((slot * unitCount) / total);
-    if (takeUnit && unitIndex < unitCount) mixed.push(eligible[unitIndex++]);
+    if (takeUnit && unitIndex < unitCount) mixed.push(unitTypes[unitIndex++]);
     else if (listingIndex < listingCount) mixed.push(listings[listingIndex++]);
-    else mixed.push(eligible[unitIndex++]);
+    else mixed.push(unitTypes[unitIndex++]);
   }
   return mixed;
 }

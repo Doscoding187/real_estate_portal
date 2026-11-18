@@ -132,7 +132,7 @@ describe('developmentUnitTypeCards', () => {
   });
 });
 
-const OPTS = { limit: 10, maxPerDevelopment: 2, maxUnitTypesWhenListingsAtLeast6: 4 };
+const OPTS = { limit: 10 };
 const listings = (n: number) => Array.from({ length: n }, (_, i) => `L${i + 1}`);
 const units = (perDev: number, devs: number) =>
   Array.from({ length: devs }, (_, d) =>
@@ -147,28 +147,48 @@ describe('mixListingsAndUnitTypes', () => {
     expect(out.every(x => typeof x !== 'string')).toBe(true);
   });
 
-  it('allows at most 2 unit types per development', () => {
+  it('keeps all unit types from one development when they fit in the rail', () => {
     const out = mixListingsAndUnitTypes([], units(5, 2), OPTS);
-    expect(out.map(tag)).toEqual(['U1.1', 'U1.2', 'U2.1', 'U2.2']);
+    expect(out.map(tag)).toEqual([
+      'U1.1',
+      'U1.2',
+      'U1.3',
+      'U1.4',
+      'U1.5',
+      'U2.1',
+      'U2.2',
+      'U2.3',
+      'U2.4',
+      'U2.5',
+    ]);
   });
 
-  it('caps unit types at 4 of 10 when 6 or more listings exist', () => {
+  it('allocates the rail proportionally when both sources have more than 10 results', () => {
     const out = mixListingsAndUnitTypes(listings(12), units(2, 8), OPTS);
     expect(out).toHaveLength(10);
-    expect(out.filter(x => typeof x !== 'string')).toHaveLength(4);
-    expect(out.filter(x => typeof x === 'string')).toHaveLength(6);
+    expect(out.filter(x => typeof x !== 'string')).toHaveLength(6);
+    expect(out.filter(x => typeof x === 'string')).toHaveLength(4);
   });
 
-  it('does not apply the 4-cap below 6 listings', () => {
-    const out = mixListingsAndUnitTypes(listings(5), units(2, 8), OPTS);
+  it('includes every eligible card when the combined sources fit the rail', () => {
+    const out = mixListingsAndUnitTypes(listings(5), units(1, 5), OPTS);
     expect(out).toHaveLength(10);
+    expect(out.filter(x => typeof x === 'string')).toHaveLength(5);
     expect(out.filter(x => typeof x !== 'string')).toHaveLength(5);
   });
 
   it('keeps listing order and spreads unit types through the result', () => {
     const out = mixListingsAndUnitTypes(listings(12), units(2, 8), OPTS).map(tag);
-    expect(out).toEqual(['L1', 'L2', 'U1.1', 'L3', 'U1.2', 'L4', 'L5', 'U2.1', 'L6', 'U2.2']);
-    expect(out.filter(t => t.startsWith('L'))).toEqual(listings(6));
+    expect(out).toHaveLength(10);
+    expect(out.filter(t => t.startsWith('L'))).toEqual(listings(4));
+    expect(out.filter(t => t.startsWith('U'))).toEqual([
+      'U1.1',
+      'U1.2',
+      'U2.1',
+      'U2.2',
+      'U3.1',
+      'U3.2',
+    ]);
   });
 
   it('fills from listings when there are too few unit types', () => {

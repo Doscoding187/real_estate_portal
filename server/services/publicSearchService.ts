@@ -65,7 +65,7 @@ export interface PublicSearchInventoryInput {
   requirePhoto?: boolean;
   /**
    * 'development' (default) returns one card per development. 'unit_type'
-   * returns one card per available unit type, mixed with listings under a cap.
+   * returns one card per available unit type, mixed with listings up to the rail limit.
    */
   developmentResultShape?: 'development' | 'unit_type';
   page?: number;
@@ -449,8 +449,6 @@ export class PublicSearchService {
     const cards = unitTypeShape
       ? mixListingsAndUnitTypes(manualEnabled ? manualCards : [], unitTypeCards, {
           limit: (canonicalPage + 1) * pageSize,
-          maxPerDevelopment: 2,
-          maxUnitTypesWhenListingsAtLeast6: 4,
         }).slice(canonicalPage * pageSize, canonicalPage * pageSize + pageSize)
       : manualEnabled && developmentEnabled
         ? blended.slice(canonicalPage * pageSize, canonicalPage * pageSize + pageSize)
