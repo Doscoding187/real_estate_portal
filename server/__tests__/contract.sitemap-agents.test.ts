@@ -1,16 +1,55 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { getDbMock } = vi.hoisted(() => ({ getDbMock: vi.fn() }));
+const { getDbMock, countListings, countDevelopments, loadProjection } = vi.hoisted(() => ({
+  getDbMock: vi.fn(),
+  countListings: vi.fn(),
+  countDevelopments: vi.fn(),
+  loadProjection: vi.fn(),
+}));
+
+const THIN_LOCALITY_PATH = '/eastern-cape/alfred-nzo-district-municipality/caba';
+const LISTED_LOCALITY_PATH = '/eastern-cape/alfred-nzo-district-municipality/bhetani';
+const LISTED_LOCALITY_ID = 'pl-place-01-f81d8b77e727099400617269';
 
 vi.mock('../db-connection', () => ({
   getDb: getDbMock,
 }));
+vi.mock('../db', () => ({ getDb: getDbMock }));
+vi.mock('../services/propertySearchService', () => ({
+  propertySearchService: { countPublicListingsByCanonicalPlace: countListings },
+}));
+vi.mock('../services/developmentPlaceAssignmentService', () => ({
+  countAcceptedDevelopmentsByPlace: countDevelopments,
+}));
+vi.mock('../services/canonicalPlaceSearchService', () => ({
+  loadCanonicalPlaceSearchProjection: loadProjection,
+}));
+vi.mock('../services/publicPropertyGuideService', () => ({
+  metroCityGuideLocalityIds: vi.fn(
+    async (_db: unknown, ids: string[]) => new Map(ids.map(id => [id, []])),
+  ),
+}));
 
 import sitemapRouter from '../routes/sitemap';
 import { SITEMAP_INDEX_CHILDREN } from '../../shared/sitemapIndex';
-import { publishedCanonicalPlaceUrls } from '../services/canonicalPlaceUrlService';
+import { resetPlaceIndexabilityCache } from '../services/placeIndexabilityService';
+import { PLACE_INDEX_ALLOWLIST_PATHS } from '../../shared/placeIndexAllowlist';
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  resetPlaceIndexabilityCache();
+  countListings.mockResolvedValue(new Map([[LISTED_LOCALITY_ID, 2]]));
+  countDevelopments.mockResolvedValue(new Map());
+  loadProjection.mockImplementation(async (_db: unknown, options: { placeIds: string[] }) => ({
+    executions: new Map(
+      options.placeIds.map(id => [
+        id,
+        { placeId: id, provincePlaceId: 'pl-place-01-9892b872a77f27e90c5cf091' },
+      ]),
+    ),
+    labels: new Map(options.placeIds.map(id => [id, { label: id }])),
+  }));
+});
 
 function makeFakeDb(rows: Array<Record<string, unknown>>) {
   const db = {
@@ -123,23 +162,23 @@ describe('canonical Place sitemap', () => {
     expect(getDbMock).not.toHaveBeenCalled();
   });
 
-  it('lists only active Places admitted by the explicit publication decision', async () => {
+  it('lists hand-approved and inventory-backed Places and omits thin ones', async () => {
     const capture = await requestSitemap([], '/sitemap-places.xml');
     expect(capture.body).toContain('<urlset');
     expect(capture.body).toContain('<loc>https://www.propertylistifysa.co.za/south-africa</loc>');
-    for (const entry of publishedCanonicalPlaceUrls()) {
-      expect(capture.body).toContain(
-        `<loc>https://www.propertylistifysa.co.za${entry.path}</loc>`,
-      );
+    for (const path of [...PLACE_INDEX_ALLOWLIST_PATHS, LISTED_LOCALITY_PATH]) {
+      expect(capture.body).toContain(`<loc>https://www.propertylistifysa.co.za${path}</loc>`);
     }
+    expect(capture.body).not.toContain(THIN_LOCALITY_PATH);
+    expect(capture.body).not.toContain('/free-state</loc>');
     expect(capture.body).not.toContain('/sitemap-guides.xml');
-    expect(getDbMock).not.toHaveBeenCalled();
   });
 
   it('keeps the static sitemap index synchronized with the runtime index', async () => {
     const capture = await requestSitemap([], '/sitemap.xml');
-    const children = [...String(capture.body).matchAll(/<loc>[^<]+\/(sitemap[^<]+\.xml)<\/loc>/g)]
-      .map(match => `/${match[1]}`);
+    const children = [
+      ...String(capture.body).matchAll(/<loc>[^<]+\/(sitemap[^<]+\.xml)<\/loc>/g),
+    ].map(match => `/${match[1]}`);
     expect(children).toEqual([...SITEMAP_INDEX_CHILDREN]);
   });
 });

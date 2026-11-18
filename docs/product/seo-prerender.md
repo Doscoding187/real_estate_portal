@@ -4,12 +4,12 @@
 
 `pnpm build:frontend` writes a real HTML file for each of these, in addition to `/south-africa`:
 
-| Family | Source of truth | Approx. count |
-| --- | --- | --- |
-| Homepage (`/`) | `homePage()` in `server/_core/prerenderPages.ts` | 1 |
-| Provinces, cities and towns, suburbs and localities | `publishedCanonicalPlaceUrls()` (published and active only) from `data/place-url-projection-national-v0.1.json` | 9 + 657 + 2,993 |
-| Fixed-content pages: `/about`, `/company/about`, `/faq`, `/support/faq`, `/terms`, `/privacy`, `/legal/*`, `/cookies`, `/compliance`, `/contact` | `client/src/lib/navLandingPages.ts` and the legal and contact pages | 16 |
-| Advertise pages: `/advertise`, `/advertise/sell/{agents,agencies,developers}` | the preparation variants of those pages (only while `COMMERCIAL_ACTIVATION_STATE.enabled` is false) | 4 |
+| Family                                                                                                                                           | Source of truth                                                                                     | Approx. count |
+| ------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- | ------------- |
+| Homepage (`/`)                                                                                                                                   | `homePage()` in `server/_core/prerenderPages.ts`                                                    | 1             |
+| Hand-approved places only: Gauteng, Johannesburg, Sandton, Rosebank (`shared/placeIndexAllowlist.ts`)                                            | `publishedCanonicalPlaceUrls()` filtered by the allowlist                                           | 4             |
+| Fixed-content pages: `/about`, `/company/about`, `/faq`, `/support/faq`, `/terms`, `/privacy`, `/legal/*`, `/cookies`, `/compliance`, `/contact` | `client/src/lib/navLandingPages.ts` and the legal and contact pages                                 | 16            |
+| Advertise pages: `/advertise`, `/advertise/sell/{agents,agencies,developers}`                                                                    | the preparation variants of those pages (only while `COMMERCIAL_ACTIVATION_STATE.enabled` is false) | 4             |
 
 Each file is the application shell Vite built (scripts and styles untouched) with its own title,
 description, canonical link, Open Graph and Twitter tags, robots, JSON-LD and a short readable body
@@ -17,6 +17,16 @@ inside `#root`. React replaces `#root` on boot. The client updates the head tags
 (`client/src/lib/seo.ts` upserts singletons; managed JSON-LD is removed and rewritten), so nothing is
 duplicated. The canonical link carries `data-route-meta="canonical"` so `MetaControl` removes it on
 routes that set none.
+
+### Place indexing rule (decision D3)
+
+Build time has no listing data, so only the allowlisted places get raw `index, follow` HTML. Every
+other published place (3,655 of 3,659) is served by the app shell and never prerendered; it still
+opens for visitors. After boot the client sets robots from the server `indexable` flag
+(`server/services/placeIndexabilityService.ts`): published AND (allowlisted OR at least one public
+sale/rent listing OR at least one accepted development in its scope). The same flag filters
+`/sitemap-places.xml`. Raw HTML must never say `noindex` for a page that can later become
+indexable, so noindex is client-side only.
 
 ## Why
 
@@ -43,10 +53,9 @@ memo 39, option B.
 
 ## Budgets
 
-Measured with all families: 3,679 files, 17 MB of HTML (generation about 3 s on top of the Vite build;
-back-to-back warm builds were 42 s without and 40 s with prerendering). If a future data change pushes
-the build past +60 s or the output past +50 MB, set `PRERENDER_LOCALITIES=false` for the build to emit
-provinces, cities and static pages only (686 files, 3 MB).
+With the allowlist only about 24 files are generated (static pages plus 4 places), so the earlier
+3,679-file, 17 MB measurement no longer applies. `PRERENDER_LOCALITIES=false` still drops allowlisted
+localities (Sandton, Rosebank).
 
 ## Routing
 

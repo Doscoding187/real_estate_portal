@@ -396,10 +396,7 @@ export class PropertySearchService {
     ) {
       throw new Error('Property search accepts canonical Place IDs only.');
     }
-    if (
-      options.provincePlaceId &&
-      filters.canonicalPlaceIds !== undefined
-    ) {
+    if (options.provincePlaceId && filters.canonicalPlaceIds !== undefined) {
       throw new Error('Province inventory scope requires the exclusive public Place boundary.');
     }
 
@@ -425,54 +422,54 @@ export class PropertySearchService {
       import('./canonicalPlaceSearchService').CanonicalPlaceSearchLabel
     >();
     let candidateRows = await db
-        .select({ id: properties.id, canonicalPlaceId: properties.canonicalPlaceId })
-        .from(properties)
-        .leftJoin(developments, eq(properties.developmentId, developments.id))
-        .where(and(...publicConditions))
-        .orderBy(...buildManualPropertySortOrder(sortOption));
+      .select({ id: properties.id, canonicalPlaceId: properties.canonicalPlaceId })
+      .from(properties)
+      .leftJoin(developments, eq(properties.developmentId, developments.id))
+      .where(and(...publicConditions))
+      .orderBy(...buildManualPropertySortOrder(sortOption));
+    if (options.provincePlaceId) {
+      // Unassigned rows cannot enter a canonical province search.
+      candidateRows = candidateRows.filter(row => Boolean(row.canonicalPlaceId));
+    }
+    if (candidateRows.some(row => row.canonicalPlaceId)) {
+      const projection =
+        (!options.provincePlaceId && options.placeProjection) ||
+        (await loadCanonicalPlaceSearchProjection(undefined, {
+          placeIds: [
+            ...(options.provincePlaceId ? [options.provincePlaceId] : []),
+            ...new Set<string>(
+              candidateRows.flatMap(row => (row.canonicalPlaceId ? [row.canonicalPlaceId] : [])),
+            ),
+          ],
+        }));
+      placeLabels = projection.labels;
       if (options.provincePlaceId) {
-        // Unassigned rows cannot enter a canonical province search.
-        candidateRows = candidateRows.filter(row => Boolean(row.canonicalPlaceId));
+        const selected = projection.executions.get(options.provincePlaceId);
+        const members = new Set(
+          selected?.scope === 'province' && projection.labels.has(selected.placeId)
+            ? canonicalPlaceSearchMembers(selected, projection)
+            : [],
+        );
+        candidateRows = candidateRows.filter(
+          row => row.canonicalPlaceId && members.has(row.canonicalPlaceId),
+        );
       }
-      if (candidateRows.some(row => row.canonicalPlaceId)) {
-        const projection =
-          (!options.provincePlaceId && options.placeProjection) ||
-          (await loadCanonicalPlaceSearchProjection(undefined, {
-            placeIds: [
-              ...(options.provincePlaceId ? [options.provincePlaceId] : []),
-              ...new Set<string>(
-                candidateRows.flatMap(row => (row.canonicalPlaceId ? [row.canonicalPlaceId] : [])),
-              ),
-            ],
-          }));
-        placeLabels = projection.labels;
-        if (options.provincePlaceId) {
-          const selected = projection.executions.get(options.provincePlaceId);
-          const members = new Set(
-            selected?.scope === 'province' && projection.labels.has(selected.placeId)
-              ? canonicalPlaceSearchMembers(selected, projection)
-              : [],
-          );
-          candidateRows = candidateRows.filter(
-            row => row.canonicalPlaceId && members.has(row.canonicalPlaceId),
-          );
-        }
-      }
-      publicResolutionById = await resolvePublicPropertyEligibilities(
-        candidateRows.map(row => Number(row.id)),
-      );
-      const eligibleIds = candidateRows
-        .filter(row => row.canonicalPlaceId && placeLabels.has(row.canonicalPlaceId))
-        .map(row => Number(row.id))
-        .filter(propertyId => {
-          const resolution = publicResolutionById.get(propertyId);
-          return (
-            resolution &&
-            (!options.requirePhoto ||
-              resolution.images.some(image => hasHomePropertyPhoto(image.url || image.imageUrl)))
-          );
-        });
-      total = eligibleIds.length;
+    }
+    publicResolutionById = await resolvePublicPropertyEligibilities(
+      candidateRows.map(row => Number(row.id)),
+    );
+    const eligibleIds = candidateRows
+      .filter(row => row.canonicalPlaceId && placeLabels.has(row.canonicalPlaceId))
+      .map(row => Number(row.id))
+      .filter(propertyId => {
+        const resolution = publicResolutionById.get(propertyId);
+        return (
+          resolution &&
+          (!options.requirePhoto ||
+            resolution.images.some(image => hasHomePropertyPhoto(image.url || image.imageUrl)))
+        );
+      });
+    total = eligibleIds.length;
     eligiblePageIds = eligibleIds.slice(offset, offset + pageSize);
 
     const hasMore = offset + pageSize < total;
@@ -580,9 +577,7 @@ export class PropertySearchService {
     const propertyIds = results.map((p: any) => Number(p.id));
     const images = propertyIds.flatMap(propertyId =>
       (publicResolutionById.get(propertyId)?.images || [])
-        .filter(
-          image => !options.requirePhoto || hasHomePropertyPhoto(image.url || image.imageUrl),
-        )
+        .filter(image => !options.requirePhoto || hasHomePropertyPhoto(image.url || image.imageUrl))
         .map(image => ({
           propertyId,
           imageUrl: image.imageUrl || image.url,
@@ -731,8 +726,7 @@ export class PropertySearchService {
       const publicCoordinates = normalizeCoordinatePair(prop.latitude, prop.longitude);
       // Public geography comes from the admitted Place projection. Keep the
       // canonical locality label for exact and approximate locations.
-      const canonicalPublicSuburb =
-        placeLabel?.locality || '';
+      const canonicalPublicSuburb = placeLabel?.locality || '';
 
       const developmentId = Number(prop.developmentId || 0);
       const developmentName =
@@ -871,6 +865,44 @@ export class PropertySearchService {
    * Supports all filter types: location, price, bedrooms, SA-specific
    * Uses hybrid approach: ID-based queries when available, text fallback otherwise
    */
+  /**
+   * Public sale and rent listings per assigned canonical Place, for page indexability.
+   * Uses the same base conditions, source-listing, land-exclusion and public-eligibility
+   * resolution as `searchProperties`, so a Place counts a listing only if search would show it.
+   * Callers filter to searchable Places (labels), exactly as search does.
+   */
+  async countPublicListingsByCanonicalPlace(): Promise<Map<string, number>> {
+    const rows = await db
+      .select({ id: properties.id, canonicalPlaceId: properties.canonicalPlaceId })
+      .from(properties)
+      .leftJoin(developments, eq(properties.developmentId, developments.id))
+      .where(
+        and(
+          ...this.buildFilterConditions({}),
+          inArray(properties.listingType, ['sale', 'rent']),
+          sql`${properties.sourceListingId} IS NOT NULL`,
+          sql`${properties.canonicalPlaceId} IS NOT NULL`,
+          excludeLandFromGenericPublicProjection(),
+        ),
+      );
+    const placeByPropertyId = new Map<number, string>();
+    for (const row of rows) {
+      if (row.canonicalPlaceId) placeByPropertyId.set(Number(row.id), row.canonicalPlaceId);
+    }
+    const counts = new Map<string, number>();
+    const ids = [...placeByPropertyId.keys()];
+    for (let offset = 0; offset < ids.length; offset += PUBLIC_PROPERTY_QUERY_BATCH_SIZE) {
+      const resolved = await resolvePublicPropertyEligibilities(
+        ids.slice(offset, offset + PUBLIC_PROPERTY_QUERY_BATCH_SIZE),
+      );
+      for (const propertyId of resolved.keys()) {
+        const placeId = placeByPropertyId.get(propertyId);
+        if (placeId) counts.set(placeId, (counts.get(placeId) ?? 0) + 1);
+      }
+    }
+    return counts;
+  }
+
   private buildFilterConditions(filters: PropertyFilters): SQL[] {
     const conditions: SQL[] = [];
     if (filters.canonicalPlaceIds !== undefined) {

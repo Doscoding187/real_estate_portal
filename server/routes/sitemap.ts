@@ -21,7 +21,7 @@ import {
 } from '../../shared/serviceDirectorySlugs';
 import { isHeldJourneyPath, isLaunchHeldJourney } from '../../shared/launchHeldJourneys';
 import { SITEMAP_INDEX_CHILDREN } from '../../shared/sitemapIndex';
-import { publishedCanonicalPlaceUrls } from '../services/canonicalPlaceUrlService';
+import { indexablePublishedPlaceUrls } from '../services/placeIndexabilityService';
 
 const router = Router();
 
@@ -186,17 +186,23 @@ router.get('/sitemap.xml', (req, res) => {
 });
 
 // Canonical Place admission and its publication gate determine place URL eligibility.
-router.get('/sitemap-places.xml', (req, res) => {
-  const baseUrl = resolveBaseUrl(req);
-  sendXml(
-    res,
-    buildUrlSet([
-      { loc: toAbsoluteUrl(COUNTRY_DISCOVERY_PATH, baseUrl) },
-      ...publishedCanonicalPlaceUrls().map(place => ({
-        loc: toAbsoluteUrl(place.path, baseUrl),
-      })),
-    ]),
-  );
+// Thin places (no listings or developments, not hand-approved) are noindexed and left out (D3).
+router.get('/sitemap-places.xml', async (req, res, next) => {
+  try {
+    const baseUrl = resolveBaseUrl(req);
+    const places = await indexablePublishedPlaceUrls();
+    sendXml(
+      res,
+      buildUrlSet([
+        { loc: toAbsoluteUrl(COUNTRY_DISCOVERY_PATH, baseUrl) },
+        ...places.map(place => ({
+          loc: toAbsoluteUrl(place.path, baseUrl),
+        })),
+      ]),
+    );
+  } catch (error) {
+    next(error);
+  }
 });
 
 router.get('/sitemap-agents.xml', async (_req, res, next) => {

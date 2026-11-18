@@ -24,7 +24,9 @@ vi.mock('../publicSearchService', () => ({
 import { publicSearchService } from '../publicSearchService';
 import { publicPropertyGuideAreas } from '../publicPropertyGuideService';
 
-let relationshipRows: { placeId: string }[][] = [];
+const EXTENT_ID = 'pl-place-01-503de72cc29aa712c0e5a597';
+
+let relationshipRows: { placeId: string; parentId: string }[][] = [];
 
 function projection(placeIds: string[]) {
   const executions = new Map(
@@ -74,7 +76,12 @@ function projection(placeIds: string[]) {
 describe('publicPropertyGuideAreas', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    relationshipRows = [[{ placeId: NEWCLARE_ID }, { placeId: WESTBURY_ID }]];
+    relationshipRows = [
+      [
+        { placeId: NEWCLARE_ID, parentId: PARENT_ID },
+        { placeId: WESTBURY_ID, parentId: PARENT_ID },
+      ],
+    ];
     select.mockImplementation(() => {
       const query = {
         from: vi.fn(() => query),
@@ -109,7 +116,12 @@ describe('publicPropertyGuideAreas', () => {
 
   it('keeps each guide count equal to exact-place public search for Sale and Rent', async () => {
     for (const mode of ['sale', 'rent'] as const) {
-      relationshipRows = [[{ placeId: NEWCLARE_ID }, { placeId: WESTBURY_ID }]];
+      relationshipRows = [
+        [
+          { placeId: NEWCLARE_ID, parentId: PARENT_ID },
+          { placeId: WESTBURY_ID, parentId: PARENT_ID },
+        ],
+      ];
       const areas = await publicPropertyGuideAreas(PARENT_ID, mode);
 
       expect(areas.map(area => area.listingCount)).toEqual(mode === 'sale' ? [4, 2] : [1]);
@@ -134,8 +146,11 @@ describe('publicPropertyGuideAreas', () => {
 
   it('uses Johannesburg administrative coverage for guide cards without changing exact search scope', async () => {
     relationshipRows = [
-      [{ placeId: WESTBURY_ID }],
-      [{ placeId: SANDTON_ID }, { placeId: WESTBURY_ID }],
+      [{ placeId: WESTBURY_ID, parentId: JOHANNESBURG_ID }],
+      [
+        { placeId: SANDTON_ID, parentId: EXTENT_ID },
+        { placeId: WESTBURY_ID, parentId: EXTENT_ID },
+      ],
     ];
 
     const areas = await publicPropertyGuideAreas(JOHANNESBURG_ID, 'sale');

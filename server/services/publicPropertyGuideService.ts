@@ -1,8 +1,9 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { place, placeRelationship } from '../../drizzle/schema/placeAuthority';
 import type { PlaceSearchScope } from '../../shared/placeAuthority';
 import { getDb } from '../db';
 import { loadCanonicalPlaceSearchProjection } from './canonicalPlaceSearchService';
+import type { PlaceReadDatabase } from './placeDiscoveryService';
 import { publicSearchService } from './publicSearchService';
 
 export type PropertyGuideMode = 'sale' | 'rent';
@@ -35,6 +36,64 @@ function searchHref(mode: PropertyGuideMode, placeId: string): string {
 }
 
 /**
+ * Locality IDs a city guide lists, for one or many city guides. This is the single
+ * child-selection rule: `settlement_within` children plus the administrative extent
+ * children above. Page indexability reuses it so a city is only indexable when its guide
+ * could list at least one area with inventory.
+ */
+export async function metroCityGuideLocalityIds(
+  database: PlaceReadDatabase,
+  cityIds: readonly string[],
+): Promise<Map<string, string[]>> {
+  const byCity = new Map<string, Set<string>>(cityIds.map(id => [id, new Set<string>()]));
+  const requested = [...new Set(cityIds)];
+  if (!requested.length) return new Map();
+
+  const children = await database
+    .select({ placeId: placeRelationship.fromPlaceId, parentId: placeRelationship.toPlaceId })
+    .from(placeRelationship)
+    .innerJoin(place, eq(place.placeId, placeRelationship.fromPlaceId))
+    .where(
+      and(
+        inArray(placeRelationship.toPlaceId, requested),
+        eq(placeRelationship.relationshipType, 'settlement_within'),
+        eq(place.lifecycleStatus, 'active'),
+        eq(place.searchEligible, 1),
+        eq(place.searchScope, 'locality'),
+      ),
+    );
+  for (const row of children as { placeId: string; parentId: string }[]) {
+    byCity.get(row.parentId)?.add(row.placeId);
+  }
+
+  const citiesByExtent = new Map<string, string[]>();
+  for (const cityId of requested) {
+    const extentId = CITY_GUIDE_ADMINISTRATIVE_EXTENTS[cityId];
+    if (extentId) citiesByExtent.set(extentId, [...(citiesByExtent.get(extentId) ?? []), cityId]);
+  }
+  if (citiesByExtent.size) {
+    const administrativeChildren = await database
+      .select({ placeId: placeRelationship.fromPlaceId, parentId: placeRelationship.toPlaceId })
+      .from(placeRelationship)
+      .innerJoin(place, eq(place.placeId, placeRelationship.fromPlaceId))
+      .where(
+        and(
+          inArray(placeRelationship.toPlaceId, [...citiesByExtent.keys()]),
+          eq(placeRelationship.relationshipType, 'administratively_contains'),
+          eq(place.lifecycleStatus, 'active'),
+          eq(place.searchEligible, 1),
+          eq(place.searchScope, 'locality'),
+        ),
+      );
+    for (const row of administrativeChildren as { placeId: string; parentId: string }[]) {
+      for (const cityId of citiesByExtent.get(row.parentId) ?? [])
+        byCity.get(cityId)?.add(row.placeId);
+    }
+  }
+  return new Map([...byCity].map(([cityId, ids]) => [cityId, [...ids]]));
+}
+
+/**
  * Build a navigational guide for a broad Place. Every count is the `total`
  * returned by the canonical public search service for that exact locality and
  * transaction mode, so the guide cannot drift from public search visibility.
@@ -60,43 +119,8 @@ export async function publicPropertyGuideAreas(
 
   let localityIds: string[];
   if (parent.scope === 'metro_city') {
-    const children = await database
-      .select({ placeId: placeRelationship.fromPlaceId })
-      .from(placeRelationship)
-      .innerJoin(place, eq(place.placeId, placeRelationship.fromPlaceId))
-      .where(
-        and(
-          eq(placeRelationship.toPlaceId, canonicalPlaceId),
-          eq(placeRelationship.relationshipType, 'settlement_within'),
-          eq(place.lifecycleStatus, 'active'),
-          eq(place.searchEligible, 1),
-          eq(place.searchScope, 'locality'),
-        ),
-      );
-    localityIds = [...new Set<string>((children as { placeId: string }[]).map(row => row.placeId))];
-
-    const administrativeExtentId = CITY_GUIDE_ADMINISTRATIVE_EXTENTS[canonicalPlaceId];
-    if (administrativeExtentId) {
-      const administrativeChildren = await database
-        .select({ placeId: placeRelationship.fromPlaceId })
-        .from(placeRelationship)
-        .innerJoin(place, eq(place.placeId, placeRelationship.fromPlaceId))
-        .where(
-          and(
-            eq(placeRelationship.toPlaceId, administrativeExtentId),
-            eq(placeRelationship.relationshipType, 'administratively_contains'),
-            eq(place.lifecycleStatus, 'active'),
-            eq(place.searchEligible, 1),
-            eq(place.searchScope, 'locality'),
-          ),
-        );
-      localityIds = [
-        ...new Set([
-          ...localityIds,
-          ...(administrativeChildren as { placeId: string }[]).map(row => row.placeId),
-        ]),
-      ];
-    }
+    localityIds =
+      (await metroCityGuideLocalityIds(database, [canonicalPlaceId])).get(canonicalPlaceId) ?? [];
   } else {
     const provinceProjection = await loadCanonicalPlaceSearchProjection(database, {
       placeIds: [canonicalPlaceId],

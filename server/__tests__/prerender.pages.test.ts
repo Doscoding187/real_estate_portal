@@ -7,6 +7,7 @@ import {
   renderPrerenderedHtml,
   type PrerenderPage,
 } from '../_core/prerenderPages';
+import { PLACE_INDEX_ALLOWLIST_PATHS } from '../../shared/placeIndexAllowlist';
 import { publishedCanonicalPlaceUrls } from '../services/canonicalPlaceUrlService';
 
 // Mirrors the head of client/index.html as built by Vite (module script, a commented-out tag).
@@ -46,15 +47,24 @@ describe('prerender route list', () => {
     ]) {
       expect(byPath.has(path), path).toBe(true);
     }
-    expect(pages.filter(item => item.family === 'province')).toHaveLength(9);
+    expect(pages.filter(item => item.family === 'province')).toHaveLength(1);
   });
 
   it('emits only published, active place URLs and never /south-africa', () => {
     const published = new Set(publishedCanonicalPlaceUrls().map(entry => entry.path));
     const placePages = pages.filter(item => ['province', 'city', 'locality'].includes(item.family));
-    expect(placePages.length).toBe(published.size);
     for (const item of placePages) expect(published.has(item.path), item.path).toBe(true);
     expect(byPath.has('/south-africa')).toBe(false);
+  });
+
+  it('prerenders only the hand-approved place pages; every other place uses the app shell', () => {
+    const placePages = pages.filter(item => ['province', 'city', 'locality'].includes(item.family));
+    expect(placePages.map(item => item.path).sort()).toEqual(
+      [...PLACE_INDEX_ALLOWLIST_PATHS].sort(),
+    );
+    for (const item of placePages) expect(item.robots).toBe('index, follow');
+    expect(publishedCanonicalPlaceUrls().length).toBeGreaterThan(placePages.length);
+    expect(byPath.has('/gauteng/akasia')).toBe(false);
   });
 
   it('uses unique, query-free, file-safe paths', () => {
