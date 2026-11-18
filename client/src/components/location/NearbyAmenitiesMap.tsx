@@ -1,5 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  Popup,
+  Tooltip,
+  useMap,
+  useMapEvents,
+} from 'react-leaflet';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -26,7 +34,9 @@ import {
   type NearbyAmenity,
   type NearbyAmenityCategory,
 } from '@shared/nearbyAmenities';
+import { divIcon } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import '@/styles/nearby-amenities-map.css';
 
 interface NearbyAmenitiesMapProps {
   center?: [number, number];
@@ -35,9 +45,16 @@ interface NearbyAmenitiesMapProps {
   showControls?: boolean;
   onAmenitySelect?: (amenity: NearbyAmenity) => void;
   className?: string;
+  locationOverviewLabel?: string;
 }
 
 const AMENITY_RADIUS_OPTIONS_KM = [2, 5, 10] as const;
+const AREA_FOCUS_ICON = divIcon({
+  className: 'location-area-focus-marker',
+  html: '<span class="location-area-focus-marker__pin"><span></span></span>',
+  iconSize: [36, 44],
+  iconAnchor: [18, 42],
+});
 
 const amenityIcons = {
   education: School,
@@ -66,7 +83,10 @@ export function NearbyAmenitiesMap({
   showControls = true,
   onAmenitySelect,
   className,
+  locationOverviewLabel,
 }: NearbyAmenitiesMapProps) {
+  const isLocationOverview = Boolean(locationOverviewLabel);
+  const overviewZoom = 12;
   const [mapCenter, setMapCenter] = useState(center);
   const [searchRadius, setSearchRadius] = useState(radius);
   const [enabledCategories, setEnabledCategories] = useState<
@@ -95,6 +115,11 @@ export function NearbyAmenitiesMap({
     },
     { retry: false, enabled: selectedCategories.length > 0 },
   );
+
+  useEffect(() => {
+    setMapCenter(center);
+    setSearchRadius(radius);
+  }, [center, radius]);
 
   // Handle map move
   const handleMapMove = useCallback((newCenter: [number, number]) => {
@@ -256,6 +281,13 @@ export function NearbyAmenitiesMap({
             </div>
           </CardContent>
         </Card>
+      ) : isLocationOverview ? (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border bg-muted/20 p-3">
+          <span className="font-medium">Places of interest around {locationOverviewLabel}</span>
+          <span className="text-sm text-muted-foreground">
+            Map view stays centred on {locationOverviewLabel}
+          </span>
+        </div>
       ) : (
         <div className="flex flex-col gap-3 rounded-xl border bg-muted/20 p-3 sm:flex-row sm:items-center sm:justify-between">
           {radiusOptions}
@@ -274,17 +306,51 @@ export function NearbyAmenitiesMap({
         <CardContent className="p-0">
           <MapContainer
             center={mapCenter}
-            zoom={13}
+            zoom={isLocationOverview ? overviewZoom : 13}
+            scrollWheelZoom={!isLocationOverview}
+            doubleClickZoom={!isLocationOverview}
+            touchZoom={!isLocationOverview}
+            boxZoom={!isLocationOverview}
+            keyboard={!isLocationOverview}
+            dragging={!isLocationOverview}
+            zoomControl={!isLocationOverview}
             style={{ height: `${mapHeight}px`, width: '100%' }}
             className="z-0"
           >
+            {isLocationOverview ? <MapViewport center={center} zoom={overviewZoom} /> : null}
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
 
+            {isLocationOverview && locationOverviewLabel ? (
+              <Marker
+                position={center}
+                icon={AREA_FOCUS_ICON}
+                title={`${locationOverviewLabel} map focus`}
+                alt={`${locationOverviewLabel} map focus`}
+                zIndexOffset={1000}
+              >
+                <Tooltip
+                  direction="top"
+                  offset={[0, -34]}
+                  permanent
+                  className="location-area-focus-tooltip"
+                >
+                  {locationOverviewLabel}
+                </Tooltip>
+                <Popup>
+                  <strong>{locationOverviewLabel} map focus</strong>
+                  <p>
+                    This marker identifies the map’s reference centre, not an official area
+                    boundary.
+                  </p>
+                </Popup>
+              </Marker>
+            ) : null}
+
             {/* Map move handler */}
-            <MapEventHandler onMove={handleMapMove} />
+            {!isLocationOverview ? <MapEventHandler onMove={handleMapMove} /> : null}
 
             {/* Amenity markers */}
             {amenities.map(amenity => (
@@ -313,9 +379,11 @@ export function NearbyAmenitiesMap({
                         <span className="text-xs bg-muted px-2 py-1 rounded">
                           {categoryLabels[amenity.category]}
                         </span>
-                        <span className="text-xs text-muted-foreground">
-                          {amenity.distance} away
-                        </span>
+                        {!isLocationOverview ? (
+                          <span className="text-xs text-muted-foreground">
+                            {amenity.distance} away
+                          </span>
+                        ) : null}
                       </div>
 
                       {amenity.rating !== null && (
@@ -342,11 +410,20 @@ export function NearbyAmenitiesMap({
       {amenities.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Nearby Amenities ({amenities.length})</CardTitle>
+            <CardTitle className="text-lg">
+              {isLocationOverview
+                ? `Places of interest around ${locationOverviewLabel}`
+                : `Nearby Amenities (${amenities.length})`}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 max-h-64 overflow-y-auto">
             {[...amenities]
-              .sort((a, b) => a.distanceValue - b.distanceValue)
+              .sort((a, b) =>
+                isLocationOverview
+                  ? categoryLabels[a.category].localeCompare(categoryLabels[b.category]) ||
+                    a.name.localeCompare(b.name)
+                  : a.distanceValue - b.distanceValue,
+              )
               .map(amenity => (
                 <div
                   key={amenity.id}
@@ -357,7 +434,9 @@ export function NearbyAmenitiesMap({
                   }`}
                   onClick={() => {
                     setSelectedAmenity(amenity);
-                    setMapCenter([amenity.latitude, amenity.longitude]);
+                    if (!isLocationOverview) {
+                      setMapCenter([amenity.latitude, amenity.longitude]);
+                    }
                   }}
                 >
                   <div className="flex items-start justify-between">
@@ -375,7 +454,9 @@ export function NearbyAmenitiesMap({
                         <Badge variant="outline" className="text-xs">
                           {categoryLabels[amenity.category]}
                         </Badge>
-                        <span className="text-xs text-muted-foreground">{amenity.distance}</span>
+                        {!isLocationOverview ? (
+                          <span className="text-xs text-muted-foreground">{amenity.distance}</span>
+                        ) : null}
                         {amenity.rating !== null && (
                           <div className="flex items-center gap-1">
                             <Star className="h-3 w-3 text-yellow-500 fill-current" />
@@ -402,10 +483,14 @@ export function NearbyAmenitiesMap({
           <CardContent className="p-6 text-center">
             <Info className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
             <p className="text-muted-foreground">
-              No qualifying places found within {searchRadius}km of this location.
+              {isLocationOverview
+                ? `No places of interest are available for the selected categories around ${locationOverviewLabel} right now.`
+                : `No qualifying places found within ${searchRadius}km of this location.`}
             </p>
             <p className="text-sm text-muted-foreground mt-1">
-              Try a wider radius or enabling more amenity categories.
+              {isLocationOverview
+                ? 'Try another category to explore more local places.'
+                : 'Try a wider radius or enabling more amenity categories.'}
             </p>
           </CardContent>
         </Card>
@@ -451,11 +536,23 @@ export function NearbyAmenitiesMap({
       )}
 
       <p className="text-xs text-muted-foreground">
-        Places data © Google. Only established, highly rated places are shown; results are measured
-        from the map centre and may sit outside the suburb boundary.
+        Places data © Google. Only established, highly rated places are shown.
+        {isLocationOverview
+          ? ` Pins are oriented around ${locationOverviewLabel}'s mapped centre. The map is for local discovery and does not represent an official suburb boundary.`
+          : ' Results are measured from the map centre and may sit outside the suburb boundary.'}
       </p>
     </div>
   );
+}
+
+function MapViewport({ center, zoom }: { center: [number, number]; zoom: number }) {
+  const map = useMap();
+  const latitude = center[0];
+  const longitude = center[1];
+  useEffect(() => {
+    map.setView([latitude, longitude], zoom, { animate: false });
+  }, [latitude, longitude, map, zoom]);
+  return null;
 }
 
 // Helper component to handle map events
