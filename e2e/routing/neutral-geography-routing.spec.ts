@@ -50,10 +50,11 @@ test.afterEach(async ({ page }) => {
   await expect(errors.length, `the page raised a client-side error:\n${errors.join('\n')}`).toBe(0);
 });
 
+// Localities render the place guide, whose heading is "Explore <place>".
 const CANONICAL_PLACE_PAGES = [
   { path: '/gauteng', label: 'Gauteng' },
   { path: '/gauteng/johannesburg', label: 'Johannesburg' },
-  { path: '/gauteng/city-of-johannesburg/sandton', label: 'Sandton' },
+  { path: '/gauteng/city-of-johannesburg/sandton', label: 'Explore Sandton' },
 ];
 
 const RETIRED_SRP_GEOGRAPHY_PATHS = [
@@ -93,11 +94,11 @@ test.describe('Canonical Place routing', () => {
 
   test('canonical place page carries its exact identity into property search', async ({ page }) => {
     await page.goto('/gauteng/city-of-johannesburg/sandton', { waitUntil: 'domcontentloaded' });
-    await expect(page.getByRole('heading', { level: 1, name: 'Sandton', exact: true })).toBeVisible(
-      {
-        timeout: PAGE_READY_TIMEOUT,
-      },
-    );
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Explore Sandton', exact: true }),
+    ).toBeVisible({
+      timeout: PAGE_READY_TIMEOUT,
+    });
 
     const saleLink = page.getByRole('link', { name: 'Search homes for sale' });
     await expect(saleLink).toBeVisible();

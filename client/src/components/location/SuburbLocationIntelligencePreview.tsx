@@ -337,9 +337,9 @@ export function SuburbLocationIntelligencePreview({
                   >
                     <span>
                       {copy.label}
-                      <small>Commercial sales search coming soon</small>
+                      <small>Commercial sales search is not available here</small>
                     </span>
-                    <span className="suburb-discovery-next-step__status">Coming soon</span>
+                    <span className="suburb-discovery-next-step__status">Not available</span>
                   </span>
                 ) : (
                   <Link key={option.key} href={option.href} className="suburb-discovery-next-step">
@@ -831,7 +831,8 @@ export function SuburbLocationIntelligencePreview({
                 className="suburb-guide-section-link"
                 href={listingTab === 'buy' ? buyHref : rentHref}
               >
-                See all properties <ArrowRight size={15} aria-hidden="true" />
+                {listingTab === 'buy' ? 'Search homes for sale' : 'Search rentals'}{' '}
+                <ArrowRight size={15} aria-hidden="true" />
               </Link>
             </div>
             <div
