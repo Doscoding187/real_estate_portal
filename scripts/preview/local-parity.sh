@@ -70,6 +70,7 @@ case "${1:-status}" in
       pnpm exec tsx server/_core/start.ts || exit 1
     start_one web "$WEB_PID_FILE" "$WEB_PORT" \
       env VITE_API_URL="$API_URL" VITE_API_BASE_URL="$API_URL" VITE_DEPLOY_ENV=development \
+      DEV_API_PROXY_TARGET="http://127.0.0.1:${API_PORT}" \
       pnpm exec vite --host 127.0.0.1 --port "$WEB_PORT" --strictPort || exit 1
     wait_for "$API_PORT" || echo "api not listening yet; see $STATE_DIR/api.log" >&2
     wait_for "$WEB_PORT" || echo "web not listening yet; see $STATE_DIR/web.log" >&2

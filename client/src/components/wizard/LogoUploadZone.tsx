@@ -79,7 +79,18 @@ export const LogoUploadZone = React.forwardRef<HTMLDivElement, LogoUploadZonePro
       setPreview(value || null);
     }, [value]);
 
-    const validateFile = (file: File): string | null => {
+    // When an upload finishes, re-sync the preview with the committed value so a
+    // failed upload (value unchanged) does not leave a stale preview behind.
+    const wasUploadingRef = React.useRef(uploading);
+    React.useEffect(() => {
+      if (wasUploadingRef.current && !uploading) {
+        setPreview(value || null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+      wasUploadingRef.current = uploading;
+    }, [uploading, value]);
+
+    const validateFile =(file: File): string | null => {
       // Check file type
       if (!acceptedTypes.includes(file.type)) {
         return `Invalid file type. Accepted types: ${acceptedTypes.map(t => t.split('/')[1].toUpperCase()).join(', ')}`;
