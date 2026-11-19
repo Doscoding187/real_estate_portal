@@ -538,7 +538,7 @@ export function EditCataloguePublisherDialog({
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={updateMutation.isPending}>
+              <Button type="submit" disabled={updateMutation.isPending || isUploadingLogo}>
                 {updateMutation.isPending ? 'Updating...' : 'Save Changes'}
               </Button>
             </DialogFooter>
