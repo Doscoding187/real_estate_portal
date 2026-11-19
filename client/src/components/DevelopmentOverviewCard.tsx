@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { formatSARandShort } from '@/lib/bond-calculator';
+import { formatSARandShort, SA_PRIME_RATE_LABEL } from '@/lib/bond-calculator';
 import { formatPriceCompact } from '@/lib/formatPrice';
 import { Calculator, Calendar, TrendingUp } from 'lucide-react';
 
@@ -98,7 +98,7 @@ export function DevelopmentOverviewCard({
                 </div>
 
                 <p className="text-xs text-slate-500">
-                  Estimated using a 20-year bond term and standard prime lending rate.
+                  Estimated using a 20-year bond term. {SA_PRIME_RATE_LABEL}.
                 </p>
               </>
             )}

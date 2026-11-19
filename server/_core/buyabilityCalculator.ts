@@ -5,12 +5,15 @@
  * based on their financial information and South African real estate market conditions.
  *
  * Key South African Factors:
- * - Prime lending rate (currently ~11.75%)
+ * - Example prime lending rate (illustration only, see shared/lendingExamples.ts)
  * - Bond registration costs (~1-2% of property value)
  * - Transfer duties (progressive scale)
  * - Legal fees (~1% of property value)
  * - Monthly household expenses considerations
  */
+
+import { estimateTransferDuty } from '@shared/transferDuty';
+import { SA_PRIME_RATE } from '@shared/lendingExamples';
 
 export interface ProspectFinancialData {
   income?: number; // Monthly gross income in cents
@@ -40,21 +43,10 @@ export interface BuyabilityResult {
 
 // South African lending constants (2024)
 const SA_LENDING_CONSTANTS = {
-  PRIME_RATE: 11.75, // Current prime lending rate
+  PRIME_RATE: SA_PRIME_RATE, // Example rate for illustration, not the current prime rate
   MAX_LOAN_TO_VALUE: 0.9, // 90% max LTV for residential properties
   MIN_DOWN_PAYMENT: 0.1, // 10% minimum down payment
   BOND_REGISTRATION_COST: 0.015, // 1.5% of property value
-  TRANSFER_DUTIES: {
-    // Progressive scale for transfer duties
-    brackets: [
-      { maxValue: 1000000, rate: 0 }, // R0 - R1M: 0%
-      { maxValue: 1500000, rate: 0.005 }, // R1M - R1.5M: 0.5%
-      { maxValue: 2000000, rate: 0.01 }, // R1.5M - R2M: 1%
-      { maxValue: 2500000, rate: 0.015 }, // R2M - R2.5M: 1.5%
-      { maxValue: 10000000, rate: 0.02 }, // R2.5M - R10M: 2%
-      { maxValue: Infinity, rate: 0.025 }, // Over R10M: 2.5%
-    ],
-  },
   LEGAL_FEES_ESTIMATE: 0.01, // 1% estimate
   MONTHLY_LIVING_EXPENSES: {
     single: 800000, // R8,000/month for essentials
@@ -64,24 +56,6 @@ const SA_LENDING_CONSTANTS = {
   INSURANCE_ESTIMATE: 0.0005, // 0.05% of property value per month
   MAINTENANCE_ESTIMATE: 0.001, // 0.1% of property value per month
 };
-
-function calculateTransferDuty(propertyValue: number): number {
-  let totalDuty = 0;
-  let remainingValue = propertyValue;
-
-  for (const bracket of SA_LENDING_CONSTANTS.TRANSFER_DUTIES.brackets) {
-    if (remainingValue <= 0) break;
-
-    const taxableInBracket = Math.min(
-      remainingValue,
-      bracket.maxValue - (propertyValue - remainingValue),
-    );
-    totalDuty += taxableInBracket * bracket.rate;
-    remainingValue -= taxableInBracket;
-  }
-
-  return totalDuty;
-}
 
 function calculateMonthlyPaymentCapacity(financialData: ProspectFinancialData): number {
   // Convert income to monthly amount (already in cents)
@@ -345,7 +319,7 @@ export function calculateTotalAcquisitionCosts(propertyValue: number): {
   legalFees: number;
   total: number;
 } {
-  const transferDuty = calculateTransferDuty(propertyValue);
+  const transferDuty = estimateTransferDuty(propertyValue);
   const bondRegistration = propertyValue * SA_LENDING_CONSTANTS.BOND_REGISTRATION_COST;
   const legalFees = propertyValue * SA_LENDING_CONSTANTS.LEGAL_FEES_ESTIMATE;
 

@@ -17,6 +17,7 @@ import {
   ProspectFinancialData,
   BuyabilityResult,
 } from '../_core/buyabilityCalculator';
+import { SA_PRIME_RATE } from '@shared/lendingExamples';
 
 export interface AffordabilityGrade {
   grade: 'A' | 'B' | 'C' | 'D' | 'E';
@@ -450,7 +451,7 @@ export function matchUnitsToAffordability(
 
     // Calculate monthly payment for this unit
     const loanAmount = priceInCents - deposit;
-    const monthlyRate = (11.75 + 1.5) / 100 / 12; // Prime + margin
+    const monthlyRate = (SA_PRIME_RATE + 1.5) / 100 / 12; // Example rate + margin
     const months = 240; // 20 years
     const monthlyPayment =
       (loanAmount * (monthlyRate * Math.pow(1 + monthlyRate, months))) /

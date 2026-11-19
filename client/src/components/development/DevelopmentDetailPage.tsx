@@ -1580,6 +1580,7 @@ export function DevelopmentDetailPage({
   const [buyabilityEstimate, setBuyabilityEstimate] = useState<BuyabilityEstimate>({
     grossMonthlyIncome: 0,
     estimatedBuyingPower: null,
+    // Example rate (SA_PRIME_RATE), not the current prime rate; payload shape unchanged.
     interestRate: SA_PRIME_RATE,
     termYears: 30,
   });
@@ -1881,6 +1882,9 @@ export function DevelopmentDetailPage({
                               ? 'On request'
                               : formatSARandShort(monthlyBondEstimate)}
                           </p>
+                          {monthlyBondEstimate !== null && monthlyBondEstimate !== undefined ? (
+                            <p className="mt-0.5 text-[10px] text-slate-500">{SA_PRIME_RATE_LABEL}</p>
+                          ) : null}
                         </div>
                       </div>
                       <div className="flex min-w-0 items-center gap-2.5 rounded-xl bg-blue-50 px-3 py-2.5">

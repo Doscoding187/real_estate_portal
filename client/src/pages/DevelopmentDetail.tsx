@@ -78,6 +78,7 @@ import {
   calculateMonthlyRepayment,
   formatSARandShort,
   SA_PRIME_RATE,
+  SA_PRIME_RATE_LABEL,
 } from '@/lib/bond-calculator';
 import { trackCTAClick, trackFunnelStep } from '@/lib/analytics/advertiseTracking';
 import {
@@ -433,6 +434,9 @@ function UnitTypeCarousel({
                               </span>
                             </div>
                           ) : null}
+                          <p className="mt-1 text-[9px] leading-tight text-slate-500">
+                            {SA_PRIME_RATE_LABEL}
+                          </p>
                         </div>
                       ) : null}
                     </div>
@@ -620,6 +624,7 @@ function DevelopmentActionPanel({
                   <p className="mt-1 text-[11px] leading-relaxed text-slate-600">
                     {quickQualification.body}
                   </p>
+                  <p className="mt-1 text-[10px] text-slate-500">{SA_PRIME_RATE_LABEL}</p>
                 </div>
               ) : null}
             </div>
@@ -1873,6 +1878,7 @@ export default function DevelopmentDetail() {
                                   {formatSARandShort(quickQualification.comfortFloor)} -{' '}
                                   {formatSARandShort(quickQualification.buyingPower)}
                                 </p>
+                                <p className="text-[11px] text-slate-500">{SA_PRIME_RATE_LABEL}</p>
                               </div>
                             </div>
                           </div>
