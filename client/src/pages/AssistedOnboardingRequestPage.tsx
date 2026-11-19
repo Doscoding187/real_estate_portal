@@ -41,12 +41,12 @@ const PAGE_COPY: Record<AssistedRequestArea, { heading: string; intro: string }>
   agency_operations: {
     heading: 'Talk to us about your agency',
     intro:
-      'Agency accounts are not open yet. Tell us about your agency and what you need, and our team will review your request.',
+      'Agency accounts are open for registration. Tell us about your agency and what you need, and our team will review your request.',
   },
   developer_operations: {
     heading: 'Talk to us about listing your development',
     intro:
-      'Developer accounts are not open yet. Tell us about your company and your development, and our team will review your request.',
+      'Developer accounts are open for registration. Tell us about your company and your development, and our team will review your request.',
   },
   other: {
     heading: 'Contact Property Listify',

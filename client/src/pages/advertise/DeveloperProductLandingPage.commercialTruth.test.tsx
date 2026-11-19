@@ -119,12 +119,12 @@ describe('public Developer product landing page', () => {
       screen.getByText('Publishing your developments opens later, after review and approval.'),
     ).toBeInTheDocument();
 
-    // Held at launch: the sign-up CTA is a non-link "Not open yet" state.
-    expect(
-      screen.queryByRole('link', { name: /Start Developer preparation/i }),
-    ).not.toBeInTheDocument();
-    expect(screen.getAllByTestId('cta-not-open-yet')).toHaveLength(2);
-    expect(document.querySelector('a[href*="developer%2Fsetup"]')).toBeNull();
+    // Registration is open: the CTA links to register with the Developer role preselected.
+    expect(screen.getAllByTestId('cta-register-role')).toHaveLength(2);
+    screen.getAllByRole('link', { name: /Create your Developer account/i }).forEach(link => {
+      expect(link).toHaveAttribute('href', '/login?mode=register&role=property_developer');
+    });
+    expect(screen.queryByTestId('cta-not-open-yet')).not.toBeInTheDocument();
 
     expect(useCatalogMock).not.toHaveBeenCalled();
   });

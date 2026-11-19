@@ -23,10 +23,15 @@ describe('Advertise product-led gateway', () => {
       'href',
       '/advertise/sell/agents',
     );
-    // Agency and Developer are held at launch: "Not open yet", not links.
-    expect(screen.queryByRole('link', { name: 'Explore Agency tools' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Explore Developer tools' })).not.toBeInTheDocument();
-    expect(screen.getAllByTestId('audience-gateway-coming-soon')).toHaveLength(2);
+    expect(screen.getByRole('link', { name: 'Explore Agency tools' })).toHaveAttribute(
+      'href',
+      '/advertise/sell/agencies',
+    );
+    expect(screen.getByRole('link', { name: 'Explore Developer tools' })).toHaveAttribute(
+      'href',
+      '/advertise/sell/developers',
+    );
+    expect(screen.queryByTestId('audience-gateway-coming-soon')).not.toBeInTheDocument();
 
     const agencyCard = cards.find(card => card.getAttribute('data-audience') === 'agency');
     expect(agencyCard).toHaveTextContent('Agency operating workspace');
