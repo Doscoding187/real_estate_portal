@@ -14,7 +14,7 @@ const COMMERCIAL_STATUS_LABELS: Record<string, string> = {
   past_due: 'Payment overdue',
   grace_period: 'Grace period',
   suspended: 'Suspended',
-  cancelled: 'Cancelled',
+  cancelled: 'Access ended',
   expired: 'Expired',
 };
 
