@@ -12,6 +12,7 @@ const testState = vi.hoisted(() => {
   const createPublisherDevelopmentMock = vi.fn();
   const updatePublisherDevelopmentMock = vi.fn();
   const publishPublisherDevelopmentMock = vi.fn();
+  const assignSuburbMock = vi.fn();
   const invalidateDevelopmentHomeMock = vi.fn().mockResolvedValue(undefined);
   const invalidateOperatingHomeMock = vi.fn().mockResolvedValue(undefined);
   const invalidatePublisherOperatingHomeMock = vi.fn().mockResolvedValue(undefined);
@@ -111,6 +112,7 @@ const testState = vi.hoisted(() => {
 
   return {
     createDevelopmentMock,
+    assignSuburbMock,
     createPublisherDevelopmentMock,
     navigateMock,
     publishDevelopmentMock,
@@ -161,6 +163,11 @@ vi.mock('@/lib/trpc', () => ({
         getDevelopments: { invalidate: testState.invalidatePublisherDevelopmentsMock },
       },
     }),
+    admin: {
+      adminReviewDevelopmentPlaceAssignment: {
+        useMutation: () => ({ mutateAsync: testState.assignSuburbMock }),
+      },
+    },
     developer: {
       createDevelopment: { useMutation: () => ({ mutateAsync: testState.createDevelopmentMock }) },
       updateDevelopment: { useMutation: () => ({ mutateAsync: testState.updateDevelopmentMock }) },
@@ -342,6 +349,8 @@ describe('FinalisationPhase', () => {
       developmentId: 456,
     });
     expect(testState.publishDevelopmentMock).not.toHaveBeenCalled();
+    // No suburb was picked in the wizard, so no Place assignment is recorded.
+    expect(testState.assignSuburbMock).not.toHaveBeenCalled();
     expect(testState.toastSuccessMock).toHaveBeenCalledWith('Curated development published!');
     expect(testState.navigateMock).toHaveBeenCalledWith('/admin/publisher');
     expect(testState.invalidatePublisherOperatingHomeMock).toHaveBeenCalledWith({
@@ -352,5 +361,53 @@ describe('FinalisationPhase', () => {
       cataloguePublisherId: 44,
       range: '30d',
     });
+  });
+
+  it('records the suburb picked by a super admin as the accepted site Place assignment', async () => {
+    testState.setActor({ id: 2, role: 'super_admin' }, { cataloguePublisherId: 44 });
+    testState.assignSuburbMock.mockResolvedValue({ success: true });
+    const original = testState.wizardState.getWizardData;
+    testState.wizardState.getWizardData = () => ({
+      ...original(),
+      location: {
+        ...original().location,
+        suburbPlaceId: 'place_north_riding',
+        suburbLabel: 'North Riding',
+      },
+    });
+
+    try {
+      render(<FinalisationPhase />);
+      fireEvent.click(screen.getByRole('button', { name: 'Publish Development' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Publish Development' }));
+
+      await waitFor(() => expect(testState.assignSuburbMock).toHaveBeenCalledTimes(1));
+      expect(testState.assignSuburbMock).toHaveBeenCalledWith({
+        developmentId: 456,
+        phaseId: null,
+        placeId: 'place_north_riding',
+        evidenceReference: expect.stringContaining('development wizard'),
+      });
+      expect(testState.navigateMock).toHaveBeenCalledWith('/admin/publisher');
+    } finally {
+      testState.wizardState.getWizardData = original;
+    }
+  });
+
+  it('a developer never records a Place assignment', async () => {
+    const original = testState.wizardState.getWizardData;
+    testState.wizardState.getWizardData = () => ({
+      ...original(),
+      location: { ...original().location, suburbPlaceId: 'place_north_riding' },
+    });
+    try {
+      render(<FinalisationPhase />);
+      fireEvent.click(screen.getByRole('button', { name: /submit for review/i }));
+      fireEvent.click(screen.getByRole('button', { name: /confirm & submit/i }));
+      await waitFor(() => expect(testState.publishDevelopmentMock).toHaveBeenCalledTimes(1));
+      expect(testState.assignSuburbMock).not.toHaveBeenCalled();
+    } finally {
+      testState.wizardState.getWizardData = original;
+    }
   });
 });

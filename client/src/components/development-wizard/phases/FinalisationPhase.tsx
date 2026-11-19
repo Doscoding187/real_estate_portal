@@ -23,6 +23,7 @@ import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { usePublisherContext } from '@/hooks/usePublisherContext';
 import { buildDevelopmentSubmitPayload } from '@/lib/developmentSubmitPayload';
+import { suburbAssignmentRequest } from '@/lib/wizardLocationCostsAmenities';
 import {
   CheckCircle2,
   AlertCircle,
@@ -130,6 +131,7 @@ export function FinalisationPhase({
   const createPublisherDevelopment = trpc.superAdminPublisher.createDevelopment.useMutation();
   const updatePublisherDevelopment = trpc.superAdminPublisher.updateDevelopment.useMutation();
   const publishPublisherDevelopment = trpc.superAdminPublisher.publishDevelopment.useMutation();
+  const assignSuburb = trpc.admin.adminReviewDevelopmentPlaceAssignment.useMutation();
 
   // Run validation
   const validationResult = validateForPublish();
@@ -361,6 +363,20 @@ export function FinalisationPhase({
           cataloguePublisherId: publisherId,
           developmentId,
         });
+        // The suburb picked in the Location step is recorded through the existing
+        // super-admin Place review (accepted "site" assignment). The development is
+        // already saved and published, so a failure here is reported, not fatal.
+        const suburbRequest = suburbAssignmentRequest(developmentId, wizardData.location);
+        if (suburbRequest) {
+          try {
+            await assignSuburb.mutateAsync(suburbRequest);
+          } catch (assignError: any) {
+            console.warn('[FinalisationPhase] Suburb assignment failed:', assignError);
+            toast.error(
+              'Published, but the suburb could not be recorded. Assign it in Development oversight.',
+            );
+          }
+        }
       } else {
         await publishDevelopment.mutateAsync({ id: developmentId });
       }

@@ -1,4 +1,5 @@
 import { WizardWorkflow, WizardStep, type FieldError } from '../types/wizard-workflows';
+import { validateLocationStep, validateAmenitiesStep } from '../wizardLocationCostsAmenities';
 import { validateAboutStep } from '../wizardBasicsAbout';
 
 // Same eight steps, in the same order, as the sale workflow.
@@ -33,12 +34,8 @@ const residentialRentSteps: WizardStep[] = [
     required: true,
     description: 'Pinpoint the exact location and address details.',
     validate: data => {
-      const errors: FieldError[] = [];
-      const loc = data.location || {};
-
-      if (!loc.latitude || !loc.longitude) {
-        errors.push({ field: 'location', message: 'Map location pin is required' });
-      }
+      // The server requires an address, not coordinates; the wizard agrees.
+      const errors: FieldError[] = validateLocationStep(data.location);
       return { valid: errors.length === 0, errors };
     },
   },
@@ -47,24 +44,19 @@ const residentialRentSteps: WizardStep[] = [
     title: 'Monthly costs',
     componentKey: 'GovernanceStep',
     required: false,
-    description: 'Configure levies, rates, and HOA details.',
-    validate: data => {
-      const errors: FieldError[] = [];
-      if (data.hasGoverningBody) {
-        if (!data.governanceType) {
-          errors.push({ field: 'governanceType', message: 'Select a governing body type' });
-        }
-      }
-      return { valid: errors.length === 0, errors };
-    },
+    description: 'Rates and taxes, and the levy if there is one.',
+    validate: () => ({ valid: true }),
   },
   {
     id: 'amenities_features',
     title: 'Amenities',
     componentKey: 'AmenitiesStep',
     required: false,
-    description: 'Highlight the lifestyle amenities and key features.',
-    validate: data => ({ valid: true }),
+    description: 'Tap what the development really has, then pick the highlights for the search card.',
+    validate: data => {
+      const errors: FieldError[] = validateAmenitiesStep(data);
+      return { valid: errors.length === 0, errors };
+    },
   },
   {
     id: 'development_media',

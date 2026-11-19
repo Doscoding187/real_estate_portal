@@ -293,7 +293,8 @@ export function toggleAmenity(
 export type AddCustomAmenityResult =
   | { status: 'added'; amenities: string[]; customGroups: CustomAmenityGroups }
   | { status: 'known'; amenities: string[]; customGroups: CustomAmenityGroups; label: string }
-  | { status: 'duplicate' | 'empty' };
+  | { status: 'duplicate' }
+  | { status: 'empty' };
 
 /**
  * "Add your own". A label that matches a registry amenity ticks that amenity
@@ -435,7 +436,9 @@ export function toggleHighlight(chosen: string[], text: string): string[] {
 
 export type AddHighlightResult =
   | { status: 'added'; highlights: string[] }
-  | { status: 'duplicate' | 'full' | 'empty' };
+  | { status: 'duplicate' }
+  | { status: 'full' }
+  | { status: 'empty' };
 
 export function addHighlight(chosen: string[], text: string): AddHighlightResult {
   const value = normalizeHighlight(text);

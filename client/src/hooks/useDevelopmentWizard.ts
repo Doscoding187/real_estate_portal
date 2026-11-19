@@ -811,6 +811,9 @@ const DEVELOPMENT_WIZARD_LOCATION_FIELDS = [
   'latitude',
   'longitude',
   'postalCode',
+  // Curated only: the Place the super admin picked as the suburb shown to buyers.
+  'suburbPlaceId',
+  'suburbLabel',
   'gpsAccuracy',
   'noOfficialStreet',
 ] as const;
@@ -900,6 +903,14 @@ const createActions = (
       // Merge other step data
       ...config,
       ...governance,
+      // Monthly costs: the estimated amounts reach the existing finance columns
+      // (levy -> monthlyLevyFrom/To, rates & taxes -> ratesFrom/To).
+      ...(governance.levyRange
+        ? { monthlyLevyFrom: governance.levyRange.min, monthlyLevyTo: governance.levyRange.max }
+        : {}),
+      ...(governance.rightsAndTaxes
+        ? { ratesFrom: governance.rightsAndTaxes.min, ratesTo: governance.rightsAndTaxes.max }
+        : {}),
       ...amenities,
 
       // Marketing Summary (Map keySellingPoints -> highlights, tagline -> subtitle)
@@ -1226,13 +1237,17 @@ const createActions = (
           if (!state.developmentData?.location?.address) errors.push('Location is required');
           const latitude = state.developmentData?.location?.latitude?.trim();
           const longitude = state.developmentData?.location?.longitude?.trim();
-          if (
-            !latitude ||
-            !longitude ||
-            !Number.isFinite(Number(latitude)) ||
-            !Number.isFinite(Number(longitude))
-          ) {
-            errors.push('Verified development entrance coordinates are required');
+          // The server needs an address, not coordinates; a pin is optional but
+          // must be a valid pair when entered.
+          if (latitude || longitude) {
+            if (
+              !latitude ||
+              !longitude ||
+              !Number.isFinite(Number(latitude)) ||
+              !Number.isFinite(Number(longitude))
+            ) {
+              errors.push('Development entrance coordinates must be a valid latitude and longitude');
+            }
           }
           break;
         }

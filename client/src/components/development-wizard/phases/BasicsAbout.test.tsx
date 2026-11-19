@@ -195,18 +195,10 @@ describe('AboutPhase', () => {
     expect(store().getWizardData().ownershipTypes).toEqual(['share-block']);
   });
 
-  it('keeps highlights reachable (temporary) so publishing still works: add, cap at 24 chars, remove', () => {
+  it('no longer asks for highlights: they moved to the end of the Amenities step', () => {
     render(<AboutPhase />);
-    expect(screen.getByText('Highlights (temporary)')).toBeInTheDocument();
-    const input = screen.getByLabelText('Add your own highlight') as HTMLInputElement;
-    expect(input.maxLength).toBe(24);
-    for (const label of ['Clubhouse', 'Pool', 'Backup power']) {
-      fireEvent.change(input, { target: { value: label } });
-      fireEvent.click(screen.getByRole('button', { name: 'Add' }));
-    }
-    expect(store().getWizardData().highlights).toEqual(['Clubhouse', 'Pool', 'Backup power']);
-    fireEvent.click(screen.getByRole('button', { name: 'Pool' }));
-    expect(store().getWizardData().highlights).toEqual(['Clubhouse', 'Backup power']);
+    expect(screen.queryByText('Highlights (temporary)')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Add your own highlight')).not.toBeInTheDocument();
   });
 
   it('description counter explains the 50-character minimum', () => {
