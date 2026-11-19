@@ -30,7 +30,12 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
-import { formatSARandShort, SA_PRIME_RATE, calculateMonthlyRepayment } from '@/lib/bond-calculator';
+import {
+  formatSARandShort,
+  SA_PRIME_RATE,
+  SA_PRIME_RATE_LABEL,
+  calculateMonthlyRepayment,
+} from '@/lib/bond-calculator';
 
 const DEFAULT_BOND_TERM_YEARS = 20;
 
@@ -352,7 +357,8 @@ export function PropertyQualificationDrawer({
                       {formatSARandShort(qualification.maxAffordable)}
                     </p>
                     <p className="mt-1 text-xs text-slate-500">
-                      Comfortable range starts near {formatSARandShort(qualification.comfortFloor)}
+                      Comfortable range starts near {formatSARandShort(qualification.comfortFloor)}.{' '}
+                      {SA_PRIME_RATE_LABEL}
                     </p>
                   </div>
                   <div className="rounded-2xl border border-white/60 bg-white p-4">
@@ -364,7 +370,7 @@ export function PropertyQualificationDrawer({
                       {formatSARandShort(qualification.estimatedRepayment)}
                     </p>
                     <p className="mt-1 text-xs text-slate-500">
-                      Based on a {DEFAULT_BOND_TERM_YEARS}-year bond at prime
+                      Based on a {DEFAULT_BOND_TERM_YEARS}-year bond. {SA_PRIME_RATE_LABEL}
                     </p>
                   </div>
                 </div>
