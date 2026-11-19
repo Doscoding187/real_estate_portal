@@ -222,6 +222,8 @@ export default function SearchResults() {
       minLng: isBuySearch ? buyFilters?.minLng : rentFilters?.minLng,
       maxLng: isBuySearch ? buyFilters?.maxLng : rentFilters?.maxLng,
       sortOption: sortBy,
+      // Published developments' available unit types sit among the listings as their own cards.
+      developmentResultShape: 'unit_type' as const,
       page,
       pageSize: limit,
     };
@@ -733,6 +735,7 @@ export default function SearchResults() {
               scopeLabels={discoveryScopeLabels}
               selectedLocation={selectedLocationChip}
               resultCount={publicSearchResults ? resultCount : undefined}
+              newDevelopmentHomeCount={publicSearchResults?.sourceCounts?.development ?? 0}
               isLoading={isLoading}
               hasError={hasSearchError}
               viewMode={viewMode}
@@ -832,6 +835,8 @@ export default function SearchResults() {
                                 imageCount: card.imageCount,
                                 listingType: card.listingType,
                                 development: card.development,
+                                unitTypeId: card.unitTypeId,
+                                availableUnits: card.availableUnits,
                                 area: card.area,
                                 yardSize: card.yardSize,
                                 bedrooms: card.bedrooms,

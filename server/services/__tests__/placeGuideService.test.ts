@@ -2,14 +2,23 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { mockGetDb, mockLoadProjection, mockResolveEligibilities, mockPlaceUrl } = vi.hoisted(
-  () => ({
-    mockGetDb: vi.fn(),
-    mockLoadProjection: vi.fn(),
-    mockResolveEligibilities: vi.fn(),
-    mockPlaceUrl: vi.fn(),
-  }),
-);
+const {
+  mockGetDb,
+  mockLoadProjection,
+  mockResolveEligibilities,
+  mockPlaceUrl,
+  mockSearchDevelopments,
+} = vi.hoisted(() => ({
+  mockGetDb: vi.fn(),
+  mockLoadProjection: vi.fn(),
+  mockResolveEligibilities: vi.fn(),
+  mockPlaceUrl: vi.fn(),
+  mockSearchDevelopments: vi.fn(),
+}));
+
+vi.mock('../publicDevelopmentSearchService', () => ({
+  publicDevelopmentSearchService: { search: mockSearchDevelopments },
+}));
 
 vi.mock('../../db', () => ({ getDb: mockGetDb }));
 vi.mock('../canonicalPlaceSearchService', () => ({
@@ -171,6 +180,8 @@ beforeEach(() => {
   mockLoadProjection.mockReset();
   mockResolveEligibilities.mockReset();
   mockPlaceUrl.mockReset();
+  mockSearchDevelopments.mockReset();
+  mockSearchDevelopments.mockResolvedValue({ items: [] });
 });
 
 describe('haversineKm', () => {
@@ -301,6 +312,65 @@ describe('placeGuideService.getPlaceGuide', () => {
     expect(guide!.stats.typeMix).toEqual([
       { propertyType: 'house', listingCount: 6, sharePct: 100 },
     ]);
+  });
+
+  it('excludes development unit types from every statistic and reports them on their own line', async () => {
+    const fiveListings: FactRow[] = [
+      { place: SELF, price: 1_000_000, area: 100 },
+      { place: SELF, price: 2_000_000, area: 100 },
+      { place: SELF, price: 3_000_000, area: 100 },
+      { place: SELF, price: 4_000_000, area: 100 },
+      { place: SELF, price: 5_000_000, area: 100 },
+    ];
+    install(fiveListings);
+    const baseline = await placeGuideService.getPlaceGuide(SELF, centroidIndex());
+
+    // One development with 40 available unit types, all cheap and sized: would skew every median.
+    const unit = (index: number) => ({
+      id: `u${index}`,
+      label: `Unit ${index}`,
+      bedrooms: 1,
+      bathrooms: 1,
+      priceFrom: 500_000,
+      priceTo: 500_000,
+      availableUnits: 1,
+      totalUnits: 1,
+      availabilityState: 'available',
+      unitSize: 30,
+    });
+    const bigEstate = {
+      items: [
+        {
+          id: 9,
+          name: 'Big Estate',
+          slug: 'big-estate',
+          canonicalRoute: '/development/big-estate',
+          images: [],
+          canonicalPlaceId: SELF,
+          locationLabels: ['Self'],
+          developmentType: 'residential',
+          transactionType: 'for_sale',
+          status: 'selling',
+          publisher: { id: 1, name: 'Dev Co', logoUrl: null, authorityKind: 'developer_first_party' },
+          unitTypes: Array.from({ length: 40 }, (_, index) => unit(index)),
+        },
+      ],
+    };
+    mockSearchDevelopments.mockResolvedValue(bigEstate);
+    install(fiveListings);
+    const withDevelopment = await placeGuideService.getPlaceGuide(SELF, centroidIndex());
+
+    expect(baseline!.stats.newDevelopmentHomes).toEqual({ sale: 0, rent: 0 });
+    expect(withDevelopment!.stats.newDevelopmentHomes).toEqual({ sale: 40, rent: 0 });
+    // Everything else about the stats is identical to the five-listing baseline.
+    const { newDevelopmentHomes: _a, asOf: _c, ...baselineStats } = baseline!.stats;
+    const { newDevelopmentHomes: _b, asOf: _d, ...withStats } = withDevelopment!.stats;
+    expect(withStats).toEqual(baselineStats);
+    expect(withDevelopment!.stats.saleCount).toBe(5);
+    expect(withDevelopment!.stats.saleMedian).toBe(3_000_000);
+    expect(withDevelopment!.stats.salePricePerM2Median).toBe(30_000);
+    expect(withDevelopment!.stats.typeMix).toEqual(baseline!.stats.typeMix);
+    expect(withDevelopment!.neighbourhoods).toEqual(baseline!.neighbourhoods);
   });
 
   it('chooses neighbourhoods by listing count then distance, and markets by distance excluding them', async () => {

@@ -435,6 +435,83 @@ describe('publicSearchService unit_type development result shape', () => {
     });
   });
 
+  it('searches developments by the place members and leaves unit filtering to the unit cards', async () => {
+    mockLoadPlaceProjection.mockResolvedValueOnce(projection('locality'));
+    await publicSearchService.searchInventory({
+      canonicalPlaceId: PLACE_ID, listingType: 'sale', pageSize: 10, minPrice: 1, maxBedrooms: 3,
+      developmentResultShape: 'unit_type',
+    });
+    const sent = mockSearchDevelopments.mock.calls[0][0];
+    expect(sent.canonicalPlaceIds).toContain(PLACE_ID);
+    expect(sent).toMatchObject({
+      transactionType: 'for_sale',
+      skipDevelopmentRangeFilters: true,
+      minPrice: 1,
+      maxBedrooms: 3,
+    });
+  });
+
+  it('applies price filters to each unit type: a unit above the max price gets no card', async () => {
+    mockSearchDevelopments.mockResolvedValue({
+      items: [developmentItem(1)],
+      total: 1, page: 0, pageSize: 10, hasMore: false, locationState: 'resolved', unpricedHiddenCount: 0,
+    });
+    const result = await publicSearchService.searchInventory({
+      canonicalPlaceId: PLACE_ID, listingType: 'sale', pageSize: 10, maxPrice: 3,
+      developmentResultShape: 'unit_type',
+    });
+    expect(result.cards).toEqual([]);
+    expect(result.sourceCounts.development).toBe(0);
+  });
+
+  it('asks for rent developments only on a rent search and counts unit types separately', async () => {
+    mockSearchProperties.mockResolvedValue({ cards: [card('property', 'p-1', 1)], total: 1 });
+    mockSearchDevelopments.mockResolvedValue({
+      items: [{ ...developmentItem(1), transactionType: 'for_sale' }],
+      total: 1, page: 0, pageSize: 10, hasMore: false, locationState: 'resolved', unpricedHiddenCount: 0,
+    });
+    const rent = await publicSearchService.searchInventory({
+      canonicalPlaceId: PLACE_ID, listingType: 'rent', pageSize: 10,
+      developmentResultShape: 'unit_type',
+    });
+    expect(mockSearchDevelopments.mock.calls[0][0]).toMatchObject({ transactionType: 'for_rent' });
+    // A for_sale development never yields rent cards, even if it slipped through.
+    expect(rent.sourceCounts).toEqual({ manual: 1, development: 0 });
+
+    mockSearchDevelopments.mockResolvedValue({
+      items: [developmentItem(1), developmentItem(2)],
+      total: 2, page: 0, pageSize: 10, hasMore: false, locationState: 'resolved', unpricedHiddenCount: 0,
+    });
+    mockLoadPlaceProjection.mockResolvedValueOnce(projection('locality'));
+    const sale = await publicSearchService.searchInventory({
+      canonicalPlaceId: PLACE_ID, listingType: 'sale', pageSize: 10,
+      developmentResultShape: 'unit_type',
+    });
+    expect(sale.sourceCounts).toEqual({ manual: 1, development: 2 });
+    expect(sale.total).toBe(3);
+  });
+
+  it('includes unit types for a multi-Place search, one development query across every member', async () => {
+    const PLACE_B = 'pl-place-01-000000000000000000000003';
+    const base = projection('locality');
+    base.executions.set(PLACE_B, {
+      placeId: PLACE_B, scope: 'locality', provincePlaceId: 'pl-place-01-000000000000000000000002',
+      cityPlaceId: null, localityPlaceId: PLACE_B, contextAncestorPlaceIds: [],
+    } as never);
+    base.labels.set(PLACE_B, {
+      canonicalPlaceId: PLACE_B, label: 'Second Place', scope: 'locality', province: 'Gauteng', city: '', locality: '',
+    } as never);
+    mockLoadPlaceProjection.mockResolvedValueOnce(base);
+    const result = await publicSearchService.searchInventory({
+      canonicalPlaceIds: [PLACE_ID, PLACE_B], listingType: 'sale', pageSize: 10,
+      developmentResultShape: 'unit_type',
+    });
+    const sent = mockSearchDevelopments.mock.calls[0][0];
+    expect(sent.canonicalPlaceIds).toEqual(expect.arrayContaining([PLACE_ID, PLACE_B]));
+    expect(sent).not.toHaveProperty('canonicalPlaceId');
+    expect(result.sourceCounts.development).toBe(2);
+  });
+
   it('ignores the shape when no place is given (no development source)', async () => {
     mockSearchProperties.mockResolvedValue({ cards: [card('property', 'p-1', 1)], total: 1 });
     const result = await publicSearchService.searchInventory({

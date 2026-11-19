@@ -31,6 +31,7 @@ import { buildDevelopmentRootPath } from './developmentRouteAuthority';
 import { publicDevelopmentEligibilityConditions } from './publicDevelopmentEligibility';
 import {
   listDevelopmentIdsForCanonicalPlace,
+  listDevelopmentIdsForCanonicalPlaces,
   listDevelopmentPlaceGeography,
   type DevelopmentPlaceGeography,
 } from './developmentPlaceAssignmentService';
@@ -41,6 +42,11 @@ import {
 
 export interface PublicDevelopmentSearchInput {
   canonicalPlaceId?: string;
+  /**
+   * Several Places (a searched area plus its member suburbs, or a multi-area search). A Development
+   * matches when its reviewed, accepted site Place is any of them. Exclusive with canonicalPlaceId.
+   */
+  canonicalPlaceIds?: string[];
   developmentType?: PublicDevelopmentSearchDevelopmentType;
   developmentStatus?: PublicDevelopmentSearchStatus;
   transactionType?: 'for_sale' | 'for_rent';
@@ -54,6 +60,11 @@ export interface PublicDevelopmentSearchInput {
   pageSize?: number;
   /** Opt-in: attach each unit type's unitSize (m2) to the returned unit types. */
   includeUnitSize?: boolean;
+  /**
+   * Opt-in: skip the development-level price and bedroom filters. The caller filters each unit
+   * type by its own facts instead (unit-type result cards).
+   */
+  skipDevelopmentRangeFilters?: boolean;
   /** Legacy offset/limit callers are translated at this boundary only. */
 }
 
@@ -327,7 +338,16 @@ export class PublicDevelopmentSearchService {
     if (!db) throw new Error('Database not available');
 
     const conditions: SQL[] = [publicDevelopmentEligibilityConditions()];
-    if (location.canonicalPlaceId) {
+    if (input.canonicalPlaceIds) {
+      const matchingDevelopmentIds = await listDevelopmentIdsForCanonicalPlaces(
+        input.canonicalPlaceIds,
+      );
+      conditions.push(
+        matchingDevelopmentIds.length
+          ? inArray(developments.id, matchingDevelopmentIds)
+          : sql`1 = 0`,
+      );
+    } else if (location.canonicalPlaceId) {
       const matchingDevelopmentIds = await listDevelopmentIdsForCanonicalPlace(
         location.canonicalPlaceId,
       );
@@ -465,7 +485,11 @@ export class PublicDevelopmentSearchService {
         });
       }
     }
-    const developmentFilters = developmentFiltersFromInput(input);
+    const developmentFilters = developmentFiltersFromInput(
+      input.skipDevelopmentRangeFilters
+        ? { ...input, minPrice: undefined, maxPrice: undefined, minBedrooms: undefined, maxBedrooms: undefined }
+        : input,
+    );
     const filtered = filterPublicDevelopmentSearchItems(items, developmentFilters);
     const unpricedHiddenCount = countUnpricedHiddenByPriceFilter(items, developmentFilters);
     const sortOption = isSearchResultSortOption(input.sortOption)

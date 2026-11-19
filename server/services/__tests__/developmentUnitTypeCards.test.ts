@@ -140,6 +140,38 @@ const units = (perDev: number, devs: number) =>
   ).flat();
 const tag = (x: any) => (typeof x === 'string' ? x : x.tag);
 
+describe('developmentUnitTypeCards filters (unit facts, not the development range)', () => {
+  const item = () =>
+    development({}, [
+      unit({ id: 'cheap', priceFrom: 900_000, bedrooms: 1, structuralType: 'apartment' }),
+      unit({ id: 'mid', priceFrom: 1_500_000, bedrooms: 2, structuralType: 'townhouse' }),
+      unit({ id: 'dear', priceFrom: 3_000_000, bedrooms: 3, structuralType: 'freestanding-house' }),
+      unit({ id: 'nobeds', priceFrom: 1_600_000, bedrooms: null, structuralType: null }),
+    ]);
+  const ids = (filters: Parameters<typeof developmentUnitTypeCards>[1]['filters']) =>
+    developmentUnitTypeCards(item(), { listingType: 'sale', filters }).map(c => c.unitTypeId);
+
+  it('applies price to each unit type price, so a development range cannot hide or admit a unit', () => {
+    expect(ids({ minPrice: 1_400_000, maxPrice: 2_000_000 })).toEqual(['mid', 'nobeds']);
+    expect(ids({ maxPrice: 1_000_000 })).toEqual(['cheap']);
+  });
+
+  it('applies bedrooms to each unit type and never matches an unrecorded bedroom count', () => {
+    expect(ids({ minBedrooms: 2 })).toEqual(['mid', 'dear']);
+    expect(ids({ minBedrooms: 1, maxBedrooms: 1 })).toEqual(['cheap']);
+  });
+
+  it('matches a property type only through the unit own structural type', () => {
+    expect(ids({ propertyType: 'apartment' })).toEqual(['cheap']);
+    expect(ids({ propertyType: 'house' })).toEqual(['dear']);
+    expect(ids({ propertyType: 'townhouse' })).toEqual(['mid']);
+  });
+
+  it('returns every available priced unit when no filter is set', () => {
+    expect(ids(undefined)).toEqual(['cheap', 'mid', 'dear', 'nobeds']);
+  });
+});
+
 describe('mixListingsAndUnitTypes', () => {
   it('returns only unit types, up to the limit, when there are no listings', () => {
     const out = mixListingsAndUnitTypes([], units(2, 8), OPTS);

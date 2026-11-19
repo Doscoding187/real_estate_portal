@@ -33,6 +33,10 @@ export interface ListingResultCardData {
     name?: string | null;
     slug?: string | null;
   };
+  /** Set when the card is one unit type of a development rather than a listing. */
+  unitTypeId?: string;
+  /** Units still available in this unit type; shown only when known and positive. */
+  availableUnits?: number;
   area?: number;
   yardSize?: number;
   bedrooms?: number;
@@ -121,6 +125,11 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
   const listingHref =
     data.href ||
     (isDevelopmentListing && developmentHref ? developmentHref : `/property/${data.id}`);
+  const isUnitType = Boolean(data.unitTypeId);
+  const availableUnits =
+    isUnitType && typeof data.availableUnits === 'number' && data.availableUnits > 0
+      ? data.availableUnits
+      : null;
   const resolvedImage = withApiBase(data.image) || PROPERTY_IMAGE_FALLBACK;
   const resolvedAvatar = withApiBase(
     canonicalIdentity?.organizationLogoUrl || canonicalIdentity?.avatarUrl || data.agentAvatarUrl,
@@ -254,6 +263,12 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
             <MapPin className="h-3.5 w-3.5 shrink-0 text-blue-600" aria-hidden="true" />
             <span className="truncate">{data.location || '-'}</span>
           </p>
+          {isUnitType && (
+            <p className="mt-1 truncate text-[11px] font-semibold text-blue-700">
+              New development · {identityDisplayName}
+              {availableUnits !== null ? ` · ${availableUnits} available` : ''}
+            </p>
+          )}
           {developmentName && (
             <p className="mt-1 flex min-w-0 items-center gap-1.5 text-[11px] text-muted-foreground">
               <Building2 className="h-3.5 w-3.5 shrink-0 text-blue-600" aria-hidden="true" />

@@ -4,6 +4,8 @@ import { properties } from '../../drizzle/schema';
 import { getDb } from '../db';
 import { loadCanonicalPlaceSearchProjection } from './canonicalPlaceSearchService';
 import { canonicalPlaceUrlByPlaceId } from './canonicalPlaceUrlService';
+import { developmentUnitTypeCards } from './developmentUnitTypeCards';
+import { publicDevelopmentSearchService } from './publicDevelopmentSearchService';
 import { publicListingBaseConditions, publishedPath } from './homeMarketInsightsService';
 import {
   haversineKm,
@@ -49,6 +51,11 @@ export type PlaceGuide = {
   stats: {
     saleCount: number;
     rentCount: number;
+    /**
+     * Available development unit types at this Place. Reported on their own line and never part of
+     * saleCount, rentCount, medians, price per m2 or the type mix.
+     */
+    newDevelopmentHomes: { sale: number; rent: number };
     saleMedian: number | null;
     rentMedian: number | null;
     salePricePerM2Median: number | null;
@@ -234,6 +241,31 @@ export function orderNeighbourhoods<
     .slice(0, PLACE_GUIDE_MAX_NEIGHBOURHOODS);
 }
 
+/** Available development unit types at one Place; a failure to read them never hides the guide. */
+export async function countNewDevelopmentHomes(
+  placeId: string,
+): Promise<{ sale: number; rent: number }> {
+  try {
+    const result = await publicDevelopmentSearchService.search({
+      canonicalPlaceId: placeId,
+      developmentType: 'residential',
+      sortOption: 'date_desc',
+      page: 0,
+      pageSize: 50,
+      skipDevelopmentRangeFilters: true,
+    });
+    let sale = 0;
+    let rent = 0;
+    for (const development of result?.items ?? []) {
+      sale += developmentUnitTypeCards(development, { listingType: 'sale' }).length;
+      rent += developmentUnitTypeCards(development, { listingType: 'rent' }).length;
+    }
+    return { sale, rent };
+  } catch {
+    return { sale: 0, rent: 0 };
+  }
+}
+
 export const placeGuideService = {
   async getPlaceGuide(
     placeId: string,
@@ -400,6 +432,7 @@ export const placeGuideService = {
       };
     });
 
+    const newDevelopmentHomes = await countNewDevelopmentHomes(placeId);
     const provinceId = urlEntry.province_place_id;
     return {
       place: {
@@ -414,6 +447,7 @@ export const placeGuideService = {
       stats: {
         saleCount: self.insights.sale.listingCount,
         rentCount: self.insights.rent.listingCount,
+        newDevelopmentHomes,
         saleMedian: self.insights.sale.medianPrice,
         rentMedian: self.insights.rent.medianPrice,
         salePricePerM2Median: self.insights.sale.medianPricePerM2,

@@ -28,6 +28,27 @@ interface LocationTrendingFeedSectionProps {
   viewAllHref?: string;
 }
 
+type FeedItemWithUnitType = {
+  unitType?: {
+    developmentName?: string | null;
+    publisherName?: string | null;
+    availableUnits?: number | null;
+  };
+};
+
+/** "New development · {publisher}" on a development unit type card; nothing on a listing. */
+export function unitTypeBadge(item: FeedItemWithUnitType): string | undefined {
+  if (!item.unitType) return undefined;
+  const publisher = item.unitType.publisherName?.trim();
+  return publisher ? `New development · ${publisher}` : 'New development';
+}
+
+/** "X available" only when the count is known and positive. */
+export function unitTypeAvailability(item: FeedItemWithUnitType): string | undefined {
+  const count = item.unitType?.availableUnits;
+  return typeof count === 'number' && count > 0 ? `${count} available` : undefined;
+}
+
 const TAB_COPY: Record<FeedTab, { title: string; subtitle: string }> = {
   buy: {
     title: 'Residential properties for sale',
@@ -162,7 +183,9 @@ export function LocationTrendingFeedSection({
                           parkingCount={item.parkingCount}
                           propertyType={item.propertyType}
                           listingType={item.listingType}
-                          badgeLabel={item.listingType === 'rent' ? 'For rent' : 'For sale'}
+                          pricePrefix={item.unitType ? 'From' : undefined}
+                          badgeLabel={unitTypeBadge(item) ?? (item.listingType === 'rent' ? 'For rent' : 'For sale')}
+                          secondaryBadgeLabel={unitTypeAvailability(item)}
                         />
                       ) : (
                         <SimpleDevelopmentCard

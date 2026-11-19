@@ -39,7 +39,10 @@ export type PublicInventorySortOption = SearchResultSortOption | 'trending';
 
 export interface PublicSearchInventoryInput {
   canonicalPlaceId?: string;
-  /** 1..MULTI_LOCATION_MAX selected Places; exclusive with canonicalPlaceId. Manual listings only. */
+  /**
+   * 1..MULTI_LOCATION_MAX selected Places; exclusive with canonicalPlaceId. Manual listings, plus
+   * development unit types when developmentResultShape is 'unit_type'.
+   */
   canonicalPlaceIds?: string[];
   propertyType?: string;
   listingType?: 'sale' | 'rent';
@@ -163,12 +166,18 @@ function buildPublicFilters(
 }
 
 function buildDevelopmentSearchInput(
-  input: PublicSearchInventoryInput & { canonicalPlaceId: string },
+  input: PublicSearchInventoryInput,
   page: number,
   pageSize: number,
+  placeIds?: string[],
 ): Parameters<typeof publicDevelopmentSearchService.search>[0] {
+  const unitTypeShape = input.developmentResultShape === 'unit_type';
   return {
-    canonicalPlaceId: input.canonicalPlaceId,
+    // Unit-type cards match a development whose accepted site Place is any searched Place
+    // (the area and its member suburbs, or each selected area); whole developments stay exact.
+    ...(unitTypeShape && placeIds?.length
+      ? { canonicalPlaceIds: placeIds }
+      : { canonicalPlaceId: input.canonicalPlaceId }),
     transactionType: input.listingType === 'rent' ? 'for_rent' : 'for_sale',
     developmentType:
       input.propertyType === 'plot'
@@ -183,7 +192,7 @@ function buildDevelopmentSearchInput(
     sortOption: input.sortOption === 'trending' ? 'date_desc' : input.sortOption,
     page,
     pageSize,
-    ...(input.developmentResultShape === 'unit_type' ? { includeUnitSize: true } : {}),
+    ...(unitTypeShape ? { includeUnitSize: true, skipDevelopmentRangeFilters: true } : {}),
   };
 }
 
@@ -424,8 +433,15 @@ export class PublicSearchService {
 
     const filters = buildPublicFilters(input, placeMemberIds);
     const manualEnabled = input.listingSource !== 'development';
-    const developmentEnabled = input.listingSource !== 'manual' && Boolean(input.canonicalPlaceId);
-    const unitTypeShape = input.developmentResultShape === 'unit_type' && developmentEnabled;
+    const unitTypePlaceIds = placeMemberIds?.length ? placeMemberIds : undefined;
+    // Unit types follow the searched Places (one, a place with its members, or several areas);
+    // whole development cards stay single-Place.
+    const unitTypeShape =
+      input.developmentResultShape === 'unit_type' &&
+      input.listingSource !== 'manual' &&
+      (Boolean(input.canonicalPlaceId) || Boolean(multiPlaceIds?.length));
+    const developmentEnabled =
+      unitTypeShape || (input.listingSource !== 'manual' && Boolean(input.canonicalPlaceId));
     const fetchSourceResults = async (requestedPage: number) => {
       const combined = (manualEnabled && developmentEnabled) || unitTypeShape;
       const sourcePageSize = combined ? (requestedPage + 1) * pageSize : pageSize;
@@ -449,9 +465,10 @@ export class PublicSearchService {
         developmentEnabled
           ? publicDevelopmentSearchService.search(
               buildDevelopmentSearchInput(
-                { ...input, canonicalPlaceId: input.canonicalPlaceId! },
+                input,
                 developmentSourcePage,
                 sourcePageSize,
+                unitTypePlaceIds,
               ),
             )
           : null,
@@ -465,6 +482,13 @@ export class PublicSearchService {
         developmentUnitTypeCards(item, {
           listingType: input.listingType!,
           requirePhoto: input.requirePhoto,
+          filters: {
+            minPrice: input.minPrice,
+            maxPrice: input.maxPrice,
+            minBedrooms: input.minBedrooms,
+            maxBedrooms: input.maxBedrooms,
+            propertyType: input.propertyType,
+          },
         }),
       );
     let unitTypeCards = unitTypeShape ? unitCardsFrom() : [];
@@ -481,7 +505,9 @@ export class PublicSearchService {
     }
 
     const manualCards = (manualResults?.cards || []) as SearchCardResult[];
-    const developmentCards = (developmentResults?.items || []).map(developmentCard);
+    const developmentCards = unitTypeShape
+      ? []
+      : (developmentResults?.items || []).map(developmentCard);
     const blended =
       manualEnabled && developmentEnabled
         ? blendSearchSources(

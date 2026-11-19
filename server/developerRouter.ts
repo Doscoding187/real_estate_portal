@@ -7,6 +7,10 @@ import { EmailService } from './_core/emailService';
 import { developerSubscriptionService } from './services/developerSubscriptionService';
 import { developmentService } from './services/developmentService';
 import { publicDevelopmentSearchService } from './services/publicDevelopmentSearchService';
+import {
+  developmentUnitTypeCards,
+  mixListingsAndUnitTypes,
+} from './services/developmentUnitTypeCards';
 import { agentProfilePhoneError } from '../shared/agentProfilePhone';
 import { assertLandDevelopmentDraftOperationAvailable } from './services/developerEngineContainment';
 import { getDeveloperByUserId, requireDeveloperProfileByUserId } from './services/developerService'; // [NEW] Import service methods
@@ -890,9 +894,53 @@ export const developerRouter = router({
         parkingCount:
           Number(cardsById.get(String(card.id))?.parking?.compactValue || 0) || null,
         propertyType: card.propertyType ?? null,
+        unitType: undefined,
       }));
+      // Available unit types of published developments at this exact Place sit among the
+      // listings as their own cards (never counted as listings; see placeGuideService stats).
+      const unitTypeSearch = await publicDevelopmentSearchService.search({
+        canonicalPlaceId: input.canonicalPlaceId,
+        transactionType: input.tab === 'rent' ? 'for_rent' : 'for_sale',
+        developmentType: 'residential',
+        sortOption: 'date_desc',
+        page: 0,
+        pageSize: 10,
+        includeUnitSize: true,
+        skipDevelopmentRangeFilters: true,
+      });
+      const unitTypeItems = (unitTypeSearch?.items ?? [])
+        .flatMap(development =>
+          developmentUnitTypeCards(development, {
+            listingType: input.tab === 'rent' ? 'rent' : 'sale',
+            requirePhoto: true,
+          }),
+        )
+        .map(card => ({
+          id: card.id,
+          kind: 'listing' as const,
+          title: card.title,
+          canonicalPlaceId: card.canonicalPlaceId ?? null,
+          locationLabels: card.locationLabels ?? [],
+          priceFrom: card.price ?? null,
+          priceTo: null,
+          image: card.image ?? '',
+          href: card.href,
+          listingType: input.tab === 'rent' ? ('rent' as const) : ('sale' as const),
+          bedrooms: card.bedrooms ?? null,
+          bathrooms: card.bathrooms ?? null,
+          area: card.area ?? null,
+          yardSize: card.unitType.yardSizeM2,
+          parkingCount: card.unitType.parking,
+          propertyType: null,
+          unitType: {
+            developmentName: card.unitType.developmentName,
+            publisherName: card.identity?.name ?? null,
+            availableUnits: card.unitType.availableUnits,
+          },
+        }));
+      const mixedItems = mixListingsAndUnitTypes(items, unitTypeItems, { limit });
       return {
-        items,
+        items: mixedItems,
         meta: {
           tab: input.tab,
           source: 'listings' as const,
@@ -901,7 +949,7 @@ export const developerRouter = router({
           selectedScope: 'canonical_place' as const,
           usedFallback: false,
           fallbackLevel: 'none' as const,
-          resultCount: items.length,
+          resultCount: mixedItems.length,
         },
       };
     }),

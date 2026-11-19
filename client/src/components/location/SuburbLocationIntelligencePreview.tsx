@@ -140,6 +140,9 @@ export function SuburbLocationIntelligencePreview({
   const [listingTab, setListingTab] = useState<'buy' | 'rent'>(buyEnabled ? 'buy' : 'rent');
   const saleCount = stats.saleCount;
   const rentalCount = stats.rentCount;
+  // Development unit types are a separate line: never part of the listing counts or medians.
+  const newDevelopmentSale = stats.newDevelopmentHomes?.sale ?? 0;
+  const newDevelopmentRent = stats.newDevelopmentHomes?.rent ?? 0;
   const saleMedian = stats.saleMedian;
   const rentMedian = stats.rentMedian;
   const priceSampleMinimum = stats.minimumSample;
@@ -484,7 +487,12 @@ export function SuburbLocationIntelligencePreview({
                 </span>
                 <span>Properties for sale</span>
                 <strong>{saleCount.toLocaleString('en-ZA')}</strong>
-                <small>Current published supply</small>
+                <small>
+                  Current published supply
+                  {newDevelopmentSale > 0
+                    ? ` + ${newDevelopmentSale.toLocaleString('en-ZA')} new-development ${newDevelopmentSale === 1 ? 'home' : 'homes'}`
+                    : ''}
+                </small>
               </article>
               <article className="suburb-discovery-metric">
                 <span className="suburb-discovery-metric__icon">
@@ -492,7 +500,12 @@ export function SuburbLocationIntelligencePreview({
                 </span>
                 <span>Rental properties</span>
                 <strong>{rentalCount.toLocaleString('en-ZA')}</strong>
-                <small>Current published supply</small>
+                <small>
+                  Current published supply
+                  {newDevelopmentRent > 0
+                    ? ` + ${newDevelopmentRent.toLocaleString('en-ZA')} new-development ${newDevelopmentRent === 1 ? 'home' : 'homes'}`
+                    : ''}
+                </small>
               </article>
             </div>
             <aside
