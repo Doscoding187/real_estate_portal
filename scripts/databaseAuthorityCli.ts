@@ -15,7 +15,14 @@ import {
 import { retireFordsburgDuplicate } from '../server/_core/databaseAuthority/dataAdapters/fordsburgPlaceRetirement';
 import { reconcileGautengReviewedTypes } from '../server/_core/databaseAuthority/dataAdapters/gautengReviewedTypeReconciliation';
 import { inspectPlaceReleaseTarget } from '../server/_core/databaseAuthority/dataAdapters/placeReleaseInspection';
-import { resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import {
+  assertSeedPackTarget,
+  prepareDevelopmentSeedPack,
+  verifyDevelopmentSeedPack,
+} from '../server/_core/databaseAuthority/dataAdapters/developmentSeedPack';
+import { exportDevelopmentSeedPack } from '../server/_core/databaseAuthority/dataAdapters/developmentSeedPackExport';
+import { readSeedPackFile, writeSeedPackExport } from './developmentSeedPackFiles';
 import {
   installLegalRelease,
   prepareLegalInstallationPacket,
@@ -182,7 +189,10 @@ type Command =
   | 'ple-publication-entitlement:prepare'
   | 'ple-publication-entitlement:verify'
   | 'ple-reviewer:prepare'
-  | 'ple-reviewer:verify';
+  | 'ple-reviewer:verify'
+  | 'seed-pack:prepare'
+  | 'seed-pack:verify'
+  | 'seed-pack:export';
 
 function option(name: string): string | undefined {
   const prefix = `--${name}=`;
@@ -945,6 +955,70 @@ async function run(command: Command): Promise<void> {
     return;
   }
 
+  if (
+    command === 'seed-pack:prepare' ||
+    command === 'seed-pack:verify' ||
+    command === 'seed-pack:export'
+  ) {
+    const isPrepare = command === 'seed-pack:prepare';
+    const isExport = command === 'seed-pack:export';
+    const authority = authorityFor(
+      isPrepare ? 'demo-seed' : 'verification',
+      isPrepare ? 'local-owner' : undefined,
+    );
+    // Refuse a protected target before any credential is used or file is read.
+    assertSeedPackTarget(authority);
+    const decision = authorizationFor(authority);
+    const connection = await createAuthoritySqlConnection(authority, decision);
+    try {
+      if (isExport) {
+        const outPath = requiredOption('out');
+        const assetsDir = option('assets-out') ?? join(dirname(resolve(outPath)), 'assets');
+        const exported = await exportDevelopmentSeedPack({
+          connection,
+          developmentSlug: requiredOption('development-slug'),
+          publisherSlug: option('publisher-slug'),
+          databaseName: authority.context.databaseName,
+        });
+        const storage = await import('../server/_core/mediaStorage');
+        const report = await writeSeedPackExport({
+          exported,
+          outPath,
+          assetsDir,
+          resolveLocalObject: async key => {
+            if (!storage.isLocalMediaStorage()) return null;
+            try {
+              storage.assertSafeLocalMediaKey(key);
+              return (await storage.inspectLocalMediaObject(key)).path;
+            } catch {
+              return null;
+            }
+          },
+        });
+        print({ ...report, source: exported.source });
+        return;
+      }
+      const pack = await readSeedPackFile(requiredOption('pack'));
+      print(
+        isPrepare
+          ? await prepareDevelopmentSeedPack({
+              authority,
+              decision,
+              connection,
+              pack,
+              options: {
+                assetRoot: requiredOption('asset-root'),
+                reviewerEmail: option('reviewer-email'),
+              },
+            })
+          : await verifyDevelopmentSeedPack({ authority, decision, connection, pack }),
+      );
+    } finally {
+      await connection.end();
+    }
+    return;
+  }
+
   const authority = authorityFor('diagnostics');
   const decision = authorizationFor(authority);
   const connection = await createAuthoritySqlConnection(authority, decision);
@@ -1062,6 +1136,9 @@ const commands = new Set<Command>([
   'ple-publication-entitlement:verify',
   'ple-reviewer:prepare',
   'ple-reviewer:verify',
+  'seed-pack:prepare',
+  'seed-pack:verify',
+  'seed-pack:export',
 ]);
 
 if (process.argv[1] && resolve(process.argv[1]) === new URL(import.meta.url).pathname) {
