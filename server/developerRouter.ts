@@ -52,6 +52,7 @@ import {
 } from '../shared/developerFunnel';
 import { calculateDevelopmentReadiness } from './lib/readiness';
 import { sanitizeDraftData } from './lib/sanitizeDraftData';
+import { draftProgressPercent } from './lib/draftProgress';
 import { requireUser } from './_core/requireUser';
 import { resolveOperatingIdentity } from './_core/identityResolver';
 import { validatePersistedSubmissionReadiness } from './services/developmentSubmissionReadiness';
@@ -641,7 +642,7 @@ export const developerRouter = router({
     .mutation(async ({ ctx, input }) => {
       const sanitized = sanitizeDraftData(input.draftData ?? {});
       const currentStep = Math.max(0, Number((sanitized as any).currentPhase ?? 0));
-      const progress = Math.min(100, Math.max(0, Math.round((currentStep / 11) * 100)));
+      const progress = draftProgressPercent(input.draftData, sanitized);
       const draftName =
         String((sanitized as any).developmentData?.name ?? (sanitized as any).name ?? '').trim() ||
         'Untitled Draft';

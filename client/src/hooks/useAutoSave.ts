@@ -43,6 +43,12 @@ export interface AutoSaveOptions<T> {
   enabled?: boolean;
 
   /**
+   * When false, no debounced saves are scheduled but saveNow() still works.
+   * @default true
+   */
+  schedule?: boolean;
+
+  /**
    * Optional: if provided, the hook will skip scheduling saves when this returns true.
    * Use it to avoid saving on purely UI-only changes or when data is effectively unchanged.
    *
@@ -124,6 +130,7 @@ export function useAutoSave<T extends object>(
     onSave,
     onError,
     enabled = true,
+    schedule = true,
     shouldSkipSave,
   } = options;
 
@@ -134,6 +141,11 @@ export function useAutoSave<T extends object>(
   const dataRef = useRef(data);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isInitialMount = useRef(true);
+
+  // Always call the latest callbacks without changing performSave identity,
+  // so inline callbacks do not restart the debounce timer on every render.
+  const latestRef = useRef({ onSave, onError, enabled, storageKey, shouldSkipSave });
+  latestRef.current = { onSave, onError, enabled, storageKey, shouldSkipSave };
 
   // Revisioning + single-flight
   const saveRevisionRef = useRef(0);
@@ -151,10 +163,7 @@ export function useAutoSave<T extends object>(
   }, []);
 
   const performSave = useCallback(async () => {
-    if (!enabled) return;
-
-    const snapshot = dataRef.current;
-    if (shouldSkipSave?.(snapshot)) return;
+    if (!latestRef.current.enabled) return;
 
     // Increment revision for this save attempt
     const myRevision = ++saveRevisionRef.current;
@@ -167,6 +176,14 @@ export function useAutoSave<T extends object>(
         // ignore; we'll attempt this save anyway
       }
     }
+
+    // Take the snapshot only now so a queued save writes the newest data.
+    const snapshot = dataRef.current;
+    if (latestRef.current.shouldSkipSave?.(snapshot)) {
+      if (myRevision === saveRevisionRef.current) setIsSaving(false);
+      return;
+    }
+    const { onSave, onError, storageKey } = latestRef.current;
 
     setIsSaving(true);
     setError(null);
@@ -181,9 +198,10 @@ export function useAutoSave<T extends object>(
           throw new Error('Either storageKey or onSave must be provided');
         }
 
-        // Only apply "lastSaved" if this is still the latest save
+        // A write that succeeded is a real save even if a newer one is queued.
+        setLastSaved(new Date());
         if (myRevision === saveRevisionRef.current) {
-          setLastSaved(new Date());
+          setError(null);
         }
       } catch (err) {
         const saveError = err instanceof Error ? err : new Error('Unknown save error');
@@ -212,7 +230,7 @@ export function useAutoSave<T extends object>(
         inFlightRef.current = null;
       }
     }
-  }, [enabled, onSave, storageKey, onError, shouldSkipSave]);
+  }, []);
 
   const saveNow = useCallback(async () => {
     clearTimer();
@@ -230,16 +248,17 @@ export function useAutoSave<T extends object>(
       return;
     }
 
-    if (!enabled) return;
-    if (shouldSkipSave?.(data)) return;
+    if (!enabled || !schedule) return;
+    if (latestRef.current.shouldSkipSave?.(data)) return;
 
     clearTimer();
     timerRef.current = setTimeout(() => {
-      void performSave();
+      // Failures surface through `error` / onError; nothing to rethrow here.
+      performSave().catch(() => undefined);
     }, debounceMs);
 
     return () => clearTimer();
-  }, [data, debounceMs, enabled, performSave, clearTimer, shouldSkipSave]);
+  }, [data, debounceMs, enabled, schedule, performSave, clearTimer]);
 
   return {
     lastSaved,

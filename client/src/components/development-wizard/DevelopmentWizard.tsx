@@ -16,8 +16,11 @@ import { parseError, type AppError } from '@/lib/errors/ErrorRecoveryStrategy';
 import { wasSessionExpired, clearSessionExpiryFlags } from '@/lib/auth/SessionExpiryHandler';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
-import { getVisibleSteps, getWorkflow } from '@/lib/workflows';
+import { WORKFLOWS, getVisibleSteps, getWorkflow } from '@/lib/workflows';
 import { usePublisherContext } from '@/hooks/usePublisherContext';
+import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
+import { hasMeaningfulDraft } from '@/lib/wizardSaveStatus';
+import { computeWizardProgress } from '@/lib/wizardProgress';
 
 import {
   AlertDialog,
@@ -42,7 +45,18 @@ const parseNumericParam = (value: string | null) => {
   return Number.isFinite(parsed) ? parsed : undefined;
 };
 
-const ownerScopedDevelopmentWizardKey = (baseKey: string, userId: string, publisherId?: number) =>
+const safeStringify = (value: unknown) => {
+  try {
+    return JSON.stringify(value) ?? '';
+  } catch {
+    return String(Math.random());
+  }
+};
+
+/** Never equal to a real snapshot: "this local copy has never been written to the server". */
+const UNSAVED_BASELINE = '\u0000unsaved';
+
+const ownerScopedDevelopmentWizardKey =(baseKey: string, userId: string, publisherId?: number) =>
   publisherId == null
     ? `${baseKey}:user-${encodeURIComponent(userId)}`
     : `${baseKey}:user-${encodeURIComponent(userId)}:publisher-${publisherId}`;
@@ -64,11 +78,18 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
   const isEditMode = editId != null;
   const isDraftMode = draftId != null;
 
-  // Keep draftId in state because new drafts get an ID after save
-  const [currentDraftId, setCurrentDraftId] = useState<number | undefined>(draftId);
+  // Keep draftId in state because new drafts get an ID after save. The ref is
+  // updated synchronously so two quick saves can never create two drafts.
+  const [currentDraftId, setCurrentDraftIdState] = useState<number | undefined>(draftId);
+  const draftIdRef = useRef<number | undefined>(draftId);
+  const setCurrentDraftId = useCallback((id: number | undefined) => {
+    draftIdRef.current = id;
+    setCurrentDraftIdState(id);
+  }, []);
   useEffect(() => {
-    setCurrentDraftId(draftId);
-  }, [draftId]);
+    // Only follow the URL when it names a draft; a created draft is written to the URL below.
+    if (draftId != null) setCurrentDraftId(draftId);
+  }, [draftId, setCurrentDraftId]);
 
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [showResumeDraftDialog, setShowResumeDraftDialog] = useState(false);
@@ -95,6 +116,11 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
     initializeWorkflow,
     setWorkflowStep,
     setListingIdentity,
+    workflowId,
+    currentStepId,
+    completedSteps,
+    stepData,
+    selectedAmenities,
   } = store;
 
   const { user, loading: isAuthLoading } = useAuth();
@@ -131,29 +157,150 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
     return () => unsub?.();
   }, []);
 
+  // Create mode never wipes work in progress. If this browser already holds a
+  // non-empty local draft for this account, the publisher chooses between
+  // "Resume draft" and "Start new"; only an empty store starts clean.
   useEffect(() => {
-    if (!persistReady) return;
-    if (!isEditMode && !isDraftMode) {
-      reset();
-      setIsHydrated(true);
-    }
-  }, [persistReady, isEditMode, isDraftMode, reset]);
+    if (!persistReady || !persistStorageKey) return;
+    if (isEditMode || isDraftMode || isHydrated || showResumeDraftDialog) return;
 
-  // --- Autosave (currently disabled in your code) ---
+    const localState = useDevelopmentWizard.getState?.() ?? store;
+    if (hasMeaningfulDraft(localState)) {
+      setShowResumeDraftDialog(true);
+      return;
+    }
+    reset();
+    setIsHydrated(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [persistReady, persistStorageKey, isEditMode, isDraftMode, isHydrated, showResumeDraftDialog, reset]);
+
+  // --- Autosave to the server draft (developer path and curated path) ---
   const saveDraftMutation = trpc.developer.saveDraft.useMutation();
   const savePublisherDraftMutation = trpc.superAdminPublisher.saveDraft.useMutation();
 
+  // Everything a publisher can change, including the workflow step data that
+  // the real wizard steps write to.
   const stateToWatch = useMemo(
     () => ({
       currentPhase,
+      workflowId,
+      currentStepId,
+      completedSteps,
+      stepData,
+      selectedAmenities,
       developmentData,
       classification,
       overview,
       unitTypes,
       finalisation,
     }),
-    [currentPhase, developmentData, classification, overview, unitTypes, finalisation],
+    [
+      currentPhase,
+      workflowId,
+      currentStepId,
+      completedSteps,
+      stepData,
+      selectedAmenities,
+      developmentData,
+      classification,
+      overview,
+      unitTypes,
+      finalisation,
+    ],
   );
+  const snapshotKey = useMemo(() => safeStringify(stateToWatch), [stateToWatch]);
+  const snapshotKeyRef = useRef(snapshotKey);
+  snapshotKeyRef.current = snapshotKey;
+
+  const autosaveReady = persistReady && isHydrated && !!persistStorageKey;
+  const localHasContent = hasMeaningfulDraft(store);
+
+  // The snapshot the server is known to hold. Set once the wizard has loaded
+  // (a loaded draft/development is "saved"); a local copy the publisher chose
+  // to resume stays "unsaved" until its first confirmed write to the server.
+  const resumedLocalRef = useRef(false);
+  const baselineRef = useRef<string | null>(null);
+  // Re-render trigger: the baseline lives in a ref so saves never race renders.
+  const [, setBaselineVersion] = useState(0);
+  useEffect(() => {
+    if (!autosaveReady) {
+      baselineRef.current = null;
+      return;
+    }
+    if (baselineRef.current !== null) return;
+    baselineRef.current =
+      resumedLocalRef.current && localHasContent ? UNSAVED_BASELINE : snapshotKeyRef.current;
+    setBaselineVersion(version => version + 1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autosaveReady]);
+
+  const manualSaveRef = useRef(false);
+
+  const invalidateDraftQueries = useCallback(
+    async (id?: number) => {
+      if (shouldUsePublisherApi) {
+        await Promise.all([
+          utils.superAdminPublisher.getDrafts.invalidate({
+            cataloguePublisherId: publisherContext.cataloguePublisherId,
+          }),
+          id
+            ? utils.superAdminPublisher.getDraft.invalidate({
+                cataloguePublisherId: publisherContext.cataloguePublisherId,
+                id,
+              })
+            : Promise.resolve(),
+        ]);
+      } else {
+        await Promise.all([
+          utils.developer.getDrafts.invalidate(),
+          id ? utils.developer.getDraft.invalidate({ id }) : Promise.resolve(),
+        ]);
+      }
+    },
+    [publisherContext?.cataloguePublisherId, shouldUsePublisherApi, utils],
+  );
+
+  // One real server write. Throws unless the server confirmed the draft.
+  const persistDraft = useCallback(async () => {
+    const isNewDraft = draftIdRef.current == null;
+    const result = await persistManualDevelopmentDraft({
+      saveDraft,
+      mutateDraft: input =>
+        shouldUsePublisherApi
+          ? savePublisherDraftMutation.mutateAsync({
+              ...input,
+              cataloguePublisherId: publisherContext.cataloguePublisherId,
+            })
+          : saveDraftMutation.mutateAsync(input),
+      currentDraftId: draftIdRef.current,
+      cataloguePublisherId: shouldUsePublisherApi
+        ? publisherContext.cataloguePublisherId
+        : cataloguePublisherId,
+      setCurrentDraftId,
+    });
+
+    if (isNewDraft && result?.id) {
+      // A reload now resumes this draft instead of starting over.
+      useDevelopmentWizard.setState?.({ draftId: result.id });
+      if (!isEditMode) {
+        const url = new URL(window.location.href);
+        url.searchParams.set('draftId', String(result.id));
+        window.history.replaceState(window.history.state, '', url.toString());
+      }
+      void invalidateDraftQueries(result.id);
+    }
+    return result;
+  }, [
+    cataloguePublisherId,
+    invalidateDraftQueries,
+    isEditMode,
+    publisherContext?.cataloguePublisherId,
+    saveDraft,
+    saveDraftMutation,
+    savePublisherDraftMutation,
+    setCurrentDraftId,
+    shouldUsePublisherApi,
+  ]);
 
   const {
     lastSaved,
@@ -161,64 +308,30 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
     error: autoSaveError,
     saveNow,
   } = useAutoSave(stateToWatch, {
-    debounceMs: 60000,
-    enabled: false, // TODO: re-enable when backend is stable
-    onSave: async () => {
-      await saveDraft(async data => {
-        const result = shouldUsePublisherApi
-          ? await savePublisherDraftMutation.mutateAsync({
-              ...(currentDraftId ? { id: currentDraftId } : {}),
-              cataloguePublisherId: publisherContext.cataloguePublisherId,
-              draftData: data,
-            })
-          : await saveDraftMutation.mutateAsync({
-              ...(currentDraftId ? { id: currentDraftId } : {}),
-              ...(cataloguePublisherId ? { cataloguePublisherId } : {}),
-              draftData: data,
-            });
-        if (result?.id && !currentDraftId) setCurrentDraftId(result.id);
-      });
+    debounceMs: 2000,
+    // Edit mode changes a real development: it is saved by an explicit action
+    // only, never silently into a draft.
+    enabled: autosaveReady,
+    schedule: !isEditMode,
+    shouldSkipSave: () => {
+      if (manualSaveRef.current) return false;
+      if (!hasMeaningfulDraft(store)) return true;
+      return snapshotKeyRef.current === baselineRef.current;
+    },
+    onSave: async data => {
+      await persistDraft();
+      // Only after the server confirmed the write is this snapshot "saved".
+      baselineRef.current = safeStringify(data);
     },
   });
 
   const handleManualSaveDraft = useCallback(async () => {
     try {
       setApiError(null);
-      const result = await persistManualDevelopmentDraft({
-        saveDraft,
-        mutateDraft: input =>
-          shouldUsePublisherApi
-            ? savePublisherDraftMutation.mutateAsync({
-                ...input,
-                cataloguePublisherId: publisherContext.cataloguePublisherId,
-              })
-            : saveDraftMutation.mutateAsync(input),
-        currentDraftId,
-        cataloguePublisherId: shouldUsePublisherApi
-          ? publisherContext.cataloguePublisherId
-          : cataloguePublisherId,
-        setCurrentDraftId,
-      });
-
-      if (shouldUsePublisherApi) {
-        await Promise.all([
-          utils.superAdminPublisher.getDrafts.invalidate({
-            cataloguePublisherId: publisherContext.cataloguePublisherId,
-          }),
-          result.id
-            ? utils.superAdminPublisher.getDraft.invalidate({
-                cataloguePublisherId: publisherContext.cataloguePublisherId,
-                id: result.id,
-              })
-            : Promise.resolve(),
-        ]);
-      } else {
-        await Promise.all([
-          utils.developer.getDrafts.invalidate(),
-          result.id ? utils.developer.getDraft.invalidate({ id: result.id }) : Promise.resolve(),
-        ]);
-      }
-
+      if (!autosaveReady) throw new Error('The wizard is still loading. Try again in a moment.');
+      manualSaveRef.current = true;
+      await saveNow();
+      await invalidateDraftQueries(draftIdRef.current);
       toast.success('Draft saved');
     } catch (error) {
       const parsed = parseError(error);
@@ -227,26 +340,39 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
         description: parsed.message,
       });
       throw error;
+    } finally {
+      manualSaveRef.current = false;
     }
-  }, [
-    cataloguePublisherId,
-    currentDraftId,
-    publisherContext?.cataloguePublisherId,
-    saveDraft,
-    saveDraftMutation,
-    savePublisherDraftMutation,
-    shouldUsePublisherApi,
-    utils,
-  ]);
+  }, [autosaveReady, invalidateDraftQueries, saveNow]);
 
-  // Save on phase transition (only after hydration)
-  const prevPhaseRef = useRef(currentPhase);
+  const retrySave = useCallback(() => {
+    manualSaveRef.current = true;
+    Promise.resolve(saveNow())
+      .catch(() => undefined)
+      .finally(() => {
+        manualSaveRef.current = false;
+      });
+  }, [saveNow]);
+
+  // Save immediately when the publisher moves to another step (and once for a
+  // resumed local draft that the server has never seen).
+  const prevStepRef = useRef(currentStepId);
   useEffect(() => {
-    if (prevPhaseRef.current !== currentPhase && prevPhaseRef.current !== 0) {
-      if (isHydrated) saveNow();
-    }
-    prevPhaseRef.current = currentPhase;
-  }, [currentPhase, saveNow, isHydrated]);
+    const changed = prevStepRef.current !== currentStepId;
+    prevStepRef.current = currentStepId;
+    if (!autosaveReady || isEditMode) return;
+    if (!changed && baselineRef.current !== UNSAVED_BASELINE) return;
+    Promise.resolve(saveNow()).catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStepId, autosaveReady]);
+
+  // Warn before leaving with unsaved changes (tab close, reload, in-app links).
+  const hasUnsavedChanges =
+    autosaveReady &&
+    localHasContent &&
+    baselineRef.current !== null &&
+    snapshotKey !== baselineRef.current;
+  useUnsavedChangesGuard(hasUnsavedChanges);
 
   const persistKeyRef = useRef<string | null>(null);
 
@@ -310,7 +436,7 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
   } = trpc.developer.getDraft.useQuery(
     { id: currentDraftId! },
     {
-      enabled: !!currentDraftId && !isEditMode && !shouldUsePublisherApi,
+      enabled: !!currentDraftId && !isEditMode && !isHydrated && !shouldUsePublisherApi,
       retry: false,
       refetchOnWindowFocus: false,
       refetchOnMount: false,
@@ -325,7 +451,7 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
         id: currentDraftId ?? -1,
       },
       {
-        enabled: !!currentDraftId && !isEditMode && shouldUsePublisherApi,
+        enabled: !!currentDraftId && !isEditMode && !isHydrated && shouldUsePublisherApi,
         retry: false,
         refetchOnWindowFocus: false,
         refetchOnMount: false,
@@ -436,6 +562,8 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
     if (!activeLoadedDraft?.draftData || isHydrated) return;
 
     hydrateDevelopment(activeLoadedDraft.draftData);
+    // Remember which server draft this local copy belongs to.
+    useDevelopmentWizard.setState?.({ draftId: currentDraftId });
     setIsHydrated(true);
     toast.success('Draft loaded successfully');
   }, [persistReady, isEditMode, activeLoadedDraft, isHydrated, hydrateDevelopment]);
@@ -457,8 +585,7 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
 
   const confirmExit = async () => {
     // The exit dialog promises a saved draft, so perform the same real server
-    // save as the explicit Save Draft action. The autosave hook is disabled
-    // and its saveNow() is a no-op.
+    // save as the explicit Save Draft action (confirmed write or no exit).
     if (!isHydrated) {
       reset();
       setLocation(
@@ -563,28 +690,54 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
         onExit={() => setShowExitDialog(true)}
         onSaveDraft={handleManualSaveDraft}
         isSavingDraft={saveDraftMutation.isPending || savePublisherDraftMutation.isPending}
-        saveStatus={isSaving ? 'saving' : autoSaveError ? 'error' : 'saved'}
-        lastSavedAt={lastSaved}
+        // "Saved" is only ever shown after a confirmed server write.
+        save={{ isSaving, hasError: Boolean(autoSaveError), lastSavedAt: lastSaved }}
+        onRetrySave={retrySave}
+        publisherName={shouldUsePublisherApi ? publisherContext?.publisherName : null}
+        changePublisherHref={shouldUsePublisherApi ? '/admin/publisher' : undefined}
+        draftsHref={shouldUsePublisherApi ? '/admin/publisher' : '/developer/drafts'}
+        draftsLabel="Your drafts"
       />
     );
   };
+
+  const draftWorkflow = workflowId ? WORKFLOWS[workflowId] : null;
+  const draftProgress = computeWizardProgress({
+    visibleStepIds: draftWorkflow
+      ? getVisibleSteps(draftWorkflow, store.getWizardData?.() ?? developmentData).map(s => s.id)
+      : [],
+    currentStepId,
+    onProjectSetup: !draftWorkflow,
+  });
 
   return (
     <>
       <DraftManager
         open={showResumeDraftDialog}
-        onOpenChange={setShowResumeDraftDialog}
-        onResume={() => setShowResumeDraftDialog(false)}
+        // The choice is required: closing the dialog without choosing would
+        // leave the wizard waiting, so only the two buttons close it.
+        onOpenChange={() => undefined}
+        onResume={() => {
+          // Keep the local draft, and the server draft it was saved to.
+          resumedLocalRef.current = true;
+          setCurrentDraftId(useDevelopmentWizard.getState?.().draftId ?? undefined);
+          setShowResumeDraftDialog(false);
+          setIsHydrated(true);
+        }}
         onStartFresh={() => {
           setShowResumeDraftDialog(false);
           setCurrentDraftId(undefined);
+          resumedLocalRef.current = false;
           reset();
-          window.history.replaceState({}, '', window.location.pathname);
+          const url = new URL(window.location.href);
+          url.searchParams.delete('draftId');
+          window.history.replaceState({}, '', url.toString());
+          setIsHydrated(true);
         }}
         wizardType="development"
         draftData={{
-          currentStep: currentPhase,
-          totalSteps: 1,
+          currentStep: Math.max(1, draftProgress.position),
+          totalSteps: draftProgress.total,
           developmentName: developmentData.name || '',
           address: developmentData.location?.address || '',
           lastModified: activeLoadedDraft?.lastModified || undefined,

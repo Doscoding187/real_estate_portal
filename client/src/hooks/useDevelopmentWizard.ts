@@ -10,6 +10,7 @@ import type {
 import { AMENITY_REGISTRY } from '@/config/amenityRegistry';
 import { WorkflowId, WizardStepId, WizardData } from '@/lib/types/wizard-workflows';
 import { WORKFLOWS, getWorkflow, getVisibleSteps } from '@/lib/workflows';
+import { computeWizardProgress } from '@/lib/wizardProgress';
 
 export const DEVELOPMENT_WIZARD_STORAGE_KEY = 'development-wizard-storage-v2';
 export const PUBLISHER_DEVELOPMENT_WIZARD_STORAGE_KEY = 'publisher-development-wizard-storage-v1';
@@ -2356,6 +2357,19 @@ const createActions = (
         },
         currentPhase: state.currentPhase,
         currentStep: state.currentStep,
+        // Real progress from the actual step list (the server used to guess
+        // from currentPhase / 11, which is not the step count).
+        progressPercent: (() => {
+          const workflow = state.workflowId ? WORKFLOWS[state.workflowId] : null;
+          const visibleStepIds = workflow
+            ? getVisibleSteps(workflow, buildWizardData(state)).map(step => step.id)
+            : [];
+          return computeWizardProgress({
+            visibleStepIds,
+            currentStepId: state.currentStepId,
+            onProjectSetup: !workflow,
+          }).percent;
+        })(),
 
         // Core data (persisted)
         developmentData: {
@@ -2425,6 +2439,8 @@ export const useDevelopmentWizard = create<DevelopmentWizardState>()(
 
         listingIdentity: state.listingIdentity,
         developmentType: state.developmentType,
+        // Server draft this local copy belongs to, so resuming never forks a duplicate.
+        draftId: state.draftId,
 
         residentialConfig: state.residentialConfig,
         landConfig: state.landConfig,

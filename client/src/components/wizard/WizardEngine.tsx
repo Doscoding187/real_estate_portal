@@ -1,7 +1,5 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useDevelopmentWizard } from '@/hooks/useDevelopmentWizard';
-import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { DevelopmentTypePhase } from '../development-wizard/phases/DevelopmentTypePhase';
 import { ResidentialConfigPhase } from '../development-wizard/phases/ResidentialConfigPhase';
 import { IdentityPhase } from '../development-wizard/phases/IdentityPhase';
@@ -14,7 +12,9 @@ import { UnitTypesPhase } from '../development-wizard/phases/UnitTypesPhase';
 import { FinalisationPhase } from '../development-wizard/phases/FinalisationPhase';
 import { WORKFLOWS, getVisibleSteps } from '@/lib/workflows';
 import { WizardData } from '@/lib/types/wizard-workflows';
-import { WizardHeader } from './WizardHeader';
+import { computeWizardProgress } from '@/lib/wizardProgress';
+import { WizardShell, type WizardSaveInput, type WizardShellStep } from './WizardShell';
+import { buildPreviewModel } from './previewModel';
 
 const STEP_COMPONENTS: Record<string, React.ComponentType<any>> = {
   ConfigurationStep: ResidentialConfigPhase,
@@ -28,24 +28,35 @@ const STEP_COMPONENTS: Record<string, React.ComponentType<any>> = {
   ReviewStep: FinalisationPhase,
 };
 
+export const PROJECT_SETUP_STEP_ID = 'project_setup';
+
 interface WizardEngineProps {
   onExit?: () => void;
   onSaveDraft?: () => Promise<void> | void;
   isSavingDraft?: boolean;
-  saveStatus?: 'saved' | 'saving' | 'error';
-  lastSavedAt?: Date;
+  save?: WizardSaveInput;
+  onRetrySave?: () => void;
+  publisherName?: string | null;
+  changePublisherHref?: string;
+  draftsHref?: string;
+  draftsLabel?: string;
 }
 
 export function WizardEngine({
   onExit,
   onSaveDraft,
   isSavingDraft,
-  saveStatus,
-  lastSavedAt,
+  save = { isSaving: false, hasError: false, lastSavedAt: null },
+  onRetrySave,
+  publisherName,
+  changePublisherHref,
+  draftsHref,
+  draftsLabel,
 }: WizardEngineProps) {
   const {
     workflowId,
     currentStepId,
+    completedSteps,
     goWorkflowNext,
     goWorkflowBack,
     stepErrors,
@@ -53,7 +64,12 @@ export function WizardEngine({
     developmentType,
     listingIdentity,
     setWorkflowStep,
+    unitTypes,
+    getWizardData,
   } = useDevelopmentWizard();
+
+  // Project Setup can be revisited with Back / the step list without losing the draft.
+  const [showProjectSetup, setShowProjectSetup] = useState(false);
 
   // Compute workflow data early (needed for useEffect)
   const workflow = workflowId ? WORKFLOWS[workflowId] : null;
@@ -68,114 +84,126 @@ export function WizardEngine({
     }
   }, [workflow, currentStepIndex, visibleSteps, setWorkflowStep]);
 
-  // Handle Initial State (No Workflow or Missing Config)
-  // We strictly require workflowId + developmentType + transactionType to render the engine
-  if (!workflowId || !developmentType || !developmentData.transactionType) {
+  const workflowReady = Boolean(workflowId && developmentType && developmentData.transactionType);
+  const onProjectSetup = !workflowReady || showProjectSetup;
+
+  // The store re-renders this component on every change, so the preview is
+  // rebuilt from the live canonical wizard data each time (cheap, pure).
+  const previewModel = buildPreviewModel(getWizardData?.() ?? developmentData, unitTypes);
+
+  const currentStep = visibleSteps[currentStepIndex];
+
+  const maxVisitedIndex = Math.max(
+    currentStepIndex,
+    ...visibleSteps.map((step, index) => (completedSteps?.includes(step.id) ? index : -1)),
+  );
+  const shellSteps: WizardShellStep[] = [
+    { id: PROJECT_SETUP_STEP_ID, title: 'Project Setup', done: workflowReady, visited: true },
+    ...visibleSteps.map((step, index) => ({
+      id: step.id,
+      title: step.title,
+      done: Boolean(completedSteps?.includes(step.id)),
+      visited: workflowReady && index <= maxVisitedIndex,
+    })),
+  ];
+  const currentIndex = onProjectSetup ? 0 : currentStepIndex + 1;
+
+  const progress = computeWizardProgress({
+    visibleStepIds: visibleSteps.map(step => step.id),
+    currentStepId,
+    onProjectSetup,
+  });
+
+  const selectStep = (stepId: string) => {
+    if (stepId === PROJECT_SETUP_STEP_ID) {
+      setShowProjectSetup(true);
+      return;
+    }
+    setShowProjectSetup(false);
+    setWorkflowStep(stepId as any);
+  };
+
+  const shellCommon = {
+    steps: shellSteps,
+    onSelectStep: selectStep,
+    progress,
+    save,
+    onRetrySave,
+    onSaveAndExit: onExit,
+    publisherName,
+    changePublisherHref,
+    draftsHref,
+    draftsLabel,
+    previewModel,
+  };
+
+  // Project Setup: first visit, or revisited from Back / the step list.
+  if (onProjectSetup) {
     return (
-      <div className="flex flex-col min-h-screen bg-slate-50/50">
-        <WizardHeader
-          title="Project Setup"
-          description="Define the core structure of your development. These choices determine the workflow."
-          progressPercent={0}
-          onExit={onExit}
-          showExit={!!onExit}
-          saveStatus={saveStatus}
-          lastSavedAt={lastSavedAt}
-        />
-        <main className="flex-1 py-8 px-4">
-          <div className="max-w-5xl mx-auto">
-            <DevelopmentTypePhase />
-          </div>
-        </main>
-      </div>
+      <WizardShell
+        {...shellCommon}
+        currentIndex={0}
+        description="Define the core structure of your development. These choices determine the workflow."
+        canGoBack={false}
+        onBack={() => undefined}
+      >
+        <DevelopmentTypePhase onResume={workflowReady ? () => setShowProjectSetup(false) : undefined} />
+      </WizardShell>
     );
   }
 
   if (!workflow) return <div>Invalid Workflow</div>;
-
-  const currentStep = visibleSteps[currentStepIndex];
   if (!currentStep) return <div>Loading step...</div>;
 
   const StepComponent = STEP_COMPONENTS[currentStep.componentKey];
-  const progress = ((currentStepIndex + 1) / visibleSteps.length) * 100;
 
   // Validation Display
   const currentErrors = currentStepId ? stepErrors[currentStepId] : [];
 
+  const notice =
+    currentErrors && currentErrors.length > 0 ? (
+      <div className="rounded-lg border border-red-200 bg-red-50 p-4 animate-in fade-in slide-in-from-top-2">
+        <h4 className="mb-2 flex items-center gap-2 font-semibold text-red-800">
+          Please check the following:
+        </h4>
+        <ul className="ml-1 list-inside list-disc space-y-1 text-sm text-red-700">
+          {currentErrors.map((err: any, idx: number) => (
+            <li key={idx}>{typeof err === 'string' ? err : err.message}</li>
+          ))}
+        </ul>
+      </div>
+    ) : null;
+
+  const isLastStep = currentStepIndex >= visibleSteps.length - 1;
+
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50/50">
-      <WizardHeader
-        title={currentStep.title}
+    <>
+      <WizardShell
+        {...shellCommon}
+        currentIndex={currentIndex}
         description={currentStep.description}
-        progressPercent={progress}
-        onExit={onExit}
-        showExit={!!onExit}
-        saveStatus={saveStatus}
-        lastSavedAt={lastSavedAt}
-      />
-
-      <main className="flex-1 py-8 px-4">
-        <div className="max-w-5xl mx-auto">
-          {/* Validation Errors for Current Step */}
-          {currentErrors && currentErrors.length > 0 && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg animate-in fade-in slide-in-from-top-2">
-              <h4 className="text-red-800 font-semibold mb-2 flex items-center gap-2">
-                Please check the following:
-              </h4>
-              <ul className="list-disc list-inside text-red-700 text-sm space-y-1 ml-1">
-                {currentErrors.map((err: any, idx: number) => (
-                  <li key={idx}>{typeof err === 'string' ? err : err.message}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* Step Content */}
-          <div className="mb-20">
-            {' '}
-            {/* Add bottom margin for fixed footer if we had one, or just spacing */}
-            {StepComponent ? (
-              <StepComponent onSaveDraft={onSaveDraft} isSavingDraft={isSavingDraft} />
-            ) : (
-              <div className="text-center p-12 bg-slate-50 border border-dashed rounded-lg">
-                Component {currentStep.componentKey} not found
-              </div>
-            )}
+        canGoBack
+        // First workflow step goes back to Project Setup instead of being stuck.
+        onBack={currentStepIndex === 0 ? () => setShowProjectSetup(true) : goWorkflowBack}
+        onNext={isLastStep ? undefined : goWorkflowNext}
+        notice={notice}
+      >
+        {StepComponent ? (
+          <StepComponent onSaveDraft={onSaveDraft} isSavingDraft={isSavingDraft} />
+        ) : (
+          <div className="rounded-lg border border-dashed bg-slate-50 p-12 text-center">
+            Component {currentStep.componentKey} not found
           </div>
-
-          {/* Navigation Footer */}
-          <div className="flex justify-between pt-6 border-t border-slate-200 mt-8">
-            <Button
-              variant="outline"
-              onClick={goWorkflowBack}
-              disabled={currentStepIndex === 0}
-              className="px-6 h-12 text-slate-600"
-            >
-              <ChevronLeft className="w-4 h-4 mr-2" />
-              Back
-            </Button>
-
-            {currentStepIndex < visibleSteps.length - 1 && (
-              <Button
-                onClick={goWorkflowNext}
-                size="lg"
-                className="px-8 h-12 bg-blue-600 hover:bg-blue-700 shadow-sm transition-all"
-              >
-                Next
-                <ChevronRight className="w-4 h-4 ml-2" />
-              </Button>
-            )}
-          </div>
-        </div>
-      </main>
+        )}
+      </WizardShell>
 
       {/* Dev Debug Info (Hidden in Prod) */}
       {process.env.NODE_ENV === 'development' && (
-        <div className="fixed bottom-2 right-2 p-2 bg-slate-900/80 text-white rounded text-[10px] font-mono opacity-50 hover:opacity-100 z-50">
+        <div className="fixed bottom-2 right-2 z-50 rounded bg-slate-900/80 p-2 font-mono text-[10px] text-white opacity-50 hover:opacity-100">
           <p>Workflow: {workflowId}</p>
           <p>Step: {currentStepId}</p>
         </div>
       )}
-    </div>
+    </>
   );
 }
