@@ -10,18 +10,20 @@ vi.mock('wouter', () => ({
 }));
 
 import AdvertiseServicesPage from '@/pages/advertise/AdvertiseServicesPage';
-import { NotOpenYetCta } from '../NotOpenYetCta';
+import { RegisterRoleCta } from '../RegisterRoleCta';
 import { PartnerSelectionSection } from '../PartnerSelectionSection';
 import { SegmentationLayer } from '../SegmentationLayer';
 
 describe('launch-held partner entries', () => {
-  it('NotOpenYetCta is a non-link state with the launch sentence', () => {
-    render(<NotOpenYetCta />);
-    expect(screen.getByText('Not open yet')).toBeInTheDocument();
-    expect(
-      screen.getByText('Buyer, agent and service-provider registration is open.'),
-    ).toBeInTheDocument();
-    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+  it.each([
+    ['agency_admin', 'Create your Agency owner account'],
+    ['property_developer', 'Create your Developer account'],
+  ] as const)('RegisterRoleCta for %s links to registration with the role preselected', (role, name) => {
+    render(<RegisterRoleCta role={role} />);
+    expect(screen.getByRole('link', { name })).toHaveAttribute(
+      'href',
+      `/login?mode=register&role=${role}`,
+    );
   });
 
   it('the services advertise page routes providers into application registration', () => {
