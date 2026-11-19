@@ -549,7 +549,8 @@ export interface DevelopmentWizardState {
   // WORKFLOW ACTIONS
   setWorkflow: (id: WorkflowId | null) => void;
   setWorkflowStep: (stepId: WizardStepId) => void;
-  goWorkflowNext: () => void;
+  /** `fromStepId` (the step the user is looking at) makes a repeated or stale call a no-op. */
+  goWorkflowNext: (fromStepId?: string) => void;
   goWorkflowBack: () => void;
   saveWorkflowStepData: (stepId: WizardStepId, data: Record<string, any>) => void;
   /**
@@ -1487,9 +1488,12 @@ const createActions = (
 
     setWorkflowStep: (stepId: WizardStepId) => set({ currentStepId: stepId }),
 
-    goWorkflowNext: () =>
+    goWorkflowNext: (fromStepId?: string) =>
       set(state => {
         if (!state.workflowId || !state.currentStepId) return {};
+        // Continue moves exactly one step from the step on screen: a second or
+        // stale call for a step we have already left does nothing.
+        if (fromStepId && fromStepId !== state.currentStepId) return {};
         const workflow = WORKFLOWS[state.workflowId];
         if (!workflow) return {};
 
