@@ -73,20 +73,14 @@ describe('BasicsPhase', () => {
     expect(screen.queryByText(/What kind of security estate/)).not.toBeInTheDocument();
   });
 
-  it('starts the sale workflow on the first answer, and lets the publisher switch to rent in place', () => {
+  it('has no sale/rent toggle (the transaction comes from the start screen) and keeps the workflow', () => {
+    store().initializeWorkflow('residential', 'for_rent');
     render(<BasicsPhase />);
-    expect(store().workflowId).toBeNull();
+    expect(screen.queryByText(/Mostly for/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('radiogroup', { name: 'Sale or rent' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('radio', { name: /Standalone/ }));
-    expect(store().workflowId).toBe('residential_sale');
-    expect(store().currentStepId).toBe('configuration');
-
-    fireEvent.click(screen.getByRole('radio', { name: 'Mostly for rent' }));
     expect(store().workflowId).toBe('residential_rent');
-    expect(store().transactionType).toBe('for_rent');
-    expect(store().developmentData.transactionType).toBe('for_rent');
-    // The step and what was entered are kept.
-    expect(store().currentStepId).toBe('configuration');
     expect(store().stepData.configuration?.setting).toBe('standalone');
   });
 });

@@ -42,6 +42,14 @@ export function WizardLivePreview({
               Cover photo appears here
             </div>
           )}
+          {model.transactionLabel && (
+            <span
+              data-testid="preview-transaction"
+              className={`${tag} absolute right-3 top-3 bg-blue-700 text-white`}
+            >
+              {model.transactionLabel}
+            </span>
+          )}
           {model.statusBadge && (
             <span className={`${tag} absolute left-3 top-3 bg-white text-slate-900`}>
               {model.statusBadge}

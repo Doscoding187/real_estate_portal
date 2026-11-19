@@ -33,6 +33,8 @@ export interface DevelopmentPreviewModel {
   highlights: string[];
   moreHighlights: number;
   tags: string[];
+  /** "For sale" / "To rent", from the start screen answer. */
+  transactionLabel: string | null;
   /** Optional "Phase 2" badge. */
   phaseLabel: string;
   /** "First homes handed over from Mar 2027 · final completion Dec 2029", "Launching Mar 2027", or null. */
@@ -157,6 +159,12 @@ export function buildPreviewModel(
     highlights: highlights.slice(0, PREVIEW_CARD_HIGHLIGHTS),
     moreHighlights: Math.max(0, highlights.length - PREVIEW_CARD_HIGHLIGHTS),
     tags,
+    transactionLabel:
+      d.transactionType === 'for_sale' || d.transactionType === 'sale'
+        ? 'For sale'
+        : d.transactionType === 'for_rent' || d.transactionType === 'rent'
+          ? 'To rent'
+          : null,
     phaseLabel: asString(d.phaseLabel),
     timelineLine: buildTimelineLine(d),
     unit,
