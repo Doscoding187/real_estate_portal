@@ -17,7 +17,7 @@ vi.mock('@/lib/trpc', () => ({
           isLoading: false,
         }),
       },
-      getPropertiesStats: { useQuery: () => ({ data: {} }) },
+      getLaunchDashboardStats: { useQuery: () => ({ data: {}, isLoading: false }) },
     },
   },
 }));
