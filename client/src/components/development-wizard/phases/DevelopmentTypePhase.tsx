@@ -47,7 +47,7 @@ const TRANSACTION_TYPES = [
   },
 ];
 
-export function DevelopmentTypePhase() {
+export function DevelopmentTypePhase({ onResume }: { onResume?: () => void } = {}) {
   const { developmentType, developmentData, workflowId, setWorkflowSelector, setPhase, reset } =
     useDevelopmentWizard();
 
@@ -144,6 +144,17 @@ export function DevelopmentTypePhase() {
       return;
     }
 
+    // Revisiting Project Setup with an active workflow and nothing changed:
+    // go straight back to the wizard without re-initialising (keeps progress).
+    if (
+      workflowId &&
+      onResume &&
+      normalizeTxType(developmentData?.transactionType) === normalizeTxType(selectedTxType)
+    ) {
+      onResume();
+      return;
+    }
+
     const workflow = getWorkflow({ developmentType, transactionType: selectedTxType });
 
     if (!workflow) {
@@ -165,7 +176,8 @@ export function DevelopmentTypePhase() {
             Development Type
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {DEVELOPMENT_TYPE_OPTIONS.map(option => {
+            {/* Options that are not ready yet are hidden, not shown as "Not available yet". */}
+            {DEVELOPMENT_TYPE_OPTIONS.filter(option => option.enabled).map(option => {
               const Icon = ICONS[option.value];
               const isSelected = developmentType === option.value;
               const isDisabled = !option.enabled;
@@ -223,8 +235,8 @@ export function DevelopmentTypePhase() {
           <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider ml-1">
             Transaction Goal
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {TRANSACTION_TYPES.map(option => {
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {TRANSACTION_TYPES.filter(option => option.enabled !== false).map(option => {
               const Icon = option.icon;
               const isSelected = selectedTxType === option.value;
               const isDisabled = option.enabled === false;
@@ -276,7 +288,7 @@ export function DevelopmentTypePhase() {
           size="lg"
           className="px-10 h-12 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-md hover:shadow-lg transition-all duration-300"
         >
-          {workflowId ? 'Resume Wizard' : 'Start Wizard'}
+          {workflowId ? 'Continue' : 'Start Wizard'}
           <ArrowRight className="w-5 h-5 ml-2" />
         </Button>
       </div>
