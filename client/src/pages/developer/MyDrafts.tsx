@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { useLocation } from 'wouter';
+import { useAuth } from '@/_core/hooks/useAuth';
 import {
   Card,
   CardContent,
@@ -35,6 +36,7 @@ import { formatDistanceToNow } from 'date-fns';
 
 export default function MyDrafts() {
   const [, setLocation] = useLocation();
+  const { user } = useAuth();
   const [draftToDelete, setDraftToDelete] = useState<number | null>(null);
 
   const { data: drafts, isLoading, refetch } = trpc.developer.getDrafts.useQuery();
@@ -105,6 +107,20 @@ export default function MyDrafts() {
           </Button>
         </div>
       </div>
+
+      {/* Curated drafts belong to the catalogue publisher, not to an organisation. */}
+      {user?.role === 'super_admin' && (
+        <div
+          role="note"
+          className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900"
+        >
+          Drafts you create as a catalogue publisher are not listed here. Open{' '}
+          <a href="/admin/publisher" className="font-semibold underline">
+            the publisher page
+          </a>{' '}
+          to see and resume them.
+        </div>
+      )}
 
       {/* Drafts List */}
       {draftItems.length === 0 ? (

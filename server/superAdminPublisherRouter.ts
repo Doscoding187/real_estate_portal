@@ -16,6 +16,7 @@ import { developmentService } from './services/developmentService';
 import { resolveOperatingIdentity } from './_core/identityResolver';
 import type { EnhancedTRPCContext } from './_core/publisherContext';
 import { sanitizeDraftData } from './lib/sanitizeDraftData';
+import { draftProgressPercent } from './lib/draftProgress';
 import { getDeveloperOperatingHome } from './services/developerOperatingHome';
 import { assertLandDevelopmentDraftOperationAvailable } from './services/developerEngineContainment';
 import { safeErrorSummary } from './_core/safeError';
@@ -431,7 +432,7 @@ export const superAdminPublisherRouter = router({
       );
       const sanitized = sanitizeDraftData(input.draftData ?? {});
       const currentStep = Math.max(0, Number((sanitized as any).currentPhase ?? 0));
-      const progress = Math.min(100, Math.max(0, Math.round((currentStep / 11) * 100)));
+      const progress = draftProgressPercent(input.draftData, sanitized);
       const draftName =
         String((sanitized as any).developmentData?.name ?? (sanitized as any).name ?? '').trim() ||
         'Untitled Curated Draft';
