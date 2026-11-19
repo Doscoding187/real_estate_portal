@@ -127,8 +127,16 @@ export function ApprovedPaymentsRefundCard() {
     offset: 0,
   });
   const mutation = trpc.billing.admin.recordEftRefund.useMutation({
-    onSuccess: () => {
-      toast.success('Refund recorded and access revoked');
+    onSuccess: data => {
+      if (data?.accessRevoked === false) {
+        toast.info(
+          data?.alreadyRefunded
+            ? 'Refund was already recorded; nothing changed.'
+            : 'Refund recorded. Access was NOT revoked because a newer paid term is in place; use Revoke access if needed.',
+        );
+      } else {
+        toast.success('Refund recorded and access revoked');
+      }
       setTarget(null);
       utils.billing.admin.financeQueue.invalidate();
       utils.billing.admin.subscriptions.invalidate();
@@ -146,8 +154,7 @@ export function ApprovedPaymentsRefundCard() {
   const cents = randToCents(amountRand);
   const canSubmit =
     Boolean(target) &&
-    cents > 0 &&
-    cents <= Number(target?.payment?.amount ?? 0) &&
+    cents === Number(target?.payment?.amount ?? 0) &&
     /^\d{4}-\d{2}-\d{2}$/.test(refundedOn) &&
     note.trim().length > 0 &&
     !mutation.isPending;
@@ -218,7 +225,7 @@ export function ApprovedPaymentsRefundCard() {
             <DialogDescription>
               {target ? ownerLabel(target) : ''} - approved payment of{' '}
               {target ? formatCurrency(Number(target.payment.amount) / 100) : ''} (
-              {target?.payment?.paymentReference}). Their access will end immediately.
+              {target?.payment?.paymentReference}). Full refunds only. Access ends only if this payment activated the current term.
             </DialogDescription>
           </DialogHeader>
           <Input
@@ -230,6 +237,7 @@ export function ApprovedPaymentsRefundCard() {
           <Input
             aria-label="Refund date"
             type="date"
+            max={new Date().toISOString().slice(0, 10)}
             value={refundedOn}
             onChange={e => setRefundedOn(e.target.value)}
           />

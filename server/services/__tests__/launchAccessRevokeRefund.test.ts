@@ -5,8 +5,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const { mockGetDb } = vi.hoisted(() => ({ mockGetDb: vi.fn() }));
 vi.mock('../../db', () => ({ getDb: mockGetDb }));
 
-import { recordEftRefund, revokeLaunchAccess } from '../billingFoundationService';
+import { MySqlDialect } from 'drizzle-orm/mysql-core';
+import { recordEftRefund, revokeLaunchAccess, updateSubscriptionLifecycle } from '../billingFoundationService';
 
+const dialect = new MySqlDialect();
 const finance = { id: 1, role: 'super_admin' };
 
 function tableName(table: any): string {
@@ -14,13 +16,14 @@ function tableName(table: any): string {
   return String((sym && table[sym]) || '');
 }
 
-type Fixture = { subscription?: any; payment?: any };
+type Fixture = { subscription?: any; payment?: any; pending?: any[]; owner?: string };
 
 function fakeDb(fixture: Fixture) {
   const inserts: Array<{ table: string; values: any }> = [];
   const updates: Array<{ table: string; values: any }> = [];
+  const executes: string[] = [];
   const rowsFor = (name: string, joined: boolean) => {
-    if (joined) return [{ ownerType: 'agent', ownerId: 31 }];
+    if (joined) return [{ ownerType: fixture.owner ?? 'agent', ownerId: 31 }];
     if (name === 'subscriptions') return fixture.subscription ? [fixture.subscription] : [];
     if (name === 'billing_payments') return fixture.payment ? [fixture.payment] : [];
     if (name === 'billable_accounts') return [{ id: 9 }];
@@ -42,9 +45,11 @@ function fakeDb(fixture: Fixture) {
       where: () => {
         const rows = () =>
           cols && name === 'subscriptions' && fixture.subscription
-            ? [{ ownerType: 'agent', ownerId: 31 }]
+            ? [{ ownerType: fixture.owner ?? 'agent', ownerId: 31 }]
             : rowsFor(name, joined);
-        const result: any = Promise.resolve(rows());
+        const result: any = Promise.resolve(
+          name === 'billing_payments' && !joined ? (fixture.pending ?? []) : rows(),
+        );
         result.limit = async () => rows();
         return result;
       },
@@ -53,7 +58,10 @@ function fakeDb(fixture: Fixture) {
   };
   const db: any = {
     select,
-    execute: async () => [],
+    execute: async (q: any) => {
+      executes.push(dialect.sqlToQuery(q).sql);
+      return [];
+    },
     insert: (table: any) => ({
       values: (values: any) => {
         inserts.push({ table: tableName(table), values });
@@ -69,7 +77,7 @@ function fakeDb(fixture: Fixture) {
     }),
     transaction: async (fn: (tx: any) => Promise<unknown>) => fn(db),
   };
-  return { db, inserts, updates };
+  return { db, inserts, updates, executes };
 }
 
 const activeSub = {
@@ -79,7 +87,7 @@ const activeSub = {
   billableAccountId: 9,
   planId: 3,
   status: 'active',
-  metadata: {},
+  metadata: { verified_payment_id: 8 },
 };
 const verifiedPayment = {
   id: 8,
@@ -171,27 +179,98 @@ describe('recordEftRefund', () => {
     expect(events).toEqual(['payment_refund_recorded', 'launch_access_revoked']);
   });
 
-  it('refuses payments that are not verified and over-refunds', async () => {
+  it('refuses payments that are not verified, partial amounts and bad dates', async () => {
     mockGetDb.mockResolvedValue(
       fakeDb({ payment: { ...verifiedPayment, state: 'under_review' }, subscription: activeSub }).db,
     );
     await expect(recordEftRefund(base)).rejects.toMatchObject({ code: 'CONFLICT' });
     mockGetDb.mockResolvedValue(fakeDb({ payment: verifiedPayment, subscription: activeSub }).db);
-    await expect(recordEftRefund({ ...base, amountMinor: 50000 })).rejects.toMatchObject({
+    await expect(recordEftRefund({ ...base, amountMinor: 10000 })).rejects.toMatchObject({
       code: 'BAD_REQUEST',
     });
+    for (const refundedOn of ['2026-02-30', '2999-01-01', 'nope']) {
+      await expect(recordEftRefund({ ...base, refundedOn })).rejects.toMatchObject({
+        code: 'BAD_REQUEST',
+      });
+    }
   });
 
-  it('is idempotent once refunded and revoked', async () => {
+  const refundedRow = {
+    ...verifiedPayment,
+    state: 'refunded',
+    metadata: {
+      refund: { amount_minor: 49900, refunded_on: '2026-11-19', note: 'FNB ref 123' },
+    },
+  };
+
+  it('identical re-run of a refund is a true no-op and keeps a later paid term', async () => {
     const f = fakeDb({
-      payment: { ...verifiedPayment, state: 'refunded' },
-      subscription: { ...activeSub, status: 'cancelled', metadata: { access_revoked_at: 'x' } },
+      payment: refundedRow,
+      subscription: { ...activeSub, metadata: { verified_payment_id: 99 } },
     });
     mockGetDb.mockResolvedValue(f.db);
     const result = await recordEftRefund(base);
-    expect(result).toMatchObject({ alreadyRefunded: true, alreadyRevoked: true });
+    expect(result).toMatchObject({ alreadyRefunded: true, accessRevoked: false });
     expect(f.updates).toHaveLength(0);
     expect(f.inserts).toHaveLength(0);
+  });
+
+  it('differing re-run of a refund conflicts', async () => {
+    mockGetDb.mockResolvedValue(fakeDb({ payment: refundedRow, subscription: activeSub }).db);
+    await expect(recordEftRefund({ ...base, note: 'other' })).rejects.toMatchObject({
+      code: 'CONFLICT',
+    });
+  });
+
+  it('refund of an older payment records the refund but keeps the newer term', async () => {
+    const f = fakeDb({
+      payment: verifiedPayment,
+      subscription: { ...activeSub, metadata: { verified_payment_id: 99 } },
+    });
+    mockGetDb.mockResolvedValue(f.db);
+    const result = await recordEftRefund(base);
+    expect(result).toMatchObject({ success: true, accessRevoked: false });
+    expect(f.updates.find(u => u.table === 'billing_payments')!.values.state).toBe('refunded');
+    expect(f.updates.find(u => u.table === 'subscriptions')).toBeUndefined();
+  });
+
+  it('uses the owner lock path for agent and developer owners', async () => {
+    for (const owner of ['agent', 'developer']) {
+      const f = fakeDb({ payment: verifiedPayment, subscription: activeSub, owner });
+      mockGetDb.mockResolvedValue(f.db);
+      await recordEftRefund(base);
+      expect(f.executes.some(q => q.includes(owner === 'agent' ? 'FROM users' : 'FROM developer_organisations'))).toBe(true);
+    }
+  });
+});
+
+describe('revoke rejects pending payments', () => {
+  it('moves submitted/under_review payments to rejected with an audit row', async () => {
+    const f = fakeDb({
+      subscription: activeSub,
+      pending: [{ id: 12, invoiceId: 6, state: 'under_review' }],
+    });
+    mockGetDb.mockResolvedValue(f.db);
+    await revokeLaunchAccess({ actorUser: finance, subscriptionId: 4, reason: 'Pilot ended' });
+    const rejected = f.updates.find(u => u.table === 'billing_payments')!;
+    expect(rejected.values).toMatchObject({
+      state: 'rejected',
+      rejectionReason: 'access revoked by admin',
+    });
+    expect(f.inserts.map(i => i.values.eventType)).toContain('payment_rejected_access_revoked');
+  });
+});
+
+describe('lifecycle reactivation of a revoked row', () => {
+  it('is refused', async () => {
+    const f = fakeDb({
+      subscription: { ...activeSub, status: 'cancelled', metadata: { access_revoked_at: 'x' } },
+    });
+    mockGetDb.mockResolvedValue(f.db);
+    await expect(
+      updateSubscriptionLifecycle({ actorUser: finance, subscriptionId: 4, status: 'active' }),
+    ).rejects.toMatchObject({ message: expect.stringContaining('revoked by an admin') });
+    expect(f.updates).toHaveLength(0);
   });
 });
 
