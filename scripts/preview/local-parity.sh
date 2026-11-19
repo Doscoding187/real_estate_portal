@@ -4,7 +4,9 @@
 # Usage: scripts/preview/local-parity.sh start|stop|status
 # Prerequisite: the documented DB sequence in docs/local-development-setup.md
 # ("Local parity preview: place search and place pages") has been run.
-# Local-only: binds 127.0.0.1, reads no env files itself, stores only PIDs/logs.
+# Local-only: binds 127.0.0.1, reads no env files itself (JWT_SECRET comes from
+# the central local environment via scripts/preview/parityLoginSecret.ts),
+# stores only PIDs/logs.
 set -u
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -52,6 +54,16 @@ wait_for() {
 
 case "${1:-status}" in
   start)
+    # JWT_SECRET comes from the central local environment through the authority
+    # helper (same validation as db:authority:status). Exported only into this
+    # script's environment so the API inherits it; never printed or in argv.
+    if ! alive "$API_PID_FILE"; then
+      JWT_SECRET="$(cd "$ROOT" && pnpm exec tsx scripts/preview/parityLoginSecret.ts)" || {
+        echo "api: login secret unavailable; see pnpm db:authority:status" >&2
+        exit 1
+      }
+      export JWT_SECRET
+    fi
     start_one api "$API_PID_FILE" "$API_PORT" \
       env NODE_ENV=development APP_ENV=development SKIP_FRONTEND=true PORT="$API_PORT" \
       APP_URL="$WEB_URL" FRONTEND_URL="$WEB_URL" \
@@ -84,6 +96,7 @@ case "${1:-status}" in
       f="$STATE_DIR/$n.pid"
       if alive "$f"; then echo "$n running (pid $(cat "$f"))"; else echo "$n stopped"; fi
     done
+    (cd "$ROOT" && pnpm exec tsx scripts/preview/parityLoginSecret.ts --status)
     echo "API: $API_URL   WEB: $WEB_URL"
     ;;
   *)

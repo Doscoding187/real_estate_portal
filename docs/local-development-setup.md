@@ -404,10 +404,15 @@ places are the digest-pinned admission packages loaded by
    Override the ports with `PARITY_API_PORT` and `PARITY_WEB_PORT`. The web app
    gets `VITE_API_URL` and `VITE_API_BASE_URL` pointing at the local API on the
    command line. Open `http://127.0.0.1:3020`.
-3. Local-only values: the script reads no env file. The API takes its database
-   target and JWT secret from the central local Database Authority environment
-   (`pnpm db:authority:status` shows which required names are configured; never
-   print the values). `REDIS_URL` is not needed, because the distributed
+3. Local-only values: the script does not parse any env file itself. On `start`
+   it runs `scripts/preview/parityLoginSecret.ts`, which validates the central
+   local Database Authority environment (same checks as
+   `pnpm db:authority:status`) and passes only `JWT_SECRET` to the API process
+   so login works; the value is never printed. If the central environment is
+   not ready or `JWT_SECRET` is missing, `start` refuses and points to
+   `pnpm db:authority:status`. `status` prints `login secret: available` or
+   `missing`. The API's database target still comes from the worktree's
+   `.env.local` (the link to the central environment). `REDIS_URL` is not needed, because the distributed
    rate-limit store is only required for production and staging. If a secret is
    missing, generate a dev-only one (see the JWT command earlier in this file)
    in your own local environment; never copy a value from another environment.
