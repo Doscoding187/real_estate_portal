@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import bcrypt from 'bcryptjs';
 import { describe, expect, it } from 'vitest';
@@ -125,5 +125,21 @@ describe('homepage journey preview Database Authority fixture', () => {
     const hash = await hashHomepageJourneyPreviewPassword(password);
     expect(hash).not.toBe(password);
     expect(await bcrypt.compare(password, hash)).toBe(true);
+  });
+
+  it('writes developments without columns dropped by migration 0157 and uses a place assignment', () => {
+    const source = readFileSync(
+      join(ROOT, 'server/_core/databaseAuthority/dataAdapters/homepageJourneyPreviewFixture.ts'),
+      'utf8',
+    );
+    const start = source.indexOf("table: 'developments',");
+    const end = source.indexOf("table: 'development_place_assignments',");
+    expect(start).toBeGreaterThan(-1);
+    expect(end).toBeGreaterThan(start);
+    const developmentBlock = source.slice(start, end);
+    for (const dropped of ['city', 'province', 'suburb', 'location_id']) {
+      expect(developmentBlock).not.toMatch(new RegExp(`['"\\s]${dropped}['":]`));
+    }
+    expect(source).toContain("assignment_kind: 'site'");
   });
 });
