@@ -420,6 +420,33 @@ Port 3020 is in the local development CORS list in
 127.0.0.1) is in the development-only allowed backends in
 `client/src/lib/env.contract.ts`; production and staging rules are unchanged.
 
+## Seed packs
+
+A seed pack is a reviewable, text-only description of one launch development
+(`data/seed-packs/<publisher-slug>/<development-slug>/pack.json`, format in
+`shared/developmentSeedPack.ts`). Asset files are not committed; they sit in an
+asset folder next to the pack. Facts that are not known stay absent.
+
+1. Enter the development by hand in the admin wizard in this worktree, then
+   export it (read-only; run from the worktree that owns the database):
+
+   `pnpm run db:seed-pack:export -- --development-slug=<slug> --out=data/seed-packs/<publisher>/<slug>/pack.json`
+
+   Locally stored media is copied to `assets/` beside the pack
+   (`--assets-out=<dir>` to change). Remote-only files are listed, never
+   fetched. The report shows the skipped fields and whether the pack validates.
+2. Review and edit `pack.json` (provenance, `reviewedBy`/`reviewedAt`,
+   `publish: true` only when the development should go public).
+3. Load into a disposable worktree database (for example the local mirror):
+
+   `pnpm run db:seed-pack:prepare -- --pack=<pack.json> --asset-root=<assets dir> --reviewer-email=<existing user email>`
+
+   then `pnpm run db:seed-pack:verify -- --pack=<pack.json>`. Loading is
+   idempotent and writes media through the same local media storage the wizard
+   uses. Packs publish under a platform catalogue publisher, so they are
+   visible while paid access is off. Production targets are refused; loading
+   there is a launch-day step that needs the owner's GO.
+
 ## Running The App Locally
 
 Start backend and frontend together:
