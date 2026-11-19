@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
 import {
-  ADMIN_NAV_GROUPS,
+  ADMIN_VISIBLE_NAV_GROUPS,
   getAdminNavGroupForPath,
   getAdminNavItemForPath,
 } from '@/pages/admin/adminRouteRegistry';
@@ -31,7 +31,7 @@ const SidebarNavigation: React.FC = () => {
         onValueChange={setActiveSection}
         className="px-4 space-y-2"
       >
-        {ADMIN_NAV_GROUPS.map(group => (
+        {ADMIN_VISIBLE_NAV_GROUPS.map(group => (
           <AccordionItem key={group.id} value={group.id} className="border-none">
             <AccordionTrigger className="hover:no-underline py-2 px-3 rounded-lg hover:bg-primary/5 text-primary/70 font-medium data-[state=open]:bg-primary/10 data-[state=open]:text-primary mb-1">
               <div className="flex items-center gap-3">

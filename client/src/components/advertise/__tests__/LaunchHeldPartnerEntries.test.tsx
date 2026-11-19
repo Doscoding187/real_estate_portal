@@ -10,18 +10,20 @@ vi.mock('wouter', () => ({
 }));
 
 import AdvertiseServicesPage from '@/pages/advertise/AdvertiseServicesPage';
-import { NotOpenYetCta } from '../NotOpenYetCta';
+import { RegisterRoleCta } from '../RegisterRoleCta';
 import { PartnerSelectionSection } from '../PartnerSelectionSection';
 import { SegmentationLayer } from '../SegmentationLayer';
 
 describe('launch-held partner entries', () => {
-  it('NotOpenYetCta is a non-link state with the launch sentence', () => {
-    render(<NotOpenYetCta />);
-    expect(screen.getByText('Not open yet')).toBeInTheDocument();
-    expect(
-      screen.getByText('Buyer, agent and service-provider registration is open.'),
-    ).toBeInTheDocument();
-    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+  it.each([
+    ['agency_admin', 'Create your Agency owner account'],
+    ['property_developer', 'Create your Developer account'],
+  ] as const)('RegisterRoleCta for %s links to registration with the role preselected', (role, name) => {
+    render(<RegisterRoleCta role={role} />);
+    expect(screen.getByRole('link', { name })).toHaveAttribute(
+      'href',
+      `/login?mode=register&role=${role}`,
+    );
   });
 
   it('the services advertise page routes providers into application registration', () => {
@@ -33,21 +35,21 @@ describe('launch-held partner entries', () => {
     expect(document.querySelector('a[href*="service%2Fprofile"]')).toBeNull();
   });
 
-  it('partner selection holds developer and links service providers to the application page', () => {
+  it('partner selection links developers and service providers to their pages', () => {
     render(<PartnerSelectionSection />);
-    expect(screen.getAllByTestId('partner-card-coming-soon')).toHaveLength(1);
-    expect(screen.getAllByText('Not open yet')).toHaveLength(1);
-    expect(document.querySelector('a[href="/advertise/developers"]')).toBeNull();
+    expect(screen.queryByTestId('partner-card-coming-soon')).not.toBeInTheDocument();
+    expect(screen.queryByText('Not open yet')).not.toBeInTheDocument();
+    expect(document.querySelector('a[href="/advertise/sell/developers"]')).not.toBeNull();
     expect(document.querySelector('a[href="/advertise/services"]')).not.toBeNull();
     expect(document.querySelector('a[href="/advertise/agents"]')).not.toBeNull();
   });
 
-  it('segmentation keeps the agent link and holds agency and developer', () => {
+  it('segmentation links agent, agency and developer', () => {
     render(<SegmentationLayer />);
-    expect(screen.getAllByTestId('audience-gateway-coming-soon')).toHaveLength(2);
-    expect(screen.getAllByText('Not open yet')).toHaveLength(2);
+    expect(screen.queryByTestId('audience-gateway-coming-soon')).not.toBeInTheDocument();
+    expect(screen.queryByText('Not open yet')).not.toBeInTheDocument();
     expect(document.querySelector('a[href="/advertise/sell/agents"]')).not.toBeNull();
-    expect(document.querySelector('a[href="/advertise/sell/agencies"]')).toBeNull();
-    expect(document.querySelector('a[href="/advertise/sell/developers"]')).toBeNull();
+    expect(document.querySelector('a[href="/advertise/sell/agencies"]')).not.toBeNull();
+    expect(document.querySelector('a[href="/advertise/sell/developers"]')).not.toBeNull();
   });
 });

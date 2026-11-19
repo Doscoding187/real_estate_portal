@@ -38,8 +38,7 @@ const defaultPartnerTypes: PartnerType[] = [
     title: 'Property Developer',
     benefit:
       'Promote your developments with immersive media, reach qualified buyers, and track leads in real-time.',
-    href: '/advertise/developers',
-    comingSoon: true,
+    href: '/advertise/sell/developers',
   },
   {
     id: 'bank',
