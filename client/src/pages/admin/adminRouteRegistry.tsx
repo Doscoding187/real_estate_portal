@@ -62,6 +62,8 @@ export type AdminNavItem = {
   label: string;
   path: string;
   icon: LucideIcon;
+  /** Launch focus: hidden from the sidebar, route stays reachable by URL. Remove the flag to restore. */
+  launchHidden?: boolean;
 };
 
 export type AdminNavGroup = {
@@ -210,9 +212,12 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     icon: Layers,
     items: [
       { label: 'Dashboard', path: ROUTES.overview.path, icon: LayoutDashboard },
+      { label: 'Approvals', path: ROUTES.approvals.path, icon: CheckCircle },
       { label: 'Listings', path: ROUTES.properties.path, icon: Home },
       { label: 'Developments', path: ROUTES.developmentApprovals.path, icon: Building2 },
-      { label: 'Approvals', path: ROUTES.approvals.path, icon: CheckCircle },
+      { label: 'Publisher', path: ROUTES.publisher.path, icon: Building2 },
+      // Leads: the platform-custody enquiry queue lives on the Ecosystem overview page.
+      { label: 'Leads', path: ROUTES.ecosystem.path, icon: MessageSquare },
     ],
   },
   {
@@ -220,12 +225,10 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     title: 'ECOSYSTEM',
     icon: Globe,
     items: [
-      { label: 'Overview', path: ROUTES.ecosystem.path, icon: LayoutDashboard },
       { label: 'Agencies', path: ROUTES.agencies.path, icon: Building2 },
       { label: 'Agents', path: ROUTES.agents.path, icon: Users },
       { label: 'Developers', path: ROUTES.developers.path, icon: Code },
-      { label: 'Publisher / Emulator', path: ROUTES.publisher.path, icon: Building2 },
-      { label: 'End Users', path: ROUTES.users.path, icon: User },
+      { label: 'Users', path: ROUTES.users.path, icon: User },
     ],
   },
   {
@@ -233,15 +236,17 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     title: 'REVENUE & GROWTH',
     icon: TrendingUp,
     items: [
-      { label: 'Revenue Center', path: ROUTES.revenue.path, icon: DollarSign },
+      // Finance opens on the verification tab; Subscriptions is a tab of the same page.
       { label: 'Finance', path: ROUTES.finance.path, icon: FileText },
-      { label: 'Subscriptions', path: ROUTES.subscriptions.path, icon: CreditCard },
-      { label: 'Featured Placements', path: ROUTES.marketing.path, icon: Star },
-      { label: 'Partner Network', path: ROUTES.partners.path, icon: Handshake },
+      { label: 'Subscriptions', path: ROUTES.subscriptions.path, icon: CreditCard, launchHidden: true },
+      { label: 'Revenue Center', path: ROUTES.revenue.path, icon: DollarSign, launchHidden: true },
+      { label: 'Featured Placements', path: ROUTES.marketing.path, icon: Star, launchHidden: true },
+      { label: 'Partner Network', path: ROUTES.partners.path, icon: Handshake, launchHidden: true },
       {
         label: 'Distribution Network',
         path: ROUTES.distribution.path,
         icon: Briefcase,
+        launchHidden: true,
       },
     ],
   },
@@ -250,11 +255,20 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     title: 'INSIGHTS',
     icon: Activity,
     items: [
-      { label: 'Platform Analytics', path: ROUTES.analytics.path, icon: BarChart3 },
-      { label: 'Discovery Ops', path: ROUTES.discoveryOps.path, icon: Activity },
-      { label: 'Agent OS Readiness', path: ROUTES.agentOsReadiness.path, icon: CheckCircle },
-      { label: 'Inventory Boundary', path: ROUTES.inventoryBoundary.path, icon: Layers },
-      { label: 'Financial Tracking', path: ROUTES.revenue.path, icon: FileText },
+      { label: 'Platform Analytics', path: ROUTES.analytics.path, icon: BarChart3, launchHidden: true },
+      { label: 'Discovery Ops', path: ROUTES.discoveryOps.path, icon: Activity, launchHidden: true },
+      {
+        label: 'Agent OS Readiness',
+        path: ROUTES.agentOsReadiness.path,
+        icon: CheckCircle,
+        launchHidden: true,
+      },
+      {
+        label: 'Inventory Boundary',
+        path: ROUTES.inventoryBoundary.path,
+        icon: Layers,
+        launchHidden: true,
+      },
     ],
   },
   {
@@ -262,14 +276,24 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     title: 'SYSTEM',
     icon: Settings,
     items: [
-      { label: 'User & Role Management', path: ROUTES.users.path, icon: Users },
-      { label: 'Content Manager', path: ROUTES.content.path, icon: FileText },
-      { label: 'Communications', path: ROUTES.communications.path, icon: MessageSquare },
       { label: 'Settings & Integrations', path: ROUTES.settings.path, icon: Settings },
       { label: 'System & Security', path: ROUTES.system.path, icon: Shield },
+      { label: 'Content Manager', path: ROUTES.content.path, icon: FileText, launchHidden: true },
+      {
+        label: 'Communications',
+        path: ROUTES.communications.path,
+        icon: MessageSquare,
+        launchHidden: true,
+      },
     ],
   },
 ];
+
+/** Sidebar groups for the launch: hidden items and emptied groups removed. */
+export const ADMIN_VISIBLE_NAV_GROUPS: AdminNavGroup[] = ADMIN_NAV_GROUPS.map(group => ({
+  ...group,
+  items: group.items.filter(item => !item.launchHidden),
+})).filter(group => group.items.length > 0);
 
 const sidebarPathGroupPairs = ADMIN_NAV_GROUPS.flatMap(group =>
   group.items.map(item => ({ groupId: group.id, path: item.path })),
@@ -295,6 +319,8 @@ export function getAdminNavItemForPath(location: string): string | undefined {
     pathname.startsWith('/admin/review/')
   )
     return ROUTES.approvals.path;
+  if (pathname === ROUTES.subscriptions.path || pathname === ROUTES.planEditor.path)
+    return ROUTES.finance.path;
   return sidebarPathGroupPairs.find(
     pair => pathname === pair.path || pathname.startsWith(`${pair.path}/`),
   )?.path;
