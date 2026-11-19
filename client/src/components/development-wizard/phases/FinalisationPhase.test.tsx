@@ -6,6 +6,7 @@ const testState = vi.hoisted(() => {
   const navigateMock = vi.fn();
   const toastSuccessMock = vi.fn();
   const toastErrorMock = vi.fn();
+  const toastInfoMock = vi.fn();
   const createDevelopmentMock = vi.fn();
   const updateDevelopmentMock = vi.fn();
   const publishDevelopmentMock = vi.fn();
@@ -124,6 +125,7 @@ const testState = vi.hoisted(() => {
     invalidatePublisherDevelopmentsMock,
     resetMock,
     toastErrorMock,
+    toastInfoMock,
     toastSuccessMock,
     updateDevelopmentMock,
     updatePublisherDevelopmentMock,
@@ -205,6 +207,7 @@ vi.mock('sonner', () => ({
   toast: {
     success: testState.toastSuccessMock,
     error: testState.toastErrorMock,
+    info: testState.toastInfoMock,
   },
 }));
 
@@ -349,8 +352,9 @@ describe('FinalisationPhase', () => {
       developmentId: 456,
     });
     expect(testState.publishDevelopmentMock).not.toHaveBeenCalled();
-    // No suburb was picked in the wizard, so no Place assignment is recorded.
+    // The pin matched no suburb, so no Place assignment is recorded and the operator is told.
     expect(testState.assignSuburbMock).not.toHaveBeenCalled();
+    expect(testState.toastInfoMock).toHaveBeenCalledWith(expect.stringContaining('left for review'));
     expect(testState.toastSuccessMock).toHaveBeenCalledWith('Curated development published!');
     expect(testState.navigateMock).toHaveBeenCalledWith('/admin/publisher');
     expect(testState.invalidatePublisherOperatingHomeMock).toHaveBeenCalledWith({
@@ -363,7 +367,7 @@ describe('FinalisationPhase', () => {
     });
   });
 
-  it('records the suburb picked by a super admin as the accepted site Place assignment', async () => {
+  it('records the suburb derived from the map pin as the accepted site Place assignment', async () => {
     testState.setActor({ id: 2, role: 'super_admin' }, { cataloguePublisherId: 44 });
     testState.assignSuburbMock.mockResolvedValue({ success: true });
     const original = testState.wizardState.getWizardData;
@@ -386,7 +390,7 @@ describe('FinalisationPhase', () => {
         developmentId: 456,
         phaseId: null,
         placeId: 'place_north_riding',
-        evidenceReference: expect.stringContaining('development wizard'),
+        evidenceReference: expect.stringContaining('derived from the development map pin'),
       });
       expect(testState.navigateMock).toHaveBeenCalledWith('/admin/publisher');
     } finally {

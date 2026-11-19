@@ -785,6 +785,9 @@ function normalizeDevelopmentData(
     postalCode: mergedLocation.postalCode ?? '',
     latitude: mergedLocation.latitude ?? '',
     longitude: mergedLocation.longitude ?? '',
+    ...(mergedLocation.noOfficialStreet !== undefined
+      ? { noOfficialStreet: mergedLocation.noOfficialStreet }
+      : {}),
   };
 
   return {
@@ -812,9 +815,10 @@ const DEVELOPMENT_WIZARD_LOCATION_FIELDS = [
   'latitude',
   'longitude',
   'postalCode',
-  // Curated only: the Place the super admin picked as the suburb shown to buyers.
+  // Derived from the map pin (never hand-picked): the suburb buyers see.
   'suburbPlaceId',
   'suburbLabel',
+  'suburbCity',
   'gpsAccuracy',
   'noOfficialStreet',
 ] as const;
@@ -1235,20 +1239,21 @@ const createActions = (
           }
           break;
         case 5: {
-          if (!state.developmentData?.location?.address) errors.push('Location is required');
+          if (
+            !state.developmentData?.location?.address &&
+            state.developmentData?.location?.noOfficialStreet !== true
+          )
+            errors.push('Location is required');
           const latitude = state.developmentData?.location?.latitude?.trim();
           const longitude = state.developmentData?.location?.longitude?.trim();
-          // The server needs an address, not coordinates; a pin is optional but
-          // must be a valid pair when entered.
-          if (latitude || longitude) {
-            if (
-              !latitude ||
-              !longitude ||
-              !Number.isFinite(Number(latitude)) ||
-              !Number.isFinite(Number(longitude))
-            ) {
-              errors.push('Development entrance coordinates must be a valid latitude and longitude');
-            }
+          // The server's readiness check needs the address and the map pin.
+          if (
+            !latitude ||
+            !longitude ||
+            !Number.isFinite(Number(latitude)) ||
+            !Number.isFinite(Number(longitude))
+          ) {
+            errors.push('Verified development entrance coordinates are required');
           }
           break;
         }
@@ -1288,7 +1293,15 @@ const createActions = (
       if (!wizardData.name) errors.push('Development Name is required');
 
       // Location (canonical)
-      if (!wizardData.location?.address) errors.push('Location Address is required');
+      if (!wizardData.location?.address && wizardData.location?.noOfficialStreet !== true)
+        errors.push('Location Address is required');
+      {
+        const lat = String(wizardData.location?.latitude ?? '').trim();
+        const lng = String(wizardData.location?.longitude ?? '').trim();
+        if (!lat || !lng || !Number.isFinite(Number(lat)) || !Number.isFinite(Number(lng))) {
+          errors.push('Map pin (latitude and longitude) is required');
+        }
+      }
 
       // Media (canonical) - at least 1 image total
       const photosCount = wizardData.media?.photos?.length ?? 0;

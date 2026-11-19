@@ -166,6 +166,8 @@ type DevelopmentOperatingRow = Pick<
   | 'name'
   | 'slug'
   | 'address'
+  | 'latitude'
+  | 'longitude'
   | 'transactionType'
   | 'approvalStatus'
   | 'isPublished'
@@ -582,6 +584,8 @@ async function loadDevelopmentRows(
     name: developments.name,
     slug: developments.slug,
     address: developments.address,
+    latitude: developments.latitude,
+    longitude: developments.longitude,
     transactionType: developments.transactionType,
     approvalStatus: developments.approvalStatus,
     isPublished: developments.isPublished,

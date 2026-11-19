@@ -181,6 +181,8 @@ type DevelopmentHomeIdentityRow = Pick<
   | 'name'
   | 'slug'
   | 'address'
+  | 'latitude'
+  | 'longitude'
   | 'transactionType'
   | 'approvalStatus'
   | 'isPublished'
@@ -1584,6 +1586,8 @@ export const developerRouter = router({
         name: developments.name,
         slug: developments.slug,
         address: developments.address,
+        latitude: developments.latitude,
+        longitude: developments.longitude,
         transactionType: developments.transactionType,
         approvalStatus: developments.approvalStatus,
         isPublished: developments.isPublished,

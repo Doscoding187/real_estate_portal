@@ -1,10 +1,11 @@
 import React from 'react';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const auth = vi.hoisted(() => ({
   user: { id: 1, role: 'property_developer' } as { id: number; role: string },
   publisher: null as { cataloguePublisherId: number } | null,
+  derived: null as null | { placeId: string; suburb: string; city: string; distanceKm: number },
 }));
 
 vi.mock('@/_core/hooks/useAuth', () => ({ useAuth: () => ({ user: auth.user }) }));
@@ -13,6 +14,15 @@ vi.mock('@/hooks/usePublisherContext', () => ({
 }));
 vi.mock('@/lib/trpc', () => ({
   trpc: {
+    placeAuthority: {
+      locateByPoint: {
+        useQuery: (_input: unknown, opts: { enabled?: boolean }) => ({
+          data: opts?.enabled ? (auth.derived ?? null) : undefined,
+          isLoading: false,
+          isFetching: false,
+        }),
+      },
+    },
     admin: {
       adminGetDevelopmentPlaceAssignmentContext: {
         useQuery: () => ({ data: { assignments: [] } }),
@@ -21,23 +31,20 @@ vi.mock('@/lib/trpc', () => ({
   },
 }));
 vi.mock('@/components/location/LocationMapPicker', () => ({
-  LocationMapPicker: () => <div data-testid="map" />,
-}));
-vi.mock('@/components/location/CanonicalPlaceSelector', () => ({
-  CanonicalPlaceSelector: ({ onChange }: { onChange: (v: any) => void }) => (
+  LocationMapPicker: ({ onLocationSelect }: { onLocationSelect: (v: any) => void }) => (
     <button
       type="button"
       onClick={() =>
-        onChange({
-          canonicalPlaceId: 'place_north_riding',
-          label: 'North Riding',
-          placeType: 'suburb',
-          scope: 'suburb',
-          administrativeContext: 'Johannesburg',
+        onLocationSelect({
+          address: '499 Boundary Road, Kya Sand',
+          postalCode: '2169',
+          latitude: -26.0412,
+          longitude: 27.9561,
+          coordinateSource: 'autocomplete',
         })
       }
     >
-      Pick North Riding
+      Search address (mock)
     </button>
   ),
 }));
@@ -57,12 +64,14 @@ beforeEach(() => {
   store().reset();
   auth.user = { id: 1, role: 'property_developer' };
   auth.publisher = null;
+  auth.derived = null;
 });
 
 describe('LocationPhase', () => {
-  it('marks the address required and keeps manual latitude/longitude entry', () => {
+  it('marks the address and the map pin required and keeps manual latitude/longitude entry', () => {
     render(<LocationPhase />);
     expect(screen.getByText('(required)')).toBeInTheDocument();
+    expect(screen.getByText(/Drop the pin at the entrance or show house \(required\)/)).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText(/Street address/), {
       target: { value: '499 Boundary Road' },
     });
@@ -75,21 +84,55 @@ describe('LocationPhase', () => {
     });
   });
 
-  it('a developer sees the reviewer note and no suburb picker', () => {
+  it('an address search fills the pin automatically', () => {
     render(<LocationPhase />);
-    expect(screen.getByText(/A reviewer assigns the suburb/)).toBeInTheDocument();
-    expect(screen.queryByText('Pick North Riding')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText('Search address (mock)'));
+    expect(store().getWizardData().location).toMatchObject({
+      address: '499 Boundary Road, Kya Sand',
+      postalCode: '2169',
+      latitude: '-26.0412',
+      longitude: '27.9561',
+    });
+    expect((screen.getByLabelText('Latitude') as HTMLInputElement).value).toBe('-26.0412');
   });
 
-  it('a curated super admin picks the suburb; it is kept for the assignment and shown in the preview', () => {
+  it('"No street address yet" makes the address optional but the pin stays required', () => {
+    render(<LocationPhase />);
+    fireEvent.click(screen.getByLabelText(/No street address yet/));
+    expect(store().getWizardData().location).toMatchObject({ noOfficialStreet: true });
+    expect(screen.getByText('(optional)')).toBeInTheDocument();
+    expect(screen.getByText(/Drop the pin at the entrance or show house/)).toBeInTheDocument();
+  });
+
+  it('the hand-pick suburb picker is gone for everyone', () => {
     auth.user = { id: 2, role: 'super_admin' };
     auth.publisher = { cataloguePublisherId: 44 };
     render(<LocationPhase />);
-    fireEvent.click(screen.getByText('Pick North Riding'));
-    const location = store().getWizardData().location as Record<string, any>;
-    expect(location.suburbPlaceId).toBe('place_north_riding');
-    expect(location.suburbLabel).toBe('North Riding');
-    expect(buildPreviewModel(store().getWizardData()).locationLabel).toBe('North Riding');
+    expect(screen.queryByText('Suburb shown to buyers')).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText(/Start typing, e\.g\. North Riding/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+  });
+
+  it('shows the suburb derived from the pin read-only, keeps it for the assignment and in the preview', async () => {
+    auth.user = { id: 2, role: 'super_admin' };
+    auth.publisher = { cataloguePublisherId: 44 };
+    auth.derived = { placeId: 'place_north_riding', suburb: 'North Riding', city: 'Johannesburg', distanceKm: 0.4 };
+    render(<LocationPhase />);
+    fireEvent.change(screen.getByLabelText('Latitude'), { target: { value: '-26.05' } });
+    fireEvent.change(screen.getByLabelText('Longitude'), { target: { value: '28.01' } });
+    expect(await screen.findByText(/North Riding, Johannesburg — from the map pin/, {}, { timeout: 2000 })).toBeInTheDocument();
+    await waitFor(() => expect((store().getWizardData().location as any).suburbPlaceId).toBe('place_north_riding'));
+    expect((store().getWizardData().location as any).suburbLabel).toBe('North Riding');
+    expect(buildPreviewModel(store().getWizardData()).locationLabel).toBe('North Riding, Johannesburg');
+  });
+
+  it('says so when the pin matches no suburb, and a developer still gets the read-only suggestion', async () => {
+    auth.derived = null;
+    render(<LocationPhase />);
+    fireEvent.change(screen.getByLabelText('Latitude'), { target: { value: '10' } });
+    fireEvent.change(screen.getByLabelText('Longitude'), { target: { value: '10' } });
+    expect(await screen.findByText(/couldn’t match this pin to a suburb/, {}, { timeout: 2000 })).toBeInTheDocument();
+    expect(screen.getByText(/A reviewer confirms the suburb/)).toBeInTheDocument();
   });
 });
 

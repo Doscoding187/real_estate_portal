@@ -112,7 +112,9 @@ export function buildPreviewModel(
   const highlights = rawHighlights.map(asString).filter(Boolean);
 
   const locationLabel =
-    asString(d.location?.suburbLabel) ||
+    [asString(d.location?.suburbLabel), asString(d.location?.suburbCity)]
+      .filter(Boolean)
+      .join(', ') ||
     asString(d.location?.suburb) ||
     asString(d.location?.city) ||
     asString(d.location?.address);

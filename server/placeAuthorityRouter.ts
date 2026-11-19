@@ -12,6 +12,7 @@ import { placeIndexability } from './services/placeIndexabilityService';
 import { isPlaceIndexAllowlistedPath } from '../shared/placeIndexAllowlist';
 import { placeGuideService } from './services/placeGuideService';
 import { nearbyPlacesService } from './services/nearbyPlacesService';
+import { placeFromPointService } from './services/placeFromPointService';
 import { MULTI_LOCATION_MAX } from '../shared/searchScope';
 import { PLACE_ID_REGEX, isCanonicalPlaceId } from '../shared/placeAuthority';
 import {
@@ -120,6 +121,18 @@ export const placeAuthorityRouter = router({
         .strict(),
     )
     .query(({ input }) => nearbyPlacesService.getNearbyPlaces([...new Set(input.canonicalPlaceIds)])),
+
+  /**
+   * The canonical suburb a map pin belongs to (nearest suburb centre within 3 km),
+   * or null. Read-only; used by the development wizard's Location step.
+   */
+  locateByPoint: publicProcedure
+    .input(
+      z
+        .object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) })
+        .strict(),
+    )
+    .query(({ input }) => placeFromPointService.locate(input)),
 
   /** Resolve a selected Place identity for canonical search controls. */
   resolveSearchPlace: publicProcedure

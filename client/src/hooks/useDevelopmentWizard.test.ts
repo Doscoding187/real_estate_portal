@@ -40,21 +40,12 @@ describe('useDevelopmentWizard Validation Logic', () => {
       expect(validation.errors).toContain('Please select at least one ownership type');
     });
 
-    it('phase 5 enforces the address; coordinates are optional but must be a valid pair', () => {
+    it('phase 5 enforces location address and verified entrance coordinates', () => {
       const { result } = renderHook(() => useDevelopmentWizard());
       const invalid = result.current.validatePhase(5);
       expect(invalid.isValid).toBe(false);
       expect(invalid.errors).toContain('Location is required');
-      expect(invalid.errors).not.toContain(
-        'Development entrance coordinates must be a valid latitude and longitude',
-      );
-
-      act(() => {
-        result.current.setIdentity({ location: { address: '123 Main Road', latitude: '-33.9' } });
-      });
-      expect(result.current.validatePhase(5).errors).toContain(
-        'Development entrance coordinates must be a valid latitude and longitude',
-      );
+      expect(invalid.errors).toContain('Verified development entrance coordinates are required');
 
       act(() => {
         result.current.setIdentity({

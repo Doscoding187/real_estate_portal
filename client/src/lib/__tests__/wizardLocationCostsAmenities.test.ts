@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   addCustomAmenity,
   addHighlight,
+  derivedLocationText,
   amenityChipsByGroup,
   cardHighlightSplit,
   estimatedAmount,
@@ -11,6 +12,7 @@ import {
   levyPatch,
   parseMonthlyAmount,
   ratesPatch,
+  submitAddress,
   suburbAssignmentRequest,
   toggleAmenity,
   toggleHighlight,
@@ -22,31 +24,68 @@ import { residentialSaleWorkflow } from '../workflows/residential-sale';
 import { iconForAmenity, FALLBACK_ICON } from '@/components/wizard/wizardIcons';
 
 describe('location validation agrees with the server', () => {
-  it('requires the address (the server readiness rule) and not the coordinates', () => {
-    expect(validateLocationStep({}).map(e => e.field)).toEqual(['address']);
-    expect(validateLocationStep({ address: '1 Main Road' })).toEqual([]);
-  });
-
-  it('a pin, when entered, must be a valid pair', () => {
-    const base = { address: '1 Main Road' };
-    expect(validateLocationStep({ ...base, latitude: '-26.05', longitude: '28.0' })).toEqual([]);
-    expect(validateLocationStep({ ...base, latitude: '-26.05' }).map(e => e.field)).toEqual([
+  it('requires the address and the map pin (the server readiness rule)', () => {
+    expect(validateLocationStep({}).map(e => e.field)).toEqual(['address', 'latitude', 'longitude']);
+    expect(validateLocationStep({ address: '1 Main Road' }).map(e => e.field)).toEqual([
+      'latitude',
       'longitude',
     ]);
-    expect(validateLocationStep({ ...base, latitude: '120', longitude: '28' }).map(e => e.field)).toEqual([
-      'latitude',
-    ]);
+    expect(validateLocationStep({ address: '1 Main Road', latitude: '-26.05', longitude: '28.0' })).toEqual([]);
   });
 
-  it('the sale workflow Location step uses the same rule, so Continue is not blocked by a missing pin', () => {
+  it('coordinates must be a valid pair', () => {
+    const base = { address: '1 Main Road' };
+    expect(validateLocationStep({ ...base, latitude: '-26.05' }).map(e => e.field)).toEqual(['longitude']);
+    expect(validateLocationStep({ ...base, latitude: '120', longitude: '28' }).map(e => e.field)).toEqual(['latitude']);
+  });
+
+  it('the sale workflow Location step blocks Continue without a pin', () => {
     const step = residentialSaleWorkflow.steps.find(s => s.id === 'location')!;
-    expect(step.validate!({ location: { address: '1 Main Road' } } as any).valid).toBe(true);
-    expect(step.validate!({ location: {} } as any).errors?.map(e => e.field)).toEqual(['address']);
+    expect(step.validate!({ location: { address: '1 Main Road' } } as any).valid).toBe(false);
+    expect(
+      step.validate!({ location: { address: '1 Main Road', latitude: '-26.05', longitude: '28.0' } } as any).valid,
+    ).toBe(true);
+  });
+
+  it('an address without a pin blocks with a clear message; no-street plus a pin passes', () => {
+    const issues = validateLocationStep({ address: '1 Main Road' });
+    expect(issues.map(e => e.field)).toEqual(['latitude', 'longitude']);
+    expect(issues[0].message).toMatch(/drop the map pin/i);
+    expect(validateLocationStep({ noOfficialStreet: true, latitude: '-26.05', longitude: '28.0' })).toEqual([]);
+    expect(validateLocationStep({ noOfficialStreet: true }).map(e => e.field)).toEqual(['latitude', 'longitude']);
+  });
+
+  it('a no-street development is submitted with its pin as the address, which the server accepts', () => {
+    const loc = { noOfficialStreet: true, latitude: '-26.05', longitude: '28.0' };
+    expect(submitAddress(loc)).toBe('Map pin -26.05, 28.0 (no street address yet)');
+    expect(submitAddress({ address: ' 1 Main Road ', ...loc })).toBe('1 Main Road');
+    expect(submitAddress({ latitude: '1', longitude: '2' })).toBeUndefined();
+    const payload = buildDevelopmentSubmitPayload({
+      amenities: [],
+      wizardData: {
+        developmentType: 'residential',
+        transactionType: 'for_sale',
+        name: 'Baltimore',
+        location: loc,
+        media: {},
+        unitTypes: [],
+      },
+    } as any);
+    expect(payload.address).toBe('Map pin -26.05, 28.0 (no street address yet)');
+    expect(payload.latitude).toBe('-26.05');
+    expect(payload.estateSpecs).toMatchObject({ noStreetAddress: true });
+  });
+
+  it('describes the derived location, or says it could not match', () => {
+    expect(derivedLocationText({ suburb: 'North Riding', city: 'Johannesburg' })).toBe(
+      'Location buyers see: North Riding, Johannesburg — from the map pin',
+    );
+    expect(derivedLocationText(null)).toMatch(/couldn’t match this pin/);
   });
 });
 
-describe('curated suburb assignment request', () => {
-  it('records the picked Place as a site assignment for the saved development', () => {
+describe('suburb assignment request (derived place)', () => {
+  it('records the derived Place as a site assignment for the saved development', () => {
     expect(suburbAssignmentRequest(77, { suburbPlaceId: 'place_1', suburbLabel: 'North Riding' })).toEqual({
       developmentId: 77,
       phaseId: null,
@@ -54,7 +93,7 @@ describe('curated suburb assignment request', () => {
       evidenceReference: expect.any(String),
     });
   });
-  it('is null with no pick, no development id, or an already recorded pick', () => {
+  it('is null with no derived place, no development id, or an already recorded one', () => {
     expect(suburbAssignmentRequest(77, {})).toBeNull();
     expect(suburbAssignmentRequest(0, { suburbPlaceId: 'place_1' })).toBeNull();
     expect(

@@ -169,6 +169,12 @@ export function getCanonicalDevelopmentLocation(payload: CanonicalRecord): Canon
       payload.longitude,
       payloadLocation.longitude,
     ),
+    // "No street address yet": kept with the location, not a database column.
+    noOfficialStreet: firstDefined(
+      locationStep.noOfficialStreet,
+      location.noOfficialStreet,
+      payloadLocation.noOfficialStreet,
+    ),
   };
 }
 

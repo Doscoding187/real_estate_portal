@@ -11,6 +11,8 @@ const validDevelopment = {
   canonicalPlaceId: 'pl-place-01-000000000000000000000001',
   slug: 'harbour-heights',
   address: '1 Harbour Road',
+  latitude: '-33.9',
+  longitude: '18.4',
   transactionType: 'for_sale',
   approvalStatus: 'approved',
   isPublished: 1,

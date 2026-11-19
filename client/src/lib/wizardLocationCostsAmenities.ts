@@ -5,9 +5,10 @@
  *
  * STORAGE (no migration; every answer lands in something that already exists)
  *   Location       stepData.location.address / postalCode / latitude / longitude   (existing columns)
- *                  stepData.location.suburbPlaceId / suburbLabel   curated only: the Place the
- *                  super admin picked. It is not a column; after the development is saved it is
- *                  recorded through the existing adminReviewDevelopmentPlaceAssignment mutation
+ *                  stepData.location.suburbPlaceId / suburbLabel / suburbCity   DERIVED from the
+ *                  pin (placeAuthority.locateByPoint), never hand-picked. Not a column; for a
+ *                  curated listing the derived Place is recorded after the development is saved
+ *                  through the existing adminReviewDevelopmentPlaceAssignment mutation
  *                  (accepted "site" assignment). See suburbAssignmentRequest().
  *   Monthly costs  stepData.governance_finances.rightsAndTaxes {min,max}  -> ratesFrom / ratesTo
  *                  stepData.governance_finances.levyRange {min,max}        -> monthlyLevyFrom / To
@@ -46,37 +47,69 @@ const parseCoordinate = (value: unknown): number | null => {
 };
 
 /**
- * The server's readiness check (developmentSubmissionReadiness.ts) requires an
- * address and does not require coordinates, so the wizard requires the address
- * and treats the map pin as optional. If coordinates are entered they must be a
- * valid pair, so a half-typed pin is never saved.
+ * The submit payload's address. A development with no street address yet (flag
+ * `noOfficialStreet`, kept in the location data and in estateSpecs) is sent with
+ * its pin as the address text, so the server's address requirement is met and the
+ * pin, which the server also requires, carries the location.
+ */
+export function submitAddress(location: Record<string, any> | null | undefined): string | undefined {
+  const address = String(location?.address ?? '').trim();
+  if (address) return address;
+  if (location?.noOfficialStreet === true) {
+    const lat = String(location?.latitude ?? '').trim();
+    const lng = String(location?.longitude ?? '').trim();
+    if (lat && lng) return `Map pin ${lat}, ${lng} (no street address yet)`;
+  }
+  return undefined;
+}
+
+/**
+ * Address (unless "No street address yet" is ticked) and the map pin
+ * (latitude + longitude) are required: the server's
+ * readiness check (developmentSubmissionReadiness.ts) blocks submission without
+ * either, so the wizard blocks Continue on the same two things. The suburb buyers
+ * see is derived from the pin, which is why the pin is not optional.
  */
 export function validateLocationStep(location: Record<string, any> | null | undefined): StepIssue[] {
   const loc = location ?? {};
   const errors: StepIssue[] = [];
 
-  if (!String(loc.address ?? '').trim()) {
-    errors.push({ field: 'address', message: 'Street address is required' });
+  if (!String(loc.address ?? '').trim() && loc.noOfficialStreet !== true) {
+    errors.push({
+      field: 'address',
+      message: 'Street address is required (or tick “No street address yet” and drop the pin)',
+    });
   }
 
   const lat = parseCoordinate(loc.latitude);
   const lng = parseCoordinate(loc.longitude);
-  if (lat !== null || lng !== null) {
-    if (lat === null || Number.isNaN(lat) || lat < -90 || lat > 90) {
-      errors.push({ field: 'latitude', message: 'Latitude must be a number between -90 and 90' });
-    }
-    if (lng === null || Number.isNaN(lng) || lng < -180 || lng > 180) {
-      errors.push({
-        field: 'longitude',
-        message: 'Longitude must be a number between -180 and 180',
-      });
-    }
+  if (lat === null || Number.isNaN(lat) || lat < -90 || lat > 90) {
+    errors.push({
+      field: 'latitude',
+      message: 'Latitude is required: drop the map pin or type a number between -90 and 90',
+    });
+  }
+  if (lng === null || Number.isNaN(lng) || lng < -180 || lng > 180) {
+    errors.push({
+      field: 'longitude',
+      message: 'Longitude is required: drop the map pin or type a number between -180 and 180',
+    });
   }
   return errors;
 }
 
 export const SUBURB_EVIDENCE_REFERENCE =
-  'Suburb selected in the development wizard by a platform operator';
+  'Suburb derived from the development map pin (nearest suburb centre within 3 km) in the development wizard';
+
+/** The text shown under the pin. */
+export function derivedLocationText(
+  derived: { suburb: string; city: string } | null | undefined,
+): string {
+  if (!derived) {
+    return 'We couldn’t match this pin to a suburb yet. Move the pin, or a reviewer will assign it.';
+  }
+  return `Location buyers see: ${[derived.suburb, derived.city].filter(Boolean).join(', ')} — from the map pin`;
+}
 
 export interface SuburbAssignmentRequest {
   developmentId: number;
@@ -86,7 +119,7 @@ export interface SuburbAssignmentRequest {
 }
 
 /**
- * The call that records the curated suburb as the development's accepted
+ * The call that records the suburb derived from the pin as the development's accepted
  * "site" Place assignment (adminReviewDevelopmentPlaceAssignment). Null when no
  * suburb was picked in this wizard session, or the picked one is already recorded.
  */

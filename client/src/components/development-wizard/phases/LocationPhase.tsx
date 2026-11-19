@@ -1,15 +1,12 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useDevelopmentWizard } from '@/hooks/useDevelopmentWizard';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { usePublisherContext } from '@/hooks/usePublisherContext';
 import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
 import { LocationMapPicker, type LocationData } from '@/components/location/LocationMapPicker';
-import {
-  CanonicalPlaceSelector,
-  type CanonicalPlaceSelection,
-} from '@/components/location/CanonicalPlaceSelector';
 import { WizardData } from '@/lib/types/wizard-workflows';
+import { derivedLocationText } from '@/lib/wizardLocationCostsAmenities';
 import { cn } from '@/lib/utils';
 import { wizardTokens as t } from '../../wizard/ui/wizardTokens';
 import { WizardSection } from '../../wizard/ui/WizardUi';
@@ -36,18 +33,18 @@ function CurrentSuburb({ developmentId }: { developmentId: number }) {
   if (!latest?.placeName) return null;
   return (
     <p className="mt-2 text-xs text-slate-700" data-testid="current-suburb">
-      Currently recorded: <b>{latest.placeName}</b>. Choosing a suburb below records a new one.
+      Currently recorded: <b>{latest.placeName}</b>.
     </p>
   );
 }
 
 /**
- * Location: street address (required, the server needs it), postal code, an
- * optional map pin, and the suburb shown to buyers. The suburb is picked here
- * only when a platform operator builds a curated listing; it is recorded as the
- * accepted site Place assignment once the development is saved (see
- * wizardLocationCostsAmenities.ts). A developer's suburb is assigned by a
- * reviewer.
+ * Location: street address and the map pin, both required (the server's
+ * readiness check needs both). The suburb buyers see is DERIVED from the pin
+ * (placeAuthority.locateByPoint) and shown read-only; it is never hand-picked.
+ * For a curated listing the derived Place is recorded as the accepted site Place
+ * assignment once the development is saved; a developer's suburb is assigned by
+ * a reviewer (the derived one is only a suggestion).
  */
 export function LocationPhase() {
   const store = useDevelopmentWizard() as any;
@@ -86,22 +83,39 @@ export function LocationPhase() {
     toast.success('Address and coordinates updated');
   };
 
-  const suburbValue: CanonicalPlaceSelection | null = location.suburbPlaceId
-    ? {
-        canonicalPlaceId: String(location.suburbPlaceId),
-        label: String(location.suburbLabel ?? ''),
-        placeType: 'suburb',
-        scope: 'suburb' as any,
-        administrativeContext: null,
-      }
-    : null;
+  // Derive the suburb from the pin (debounced while typing coordinates).
+  const lat = Number(String(location.latitude ?? '').trim() || Number.NaN);
+  const lng = Number(String(location.longitude ?? '').trim() || Number.NaN);
+  const pinValid =
+    Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
+  const [pin, setPin] = useState<{ lat: number; lng: number } | null>(
+    pinValid ? { lat, lng } : null,
+  );
+  useEffect(() => {
+    const timer = setTimeout(() => setPin(pinValid ? { lat, lng } : null), 400);
+    return () => clearTimeout(timer);
+  }, [pinValid, lat, lng]);
+  const lookup = trpc.placeAuthority.locateByPoint.useQuery(pin ?? { lat: 0, lng: 0 }, {
+    enabled: pin !== null,
+    retry: false,
+  });
+  const derived = pin && lookup.data ? lookup.data : null;
+  const settled = pin === null || (!lookup.isLoading && !lookup.isFetching);
 
-  const pickSuburb = (selection: CanonicalPlaceSelection | null) =>
+  // Keep the derived suburb in the wizard data (cleared when the pin has no match).
+  const derivedId = derived?.placeId ?? undefined;
+  useEffect(() => {
+    if (!settled) return;
+    if ((location.suburbPlaceId ?? undefined) === derivedId) return;
     handleUpdate({
-      suburbPlaceId: selection?.canonicalPlaceId ?? undefined,
-      suburbLabel: selection?.label ?? undefined,
+      suburbPlaceId: derivedId,
+      suburbLabel: derived?.suburb ?? undefined,
+      suburbCity: derived?.city ?? undefined,
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settled, derivedId]);
 
+  const noStreet = location.noOfficialStreet === true;
   const latitude = location.latitude ? parseFloat(location.latitude) : undefined;
   const longitude = location.longitude ? parseFloat(location.longitude) : undefined;
 
@@ -111,7 +125,12 @@ export function LocationPhase() {
 
       <div>
         <label htmlFor="address" className={t.sectionLabel}>
-          Street address <span className="font-normal text-red-700">(required)</span>
+          Street address{' '}
+          {noStreet ? (
+            <span className="font-normal text-slate-600">(optional)</span>
+          ) : (
+            <span className="font-normal text-red-700">(required)</span>
+          )}
         </label>
         <input
           id="address"
@@ -123,6 +142,15 @@ export function LocationPhase() {
           onChange={e => handleUpdate({ address: e.target.value })}
         />
         <FieldError message={errorFor('address')} />
+        <label className="mt-3 flex cursor-pointer items-center gap-2.5 text-sm text-slate-800">
+          <input
+            type="checkbox"
+            className="h-5 w-5"
+            checked={noStreet}
+            onChange={e => handleUpdate({ noOfficialStreet: e.target.checked })}
+          />
+          No street address yet (new development: drop the pin instead)
+        </label>
       </div>
 
       <div className="max-w-[280px]">
@@ -140,35 +168,8 @@ export function LocationPhase() {
       </div>
 
       <WizardSection
-        label="Suburb shown to buyers"
-        hint={
-          isCurated
-            ? 'The suburb decides which search results the development appears in. It is recorded when the development is saved.'
-            : 'A platform reviewer assigns the suburb after checking the site. Public search uses only that reviewed suburb.'
-        }
-      >
-        {isCurated ? (
-          <>
-            <CanonicalPlaceSelector
-              value={suburbValue}
-              onChange={pickSuburb}
-              label="Search for the suburb"
-              inputId="suburb-picker"
-              placeholder="Start typing, e.g. North Riding"
-              compact
-            />
-            {editingId ? <CurrentSuburb developmentId={editingId} /> : null}
-          </>
-        ) : (
-          <p className="rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
-            A reviewer assigns the suburb. You do not need to choose one.
-          </p>
-        )}
-      </WizardSection>
-
-      <WizardSection
-        label="Map pin (optional)"
-        hint="Search the address, then drag the pin to the entrance. Helps the reviewer place the development."
+        label="Drop the pin at the entrance or show house (required)"
+        hint="Buyers use it for directions. Search the address and the pin fills in; or drag the pin, or type the coordinates for new land. The suburb buyers see is worked out from the pin."
       >
         <div className="h-[320px] overflow-hidden rounded-lg border border-slate-200">
           <LocationMapPicker
@@ -219,8 +220,29 @@ export function LocationPhase() {
           </div>
         </div>
         <p className={t.hint}>
-          If the map is unavailable you can type the entrance coordinates. Enter both or neither.
+          If the map is unavailable, type the entrance latitude and longitude.
         </p>
+        <p
+          data-testid="derived-location"
+          className={cn(
+            'mt-4 rounded-md border p-3 text-sm',
+            derived ? 'border-green-200 bg-green-50 text-green-900' : 'border-slate-200 bg-slate-50 text-slate-700',
+          )}
+        >
+          {pin === null
+            ? 'Drop the pin or enter coordinates to see the location buyers will see.'
+            : !settled
+              ? 'Finding the suburb…'
+              : derivedLocationText(derived)}
+        </p>
+        {isCurated ? (
+          <>
+            <p className={t.hint}>When you publish, this suburb is recorded for search.</p>
+            {editingId ? <CurrentSuburb developmentId={editingId} /> : null}
+          </>
+        ) : (
+          <p className={t.hint}>A reviewer confirms the suburb after checking the site.</p>
+        )}
       </WizardSection>
     </div>
   );

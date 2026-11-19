@@ -25,6 +25,8 @@ type PersistedDevelopment = Pick<
   typeof developments.$inferSelect,
   | 'name'
   | 'address'
+  | 'latitude'
+  | 'longitude'
   | 'description'
   | 'ownershipType'
   | 'developmentType'
@@ -228,6 +230,19 @@ export function validatePersistedSubmissionReadiness(
 
   if (!name) errors.push({ field: 'name', message: 'Development name is required.' });
   if (!address) errors.push({ field: 'address', message: 'Development address is required.' });
+  const latitude = Number(String(development.latitude ?? '').trim() || Number.NaN);
+  const longitude = Number(String(development.longitude ?? '').trim() || Number.NaN);
+  if (
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude) ||
+    Math.abs(latitude) > 90 ||
+    Math.abs(longitude) > 180
+  ) {
+    errors.push({
+      field: 'location',
+      message: 'Development map pin (latitude and longitude) is required.',
+    });
+  }
   if (!['residential', 'commercial', 'mixed_use', 'land'].includes(developmentType)) {
     errors.push({
       field: 'developmentType',

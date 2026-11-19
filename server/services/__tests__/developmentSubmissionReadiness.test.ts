@@ -12,6 +12,8 @@ const validDevelopment = {
   name: 'Harbour Heights',
   canonicalPlaceId: 'pl-place-01-000000000000000000000001',
   address: '1 Harbour Road',
+  latitude: '-33.9',
+  longitude: '18.4',
   description:
     'A valid persisted description that contains more than fifty characters for submission.',
   ownershipType: 'sectional-title',
@@ -45,6 +47,17 @@ describe('development persisted submission readiness', () => {
     expect(
       validatePersistedSubmissionReadiness(validDevelopment as never, [validUnit] as never),
     ).toEqual([]);
+  });
+
+  it('blocks a development without a map pin, the same rule as the wizard Location step', () => {
+    for (const pin of [{ latitude: null }, { longitude: '' }, { latitude: 'abc' }, { latitude: '120' }]) {
+      expect(
+        validatePersistedSubmissionReadiness(
+          { ...validDevelopment, ...pin } as never,
+          [validUnit] as never,
+        ).map(e => e.field),
+      ).toEqual(['location']);
+    }
   });
 
   it.each(['full-title', 'sectional-title', 'life-rights', 'leasehold', 'share-block', 'varies'])(

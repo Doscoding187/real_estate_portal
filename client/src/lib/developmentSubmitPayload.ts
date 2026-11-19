@@ -9,6 +9,7 @@ import {
   getCanonicalDevelopmentUnitTypes,
 } from '../../../shared/developmentCanonicalSelectors';
 import { communityTypesForSetting } from './wizardBasicsAbout';
+import { submitAddress } from './wizardLocationCostsAmenities';
 import {
   CANONICAL_PARTIAL_UPDATE_MODE,
   CANONICAL_UPDATE_MODE_FIELD,
@@ -526,6 +527,7 @@ function buildBasicsAboutEstateSpecs(canonical: Record<string, any>): Record<str
     phaseLabel,
     handoverInPhases: phased,
     firstHandoverDate: phased ? asOptionalString(canonical.expectedFirstHandoverDate) : undefined,
+    noStreetAddress: canonical.location?.noOfficialStreet === true ? true : undefined,
   };
   return Object.fromEntries(Object.entries(facts).filter(([, value]) => value !== undefined));
 }
@@ -792,7 +794,10 @@ export function buildDevelopmentSubmitPayload(input: DevelopmentSubmitPayloadInp
     developmentType,
     transactionType,
     ownershipType: normalizeSubmitOwnershipType(ownershipSource),
-    address: canonicalDevelopmentData.location?.address,
+    address: submitAddress({
+      ...canonicalDevelopmentData.location,
+      noOfficialStreet: (submitSource.location as any)?.noOfficialStreet,
+    }),
     postalCode: canonicalDevelopmentData.location?.postalCode,
     latitude: canonicalDevelopmentData.location?.latitude,
     longitude: canonicalDevelopmentData.location?.longitude,
