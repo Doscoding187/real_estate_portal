@@ -7,7 +7,7 @@
  * light divider. Font: the app already loads Inter globally.
  */
 export const wizardTokens = {
-  card: 'rounded-lg border border-slate-200 bg-white p-5 sm:p-8',
+  card: 'rounded-lg border border-slate-200 bg-white p-4 sm:p-6',
   pageBackground: 'bg-slate-100',
   sectionLabel: 'mb-3 block text-sm font-semibold text-slate-800',
   hint: 'mt-2 text-xs leading-relaxed text-slate-600',

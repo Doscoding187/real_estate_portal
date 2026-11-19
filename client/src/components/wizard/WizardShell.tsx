@@ -174,7 +174,7 @@ export function WizardShell({
         </div>
       </header>
 
-      <div className="mx-auto grid w-full max-w-[1440px] grid-cols-1 items-start gap-6 px-4 py-6 sm:px-7 lg:grid-cols-[240px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1fr)_340px]">
+      <div className="mx-auto grid w-full max-w-[1600px] grid-cols-1 items-start gap-4 px-3 py-6 sm:px-5 lg:grid-cols-[190px_minmax(0,1fr)] lg:gap-4 xl:grid-cols-[190px_minmax(0,1fr)_300px] xl:gap-4">
         <nav aria-label="Wizard steps" className="min-w-0">
           <div className="hidden px-2.5 pb-2 pt-1 text-xs font-semibold uppercase tracking-wider text-slate-600 lg:block">
             Step {progress.position} of {progress.total}

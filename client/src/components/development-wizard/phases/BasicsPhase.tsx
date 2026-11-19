@@ -107,6 +107,7 @@ export function BasicsPhase() {
           {SETTING_OPTIONS.map(option => (
             <OptionCard
               key={option.value}
+              stacked
               icon={iconForSetting(option.value)}
               title={option.label}
               description={option.description}

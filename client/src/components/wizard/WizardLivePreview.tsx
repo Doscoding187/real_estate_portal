@@ -2,7 +2,7 @@ import React from 'react';
 import { ImageOff } from 'lucide-react';
 import { formatRand, type DevelopmentPreviewModel } from './previewModel';
 
-const tag = 'inline-flex h-6 items-center rounded px-2.5 text-xs font-semibold';
+const tag = 'inline-flex h-5 items-center rounded px-2 text-[11px] font-semibold';
 
 /** "What buyers will see": development card and a unit listing card, fed live from the wizard. */
 export function WizardLivePreview({
@@ -24,7 +24,7 @@ export function WizardLivePreview({
 
   return (
     <aside aria-label="Live preview" className="flex flex-col gap-3">
-      <div className="text-xs font-semibold uppercase tracking-wider text-slate-600">
+      <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-600">
         What buyers will see
       </div>
 
@@ -34,10 +34,10 @@ export function WizardLivePreview({
             <img
               src={model.coverUrl}
               alt={`Cover photo of ${developmentName}`}
-              className="block h-[180px] w-full object-cover"
+              className="block h-[150px] w-full object-cover"
             />
           ) : (
-            <div className="flex h-[180px] w-full flex-col items-center justify-center gap-1 bg-slate-100 text-xs text-slate-500">
+            <div className="flex h-[150px] w-full flex-col items-center justify-center gap-1 bg-slate-100 text-xs text-slate-500">
               <ImageOff className="h-6 w-6" aria-hidden="true" />
               Cover photo appears here
             </div>
@@ -48,27 +48,27 @@ export function WizardLivePreview({
             </span>
           )}
         </div>
-        <div className="flex flex-col gap-1.5 p-4">
-          <div className="text-xs text-slate-600">
+        <div className="flex flex-col gap-1 p-3">
+          <div className="text-[11px] text-slate-600">
             New development
             {model.phaseLabel ? ` · ${model.phaseLabel}` : ''}
             {publisherName ? ` · ${publisherName}` : ''}
           </div>
-          <div className="text-lg font-bold text-slate-900" data-testid="preview-name">
+          <div className="text-base font-bold leading-snug text-slate-900" data-testid="preview-name">
             {developmentName}
           </div>
           {model.tagline && (
-            <div className="text-[13px] leading-snug text-slate-700">{model.tagline}</div>
+            <div className="text-xs leading-snug text-slate-700">{model.tagline}</div>
           )}
           {model.locationLabel && (
-            <div className="text-[13px] text-slate-600">{model.locationLabel}</div>
+            <div className="text-xs text-slate-600">{model.locationLabel}</div>
           )}
           {model.priceFrom != null && (
-            <div className="mt-1 text-xl font-bold text-slate-900">
+            <div className="mt-0.5 text-base font-bold text-slate-900">
               From {formatRand(model.priceFrom)}
             </div>
           )}
-          {facts.length > 0 && <div className="text-[13px] text-slate-700">{facts.join(' · ')}</div>}
+          {facts.length > 0 && <div className="text-xs text-slate-700">{facts.join(' · ')}</div>}
           <div className="mt-1.5 flex flex-nowrap items-center gap-1.5 overflow-hidden">
             {model.highlights.map(label => (
               <span
@@ -105,16 +105,16 @@ export function WizardLivePreview({
       </div>
 
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-        <div className="flex flex-col gap-1 p-4">
-          <div className="text-xs text-slate-600">Unit listing in search results</div>
+        <div className="flex flex-col gap-1 p-3">
+          <div className="text-[11px] text-slate-600">Unit listing in search results</div>
           {unit ? (
             <>
-              <div className="text-[15px] font-bold text-slate-900">{unit.name}</div>
-              <div className="text-xs text-slate-600">
+              <div className="text-sm font-bold text-slate-900">{unit.name}</div>
+              <div className="text-[11px] text-slate-600">
                 {developmentName}
                 {model.locationLabel ? ` · ${model.locationLabel}` : ''}
               </div>
-              <div className="text-[13px] text-slate-700">
+              <div className="text-xs text-slate-700">
                 {[
                   unit.beds != null ? `${unit.beds} beds` : null,
                   unit.baths != null ? `${unit.baths} baths` : null,
