@@ -1,52 +1,32 @@
 import { WizardWorkflow, WizardStep, type FieldError } from '../types/wizard-workflows';
+import { validateAboutStep } from '../wizardBasicsAbout';
 
+// Eight steps, in this order: Basics, About, Location, Monthly costs,
+// Amenities, Media, House types, Review & publish. The step ids are the same
+// ones drafts and published developments already use, so nothing saved before
+// is lost: only titles and screens changed.
 const residentialSaleSteps: WizardStep[] = [
   {
     id: 'configuration',
-    title: 'Configuration',
+    title: 'Basics',
     componentKey: 'ConfigurationStep',
     required: true,
-    description:
-      'Set up pricing, unit mix, and basic configuration for your residential development.',
-    validate: data => ({ valid: true }), // Minimal validation for config
+    description: 'The setting of the development: standalone, gated community or security estate.',
+    validate: data => {
+      const errors: FieldError[] = [];
+      const setting = (data as any).setting;
+      if (!setting) errors.push({ field: 'setting', message: 'Choose the setting' });
+      return { valid: errors.length === 0, errors };
+    },
   },
   {
     id: 'identity_market',
-    title: 'Identity & Market',
+    title: 'About',
     componentKey: 'IdentityMarketStep',
     required: true,
-    description: 'Define the brand identity and market positioning of your development.',
+    description: 'Name, sales status, ownership and description: everything buyers read first.',
     validate: data => {
-      const errors: FieldError[] = [];
-
-      // 1. Name is required and must be significant
-      if (!data.name || data.name.trim().length < 2) {
-        errors.push({ field: 'name', message: 'Development name is required' });
-      }
-
-      // 2. Status is required
-      if (!data.status) {
-        errors.push({ field: 'status', message: 'Development status is required' });
-      }
-
-      // 3. Ownership Validation (For Sale Context)
-      const isForSale = ['for_sale', 'sale', 'auction'].includes(data.transactionType || '');
-
-      if (isForSale) {
-        if (!data.ownershipTypes || data.ownershipTypes.length === 0) {
-          errors.push({
-            field: 'ownershipTypes',
-            message: 'At least one ownership type is required',
-          });
-        }
-      }
-
-      // 4. Transaction Type Sanity Check (Soft)
-      if (data.transactionType && !isForSale && data.transactionType !== 'for_rent') {
-        // In Phase 2B, we acknowledge that transactionType comes from Step 1
-        // We don't block, but this would be an invalid state for this workflow
-      }
-
+      const errors: FieldError[] = validateAboutStep(data);
       return { valid: errors.length === 0, errors };
     },
   },
@@ -69,7 +49,7 @@ const residentialSaleSteps: WizardStep[] = [
   },
   {
     id: 'governance_finances',
-    title: 'Governance & Finances',
+    title: 'Monthly costs',
     componentKey: 'GovernanceStep',
     required: false,
     description: 'Configure levies, rates, and HOA details.',
@@ -90,33 +70,11 @@ const residentialSaleSteps: WizardStep[] = [
   },
   {
     id: 'amenities_features',
-    title: 'Amenities & Features',
+    title: 'Amenities',
     componentKey: 'AmenitiesStep',
     required: false,
     description: 'Highlight the lifestyle amenities and key features.',
     validate: data => ({ valid: true }),
-  },
-  {
-    id: 'marketing_summary',
-    title: 'Marketing Summary',
-    componentKey: 'MarketingStep',
-    required: true,
-    description: 'Create the marketing copy and key selling points.',
-    validate: data => {
-      const errors: FieldError[] = [];
-      const d = data as any;
-      if (!d.description || d.description.length < 50) {
-        errors.push({
-          field: 'description',
-          message: 'Description must be at least 50 characters',
-        });
-      }
-      const points = d.keySellingPoints || d.highlights || [];
-      if (points.length < 3) {
-        errors.push({ field: 'highlights', message: 'At least 3 key selling points are required' });
-      }
-      return { valid: errors.length === 0, errors };
-    },
   },
   {
     id: 'development_media',
@@ -139,7 +97,7 @@ const residentialSaleSteps: WizardStep[] = [
   },
   {
     id: 'unit_types',
-    title: 'Unit Types',
+    title: 'House types',
     componentKey: 'UnitTypesStep',
     required: true,
     description: 'Define the different unit configurations available.',
@@ -182,7 +140,7 @@ const residentialSaleSteps: WizardStep[] = [
   },
   {
     id: 'review_publish',
-    title: 'Review & Publish',
+    title: 'Review & publish',
     componentKey: 'ReviewStep',
     required: true,
     description: 'Review all details before publishing your listing.',

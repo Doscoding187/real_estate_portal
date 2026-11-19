@@ -1566,7 +1566,7 @@ describe('development submit payload helpers', () => {
     expect(publishPayload.stepData.unit_types.unitTypes).toEqual(publishPayload.unitTypes);
   });
 
-  it('keeps identity partial updates from owning the marketing tagline', () => {
+  it('lets the About step (identity partial updates) own the tagline, description and highlights it asks', () => {
     const payload = buildDevelopmentPartialUpdatePayload({
       amenities: [],
       canonicalSnapshot: {
@@ -1594,21 +1594,29 @@ describe('development submit payload helpers', () => {
       },
     });
 
+    // About is Identity & Market merged with Marketing Summary, so a partial
+    // save from it carries both step slices and the marketing fields.
     expect(payload).toMatchObject({
       currentStepId: 'identity_market',
       name: 'Updated Identity Name',
       subtitle: 'Updated identity subtitle',
       status: 'launching-soon',
+      tagline: 'Stale marketing mirror',
+      description: 'Stale marketing description',
       stepData: {
         identity_market: {
           name: 'Updated Identity Name',
           subtitle: 'Updated identity subtitle',
           status: 'launching-soon',
         },
+        marketing_summary: {
+          tagline: 'Stale marketing mirror',
+          description: 'Stale marketing description',
+        },
       },
     });
-    expect(payload).not.toHaveProperty('tagline');
-    expect(payload).not.toHaveProperty('description');
+    expect(payload).not.toHaveProperty('unitTypes');
+    expect(payload).not.toHaveProperty('priceFrom');
   });
 
   it('keeps the root unit mirror when the legacy edit step slice only contains ids', () => {

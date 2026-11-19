@@ -145,13 +145,13 @@ export const DraftManager: React.FC<DraftManagerProps> = ({
 
             {wizardType === 'development' && (
               <>
-                {developmentName && (
-                  <div className="flex items-center gap-2 text-sm text-slate-600">
-                    <Home className="w-4 h-4 text-slate-400" />
-                    <span className="font-medium">Name:</span>
-                    <span className="truncate">{developmentName}</span>
-                  </div>
-                )}
+                <div className="flex items-center gap-2 text-sm text-slate-600">
+                  <Home className="w-4 h-4 text-slate-400" />
+                  <span className="font-medium">Name:</span>
+                  <span className="truncate" data-testid="draft-name">
+                    {developmentName?.trim() || 'Untitled'}
+                  </span>
+                </div>
                 {address && (
                   <div className="flex items-center gap-2 text-sm text-slate-600">
                     <MapPin className="w-4 h-4 text-slate-400" />
@@ -162,13 +162,13 @@ export const DraftManager: React.FC<DraftManagerProps> = ({
               </>
             )}
 
-            {lastModified && (
-              <div className="flex items-center gap-2 text-sm text-slate-600">
-                <Clock className="w-4 h-4 text-slate-400" />
-                <span className="font-medium">Last saved:</span>
-                <span>{lastModifiedText}</span>
-              </div>
-            )}
+            <div className="flex items-center gap-2 text-sm text-slate-600">
+              <Clock className="w-4 h-4 text-slate-400" />
+              <span className="font-medium">Last saved:</span>
+              <span data-testid="draft-last-saved">
+                {lastModified ? lastModifiedText : 'only on this device so far'}
+              </span>
+            </div>
           </div>
         </div>
 

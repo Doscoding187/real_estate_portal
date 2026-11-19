@@ -51,8 +51,8 @@ export interface WizardShellProps {
 
 const STEP_TIPS: Record<string, string> = {
   project_setup: 'Two quick choices to begin.',
-  configuration: 'Describe what kind of place this is.',
-  identity_market: 'Name it, say where it is in its life.',
+  configuration: 'What kind of place is it?',
+  identity_market: 'Name it and say where it is in its life.',
   location: 'Buyers see the suburb, not the street.',
   governance_finances: 'The running costs every buyer asks about.',
   amenities_features: 'Tap what the development really has.',

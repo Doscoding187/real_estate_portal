@@ -1,8 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useDevelopmentWizard } from '@/hooks/useDevelopmentWizard';
-import { DevelopmentTypePhase } from '../development-wizard/phases/DevelopmentTypePhase';
-import { ResidentialConfigPhase } from '../development-wizard/phases/ResidentialConfigPhase';
-import { IdentityPhase } from '../development-wizard/phases/IdentityPhase';
+import { BasicsPhase } from '../development-wizard/phases/BasicsPhase';
+import { AboutPhase } from '../development-wizard/phases/AboutPhase';
 import { LocationPhase } from '../development-wizard/phases/LocationPhase';
 import { EstateProfilePhase } from '../development-wizard/phases/EstateProfilePhase';
 import { AmenitiesPhase } from '../development-wizard/phases/AmenitiesPhase';
@@ -16,19 +15,26 @@ import { computeWizardProgress } from '@/lib/wizardProgress';
 import { WizardShell, type WizardSaveInput, type WizardShellStep } from './WizardShell';
 import { buildPreviewModel } from './previewModel';
 
+/**
+ * The eight residential steps, in order: Basics, About, Location, Monthly
+ * costs, Amenities, Media, House types, Review & publish. Steps that have not
+ * been rebuilt yet still render their existing screens.
+ */
 const STEP_COMPONENTS: Record<string, React.ComponentType<any>> = {
-  ConfigurationStep: ResidentialConfigPhase,
-  IdentityMarketStep: IdentityPhase,
+  ConfigurationStep: BasicsPhase,
+  IdentityMarketStep: AboutPhase,
   LocationStep: LocationPhase,
   GovernanceStep: EstateProfilePhase,
   AmenitiesStep: AmenitiesPhase,
+  // Only the auction workflow still has a separate marketing step.
   MarketingStep: OverviewPhase,
   MediaStep: MediaPhase,
   UnitTypesStep: UnitTypesPhase,
   ReviewStep: FinalisationPhase,
 };
 
-export const PROJECT_SETUP_STEP_ID = 'project_setup';
+/** Residential sale is the starting point until the publisher says "for rent" in Basics. */
+const DEFAULT_WORKFLOW = WORKFLOWS.residential_sale;
 
 interface WizardEngineProps {
   onExit?: () => void;
@@ -59,6 +65,7 @@ export function WizardEngine({
     completedSteps,
     goWorkflowNext,
     goWorkflowBack,
+    ensureResidentialWorkflow,
     stepErrors,
     developmentData,
     developmentType,
@@ -68,24 +75,22 @@ export function WizardEngine({
     getWizardData,
   } = useDevelopmentWizard();
 
-  // Project Setup can be revisited with Back / the step list without losing the draft.
-  const [showProjectSetup, setShowProjectSetup] = useState(false);
-
-  // Compute workflow data early (needed for useEffect)
-  const workflow = workflowId ? WORKFLOWS[workflowId] : null;
+  // A brand-new wizard has no workflow yet (and nothing worth saving). Until the
+  // publisher answers something it shows the sale workflow, starting at Basics;
+  // the first answer or "Continue" starts the real workflow in the store.
+  const workflow = (workflowId ? WORKFLOWS[workflowId] : null) ?? DEFAULT_WORKFLOW;
+  const activeStepId = workflowId ? currentStepId : 'configuration';
   const wizardData = { ...developmentData, developmentType, listingIdentity } as WizardData;
-  const visibleSteps = workflow ? getVisibleSteps(workflow, wizardData) : [];
-  const currentStepIndex = visibleSteps.findIndex(s => s.id === currentStepId);
+  const visibleSteps = getVisibleSteps(workflow, wizardData);
+  const currentStepIndex = visibleSteps.findIndex(s => s.id === activeStepId);
 
-  // Auto-correct if on invalid step (MUST be before any conditional returns)
+  // Auto-correct if on a step this wizard no longer has (for example a draft
+  // saved on the old "Marketing Summary" step).
   useEffect(() => {
-    if (workflow && currentStepIndex === -1 && visibleSteps.length > 0) {
+    if (workflowId && currentStepIndex === -1 && visibleSteps.length > 0) {
       setWorkflowStep(visibleSteps[0].id);
     }
-  }, [workflow, currentStepIndex, visibleSteps, setWorkflowStep]);
-
-  const workflowReady = Boolean(workflowId && developmentType && developmentData.transactionType);
-  const onProjectSetup = !workflowReady || showProjectSetup;
+  }, [workflowId, currentStepIndex, visibleSteps, setWorkflowStep]);
 
   // The store re-renders this component on every change, so the preview is
   // rebuilt from the live canonical wizard data each time (cheap, pure).
@@ -97,68 +102,34 @@ export function WizardEngine({
     currentStepIndex,
     ...visibleSteps.map((step, index) => (completedSteps?.includes(step.id) ? index : -1)),
   );
-  const shellSteps: WizardShellStep[] = [
-    { id: PROJECT_SETUP_STEP_ID, title: 'Project Setup', done: workflowReady, visited: true },
-    ...visibleSteps.map((step, index) => ({
-      id: step.id,
-      title: step.title,
-      done: Boolean(completedSteps?.includes(step.id)),
-      visited: workflowReady && index <= maxVisitedIndex,
-    })),
-  ];
-  const currentIndex = onProjectSetup ? 0 : currentStepIndex + 1;
+  const shellSteps: WizardShellStep[] = visibleSteps.map((step, index) => ({
+    id: step.id,
+    title: step.title,
+    done: Boolean(completedSteps?.includes(step.id)),
+    visited: index <= maxVisitedIndex,
+  }));
 
   const progress = computeWizardProgress({
     visibleStepIds: visibleSteps.map(step => step.id),
-    currentStepId,
-    onProjectSetup,
+    currentStepId: activeStepId,
   });
 
   const selectStep = (stepId: string) => {
-    if (stepId === PROJECT_SETUP_STEP_ID) {
-      setShowProjectSetup(true);
-      return;
-    }
-    setShowProjectSetup(false);
+    ensureResidentialWorkflow();
     setWorkflowStep(stepId as any);
   };
 
-  const shellCommon = {
-    steps: shellSteps,
-    onSelectStep: selectStep,
-    progress,
-    save,
-    onRetrySave,
-    onSaveAndExit: onExit,
-    publisherName,
-    changePublisherHref,
-    draftsHref,
-    draftsLabel,
-    previewModel,
+  const goNext = () => {
+    ensureResidentialWorkflow();
+    goWorkflowNext();
   };
 
-  // Project Setup: first visit, or revisited from Back / the step list.
-  if (onProjectSetup) {
-    return (
-      <WizardShell
-        {...shellCommon}
-        currentIndex={0}
-        description="Define the core structure of your development. These choices determine the workflow."
-        canGoBack={false}
-        onBack={() => undefined}
-      >
-        <DevelopmentTypePhase onResume={workflowReady ? () => setShowProjectSetup(false) : undefined} />
-      </WizardShell>
-    );
-  }
-
-  if (!workflow) return <div>Invalid Workflow</div>;
   if (!currentStep) return <div>Loading step...</div>;
 
   const StepComponent = STEP_COMPONENTS[currentStep.componentKey];
 
   // Validation Display
-  const currentErrors = currentStepId ? stepErrors[currentStepId] : [];
+  const currentErrors = activeStepId ? stepErrors[activeStepId] : [];
 
   const notice =
     currentErrors && currentErrors.length > 0 ? (
@@ -179,13 +150,22 @@ export function WizardEngine({
   return (
     <>
       <WizardShell
-        {...shellCommon}
-        currentIndex={currentIndex}
+        steps={shellSteps}
+        currentIndex={currentStepIndex}
+        onSelectStep={selectStep}
+        progress={progress}
+        save={save}
+        onRetrySave={onRetrySave}
+        onSaveAndExit={onExit}
+        publisherName={publisherName}
+        changePublisherHref={changePublisherHref}
+        draftsHref={draftsHref}
+        draftsLabel={draftsLabel}
+        previewModel={previewModel}
         description={currentStep.description}
-        canGoBack
-        // First workflow step goes back to Project Setup instead of being stuck.
-        onBack={currentStepIndex === 0 ? () => setShowProjectSetup(true) : goWorkflowBack}
-        onNext={isLastStep ? undefined : goWorkflowNext}
+        canGoBack={currentStepIndex > 0}
+        onBack={goWorkflowBack}
+        onNext={isLastStep ? undefined : goNext}
         notice={notice}
       >
         {StepComponent ? (

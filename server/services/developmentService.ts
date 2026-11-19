@@ -48,6 +48,7 @@ import {
   distributionPrograms,
 } from '../../drizzle/schema';
 import { safeErrorSummary } from '../_core/safeError';
+import { DEVELOPMENT_OWNERSHIP_TYPES } from '../../shared/db-enums';
 
 // ===========================================================================
 // TYPES
@@ -1385,7 +1386,7 @@ export async function createDevelopment(
 
     ownershipType: sanitizeEnum(
       (developmentData as any).ownershipType,
-      ['full-title', 'sectional-title', 'leasehold', 'life-rights'],
+      DEVELOPMENT_OWNERSHIP_TYPES,
       null,
     ),
     structuralType: sanitizeEnum(
@@ -1812,7 +1813,7 @@ export async function updateDevelopment(
   if (developmentData.ownershipType !== undefined)
     updatePayload.ownershipType = sanitizeEnum(
       developmentData.ownershipType,
-      ['full-title', 'sectional-title', 'leasehold', 'life-rights'],
+      DEVELOPMENT_OWNERSHIP_TYPES,
       null,
     );
   if (developmentData.floors !== undefined)

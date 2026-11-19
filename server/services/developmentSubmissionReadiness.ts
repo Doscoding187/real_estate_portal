@@ -1,6 +1,7 @@
 import { TRPCError } from '@trpc/server';
 import { developments, unitTypes } from '../../drizzle/schema';
 import { assertSafeLocalMediaKey, isLocalMediaStorage } from '../_core/mediaStorage';
+import { DEVELOPMENT_OWNERSHIP_TYPES } from '../../shared/db-enums';
 
 export type SubmissionValidationError = {
   field: string;
@@ -51,12 +52,9 @@ type PersistedUnitType = Pick<
   | 'reservePrice'
 >;
 
-const CANONICAL_OWNERSHIP_TYPES = [
-  'full-title',
-  'sectional-title',
-  'leasehold',
-  'life-rights',
-] as const;
+// The wizard asks for: full title, sectional title, life rights, leasehold,
+// share block, or "varies by house type". Every one of them is a valid answer.
+const CANONICAL_OWNERSHIP_TYPES = DEVELOPMENT_OWNERSHIP_TYPES;
 
 function parseJsonMaybeTwice<T>(value: unknown, fallback: T): T {
   if (value === null || value === undefined || value === '') return fallback;

@@ -54,6 +54,14 @@ export function getCanonicalDevelopmentConfiguration(payload: CanonicalRecord): 
       payload.transactionType,
       payload.listingType,
     ),
+    // Basics step: "Standalone" | "Gated community" | "Security estate" and,
+    // for a security estate, which kind (standard is the default).
+    setting: firstDefined(configuration.setting, developmentData.setting, payload.setting),
+    estateType: firstDefined(
+      configuration.estateType,
+      developmentData.estateType,
+      payload.estateType,
+    ),
   };
 }
 
@@ -110,6 +118,18 @@ export function getCanonicalDevelopmentIdentity(payload: CanonicalRecord): Canon
       identityMarket.handoverDuringConstruction,
       developmentData.handoverDuringConstruction,
       payload.handoverDuringConstruction,
+    ),
+    // About step: off-plan vs ready to move in (both are status "selling"),
+    // and the optional phase label that replaces "nature".
+    salesStage: firstDefined(
+      identityMarket.salesStage,
+      developmentData.salesStage,
+      payload.salesStage,
+    ),
+    phaseLabel: firstDefined(
+      identityMarket.phaseLabel,
+      developmentData.phaseLabel,
+      payload.phaseLabel,
     ),
   };
 }
@@ -430,6 +450,10 @@ export function buildCanonicalDevelopmentDataSnapshot(payload: CanonicalRecord):
     completionDate: identity.completionDate,
     expectedFirstHandoverDate: identity.expectedFirstHandoverDate,
     handoverDuringConstruction: identity.handoverDuringConstruction,
+    salesStage: identity.salesStage,
+    phaseLabel: identity.phaseLabel,
+    setting: configuration.setting,
+    estateType: configuration.estateType,
     monthlyLevyFrom: firstDefined(
       governanceFinances.monthlyLevyFrom,
       developmentData.monthlyLevyFrom,
@@ -462,8 +486,12 @@ export function buildCanonicalStepDataFromDevelopmentSnapshot(
     configuration: {
       developmentType: developmentData.developmentType,
       transactionType: developmentData.transactionType,
+      setting: developmentData.setting,
+      estateType: developmentData.estateType,
     },
     identity_market: {
+      salesStage: developmentData.salesStage,
+      phaseLabel: developmentData.phaseLabel,
       name: developmentData.name,
       subtitle: developmentData.subtitle,
       tagline: developmentData.tagline,

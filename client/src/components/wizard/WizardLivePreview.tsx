@@ -50,7 +50,9 @@ export function WizardLivePreview({
         </div>
         <div className="flex flex-col gap-1.5 p-4">
           <div className="text-xs text-slate-600">
-            New development{publisherName ? ` · ${publisherName}` : ''}
+            New development
+            {model.phaseLabel ? ` · ${model.phaseLabel}` : ''}
+            {publisherName ? ` · ${publisherName}` : ''}
           </div>
           <div className="text-lg font-bold text-slate-900" data-testid="preview-name">
             {developmentName}
@@ -92,6 +94,11 @@ export function WizardLivePreview({
                   {label}
                 </span>
               ))}
+            </div>
+          )}
+          {model.timelineLine && (
+            <div className="mt-1 text-xs text-slate-600" data-testid="preview-timeline">
+              {model.timelineLine}
             </div>
           )}
         </div>
