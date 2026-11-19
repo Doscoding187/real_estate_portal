@@ -26,7 +26,8 @@ describe('ListWithUsSection', () => {
       'href',
       '/advertise/services',
     );
-    expect(screen.getAllByText('Opening soon')).toHaveLength(2);
+    expect(screen.queryByText('Opening soon')).not.toBeInTheDocument();
+    expect(screen.getAllByText('Set up today')).toHaveLength(4);
     expect(screen.getByText(/service provider applications are open/i)).toBeInTheDocument();
     expect(
       screen.getByText(

@@ -36,21 +36,17 @@ describe('Login registration audience preselection', () => {
     setLocationMock.mockClear();
   });
 
-  it.each(['property_developer', 'agency_admin'])(
-    'ignores a %s preselect and keeps the public role chooser open',
-    role => {
-      setSearch(`?mode=register&role=${role}&next=%2Fdeveloper%2Fplans`);
-      render(<Login />);
+  it.each([
+    ['property_developer', 'Your name'],
+    ['agency_admin', 'Owner name'],
+  ])('preselects %s registration from the role parameter', (role, nameLabel) => {
+    setSearch(`?mode=register&role=${role}`);
+    render(<Login />);
 
-      expect(screen.getByRole('heading', { name: /Choose your role/i })).toBeInTheDocument();
-      expect(screen.getByTestId('unavailable-role-notice')).toHaveTextContent(
-        'Agency and developer registrations are not open yet. Buyers, agents and service providers can register now.',
-      );
-      expect(screen.queryByRole('heading', { name: 'Create your account' })).not.toBeInTheDocument();
-      expect(screen.getAllByText('Buyer / User').length).toBeGreaterThan(0);
-      expect(screen.getAllByText('Real Estate Agent').length).toBeGreaterThan(0);
-    },
-  );
+    expect(screen.getByRole('heading', { name: 'Create your account' })).toBeInTheDocument();
+    expect(screen.getByText(nameLabel)).toBeInTheDocument();
+    expect(screen.queryByTestId('unavailable-role-notice')).not.toBeInTheDocument();
+  });
 
   it('keeps the neutral role chooser open for buyer, agent and service provider', () => {
     setSearch('?mode=register');
@@ -61,8 +57,8 @@ describe('Login registration audience preselection', () => {
     expect(screen.getAllByText('Real Estate Agent').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Service Provider').length).toBeGreaterThan(0);
     expect(screen.queryByTestId('unavailable-role-notice')).not.toBeInTheDocument();
-    expect(screen.queryByText('Developer')).not.toBeInTheDocument();
-    expect(screen.queryByText('Agency')).not.toBeInTheDocument();
+    expect(screen.getAllByText('Developer').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Agency').length).toBeGreaterThan(0);
     expect(screen.queryByText('Your name')).not.toBeInTheDocument();
   });
 
@@ -97,7 +93,6 @@ describe('Login registration audience preselection', () => {
     expect(screen.getAllByText('Buyer / User').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Real Estate Agent').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Service Provider').length).toBeGreaterThan(0);
-    expect(screen.queryByText('Developer')).not.toBeInTheDocument();
     expect(screen.queryByText('Your name')).not.toBeInTheDocument();
   });
 });

@@ -40,6 +40,8 @@ import {
   cataloguePublishers,
   developerOrganisations,
   developmentApprovalQueue,
+  billingPayments,
+  leads,
 } from '../drizzle/schema';
 import { eq, desc, asc, and, or, like, sql, type SQL, gte, lte, inArray } from 'drizzle-orm';
 import { logAudit, AuditActions } from './_core/auditLog';
@@ -486,6 +488,54 @@ export const adminRouter = router({
         pendingListingApprovals: listings,
         pendingDevelopmentApprovals: developments,
         flaggedItems: 0, // Placeholder
+      };
+    },
+  ),
+
+  /**
+   * Super Admin: launch dashboard figures (read-only, real data only).
+   * Money comes from billing payments (minor units), never the commissions table.
+   */
+  getLaunchDashboardStats: superAdminProcedure.query(
+    async (): Promise<{
+      eftAwaitingReview: number;
+      approvedThisMonthCount: number;
+      approvedThisMonthRand: number;
+      newLeads30d: number;
+    }> => {
+      const dbConn = await getDb();
+      if (!dbConn) {
+        throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'Database not available' });
+      }
+      const now = new Date();
+      const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const [awaiting] = await dbConn
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(billingPayments)
+        .where(inArray(billingPayments.state, ['submitted', 'under_review']));
+      const [approved] = await dbConn
+        .select({
+          count: sql<number>`COUNT(*)`,
+          total: sql<number>`COALESCE(SUM(${billingPayments.amount}), 0)`,
+        })
+        .from(billingPayments)
+        .where(
+          and(
+            eq(billingPayments.state, 'verified'),
+            eq(billingPayments.currency, 'ZAR'),
+            gte(billingPayments.reviewedAt, monthStart.toISOString().slice(0, 19).replace('T', ' ')),
+          ),
+        );
+      const [newLeads] = await dbConn
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(leads)
+        .where(gte(leads.createdAt, thirtyDaysAgo.toISOString().slice(0, 19).replace('T', ' ')));
+      return {
+        eftAwaitingReview: Number(awaiting?.count || 0),
+        approvedThisMonthCount: Number(approved?.count || 0),
+        approvedThisMonthRand: Number(approved?.total || 0) / 100,
+        newLeads30d: Number(newLeads?.count || 0),
       };
     },
   ),

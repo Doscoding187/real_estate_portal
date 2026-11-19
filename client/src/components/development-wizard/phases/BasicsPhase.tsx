@@ -13,13 +13,6 @@ import { iconForEstateType, iconForSetting } from '../../wizard/wizardIcons';
 import { OptionCard, WizardSection } from '../../wizard/ui/WizardUi';
 import { wizardTokens as t } from '../../wizard/ui/wizardTokens';
 
-type SaleOrRent = 'for_sale' | 'for_rent';
-
-const SALE_OR_RENT: Array<{ value: SaleOrRent; label: string }> = [
-  { value: 'for_sale', label: 'Mostly for sale' },
-  { value: 'for_rent', label: 'Mostly for rent' },
-];
-
 /**
  * Basics: the setting (standalone, gated community, security estate) and, for
  * a security estate, which kind. Replaces Development Type, Freehold Category,
@@ -32,12 +25,9 @@ const SALE_OR_RENT: Array<{ value: SaleOrRent; label: string }> = [
 export function BasicsPhase() {
   const {
     stepData,
-    developmentData,
-    transactionType,
     saveWorkflowStepData,
     setResidentialConfig,
     ensureResidentialWorkflow,
-    switchResidentialTransaction,
     stepErrors,
     currentStepId,
   } = useDevelopmentWizard();
@@ -45,10 +35,6 @@ export function BasicsPhase() {
   const config = stepData?.configuration ?? {};
   const setting: WizardSetting | null = config.setting ?? null;
   const estateType: EstateType = config.estateType ?? DEFAULT_ESTATE_TYPE;
-
-  const activeTransaction = transactionType ?? developmentData?.transactionType ?? 'for_sale';
-  // Auction is not offered at launch; do not show a choice that cannot apply to it.
-  const showSaleOrRent = activeTransaction === 'for_sale' || activeTransaction === 'for_rent';
 
   const errors = (currentStepId && stepErrors?.[currentStepId]) || [];
   const settingError = errors.find((e: any) => e?.field === 'setting')?.message;
@@ -65,38 +51,11 @@ export function BasicsPhase() {
     });
   };
 
-  const pickTransaction = (value: SaleOrRent) => {
-    ensureResidentialWorkflow(value);
-    switchResidentialTransaction(value);
-  };
-
   return (
     <div className={cn(t.card, 'flex flex-col gap-6')}>
       <p className="text-sm text-slate-600">
         Residential development. Pick the setting that best describes it; buyers filter on this.
       </p>
-
-      {showSaleOrRent && (
-        <WizardSection label="Is this development mostly for sale or for rent?">
-          <div role="radiogroup" aria-label="Sale or rent" className="flex flex-wrap gap-2">
-            {SALE_OR_RENT.map(option => {
-              const selected = activeTransaction === option.value;
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  role="radio"
-                  aria-checked={selected}
-                  onClick={() => pickTransaction(option.value)}
-                  className={cn(t.chip, selected && t.chipOn)}
-                >
-                  {option.label}
-                </button>
-              );
-            })}
-          </div>
-        </WizardSection>
-      )}
 
       <WizardSection label="What is the setting?">
         <div

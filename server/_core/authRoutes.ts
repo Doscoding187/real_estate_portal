@@ -18,6 +18,8 @@ export const REGISTRATION_ALLOWED_ROLES: readonly string[] = [
   'visitor',
   'agent',
   'service_provider',
+  'agency_admin',
+  'property_developer',
 ];
 
 /** Known professional roles that are rejected (HTTP 400) unless listed above. */

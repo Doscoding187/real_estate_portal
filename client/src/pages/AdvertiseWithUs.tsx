@@ -79,27 +79,27 @@ const PREPARATION_PATHS = [
   {
     title: 'For Agencies',
     description:
-      'Agency accounts open soon. See how it will work for your team, or get in touch to talk it through.',
+      'Create your agency owner account and set up your agency. Publishing opens later, after approval.',
     icon: UsersRound,
     href: '/advertise/sell/agencies',
     ctaText: 'See agency details',
     benefits: [
-      'See what agency tools will include',
+      'See what agency tools include',
       'Learn how team and office set-up works',
-      'Get in touch about early access',
+      'Talk to us about your set-up',
     ],
   },
   {
     title: 'For Developers',
     description:
-      'Developer accounts open soon. See how it will work for your company, or get in touch to talk it through.',
+      'Create your developer account and set up your company. Publishing opens later, after review.',
     icon: Building2,
     href: '/advertise/sell/developers',
     ctaText: 'See developer details',
     benefits: [
-      'See what developer tools will include',
+      'See what developer tools include',
       'Learn how company review works',
-      'Get in touch about early access',
+      'Talk to us about your set-up',
     ],
   },
 ];

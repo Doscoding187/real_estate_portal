@@ -47,6 +47,10 @@ import {
 import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
 import { RecordPaymentByReferenceCard } from '@/components/admin/RecordPaymentByReferenceCard';
+import {
+  ApprovedPaymentsRefundCard,
+  RevokeAccessButton,
+} from '@/components/admin/LaunchAccessRevokeRefund';
 import { useCommercialActivationAvailability } from '@/hooks/useCommercialProductAvailability';
 
 function formatDate(value: string | null | undefined) {
@@ -219,6 +223,18 @@ export default function SubscriptionManagementPage({
         return (
           <Badge className="bg-orange-500/10 text-orange-600 hover:bg-orange-500/20 border-orange-200">
             Past Due
+          </Badge>
+        );
+      case 'refunded':
+        return (
+          <Badge className="bg-red-500/10 text-red-600 hover:bg-red-500/20 border-red-200">
+            Refunded
+          </Badge>
+        );
+      case 'cancelled':
+        return (
+          <Badge className="bg-red-500/10 text-red-600 hover:bg-red-500/20 border-red-200">
+            Access ended
           </Badge>
         );
       case 'canceled':
@@ -489,9 +505,15 @@ export default function SubscriptionManagementPage({
                           {sub.plan?.price ? formatCurrency(Number(sub.plan.price) / 100) : '-'}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="sm">
-                            <MoreHorizontal className="w-4 h-4" />
-                          </Button>
+                          <RevokeAccessButton
+                            subscription={{
+                              id: sub.id,
+                              status: sub.status,
+                              ownerName: sub.owner?.name,
+                              planName: sub.plan?.displayName,
+                            }}
+                            onDone={() => refetchSubs()}
+                          />
                         </TableCell>
                       </TableRow>
                     ))
@@ -571,6 +593,7 @@ export default function SubscriptionManagementPage({
         {/* VERIFICATION TAB */}
         <TabsContent value="verification" className="space-y-6">
           <RecordPaymentByReferenceCard onRecorded={() => refetchProofs()} />
+          <ApprovedPaymentsRefundCard />
           <GlassCard className="p-6">
             <div className="flex items-center justify-between mb-6">
               <div>

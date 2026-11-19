@@ -182,10 +182,10 @@ describe('DevelopmentWizard publisher context initialization', () => {
     render(<DevelopmentWizard />);
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Basics' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Start a new development' })).toBeInTheDocument();
     });
 
-    expect(screen.getByText('Basics step body')).toBeInTheDocument();
+    expect(screen.getByText('What are you listing?')).toBeInTheDocument();
     expect(testState.setListingIdentity).toHaveBeenCalledWith({
       identityType: 'brand',
       cataloguePublisherId: 1109,
@@ -199,10 +199,10 @@ describe('DevelopmentWizard publisher context initialization', () => {
     render(<DevelopmentWizard />);
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Basics' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Start a new development' })).toBeInTheDocument();
     });
 
-    expect(screen.getByText('Basics step body')).toBeInTheDocument();
+    expect(screen.getByText('What are you listing?')).toBeInTheDocument();
     expect(testState.setListingIdentity).not.toHaveBeenCalled();
   });
 
@@ -323,7 +323,7 @@ describe('DevelopmentWizard edit-mode lifecycle truth', () => {
         screen.getByRole('heading', { name: 'Unable to open this development' }),
       ).toBeInTheDocument();
     });
-    expect(screen.queryByRole('heading', { name: 'Basics' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Start a new development' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(testState.editRefetch).toHaveBeenCalledOnce();

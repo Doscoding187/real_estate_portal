@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { StartScreen, type StartTransaction } from './StartScreen';
 import { useDevelopmentWizard } from '@/hooks/useDevelopmentWizard';
 import { BasicsPhase } from '../development-wizard/phases/BasicsPhase';
 import { AboutPhase } from '../development-wizard/phases/AboutPhase';
@@ -66,6 +67,9 @@ export function WizardEngine({
     goWorkflowNext,
     goWorkflowBack,
     ensureResidentialWorkflow,
+    switchResidentialTransaction,
+    transactionType,
+    stepData,
     stepErrors,
     developmentData,
     developmentType,
@@ -75,11 +79,23 @@ export function WizardEngine({
     getWizardData,
   } = useDevelopmentWizard();
 
-  // A brand-new wizard has no workflow yet (and nothing worth saving). Until the
-  // publisher answers something it shows the sale workflow, starting at Basics;
-  // the first answer or "Continue" starts the real workflow in the store.
+  // The unnumbered start screen shows for a brand-new wizard (no workflow yet),
+  // and again when the publisher goes Back from step 1. A resumed draft or a
+  // development being edited already has its answers, so it skips the screen.
+  const [showStart, setShowStart] = useState(false);
+  const [pendingTx, setPendingTx] = useState<StartTransaction | null>(null);
+  const [warnChange, setWarnChange] = useState(false);
+  const onStartScreen = !workflowId || showStart;
+  const storedTx: StartTransaction | null =
+    (transactionType ?? developmentData?.transactionType) === 'for_rent'
+      ? 'for_rent'
+      : (transactionType ?? developmentData?.transactionType) === 'for_sale'
+        ? 'for_sale'
+        : null;
+  const selectedTx = pendingTx ?? (workflowId ? storedTx : null);
+
   const workflow = (workflowId ? WORKFLOWS[workflowId] : null) ?? DEFAULT_WORKFLOW;
-  const activeStepId = workflowId ? currentStepId : 'configuration';
+  const activeStepId = workflowId ? currentStepId : null;
   const wizardData = { ...developmentData, developmentType, listingIdentity } as WizardData;
   const visibleSteps = getVisibleSteps(workflow, wizardData);
   const currentStepIndex = visibleSteps.findIndex(s => s.id === activeStepId);
@@ -94,25 +110,63 @@ export function WizardEngine({
 
   // The store re-renders this component on every change, so the preview is
   // rebuilt from the live canonical wizard data each time (cheap, pure).
-  const previewModel = buildPreviewModel(getWizardData?.() ?? developmentData, unitTypes);
+  const baseData = (getWizardData?.() ?? developmentData) as Record<string, any>;
+  const previewModel = buildPreviewModel(
+    onStartScreen && selectedTx ? { ...baseData, transactionType: selectedTx } : baseData,
+    unitTypes,
+  );
 
-  const currentStep = visibleSteps[currentStepIndex];
+  const currentStep = onStartScreen ? undefined : visibleSteps[currentStepIndex];
 
   const maxVisitedIndex = Math.max(
     currentStepIndex,
     ...visibleSteps.map((step, index) => (completedSteps?.includes(step.id) ? index : -1)),
   );
-  const shellSteps: WizardShellStep[] = visibleSteps.map((step, index) => ({
-    id: step.id,
-    title: step.title,
-    done: Boolean(completedSteps?.includes(step.id)),
-    visited: index <= maxVisitedIndex,
-  }));
+  // Nothing is numbered until Start.
+  const shellSteps: WizardShellStep[] = onStartScreen
+    ? []
+    : visibleSteps.map((step, index) => ({
+        id: step.id,
+        title: step.title,
+        done: Boolean(completedSteps?.includes(step.id)),
+        visited: index <= maxVisitedIndex,
+      }));
 
-  const progress = computeWizardProgress({
-    visibleStepIds: visibleSteps.map(step => step.id),
-    currentStepId: activeStepId,
-  });
+  const progress = onStartScreen
+    ? { position: 0, total: 0, percent: 0 }
+    : computeWizardProgress({
+        visibleStepIds: visibleSteps.map(step => step.id),
+        currentStepId: activeStepId,
+      });
+
+  const hasEnteredAnswers = Boolean(stepData && Object.keys(stepData).length > 0);
+
+  const pickTransaction = (value: StartTransaction) => {
+    setPendingTx(value);
+    setWarnChange(false);
+  };
+
+  const start = () => {
+    if (!selectedTx) return;
+    if (!workflowId) {
+      ensureResidentialWorkflow(selectedTx);
+    } else if (selectedTx !== storedTx) {
+      if (hasEnteredAnswers && !warnChange) {
+        setWarnChange(true);
+        return;
+      }
+      switchResidentialTransaction(selectedTx);
+    }
+    setShowStart(false);
+    setPendingTx(null);
+    setWarnChange(false);
+  };
+
+  const backToStart = () => {
+    setPendingTx(null);
+    setWarnChange(false);
+    setShowStart(true);
+  };
 
   const selectStep = (stepId: string) => {
     ensureResidentialWorkflow();
@@ -123,6 +177,41 @@ export function WizardEngine({
     ensureResidentialWorkflow();
     goWorkflowNext();
   };
+
+  if (onStartScreen) {
+    return (
+      <WizardShell
+        steps={[]}
+        currentIndex={-1}
+        onSelectStep={() => undefined}
+        progress={progress}
+        save={save}
+        onRetrySave={onRetrySave}
+        onSaveAndExit={onExit}
+        publisherName={publisherName}
+        changePublisherHref={changePublisherHref}
+        draftsHref={draftsHref}
+        draftsLabel={draftsLabel}
+        previewModel={previewModel}
+        heading="Start a new development"
+        hideBack
+        canGoBack={false}
+        onBack={() => undefined}
+      >
+        <StartScreen
+          transaction={selectedTx}
+          onTransaction={pickTransaction}
+          onStart={start}
+          startLabel={warnChange ? 'Change anyway' : workflowId ? 'Continue' : 'Start'}
+          warning={
+            warnChange
+              ? 'Some of the answers you have already entered may not apply to this kind of listing. They are kept, but please review each step.'
+              : null
+          }
+        />
+      </WizardShell>
+    );
+  }
 
   if (!currentStep) return <div>Loading step...</div>;
 
@@ -163,8 +252,9 @@ export function WizardEngine({
         draftsLabel={draftsLabel}
         previewModel={previewModel}
         description={currentStep.description}
-        canGoBack={currentStepIndex > 0}
-        onBack={goWorkflowBack}
+        canGoBack
+        // Back from step 1 returns to the start screen.
+        onBack={currentStepIndex === 0 ? backToStart : goWorkflowBack}
         onNext={isLastStep ? undefined : goNext}
         notice={notice}
       >

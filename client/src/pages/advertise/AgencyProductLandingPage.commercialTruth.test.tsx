@@ -125,7 +125,7 @@ describe('public Agency product landing page', () => {
 
     expect(
       screen.getByRole('heading', {
-        name: 'Agency accounts are coming. See how set-up will work.',
+        name: 'Create your Agency account and set up your business.',
         level: 1,
       }),
     ).toBeInTheDocument();
@@ -140,12 +140,12 @@ describe('public Agency product landing page', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('Prepare private listings')).toBeInTheDocument();
 
-    // Held at launch: the sign-up CTA is a non-link "Not open yet" state.
-    expect(
-      screen.queryByRole('link', { name: /Start Agency preparation/i }),
-    ).not.toBeInTheDocument();
-    expect(screen.getAllByTestId('cta-not-open-yet')).toHaveLength(2);
-    expect(document.querySelector('a[href*="agency%2Fsetup"]')).toBeNull();
+    // Registration is open: the CTA links to register with the Agency role preselected.
+    expect(screen.getAllByTestId('cta-register-role')).toHaveLength(2);
+    screen.getAllByRole('link', { name: /Create your Agency owner account/i }).forEach(link => {
+      expect(link).toHaveAttribute('href', '/login?mode=register&role=agency_admin');
+    });
+    expect(screen.queryByTestId('cta-not-open-yet')).not.toBeInTheDocument();
 
     expect(useCatalogMock).not.toHaveBeenCalled();
   });
@@ -280,11 +280,11 @@ describe('public Agency product landing page', () => {
   it('retains the enabled-runtime owner account start and commercial proposition', () => {
     render(<AgencyCommercialLandingPage />);
 
-    // Held at launch: no owner-account sign-up link, a "Not open yet" state instead.
+    // Registration is open: owner-account sign-up links with the role preselected.
     expect(
-      screen.queryByRole('link', { name: /Create your Agency owner account/i }),
-    ).not.toBeInTheDocument();
-    expect(screen.getAllByTestId('cta-not-open-yet')).toHaveLength(2);
+      screen.getAllByRole('link', { name: /Create your Agency owner account/i })[0],
+    ).toHaveAttribute('href', '/login?mode=register&role=agency_admin');
+    expect(screen.getAllByTestId('cta-register-role')).toHaveLength(2);
     expect(screen.getAllByText(/not a reduced feature tier/i).length).toBeGreaterThan(0);
   });
 

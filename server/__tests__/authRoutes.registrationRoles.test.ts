@@ -15,7 +15,11 @@ vi.mock('../_core/auth', () => ({
     createSessionToken: mocks.createSessionToken,
   },
 }));
-import { REGISTRATION_ALLOWED_ROLES, registerAuthRoutes } from '../_core/authRoutes';
+import {
+  HELD_REGISTRATION_ROLES,
+  REGISTRATION_ALLOWED_ROLES,
+  registerAuthRoutes,
+} from '../_core/authRoutes';
 
 async function register(body: object) {
   const app = express();
@@ -72,8 +76,14 @@ describe('registration role gating at launch', () => {
     mocks.createSessionToken.mockResolvedValue('verified-provider-session');
   });
 
-  it('allows visitor, agent and service provider', () => {
-    expect([...REGISTRATION_ALLOWED_ROLES]).toEqual(['visitor', 'agent', 'service_provider']);
+  it('allows visitor, agent, service provider, agency admin and property developer', () => {
+    expect([...REGISTRATION_ALLOWED_ROLES]).toEqual([
+      'visitor',
+      'agent',
+      'service_provider',
+      'agency_admin',
+      'property_developer',
+    ]);
   });
 
   it('accepts visitor, agent and service provider', async () => {
@@ -98,14 +108,17 @@ describe('registration role gating at launch', () => {
   });
 
   it.each(['agency_admin', 'property_developer'])(
-    'rejects %s with 400 and does not register',
+    'accepts %s and registers it with that role',
     async role => {
       const result = await register({ ...base, role });
-      expect(result.status).toBe(400);
-      expect(result.body.error).toBe('This account type is not available yet.');
-      expect(mocks.register).not.toHaveBeenCalled();
+      expect(result.status).toBe(201);
+      expect(mocks.register.mock.calls[0][3]).toBe(role);
     },
   );
+
+  it('keeps no role held while the held-role mechanism stays in place', () => {
+    expect([...HELD_REGISTRATION_ROLES]).toEqual([]);
+  });
 
   it('turns an unknown role string into a visitor', async () => {
     const result = await register({ ...base, role: 'super_admin' });
