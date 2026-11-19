@@ -137,6 +137,12 @@ export default function AgencySubscriptionPage() {
             Past Due
           </Badge>
         );
+      case 'cancelled':
+        return (
+          <Badge className="bg-red-500/10 text-red-600 hover:bg-red-500/20 border-red-200">
+            Access ended
+          </Badge>
+        );
       case 'canceled':
         return (
           <Badge className="bg-red-500/10 text-red-600 hover:bg-red-500/20 border-red-200">

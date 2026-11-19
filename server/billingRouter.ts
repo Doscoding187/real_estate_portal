@@ -37,6 +37,8 @@ import {
   submitPaidLaunchAccessPaymentNotice,
   submitDeveloperPaymentProof,
   updateSubscriptionLifecycle,
+  revokeLaunchAccess,
+  recordEftRefund,
   MAX_PROOF_BASE64_CHARS,
   type BillingCycle,
   type CanonicalSubscriptionStatus,
@@ -467,6 +469,40 @@ export const billingRouter = {
           status: input.status as CanonicalSubscriptionStatus,
           periodEnd: input.periodEnd,
           graceEndsAt: input.graceEndsAt,
+          note: input.note,
+        }),
+      ),
+
+    revokeLaunchAccess: superAdminProcedure
+      .input(
+        z.object({
+          subscriptionId: z.number().int().positive(),
+          reason: z.string().trim().min(1).max(2000),
+        }),
+      )
+      .mutation(async ({ ctx, input }) =>
+        revokeLaunchAccess({
+          actorUser: requireUser(ctx),
+          subscriptionId: input.subscriptionId,
+          reason: input.reason,
+        }),
+      ),
+
+    recordEftRefund: superAdminProcedure
+      .input(
+        z.object({
+          paymentId: z.number().int().positive(),
+          amountMinor: z.number().int().positive().safe(),
+          refundedOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+          note: z.string().trim().min(1).max(2000),
+        }),
+      )
+      .mutation(async ({ ctx, input }) =>
+        recordEftRefund({
+          actorUser: requireUser(ctx),
+          paymentId: input.paymentId,
+          amountMinor: input.amountMinor,
+          refundedOn: input.refundedOn,
           note: input.note,
         }),
       ),
