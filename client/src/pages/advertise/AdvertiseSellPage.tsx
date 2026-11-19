@@ -125,7 +125,7 @@ function PreparationAdvertiseSellPage() {
             />
             <VisualPathCard
               title="For Agencies"
-              description="Agency accounts are not open yet. See how set-up will work."
+              description="Create your agency owner account and set up your agency."
               icon={UsersRound}
               href="/advertise/sell/agencies"
               ctaText="See agency details"
@@ -133,7 +133,7 @@ function PreparationAdvertiseSellPage() {
             />
             <VisualPathCard
               title="For Developers"
-              description="Developer accounts are not open yet. See how set-up will work."
+              description="Create your developer account and set up your company."
               icon={Building2}
               href="/advertise/sell/developers"
               ctaText="See developer details"

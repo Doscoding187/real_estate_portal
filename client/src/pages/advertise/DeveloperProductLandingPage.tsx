@@ -459,7 +459,7 @@ function DeveloperLaunchAccessCard({ product }: { product?: CommercialProduct })
   const term = getCommercialTermPresentation(product);
   const action = getCommercialActionPresentation(product);
   const limits = getCommercialPresentationLimits(product);
-  // Developer accounts are not open yet, so the card never leads into a sign-up.
+  // Developer accounts are open; publishing and paid access are still preparation-only.
   const actionHref = '/contact';
   const portfolioEntitled = product.limits.unlimited_development_portfolio === true;
 
