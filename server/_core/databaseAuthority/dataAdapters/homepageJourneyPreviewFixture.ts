@@ -51,6 +51,7 @@ const IDS = Object.freeze({
   developerUser: 996003,
   cataloguePublisher: 996001,
   development: 996001,
+  developmentPlaceAssignment: 996001,
   unit: '00000000-0000-4000-8000-000000009961',
   agencyAgentMembership: 996001,
 });
@@ -150,6 +151,7 @@ const BRANDING = Object.freeze({
 });
 
 const FIXTURE_TIMESTAMP = '2026-09-02 12:00:00';
+const DEVELOPMENT_PLACE_EVIDENCE = 'local-fixture:homepage-preview:development-site-place';
 
 const HOME_SALE_FIXTURES: readonly ManualFixtureDefinition[] = [
   {
@@ -1007,9 +1009,6 @@ async function ensureDeveloperIdentity(connection: AuthoritySqlConnection): Prom
       'catalogue_publisher_id',
       'name',
       'slug',
-      'city',
-      'province',
-      'suburb',
       'isPublished',
       'approval_status',
       'transaction_type',
@@ -1019,9 +1018,6 @@ async function ensureDeveloperIdentity(connection: AuthoritySqlConnection): Prom
       catalogue_publisher_id: IDS.cataloguePublisher,
       name: 'The Preview Residences',
       slug: 'homepage-preview-residences-v1',
-      city: 'Johannesburg',
-      province: 'Gauteng',
-      suburb: 'Sandton',
       isPublished: 1,
       approval_status: 'approved',
       transaction_type: 'for_sale',
@@ -1031,9 +1027,6 @@ async function ensureDeveloperIdentity(connection: AuthoritySqlConnection): Prom
       'catalogue_publisher_id',
       'name',
       'developmentType',
-      'city',
-      'province',
-      'suburb',
       'slug',
       'isPublished',
       'approval_status',
@@ -1049,9 +1042,6 @@ async function ensureDeveloperIdentity(connection: AuthoritySqlConnection): Prom
       IDS.cataloguePublisher,
       'The Preview Residences',
       'residential',
-      'Johannesburg',
-      'Gauteng',
-      'Sandton',
       'homepage-preview-residences-v1',
       1,
       'approved',
@@ -1061,6 +1051,57 @@ async function ensureDeveloperIdentity(connection: AuthoritySqlConnection): Prom
       24,
       16,
       1950000,
+    ],
+  });
+  // Migration 0157 dropped developments.city/province/suburb/location_id; the
+  // development's place is its reviewed site assignment (migration 0155).
+  await ensureFixedRow({
+    connection,
+    table: 'development_place_assignments',
+    id: IDS.developmentPlaceAssignment,
+    columns: [
+      'id',
+      'development_id',
+      'phase_id',
+      'place_id',
+      'assignment_kind',
+      'review_state',
+      'evidence_reference',
+    ],
+    expected: {
+      id: IDS.developmentPlaceAssignment,
+      development_id: IDS.development,
+      phase_id: null,
+      place_id: DEVELOPMENT_SITE_PLACE_ID,
+      assignment_kind: 'site',
+      review_state: 'accepted',
+      evidence_reference: DEVELOPMENT_PLACE_EVIDENCE,
+    },
+    insertColumns: [
+      'id',
+      'development_id',
+      'phase_id',
+      'place_id',
+      'assignment_kind',
+      'review_state',
+      'evidence_reference',
+      'created_by_user_id',
+      'reviewed_by_user_id',
+      'reviewed_at',
+      'review_note',
+    ],
+    insertValues: [
+      IDS.developmentPlaceAssignment,
+      IDS.development,
+      null,
+      DEVELOPMENT_SITE_PLACE_ID,
+      'site',
+      'accepted',
+      DEVELOPMENT_PLACE_EVIDENCE,
+      USERS.developer.id,
+      USERS.agencyAdmin.id,
+      FIXTURE_TIMESTAMP,
+      'Machine-local canonical Place assignment for the homepage preview fixture.',
     ],
   });
   await ensureFixedRow({
