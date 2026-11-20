@@ -24,6 +24,24 @@ const OVERRIDES_PATH = 'data/place-centroid-overrides-gauteng-v0.1.json';
 const EXTERNAL_PATH = 'data/place-centroid-external-gauteng-v0.1.json';
 /** Tier 2b/3/4 and external matches further than this from the parent city are dropped. */
 export const MAX_PARENT_DISTANCE_KM = 60;
+/** External (Wikidata) centres must be this close to the parent city centre. */
+export const EXTERNAL_MAX_PARENT_DISTANCE_KM = 40;
+/** Without a known parent centre, a bridged/external centre must be this close to a sibling. */
+export const SIBLING_MAX_KM = 15;
+/** A derived parent centre needs at least this many internally centred children. */
+export const MIN_DERIVED_CHILDREN = 3;
+/** Hard sanity bound for every centre point. */
+export const GAUTENG_BOX = { latMin: -27.0, latMax: -25.0, lngMin: 26.9, lngMax: 29.2 };
+export const inGautengBox = (lat: number, lng: number) =>
+  lat >= GAUTENG_BOX.latMin &&
+  lat <= GAUTENG_BOX.latMax &&
+  lng >= GAUTENG_BOX.lngMin &&
+  lng <= GAUTENG_BOX.lngMax;
+const median = (values: number[]) => {
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+};
 
 /** Explicit city segment aliases (exact segment substitution, tier 2b only). */
 const CITY_SEGMENT_ALIASES: Record<string, readonly string[]> = {
@@ -101,8 +119,17 @@ export type BuildResult = {
   dropped: Array<{ naturalKey: string; method: MatchMethod; reason: string }>;
   externalRejected: Array<{ naturalKey: string; reason: string }>;
   externalApplied: number;
-  externalUnchecked: number;
+  boxRejected: Array<{ naturalKey: string; reason: string }>;
+  derivedParentCentres: DerivedParentCentre[];
 };
+
+export type DerivedParentCentre = {
+  naturalKey: string;
+  lat: number;
+  lng: number;
+  childCount: number;
+};
+type Point = { lat: number; lng: number };
 
 function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
   const rad = (degrees: number) => (degrees * Math.PI) / 180;
@@ -164,10 +191,21 @@ export function buildPlaceCentroids(input: {
   const taken = new Set<string>();
   const matched = new Map<string, { entry: UrlEntry; method: MatchMethod }>();
   const dropped: BuildResult['dropped'] = [];
-  const centreOf = (row: SourceRow) =>
-    typeof row.latitude === 'number' && typeof row.longitude === 'number'
-      ? { lat: row.latitude, lng: row.longitude }
-      : null;
+  const boxRejected: BuildResult['boxRejected'] = [];
+  const boxLogged = new Set<string>();
+  const logBox = (naturalKey: string, lat: number, lng: number) => {
+    if (boxLogged.has(naturalKey)) return;
+    boxLogged.add(naturalKey);
+    boxRejected.push({ naturalKey, reason: `outside the Gauteng box (${lat}, ${lng})` });
+  };
+  const centreOf = (row: SourceRow) => {
+    if (typeof row.latitude !== 'number' || typeof row.longitude !== 'number') return null;
+    if (!inGautengBox(row.latitude, row.longitude)) {
+      logBox(row.runtime_natural_key, row.latitude, row.longitude);
+      return null;
+    }
+    return { lat: row.latitude, lng: row.longitude };
+  };
   const rowByKey = new Map(rows.map(row => [row.runtime_natural_key, row]));
 
   const claim = (row: SourceRow, entry: UrlEntry | null | undefined, method: MatchMethod) => {
@@ -283,18 +321,26 @@ export function buildPlaceCentroids(input: {
 
   // The parent city of a URL entry: its path_context place, else an aliased city path,
   // restricted to cities that matched a runtime row. Centre may be null (no coordinates).
-  const cityByPlaceId = () => {
-    const map = new Map<string, { placeId: string; centre: { lat: number; lng: number } | null }>();
+  type Cities = Map<
+    string,
+    { placeId: string; naturalKey: string; centre: Point | null; own: boolean }
+  >;
+  const cityByPlaceId = (derived?: ReadonlyMap<string, DerivedParentCentre>): Cities => {
+    const map: Cities = new Map();
     for (const [key, hit] of matched) {
       if (hit.entry.search_scope !== 'metro_city') continue;
+      const own = centreOf(rowByKey.get(key)!);
+      const fallback = derived?.get(hit.entry.place_id);
       map.set(hit.entry.place_id, {
         placeId: hit.entry.place_id,
-        centre: centreOf(rowByKey.get(key)!),
+        naturalKey: key,
+        centre: own ?? (fallback ? { lat: fallback.lat, lng: fallback.lng } : null),
+        own: own !== null,
       });
     }
     return map;
   };
-  const parentCityOf = (entry: UrlEntry, cities: ReturnType<typeof cityByPlaceId>) => {
+  const parentCityOf = (entry: UrlEntry, cities: Cities) => {
     const context = entry.path_context;
     if (!context) return null;
     const candidates: Array<string | undefined> = [context.place_id];
@@ -310,7 +356,53 @@ export function buildPlaceCentroids(input: {
   // Tier 4: a runtime city-level row with coordinates supplies the centre of the one URL
   // locality with the same slug and name, provided the URL parent city centre is known and
   // the row is within MAX_PARENT_DISTANCE_KM of it. One URL entry per runtime row.
-  const cities = cityByPlaceId();
+  // Internal localities with a centre (tiers so far, never external), as {entry, centre}.
+  const internalCentred = () => {
+    const list: Array<{ entry: UrlEntry; centre: Point }> = [];
+    for (const [key, hit] of matched) {
+      if (hit.entry.search_scope !== 'locality') continue;
+      const centre = centreOf(rowByKey.get(key)!);
+      if (centre) list.push({ entry: hit.entry, centre });
+    }
+    return list;
+  };
+  // A city row without coordinates gets a derived centre: the median of its internally
+  // centred child localities, only when there are at least MIN_DERIVED_CHILDREN of them.
+  const deriveParentCentres = () => {
+    const base = cityByPlaceId();
+    const groups = new Map<string, Point[]>();
+    for (const { entry, centre } of internalCentred()) {
+      const parent = parentCityOf(entry, base);
+      if (!parent || parent.own) continue;
+      groups.set(parent.placeId, [...(groups.get(parent.placeId) ?? []), centre]);
+    }
+    const derived = new Map<string, DerivedParentCentre>();
+    for (const [placeId, points] of groups) {
+      if (points.length < MIN_DERIVED_CHILDREN) continue;
+      derived.set(placeId, {
+        naturalKey: base.get(placeId)!.naturalKey,
+        lat: median(points.map(point => point.lat)),
+        lng: median(points.map(point => point.lng)),
+        childCount: points.length,
+      });
+    }
+    return derived;
+  };
+  // Fallback when the parent centre is unknown: within SIBLING_MAX_KM of an internally
+  // centred sibling locality under the same URL parent.
+  const nearestSiblingKm = (entry: UrlEntry, point: Point) => {
+    const parentId = entry.path_context?.place_id;
+    if (!parentId) return null;
+    let best: number | null = null;
+    for (const sibling of internalCentred()) {
+      if (sibling.entry.place_id === entry.place_id) continue;
+      if (sibling.entry.path_context?.place_id !== parentId) continue;
+      const km = haversineKm(point, sibling.centre);
+      if (best === null || km < best) best = km;
+    }
+    return best;
+  };
+  let cities = cityByPlaceId(deriveParentCentres());
   const localityBySlugName = new Map<string, UrlEntry[]>();
   for (const entry of entries) {
     if (entry.search_scope !== 'locality') continue;
@@ -325,18 +417,33 @@ export function buildPlaceCentroids(input: {
     );
     if (candidates.length !== 1) continue;
     const parent = parentCityOf(candidates[0], cities);
-    if (!parent?.centre) continue;
-    const km = haversineKm(own, parent.centre);
-    if (km > MAX_PARENT_DISTANCE_KM) {
-      dropped.push({
-        naturalKey: row.runtime_natural_key,
-        method: 'tier4_level_bridge',
-        reason: `${km.toFixed(1)} km from URL parent city centroid`,
-      });
-      continue;
+    if (parent?.centre) {
+      const km = haversineKm(own, parent.centre);
+      if (km > MAX_PARENT_DISTANCE_KM) {
+        dropped.push({
+          naturalKey: row.runtime_natural_key,
+          method: 'tier4_level_bridge',
+          reason: `${km.toFixed(1)} km from URL parent city centroid`,
+        });
+        continue;
+      }
+    } else {
+      const sibling = nearestSiblingKm(candidates[0], own);
+      if (sibling === null || sibling > SIBLING_MAX_KM) {
+        dropped.push({
+          naturalKey: row.runtime_natural_key,
+          method: 'tier4_level_bridge',
+          reason: 'no parent centre and no sibling locality within 15 km',
+        });
+        continue;
+      }
     }
     claim(row, candidates[0], 'tier4_level_bridge');
   }
+
+  // Re-derive with tier 4 children included (still internal only) for the external checks.
+  const derivedParentCentres = deriveParentCentres();
+  cities = cityByPlaceId(derivedParentCentres);
 
   const parentOfMatched = (hit: { entry: UrlEntry; method: MatchMethod }, row: SourceRow) => {
     const parentKey = row.runtime_parent_natural_key;
@@ -372,7 +479,6 @@ export function buildPlaceCentroids(input: {
   // External tier (last): fills places that still have no centre. Internal data always wins.
   const externalRejected: BuildResult['externalRejected'] = [];
   let externalApplied = 0;
-  let externalUnchecked = 0;
   const outputByPlaceId = new Map(output.map(item => [item.canonicalPlaceId, item]));
   for (const ext of input.external?.entries ?? []) {
     const entry = byPath.get(`/${ext.naturalKey}`);
@@ -389,18 +495,32 @@ export function buildPlaceCentroids(input: {
       continue;
     }
     if (taken.has(entry.place_id) && !existing) continue;
+    if (!inGautengBox(ext.lat, ext.lng)) {
+      const reason = `outside the Gauteng box (${ext.lat}, ${ext.lng})`;
+      externalRejected.push({ naturalKey: ext.naturalKey, reason });
+      boxRejected.push({ naturalKey: ext.naturalKey, reason });
+      continue;
+    }
     const parent = parentCityOf(entry, cities);
+    const point = { lat: ext.lat, lng: ext.lng };
     if (parent?.centre) {
-      const km = haversineKm({ lat: ext.lat, lng: ext.lng }, parent.centre);
-      if (km > MAX_PARENT_DISTANCE_KM) {
+      const km = haversineKm(point, parent.centre);
+      if (km > EXTERNAL_MAX_PARENT_DISTANCE_KM) {
         externalRejected.push({
           naturalKey: ext.naturalKey,
-          reason: `${km.toFixed(1)} km from parent city centroid`,
+          reason: `${km.toFixed(1)} km from parent city centre`,
         });
         continue;
       }
     } else {
-      externalUnchecked += 1;
+      const sibling = nearestSiblingKm(entry, point);
+      if (sibling === null || sibling > SIBLING_MAX_KM) {
+        externalRejected.push({
+          naturalKey: ext.naturalKey,
+          reason: 'no parent centre and no internally centred sibling within 15 km',
+        });
+        continue;
+      }
     }
     externalApplied += 1;
     if (existing) {
@@ -431,7 +551,8 @@ export function buildPlaceCentroids(input: {
     dropped,
     externalRejected,
     externalApplied,
-    externalUnchecked,
+    boxRejected,
+    derivedParentCentres: [...derivedParentCentres.values()],
   };
 }
 
@@ -467,6 +588,7 @@ function main() {
           source: external.source,
         },
         generatedAt: new Date().toISOString(),
+        derivedParentCentres: result.derivedParentCentres,
         entries: result.output,
       },
       null,
@@ -494,7 +616,8 @@ function main() {
         matchedWithoutCoordinates: result.output.filter(item => item.lat === null).length,
         droppedBySanity: result.dropped,
         externalRejected: result.externalRejected,
-        externalWithoutParentCheck: result.externalUnchecked,
+        boxRejected: result.boxRejected,
+        derivedParentCentres: result.derivedParentCentres,
         unresolvedNaturalKeys: result.unresolved.map(row => row.runtime_natural_key),
         gautengLocalities: localities.length,
         localitiesWithoutCentre: missing.length,
