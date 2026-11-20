@@ -196,20 +196,27 @@ export function validateMediaFile(
   const type = (file.type || '').toLowerCase();
   if (kind === 'pdf') {
     if (SPREADSHEET_EXT.test(file.name) || SPREADSHEET_TYPE.test(type)) return SPREADSHEET_MESSAGE;
-    if (type !== PDF_TYPE) return `${file.name} is not a PDF. Documents must be PDF files.`;
+    if (type !== PDF_TYPE) return 'not a PDF; documents must be PDF files.';
   } else if (kind === 'image') {
     if (!IMAGE_TYPES.includes(type)) {
-      return `${file.name} is not a supported photo. Use JPG, PNG, WebP, GIF or AVIF.`;
+      return 'not a supported photo; use JPG, PNG, WebP, GIF or AVIF.';
     }
   } else if (!VIDEO_TYPES.includes(type)) {
-    return `${file.name} is not a supported video. Use MP4, WebM or MOV.`;
+    return 'not a supported video; use MP4, WebM or MOV.';
   }
-  if (!Number.isFinite(file.size) || file.size <= 0) return `${file.name} is empty.`;
+  if (!Number.isFinite(file.size) || file.size <= 0) return 'the file is empty.';
   const cap = MEDIA_MAX_BYTES[kind];
-  if (file.size > cap) {
-    return `${file.name} is ${(file.size / (1024 * 1024)).toFixed(1)} MB. The limit is ${mb(cap)} MB.`;
-  }
+  if (file.size > cap) return `too large (max ${mb(cap)} MB).`;
   return null;
+}
+
+/** "<file name>: <reason>" for the inline error under a slot, or null when the file is fine. */
+export function rejectionMessage(
+  file: { name: string; type: string; size: number },
+  kind: MediaKind,
+): string | null {
+  const problem = validateMediaFile(file, kind);
+  return problem ? `${file.name}: ${problem}` : null;
 }
 
 export const sizeHint = (kind: MediaKind): string =>

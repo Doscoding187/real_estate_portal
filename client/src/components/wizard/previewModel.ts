@@ -161,7 +161,13 @@ export function buildPreviewModel(
     unitTypeCount: unitTypes.length,
     highlights: highlights.slice(0, PREVIEW_CARD_HIGHLIGHTS),
     moreHighlights: Math.max(0, highlights.length - PREVIEW_CARD_HIGHLIGHTS),
-    tags,
+    // Each label once: a fact badge is dropped when a visible highlight chip says the same.
+    tags: tags.filter(
+      tag =>
+        !highlights
+          .slice(0, PREVIEW_CARD_HIGHLIGHTS)
+          .some(h => h.trim().toLowerCase() === tag.trim().toLowerCase()),
+    ),
     transactionLabel:
       d.transactionType === 'for_sale' || d.transactionType === 'sale'
         ? 'For sale'

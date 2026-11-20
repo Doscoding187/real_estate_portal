@@ -8,6 +8,7 @@ import {
   documentSlotOf,
   hasCoverPhoto,
   photosForSlot,
+  rejectionMessage,
   sizeHint,
   slotForPhoto,
   sortDocuments,
@@ -75,7 +76,8 @@ describe('size and type checks', () => {
   it('rejects oversize files and accepts files at the cap', () => {
     const img = { name: 'a.jpg', type: 'image/jpeg' };
     expect(validateMediaFile({ ...img, size: 15 * MB }, 'image')).toBeNull();
-    expect(validateMediaFile({ ...img, size: 15 * MB + 1 }, 'image')).toMatch(/limit is 15 MB/);
+    expect(validateMediaFile({ ...img, size: 15 * MB + 1 }, 'image')).toBe('too large (max 15 MB).');
+    expect(rejectionMessage({ ...img, size: 15 * MB + 1 }, 'image')).toBe('a.jpg: too large (max 15 MB).');
     expect(validateMediaFile({ name: 'v.mp4', type: 'video/mp4', size: 80 * MB + 1 }, 'video')).toMatch(/80 MB/);
     expect(validateMediaFile({ name: 'b.pdf', type: 'application/pdf', size: 25 * MB + 1 }, 'pdf')).toMatch(/25 MB/);
     expect(validateMediaFile({ ...img, size: 0 }, 'image')).toMatch(/empty/);

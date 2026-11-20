@@ -19,7 +19,7 @@ import {
   sizeHint,
   slotById,
   sortDocuments,
-  validateMediaFile,
+  rejectionMessage,
   type DocumentSlotId,
   type MediaKind,
   type PhotoSlotId,
@@ -55,6 +55,7 @@ export function MediaPhase() {
   const presignCuratedUpload = trpc.upload.presign.useMutation();
 
   const [busy, setBusy] = useState<SlotKey | null>(null);
+  const [slotErrors, setSlotErrors] = useState<Partial<Record<SlotKey, string[]>>>({});
   const inputs = useRef<Record<string, HTMLInputElement | null>>({});
 
   // Source of truth: stepData.development_media; fall back to the wizard data
@@ -138,12 +139,15 @@ export function MediaPhase() {
     const chosen = single ? files.slice(0, 1) : files;
 
     // Client-side checks use the same limits as the server.
+    // Rejections stay visible under the slot until the next good upload there.
     const accepted: File[] = [];
+    const problems: string[] = [];
     for (const file of chosen) {
-      const problem = validateMediaFile(file, kind);
-      if (problem) toast.error(problem);
+      const problem = rejectionMessage(file, kind);
+      if (problem) problems.push(problem);
       else accepted.push(file);
     }
+    setSlotErrors(prev => ({ ...prev, [slot]: problems.length ? problems : undefined }));
     if (accepted.length === 0) return;
 
     setBusy(slot);
@@ -230,6 +234,15 @@ export function MediaPhase() {
     />
   );
 
+  const slotError = (slot: SlotKey) =>
+    slotErrors[slot]?.length ? (
+      <div role="alert" data-testid={`media-error-${slot}`} className="text-xs text-red-700">
+        {slotErrors[slot]!.map(message => (
+          <p key={message}>{message}</p>
+        ))}
+      </div>
+    ) : null;
+
   const addButton = (slot: SlotKey, label: string) => (
     <button
       type="button"
@@ -310,8 +323,9 @@ export function MediaPhase() {
                   ))}
                   {slot.max === 1 && items.length >= 1
                     ? addButton(slot.id, 'Replace')
-                    : addButton(slot.id, '+ Add')}
+                    : addButton(slot.id, 'Add')}
                 </div>
+                {slotError(slot.id)}
                 {hiddenInput(slot.id, IMAGE_ACCEPT, slot.max !== 1)}
               </div>
             );
@@ -348,6 +362,7 @@ export function MediaPhase() {
             ) : null}
             {addButton('video', videos[0] ? 'Replace' : 'Upload video')}
           </div>
+          <div className="w-full">{slotError('video')}</div>
           {hiddenInput('video', VIDEO_ACCEPT, false)}
         </div>
       </WizardSection>
@@ -385,6 +400,7 @@ export function MediaPhase() {
                   ) : null}
                   {addButton(slot.id, doc ? 'Replace PDF' : 'Upload PDF')}
                 </div>
+                <div className="w-full">{slotError(slot.id)}</div>
                 {hiddenInput(slot.id, PDF_TYPE, false)}
               </div>
             );

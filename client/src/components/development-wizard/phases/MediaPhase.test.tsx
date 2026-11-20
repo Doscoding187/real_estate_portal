@@ -111,10 +111,33 @@ describe('MediaPhase guided slots', () => {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       }),
     );
-    await waitFor(() => expect(h.toastError).toHaveBeenCalled());
-    expect(h.toastError.mock.calls[0][0]).toMatch(/Spreadsheets stay private/);
+    const alert = await screen.findByTestId('media-error-price_list');
+    expect(alert.getAttribute('role')).toBe('alert');
+    expect(alert.textContent).toBe(
+      'prices.xlsx: Spreadsheets stay private; export a PDF to show it to buyers.',
+    );
     expect(h.reserve).not.toHaveBeenCalled();
     expect(h.saved).toHaveLength(0);
+  });
+
+  it('shows a persistent inline error for an oversize photo, cleared by the next good upload', async () => {
+    render(<MediaPhase />);
+    const big = new File(['x'], 'huge.jpg', { type: 'image/jpeg' });
+    Object.defineProperty(big, 'size', { value: 15 * 1024 * 1024 + 1 });
+    pick('amenities', big);
+    const alert = await screen.findByTestId('media-error-amenities');
+    expect(alert.textContent).toBe('huge.jpg: too large (max 15 MB).');
+    expect(h.reserve).not.toHaveBeenCalled();
+    pick('amenities', new File(['x'], 'pool.jpg', { type: 'image/jpeg' }));
+    await waitFor(() => expect(h.saved.length).toBe(1));
+    await waitFor(() => expect(screen.queryByTestId('media-error-amenities')).toBeNull());
+  });
+
+  it('labels the buttons without a doubled plus', () => {
+    render(<MediaPhase />);
+    expect(screen.getAllByRole('button', { name: 'Add' }).length).toBe(5);
+    expect(screen.queryByText(/\+ Add/)).toBeNull();
+    expect(screen.getAllByRole('button', { name: 'Upload PDF' }).length).toBe(4);
   });
 
   it('stores a PDF with its document type', async () => {
