@@ -207,6 +207,7 @@ describe('LocationPhase', () => {
     render(<LocationPhase />);
     const location = store().getWizardData().location as any;
     expect(location.suburbPlaceId ?? null).toBeNull();
+    // The picker was remounted, so no stale typed text is left behind.
     expect(screen.getByRole('alert')).toHaveTextContent('Choose the suburb from the list');
   });
 

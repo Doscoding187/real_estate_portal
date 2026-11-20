@@ -20,6 +20,7 @@ import {
   normalizeDevelopmentRootPath,
 } from './developmentRouteAuthority';
 import { validatePersistedSubmissionReadiness } from './developmentSubmissionReadiness';
+import { loadSuburbReadinessContext } from './developmentPlaceAssignmentService';
 import { publicDevelopmentEligibilityConditions } from './publicDevelopmentEligibility';
 import { DEVELOPMENT_SUPERSESSION_OPEN_STATUSES } from './developmentSupersessionPolicy';
 
@@ -418,7 +419,11 @@ export async function activateDevelopmentSupersession(input: {
       .select()
       .from(unitTypes)
       .where(eq(unitTypes.developmentId, replacement.id));
-    const blockers = validatePersistedSubmissionReadiness(replacement, replacementUnits);
+    const blockers = validatePersistedSubmissionReadiness(
+      replacement,
+      replacementUnits,
+      await loadSuburbReadinessContext(tx, replacement),
+    );
     if (blockers.length > 0) {
       throw new TRPCError({
         code: 'BAD_REQUEST',

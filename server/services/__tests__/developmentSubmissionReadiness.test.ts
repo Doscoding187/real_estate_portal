@@ -208,8 +208,8 @@ describe('development persisted submission readiness', () => {
 
     expect(service).toContain("from './developmentSubmissionReadiness'");
     expect(router).toContain("from './services/developmentSubmissionReadiness'");
-    expect(service).toContain(
-      'validatePersistedSubmissionReadiness(ownedDevelopment, persistedUnits)',
+    expect(service).toMatch(
+      /validatePersistedSubmissionReadiness\(\s*ownedDevelopment,\s*persistedUnits,/,
     );
     expect(router).toContain('validatePersistedSubmissionReadiness(');
   });

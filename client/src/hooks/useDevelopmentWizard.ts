@@ -819,7 +819,6 @@ const DEVELOPMENT_WIZARD_LOCATION_FIELDS = [
   // Derived from the map pin (never hand-picked): the suburb buyers see.
   'suburbPlaceId',
   'suburbLabel',
-  'suburbAssignedPlaceId',
   'gpsAccuracy',
   'noOfficialStreet',
 ] as const;

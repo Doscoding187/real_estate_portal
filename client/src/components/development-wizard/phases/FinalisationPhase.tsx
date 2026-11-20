@@ -20,7 +20,6 @@ import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { usePublisherContext } from '@/hooks/usePublisherContext';
 import { buildDevelopmentSubmitPayload } from '@/lib/developmentSubmitPayload';
-import { suburbAssignmentRequest } from '@/lib/wizardLocationCostsAmenities';
 import { CheckCircle2, AlertCircle, AlertTriangle, Edit2, Upload, Calendar } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import {
@@ -118,7 +117,6 @@ export function FinalisationPhase({
   const createPublisherDevelopment = trpc.superAdminPublisher.createDevelopment.useMutation();
   const updatePublisherDevelopment = trpc.superAdminPublisher.updateDevelopment.useMutation();
   const publishPublisherDevelopment = trpc.superAdminPublisher.publishDevelopment.useMutation();
-  const assignSuburb = trpc.admin.adminReviewDevelopmentPlaceAssignment.useMutation();
 
   // Run validation
   const validationResult = validateForPublish();
@@ -257,31 +255,8 @@ export function FinalisationPhase({
           cataloguePublisherId: publisherId,
           developmentId,
         });
-        // The suburb chosen in the Location step (from our canonical geography) is
-        // recorded through the existing super-admin Place review (accepted "site"
-        // assignment). The development is already saved and published, so a
-        // failure is reported with a Retry, not fatal.
-        const suburbRequest = suburbAssignmentRequest(developmentId, wizardData.location);
-        if (suburbRequest) {
-          // replaceExisting makes the call idempotent: the same Place is skipped,
-          // a different one withdraws the old accepted site assignment first.
-          const request = { ...suburbRequest, replaceExisting: true as const };
-          const record = async (): Promise<void> => {
-            try {
-              await assignSuburb.mutateAsync(request);
-              (store as any).saveWorkflowStepData?.('location', {
-                suburbAssignedPlaceId: request.placeId,
-              });
-            } catch (assignError: any) {
-              console.warn('[FinalisationPhase] Suburb assignment failed:', assignError);
-              toast.error(
-                'Published, but the suburb could not be recorded. Retry, or assign it in Development oversight.',
-                { action: { label: 'Retry', onClick: () => void record() } },
-              );
-            }
-          };
-          await record();
-        }
+        // The suburb chosen in the Location step travels in estateSpecs and is
+        // recorded by the server in the same transaction as publication.
       } else {
         await publishDevelopment.mutateAsync({ id: developmentId });
       }

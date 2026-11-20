@@ -370,83 +370,20 @@ describe('FinalisationPhase', () => {
     });
   });
 
-  it('records the chosen suburb as the accepted site Place assignment', async () => {
+  it('curated publish makes no client-side Place assignment: the server records the suburb atomically', async () => {
     testState.setActor({ id: 2, role: 'super_admin' }, { cataloguePublisherId: 44 });
-    testState.assignSuburbMock.mockResolvedValue({ success: true });
     const original = testState.wizardState.getWizardData;
     testState.wizardState.getWizardData = () => ({
       ...original(),
-      location: {
-        ...original().location,
-        suburbPlaceId: 'place_north_riding',
-        suburbLabel: 'North Riding',
-      },
-    });
-
-    try {
-      render(<FinalisationPhase />);
-      fireEvent.click(screen.getByRole('button', { name: 'Publish Development' }));
-      fireEvent.click(screen.getByRole('button', { name: 'Publish Development' }));
-
-      await waitFor(() => expect(testState.assignSuburbMock).toHaveBeenCalledTimes(1));
-      expect(testState.assignSuburbMock).toHaveBeenCalledWith({
-        developmentId: 456,
-        phaseId: null,
-        placeId: 'place_north_riding',
-        evidenceReference: expect.stringContaining('chosen from our canonical geography'),
-        replaceExisting: true,
-      });
-      await waitFor(() =>
-        expect(testState.saveStepDataMock).toHaveBeenCalledWith('location', {
-          suburbAssignedPlaceId: 'place_north_riding',
-        }),
-      );
-      expect(testState.navigateMock).toHaveBeenCalledWith('/admin/publisher');
-    } finally {
-      testState.wizardState.getWizardData = original;
-    }
-  });
-
-  it('a failed assignment after publish offers Retry, which calls it again and records it', async () => {
-    testState.setActor({ id: 2, role: 'super_admin' }, { cataloguePublisherId: 44 });
-    testState.assignSuburbMock.mockRejectedValueOnce(new Error('boom')).mockResolvedValue({ success: true });
-    const original = testState.wizardState.getWizardData;
-    testState.wizardState.getWizardData = () => ({
-      ...original(),
-      location: { ...original().location, suburbPlaceId: 'place_north_riding' },
+      location: { ...original().location, suburbPlaceId: 'pl-place-01-000000000000000000000001' },
     });
     try {
       render(<FinalisationPhase />);
       fireEvent.click(screen.getByRole('button', { name: 'Publish Development' }));
       fireEvent.click(screen.getByRole('button', { name: 'Publish Development' }));
-      await waitFor(() => expect(testState.toastErrorMock).toHaveBeenCalled());
-      const [message, options] = testState.toastErrorMock.mock.calls.at(-1)!;
-      expect(message).toMatch(/could not be recorded/);
-      expect(options.action.label).toBe('Retry');
-      options.action.onClick();
-      await waitFor(() => expect(testState.assignSuburbMock).toHaveBeenCalledTimes(2));
-      await waitFor(() =>
-        expect(testState.saveStepDataMock).toHaveBeenCalledWith('location', {
-          suburbAssignedPlaceId: 'place_north_riding',
-        }),
-      );
-    } finally {
-      testState.wizardState.getWizardData = original;
-    }
-  });
-
-  it('a developer never records a Place assignment', async () => {
-    const original = testState.wizardState.getWizardData;
-    testState.wizardState.getWizardData = () => ({
-      ...original(),
-      location: { ...original().location, suburbPlaceId: 'place_north_riding' },
-    });
-    try {
-      render(<FinalisationPhase />);
-      fireEvent.click(screen.getByRole('button', { name: /submit for review/i }));
-      fireEvent.click(screen.getByRole('button', { name: /confirm & submit/i }));
-      await waitFor(() => expect(testState.publishDevelopmentMock).toHaveBeenCalledTimes(1));
+      await waitFor(() => expect(testState.publishPublisherDevelopmentMock).toHaveBeenCalledTimes(1));
       expect(testState.assignSuburbMock).not.toHaveBeenCalled();
+      expect(testState.toastErrorMock).not.toHaveBeenCalled();
     } finally {
       testState.wizardState.getWizardData = original;
     }

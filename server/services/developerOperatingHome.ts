@@ -25,6 +25,7 @@ import {
 } from './developmentInventorySummary';
 import {
   listDevelopmentPlaceGeography,
+  suburbReadinessContextFromGeography,
   type DevelopmentPlaceGeography,
 } from './developmentPlaceAssignmentService';
 import {
@@ -346,6 +347,7 @@ export function buildDevelopmentOperatingSummary(input: {
   const blockers: DevelopmentHomeReadinessBlocker[] = validatePersistedSubmissionReadiness(
     input.development,
     input.persistedUnitTypes,
+    suburbReadinessContextFromGeography(input.development, input.geography),
   ).map(blocker => ({ ...blocker, severity: 'critical' as const }));
   const inventory = buildDevelopmentHomeInventory(
     input.development,
