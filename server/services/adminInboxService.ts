@@ -99,8 +99,43 @@ async function requireDb() {
   return db;
 }
 
-export async function loadAdminInbox(): Promise<AdminInboxItem[]> {
+export type AdminInboxResult = {
+  items: AdminInboxItem[];
+  /** True number of pending rows per source (same definitions as the sidebar badges). */
+  totals: Record<AdminInboxKind, number>;
+  /** Rows returned per source at most. */
+  cap: number;
+};
+
+export async function loadAdminInbox(): Promise<AdminInboxResult> {
   const db = await requireDb();
+  const countOf = async (q: Promise<Array<{ count: number }>>) => Number((await q)[0]?.count ?? 0);
+  const totalsPromise = Promise.all([
+    countOf(
+      db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(billingPayments)
+        .where(inArray(billingPayments.state, ['submitted', 'under_review'])),
+    ),
+    countOf(
+      db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(listings)
+        .where(eq(listings.status, 'pending_review')),
+    ),
+    countOf(
+      db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(developments)
+        .where(eq(developments.approvalStatus, 'pending')),
+    ),
+    countOf(
+      db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(agents)
+        .where(eq(agents.status, 'pending')),
+    ),
+  ]);
   const [payments, pendingListings, pendingDevelopments, pendingAgents] = await Promise.all([
     db
       .select({
@@ -192,7 +227,12 @@ export async function loadAdminInbox(): Promise<AdminInboxItem[]> {
       href: '/admin/approvals?tab=agents',
     });
   }
-  return sortInbox(items);
+  const [tPay, tListing, tDev, tAgent] = await totalsPromise;
+  return {
+    items: sortInbox(items),
+    totals: { payment: tPay, listing: tListing, development: tDev, agent: tAgent },
+    cap: PER_SOURCE_LIMIT,
+  };
 }
 
 export async function loadRecentAdminActivity(limit = 8): Promise<AdminActivityItem[]> {
@@ -208,7 +248,8 @@ export async function loadRecentAdminActivity(limit = 8): Promise<AdminActivityI
     })
     .from(auditLogs)
     .leftJoin(users, eq(auditLogs.userId, users.id))
-    .orderBy(desc(auditLogs.createdAt), desc(auditLogs.id))
+    // Newest first by the indexed primary key (ids increase with time); no created_at index.
+    .orderBy(desc(auditLogs.id))
     .limit(Math.min(Math.max(limit, 1), 20));
   return rows.flatMap(row => {
     const createdAt = toIsoUtc(row.createdAt);
@@ -216,6 +257,11 @@ export async function loadRecentAdminActivity(limit = 8): Promise<AdminActivityI
   });
 }
 
+/**
+ * Bounded by an 8-week WHERE window, which is fine at pilot volume. Post-launch follow-up:
+ * add created_at indexes (users, leads, billing_payments.reviewed_at). Launch is pinned at
+ * migration head 0197, so no index is added here.
+ */
 export async function loadWeeklyGrowth(): Promise<AdminWeeklyPoint[]> {
   const db = await requireDb();
   const now = new Date();

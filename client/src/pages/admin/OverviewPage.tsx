@@ -5,13 +5,16 @@ import { useLocation } from 'wouter';
 import GrowthChart from './dashboard/GrowthChart';
 import {
   ageTag,
+  INBOX_SOURCE_PAGES,
   buildInboxTabs,
+  cappedSources,
   filterInbox,
   overdueCount,
   sortInboxItems,
   type AgeLevel,
   type InboxItem,
   type InboxTabId,
+  type InboxTotals,
 } from './dashboard/inboxModel';
 
 const card = 'bg-white border border-slate-200 rounded-lg';
@@ -66,7 +69,7 @@ const OverviewPage: React.FC = () => {
 
   const pulse = [
     { label: 'EFT proofs waiting', value: pulseValue(launch, launch.data?.eftAwaitingReview) },
-    { label: 'Paid this month', value: pulseValue(launch, launch.data?.approvedThisMonthCount) },
+    { label: 'Verified payments', value: pulseValue(launch, launch.data?.approvedThisMonthCount) },
     {
       label: 'Approved amount',
       value: pulseValue(launch, launch.data?.approvedThisMonthRand, formatCurrency),
@@ -79,10 +82,13 @@ const OverviewPage: React.FC = () => {
     { label: 'Leads, 30 days', value: pulseValue(launch, launch.data?.newLeads30d) },
   ];
 
-  const items: InboxItem[] = sortInboxItems((inbox.data ?? []) as InboxItem[]);
-  const tabs = buildInboxTabs(items);
+  const items: InboxItem[] = sortInboxItems((inbox.data?.items ?? []) as InboxItem[]);
+  const totals = inbox.data?.totals as InboxTotals | undefined;
+  const tabs = buildInboxTabs(items, totals);
+  const totalWaiting = tabs[0].count;
   const visible = filterInbox(items, tab);
   const overdue = overdueCount(items, now);
+  const capped = cappedSources(items, totals, tab);
 
   const quick = [
     { label: 'New curated development', icon: Plus, href: '/admin/publisher/developments/new' },
@@ -107,9 +113,9 @@ const OverviewPage: React.FC = () => {
               ? 'Checking what needs you...'
               : inbox.isError
                 ? 'Could not check what needs you.'
-                : items.length === 0
+                : totalWaiting === 0
                   ? 'Nothing is waiting on you right now.'
-                  : `${items.length} ${items.length === 1 ? 'thing needs' : 'things need'} you today${
+                  : `${totalWaiting} ${totalWaiting === 1 ? 'thing needs' : 'things need'} you today${
                       overdue ? `, ${overdue} waiting more than a day.` : '.'
                     }`}
           </p>
@@ -181,6 +187,21 @@ const OverviewPage: React.FC = () => {
               })}
             </ul>
           )}
+          {capped.map(c => (
+            <p
+              key={c.kind}
+              className="px-5 py-2 text-sm text-amber-900 bg-amber-50 border-t border-amber-100"
+            >
+              Showing {c.shown} of {c.total} &mdash;{' '}
+              <button
+                type="button"
+                onClick={() => setLocation(INBOX_SOURCE_PAGES[c.kind].href)}
+                className={`underline font-semibold ${focus}`}
+              >
+                open {INBOX_SOURCE_PAGES[c.kind].label} for all
+              </button>
+            </p>
+          ))}
           <p className="px-5 py-3 text-sm text-slate-600 bg-slate-50">
             Buyer enquiries for a development or listing are not here: they sit in that
             development&rsquo;s or publisher&rsquo;s Leads tab. Support requests and applications
@@ -263,7 +284,7 @@ const OverviewPage: React.FC = () => {
         <div className={`${card} p-5`}>
           <h2 className="text-base font-semibold text-slate-900">Are we growing?</h2>
           <p className="text-sm text-slate-600 mt-1 mb-3">
-            Per week, last 8 weeks. Paid accounts are verified payments.
+            Per week, last 8 weeks. Verified payments are counted per payment, not per account.
           </p>
           {growth.isLoading ? (
             <Skeleton className="h-48" />

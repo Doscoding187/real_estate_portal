@@ -49,14 +49,48 @@ export function sortInboxItems(items: InboxItem[]): InboxItem[] {
   );
 }
 
-export function buildInboxTabs(items: InboxItem[]): InboxTab[] {
+export type InboxTotals = Record<InboxKind, number>;
+
+const sumTotals = (totals: InboxTotals, kinds: InboxKind[]) =>
+  kinds.reduce((sum, kind) => sum + (totals[kind] ?? 0), 0);
+
+/** Tab counts use the true totals per source, not the capped rows. */
+export function buildInboxTabs(items: InboxItem[], totals?: InboxTotals): InboxTab[] {
   const countFor = (id: Exclude<InboxTabId, 'all'>) =>
-    items.filter(item => INBOX_TAB_SOURCES[id].includes(item.kind)).length;
+    totals
+      ? sumTotals(totals, INBOX_TAB_SOURCES[id])
+      : items.filter(item => INBOX_TAB_SOURCES[id].includes(item.kind)).length;
+  const payments = countFor('payments');
+  const approvals = countFor('approvals');
   return [
-    { id: 'all', label: 'All', count: items.length },
-    { id: 'payments', label: 'Payments', count: countFor('payments') },
-    { id: 'approvals', label: 'Approvals', count: countFor('approvals') },
+    { id: 'all', label: 'All', count: totals ? payments + approvals : items.length },
+    { id: 'payments', label: 'Payments', count: payments },
+    { id: 'approvals', label: 'Approvals', count: approvals },
   ];
+}
+
+export const INBOX_SOURCE_PAGES: Record<InboxKind, { label: string; href: string }> = {
+  payment: { label: 'Finance', href: '/admin/finance' },
+  listing: { label: 'Approvals, Listings', href: '/admin/approvals?tab=listings' },
+  development: { label: 'Approvals, Developments', href: '/admin/approvals?tab=developments' },
+  agent: { label: 'Approvals, Agents', href: '/admin/approvals?tab=agents' },
+};
+
+/** Sources whose true total is larger than the rows returned. */
+export function cappedSources(
+  items: InboxItem[],
+  totals: InboxTotals | undefined,
+  tab: InboxTabId,
+): { kind: InboxKind; shown: number; total: number }[] {
+  if (!totals) return [];
+  const kinds = tab === 'all' ? (Object.keys(totals) as InboxKind[]) : INBOX_TAB_SOURCES[tab];
+  return kinds
+    .map(kind => ({
+      kind,
+      shown: items.filter(item => item.kind === kind).length,
+      total: totals[kind] ?? 0,
+    }))
+    .filter(s => s.total > s.shown);
 }
 
 export function filterInbox(items: InboxItem[], tab: InboxTabId): InboxItem[] {
@@ -79,7 +113,7 @@ export type GrowthMetric = 'signups' | 'paidAccounts' | 'enquiries';
 
 export const GROWTH_METRICS: { id: GrowthMetric; label: string; noun: string; color: string }[] = [
   { id: 'signups', label: 'Sign-ups', noun: 'sign-ups', color: '#1D4ED8' },
-  { id: 'paidAccounts', label: 'Paid accounts', noun: 'paid accounts', color: '#047857' },
+  { id: 'paidAccounts', label: 'Verified payments', noun: 'verified payments', color: '#047857' },
   { id: 'enquiries', label: 'Enquiries', noun: 'enquiries', color: '#C2410C' },
 ];
 

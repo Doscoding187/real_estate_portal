@@ -31,7 +31,13 @@ vi.mock('@/lib/trpc', () => ({
   },
 }));
 
-const hoursAgo = (h: number) => new Date(Date.now() - h * 3600 * 1000).toISOString();
+const inboxOf = (items: any[]) => {
+  const totals = { payment: 0, listing: 0, development: 0, agent: 0 } as Record<string, number>;
+  for (const i of items) totals[i.kind] += 1;
+  return { items, totals, cap: 50 };
+};
+
+const hoursAgo =(h: number) => new Date(Date.now() - h * 3600 * 1000).toISOString();
 
 const weeks = Array.from({ length: 8 }, (_, i) => ({
   weekStart: new Date(Date.UTC(2026, 9, 1 + i * 7)).toISOString().slice(0, 10),
@@ -44,7 +50,7 @@ describe('daily inbox dashboard', () => {
   beforeEach(() => {
     state.analytics = q();
     state.launch = q();
-    state.inbox = q({ data: [] });
+    state.inbox = q({ data: inboxOf([]) });
     state.activity = q({ data: [] });
     state.growth = q({ data: weeks });
     state.navigate = vi.fn();
@@ -80,7 +86,7 @@ describe('daily inbox dashboard', () => {
 
   it('merges items, tags age, filters by tab and hides tabs with no source', () => {
     state.inbox = q({
-      data: [
+      data: inboxOf([
         {
           id: 'listing-1',
           kind: 'listing',
@@ -105,7 +111,7 @@ describe('daily inbox dashboard', () => {
           waitingSince: hoursAgo(30),
           href: '/admin/approvals?tab=agents',
         },
-      ],
+      ]),
     });
     render(<OverviewPage />);
     const rows = screen.getAllByRole('listitem').slice(0, 3);
@@ -121,6 +127,44 @@ describe('daily inbox dashboard', () => {
     expect(state.navigate).toHaveBeenLastCalledWith('/admin/finance');
   });
 
+  it('uses true totals for tab counts and says when the list is capped', () => {
+    const rows = Array.from({ length: 50 }, (_, i) => ({
+      id: `payment-${i}`,
+      kind: 'payment',
+      title: `EFT proof ${i}`,
+      subtitle: '',
+      waitingSince: hoursAgo(2 + i),
+      href: '/admin/finance',
+    }));
+    state.inbox = q({
+      data: { items: rows, totals: { payment: 73, listing: 2, development: 0, agent: 0 }, cap: 50 },
+    });
+    const { container } = render(<OverviewPage />);
+    expect(screen.getByRole('tab', { name: /All/ }).textContent).toContain('75');
+    expect(screen.getByRole('tab', { name: /Payments/ }).textContent).toContain('73');
+    expect(screen.getByRole('tab', { name: /Approvals/ }).textContent).toContain('2');
+    expect(container.textContent).toContain('75 things need you today');
+    expect(container.textContent).toContain('Showing 50 of 73');
+    fireEvent.click(screen.getByRole('button', { name: /open Finance for all/ }));
+    expect(state.navigate).toHaveBeenLastCalledWith('/admin/finance');
+  });
+
+  it('chart bars are focusable, labelled and show the tooltip on focus', () => {
+    render(<OverviewPage />);
+    const bar = screen.getByRole('img', { name: /^Week of .*: 3 sign-ups$/ });
+    expect(bar.getAttribute('tabindex')).toBe('0');
+    fireEvent.focus(bar);
+    expect(bar.textContent).toMatch(/: 3 sign-ups/);
+  });
+
+  it('relabels paid counts as verified payments', () => {
+    state.launch = q({ data: { approvedThisMonthCount: 3 } });
+    const { container } = render(<OverviewPage />);
+    expect(container.textContent).toContain('Verified payments');
+    expect(container.textContent).not.toContain('Paid this month');
+    expect(container.textContent).not.toContain('Paid accounts');
+  });
+
   it('offers retry when the inbox fails', () => {
     const refetch = vi.fn();
     state.inbox = q({ isError: true, refetch });
@@ -134,7 +178,8 @@ describe('daily inbox dashboard', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Show as table' }));
     const cells = screen.getAllByRole('cell').filter((_, i) => i % 2 === 1);
     expect(cells.map(c => c.textContent)).toEqual(['0', '1', '2', '3', '4', '5', '6', '7']);
-    fireEvent.click(screen.getByRole('button', { name: 'Paid accounts' }));
+    expect(screen.queryByRole('button', { name: 'Paid accounts' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Verified payments' }));
     expect(screen.getAllByRole('cell').filter((_, i) => i % 2 === 1).every(c => c.textContent === '0')).toBe(true);
   });
 

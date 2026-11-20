@@ -48,16 +48,21 @@ const GrowthChart: React.FC<{ points: WeeklyPoint[] }> = ({ points }) => {
         {change ? <span className="text-sm font-semibold text-slate-700">{change}</span> : null}
       </div>
       <div
-        role="img"
+        role="group"
         aria-label={`${def.label} per week for the last ${points.length} weeks, latest ${latest}`}
         className="flex items-end gap-2 h-36 px-1 border-b border-slate-300"
       >
         {points.map((p, i) => (
           <div
             key={p.weekStart}
-            className="relative flex-1 h-full flex flex-col justify-end items-center"
+            tabIndex={0}
+            role="img"
+            aria-label={`Week of ${formatWeekLabel(p.weekStart)}: ${p[metric]} ${def.noun}`}
+            className="relative flex-1 h-full flex flex-col justify-end items-center focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 rounded"
             onMouseEnter={() => setHover(i)}
             onMouseLeave={() => setHover(-1)}
+            onFocus={() => setHover(i)}
+            onBlur={() => setHover(-1)}
           >
             {hover === i ? (
               <span className="absolute bottom-full mb-1 whitespace-nowrap rounded bg-slate-900 px-2 py-1 text-xs text-white">
