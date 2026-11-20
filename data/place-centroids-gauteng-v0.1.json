@@ -19,7 +19,18 @@
    "retrievedAt": "2026-11-20"
   }
  },
- "generatedAt": "2026-11-20T00:54:56.611Z",
+ "geonames": {
+  "path": "data/place-centroid-geonames-gauteng-v0.1.json",
+  "sha256": "e7c027451cd10291b04606a71a8a21ca23bcf7d55529e137ffe20ec800a66638",
+  "source": {
+   "name": "GeoNames",
+   "licence": "CC-BY-4.0",
+   "url": "https://www.geonames.org",
+   "retrievedAt": "2026-11-20",
+   "attribution": "Contains place data from GeoNames (geonames.org), CC BY 4.0"
+  }
+ },
+ "generatedAt": "2026-11-20T01:07:10.702Z",
  "derivedParentCentres": [
   {
    "naturalKey": "gauteng/johannesburg",
@@ -714,6 +725,15 @@
    "matchMethod": "external_wikidata"
   },
   {
+   "canonicalPlaceId": "pl-place-01-0e7699d32aab5d0977cb4778",
+   "naturalKey": "gauteng/city-of-tshwane/waverley",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-d0401eba0f556a60bb02e528",
+   "lat": -25.702222,
+   "lng": 28.259167,
+   "matchMethod": "external_geonames"
+  },
+  {
    "canonicalPlaceId": "pl-place-01-0e92631ce2fb9b6ef413ec04",
    "naturalKey": "gauteng/blinkpoort",
    "level": "city",
@@ -793,6 +813,15 @@
    "lat": -26.20601,
    "lng": 27.69709,
    "matchMethod": "tier3_slug_name_unique"
+  },
+  {
+   "canonicalPlaceId": "pl-place-01-1009370d78ccaa565e4cf8a6",
+   "naturalKey": "gauteng/localities/eikenhof",
+   "level": "suburb",
+   "parentCityPlaceId": null,
+   "lat": -26.332778,
+   "lng": 27.973889,
+   "matchMethod": "external_geonames"
   },
   {
    "canonicalPlaceId": "pl-place-01-1022c08b094c19d5978b568a",
@@ -1576,6 +1605,15 @@
    "lat": -26.1019444,
    "lng": 27.9861111,
    "matchMethod": "tier3_slug_name_unique"
+  },
+  {
+   "canonicalPlaceId": "pl-place-01-21b53318700e4abb95d08616",
+   "naturalKey": "gauteng/city-of-tshwane/kaalfontein-landbouhoewes",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-d0401eba0f556a60bb02e528",
+   "lat": -25.988056,
+   "lng": 28.173889,
+   "matchMethod": "external_geonames"
   },
   {
    "canonicalPlaceId": "pl-place-01-21f154cd5d0954c29ec7525f",
@@ -2739,6 +2777,15 @@
    "matchMethod": "tier3_slug_name_unique"
   },
   {
+   "canonicalPlaceId": "pl-place-01-388347582530c67a93b63ab5",
+   "naturalKey": "gauteng/localities/mogale-city",
+   "level": "suburb",
+   "parentCityPlaceId": null,
+   "lat": -26.085833,
+   "lng": 27.775278,
+   "matchMethod": "external_geonames"
+  },
+  {
    "canonicalPlaceId": "pl-place-01-38c86a72cc0e841471e33ed5",
    "naturalKey": "gauteng/jameson-park",
    "level": "city",
@@ -2968,9 +3015,9 @@
    "naturalKey": "gauteng/pretoria/zwartkop",
    "level": "suburb",
    "parentCityPlaceId": "pl-place-01-d0401eba0f556a60bb02e528",
-   "lat": null,
-   "lng": null,
-   "matchMethod": "tier2b_city_alias"
+   "lat": -25.869722,
+   "lng": 28.180278,
+   "matchMethod": "external_geonames"
   },
   {
    "canonicalPlaceId": "pl-place-01-3f0345630bc80a1163d62b8a",
@@ -4759,9 +4806,9 @@
    "naturalKey": "gauteng/alberton/brackenhurst",
    "level": "suburb",
    "parentCityPlaceId": "pl-place-01-17dec3188c1a55debd727832",
-   "lat": null,
-   "lng": null,
-   "matchMethod": "tier3_slug_name_unique"
+   "lat": -26.318889,
+   "lng": 28.103889,
+   "matchMethod": "external_geonames"
   },
   {
    "canonicalPlaceId": "pl-place-01-66cfde107f4d4ef45134e62f",
@@ -6384,6 +6431,15 @@
    "matchMethod": "tier1_exact_path"
   },
   {
+   "canonicalPlaceId": "pl-place-01-8576189ce9f4591480e2399b",
+   "naturalKey": "gauteng/johannesburg/eikenhof",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-21f154cd5d0954c29ec7525f",
+   "lat": -26.332778,
+   "lng": 27.973889,
+   "matchMethod": "external_geonames"
+  },
+  {
    "canonicalPlaceId": "pl-place-01-8590ec580008372a017d3378",
    "naturalKey": "gauteng/johannesburg/moletsane",
    "level": "suburb",
@@ -7459,9 +7515,9 @@
    "naturalKey": "gauteng/alberton/randhart",
    "level": "suburb",
    "parentCityPlaceId": "pl-place-01-17dec3188c1a55debd727832",
-   "lat": null,
-   "lng": null,
-   "matchMethod": "tier3_slug_name_unique"
+   "lat": -26.290833,
+   "lng": 28.11,
+   "matchMethod": "external_geonames"
   },
   {
    "canonicalPlaceId": "pl-place-01-99b91be60755ea1f09bf6349",
@@ -8382,6 +8438,15 @@
    "matchMethod": "tier3_slug_name_unique"
   },
   {
+   "canonicalPlaceId": "pl-place-01-a838e85cfe8f855a600e2616",
+   "naturalKey": "gauteng/localities/west-wits",
+   "level": "suburb",
+   "parentCityPlaceId": null,
+   "lat": -26.35,
+   "lng": 27.5,
+   "matchMethod": "external_geonames"
+  },
+  {
    "canonicalPlaceId": "pl-place-01-a84b6ff12d48d57b8b51c6bc",
    "naturalKey": "gauteng/magaliesburg",
    "level": "city",
@@ -8584,9 +8649,9 @@
    "naturalKey": "gauteng/pretoria/mooikloof",
    "level": "suburb",
    "parentCityPlaceId": "pl-place-01-d0401eba0f556a60bb02e528",
-   "lat": null,
-   "lng": null,
-   "matchMethod": "tier2b_city_alias"
+   "lat": -25.839722,
+   "lng": 28.338889,
+   "matchMethod": "external_geonames"
   },
   {
    "canonicalPlaceId": "pl-place-01-ac38ce9aa6eb4fa099f666e1",
@@ -8947,6 +9012,15 @@
    "lat": -26.13539595,
    "lng": 28.0791667,
    "matchMethod": "tier1_exact_path"
+  },
+  {
+   "canonicalPlaceId": "pl-place-01-b481bbf4965526a194b137b9",
+   "naturalKey": "gauteng/ekurhuleni/rondebult",
+   "level": "suburb",
+   "parentCityPlaceId": null,
+   "lat": -26.309722,
+   "lng": 28.232222,
+   "matchMethod": "external_geonames"
   },
   {
    "canonicalPlaceId": "pl-place-01-b4b049aae4abc2763bd6b59e",
@@ -9649,6 +9723,15 @@
    "lat": -25.397162,
    "lng": 28.235903,
    "matchMethod": "tier1_exact_path"
+  },
+  {
+   "canonicalPlaceId": "pl-place-01-c33f257555af4ae10ef974cd",
+   "naturalKey": "gauteng/localities/lakeside",
+   "level": "suburb",
+   "parentCityPlaceId": null,
+   "lat": -26.099444,
+   "lng": 28.146944,
+   "matchMethod": "external_geonames"
   },
   {
    "canonicalPlaceId": "pl-place-01-c3834f70073dc905e2e1e734",
@@ -10468,6 +10551,15 @@
    "lat": -26.389893,
    "lng": 27.615915,
    "matchMethod": "tier1_exact_path"
+  },
+  {
+   "canonicalPlaceId": "pl-place-01-d3573eea15a39a28fc605d37",
+   "naturalKey": "gauteng/johannesburg/lakeside",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-21f154cd5d0954c29ec7525f",
+   "lat": -26.099444,
+   "lng": 28.146944,
+   "matchMethod": "external_geonames"
   },
   {
    "canonicalPlaceId": "pl-place-01-d364aa613a35c5fee1decb80",

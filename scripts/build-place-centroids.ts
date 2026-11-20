@@ -22,6 +22,7 @@ const URL_PROJECTION_PATH = 'data/place-url-projection-national-v0.1.json';
 const OUTPUT_PATH = 'data/place-centroids-gauteng-v0.1.json';
 const OVERRIDES_PATH = 'data/place-centroid-overrides-gauteng-v0.1.json';
 const EXTERNAL_PATH = 'data/place-centroid-external-gauteng-v0.1.json';
+const GEONAMES_PATH = 'data/place-centroid-geonames-gauteng-v0.1.json';
 /** Tier 2b/3/4 and external matches further than this from the parent city are dropped. */
 export const MAX_PARENT_DISTANCE_KM = 60;
 /** External (Wikidata) centres must be this close to the parent city centre. */
@@ -62,7 +63,8 @@ export type MatchMethod =
   | 'tier3b_grid_code'
   | 'tier4_level_bridge'
   | 'manual-reviewed'
-  | 'external_wikidata';
+  | 'external_wikidata'
+  | 'external_geonames';
 
 export type SourceRow = {
   runtime_storage_level: string;
@@ -101,14 +103,23 @@ export type ExternalEntry = {
   naturalKey: string;
   lat: number;
   lng: number;
-  qid: string;
+  qid?: string;
+  geonameId?: number;
   label: string;
   note?: string;
+  /** Hand-reviewed: may bypass the sibling rule (never the box or the parent-distance check). */
+  reviewed?: boolean;
 };
 
 export type ExternalFile = {
   version: string;
-  source: { name: string; licence: string; url: string; retrievedAt: string };
+  source: {
+    name: string;
+    licence: string;
+    url: string;
+    retrievedAt: string;
+    attribution?: string;
+  };
   entries: ExternalEntry[];
 };
 
@@ -168,6 +179,7 @@ export function buildPlaceCentroids(input: {
   entries: readonly UrlEntry[];
   overrides: readonly CentroidOverride[];
   external?: ExternalFile | null;
+  geonames?: ExternalFile | null;
 }): BuildResult {
   const rows = input.rows.filter(
     row => row.runtime_storage_level === 'city' || row.runtime_storage_level === 'suburb',
@@ -480,7 +492,14 @@ export function buildPlaceCentroids(input: {
   const externalRejected: BuildResult['externalRejected'] = [];
   let externalApplied = 0;
   const outputByPlaceId = new Map(output.map(item => [item.canonicalPlaceId, item]));
-  for (const ext of input.external?.entries ?? []) {
+  const externalSources: Array<{ file: ExternalFile | null | undefined; method: MatchMethod }> = [
+    { file: input.external, method: 'external_wikidata' },
+    { file: input.geonames, method: 'external_geonames' },
+  ];
+  const externalList = externalSources.flatMap(({ file, method }) =>
+    (file?.entries ?? []).map(ext => ({ ext, method })),
+  );
+  for (const { ext, method } of externalList) {
     const entry = byPath.get(`/${ext.naturalKey}`);
     if (!entry || entry.search_scope !== 'locality') {
       externalRejected.push({ naturalKey: ext.naturalKey, reason: 'not a Gauteng locality path' });
@@ -512,7 +531,8 @@ export function buildPlaceCentroids(input: {
         });
         continue;
       }
-    } else {
+    } else if (!ext.reviewed) {
+      // Hand-reviewed entries may bypass the sibling rule; the box and 40 km checks still apply.
       const sibling = nearestSiblingKm(entry, point);
       if (sibling === null || sibling > SIBLING_MAX_KM) {
         externalRejected.push({
@@ -526,7 +546,7 @@ export function buildPlaceCentroids(input: {
     if (existing) {
       existing.lat = ext.lat;
       existing.lng = ext.lng;
-      existing.matchMethod = 'external_wikidata';
+      existing.matchMethod = method;
       existing.parentCityPlaceId ??= parent?.placeId ?? null;
     } else {
       const created: PlaceCentroidEntry = {
@@ -536,7 +556,7 @@ export function buildPlaceCentroids(input: {
         parentCityPlaceId: parent?.placeId ?? null,
         lat: ext.lat,
         lng: ext.lng,
-        matchMethod: 'external_wikidata',
+        matchMethod: method,
       };
       output.push(created);
       outputByPlaceId.set(created.canonicalPlaceId, created);
@@ -572,8 +592,10 @@ function main() {
   ).overrides;
   const externalBytes = readFileSync(resolve(process.cwd(), EXTERNAL_PATH));
   const external = JSON.parse(externalBytes.toString('utf8')) as ExternalFile;
+  const geonamesBytes = readFileSync(resolve(process.cwd(), GEONAMES_PATH));
+  const geonames = JSON.parse(geonamesBytes.toString('utf8')) as ExternalFile;
 
-  const result = buildPlaceCentroids({ rows, entries, overrides, external });
+  const result = buildPlaceCentroids({ rows, entries, overrides, external, geonames });
 
   writeFileSync(
     resolve(process.cwd(), OUTPUT_PATH),
@@ -587,6 +609,11 @@ function main() {
           sha256: createHash('sha256').update(externalBytes).digest('hex'),
           source: external.source,
         },
+        geonames: {
+          path: GEONAMES_PATH,
+          sha256: createHash('sha256').update(geonamesBytes).digest('hex'),
+          source: geonames.source,
+        },
         generatedAt: new Date().toISOString(),
         derivedParentCentres: result.derivedParentCentres,
         entries: result.output,
@@ -598,7 +625,10 @@ function main() {
 
   const perTier: Record<string, number> = {};
   for (const { method } of result.matched.values()) perTier[method] = (perTier[method] ?? 0) + 1;
-  if (result.externalApplied) perTier.external_wikidata = result.externalApplied;
+  for (const item of result.output) {
+    if (item.matchMethod.startsWith('external_'))
+      perTier[item.matchMethod] = (perTier[item.matchMethod] ?? 0) + 1;
+  }
   const centred = new Set(
     result.output.filter(item => item.lat !== null).map(item => item.canonicalPlaceId),
   );
