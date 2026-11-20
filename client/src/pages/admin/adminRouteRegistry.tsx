@@ -49,7 +49,7 @@ const PartnerNetworkPage = lazy(() => import('./PartnerNetworkPage'));
 const ServicesReviewWorkspace = lazy(() => import('./ServicesReviewWorkspace'));
 const DistributionNetworkPage = lazy(() => import('./DistributionNetworkPage'));
 const SuperAdminPublisher = lazy(() => import('./publisher/SuperAdminPublisher'));
-const CreateDevelopment = lazy(() => import('../CreateDevelopment'));
+const PublisherDevelopmentWizard = lazy(() => import('./publisher/PublisherDevelopmentWizard'));
 const PlanEditor = lazy(() => import('./PlanEditor'));
 const PlatformSettings = lazy(() => import('./PlatformSettings'));
 const AuditLogs = lazy(() => import('./AuditLogs'));
@@ -154,7 +154,7 @@ const ROUTES = {
 
   publisherDevelopmentWizard: {
     path: '/admin/publisher/developments/new',
-    render: () => <CreateDevelopment />,
+    render: () => <PublisherDevelopmentWizard />,
   },
 
   content: {
