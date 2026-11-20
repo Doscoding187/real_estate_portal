@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const testState = vi.hoisted(() => {
@@ -109,6 +109,7 @@ const testState = vi.hoisted(() => {
     }),
     getCardFieldRecommendations: () => [],
     setPhase: setPhaseMock,
+    setWorkflowStep: vi.fn(),
     saveWorkflowStepData: saveStepDataMock,
     reset: resetMock,
   };
@@ -343,9 +344,9 @@ describe('FinalisationPhase', () => {
     expect(screen.getByRole('button', { name: 'Publish Development' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Publish Development' }));
     expect(screen.getByRole('heading', { name: 'Confirm Publication' })).toBeInTheDocument();
-    expect(
-      screen.getByText(/publish this curated development to the Property Listify marketplace/i),
-    ).toBeInTheDocument();
+    expect(screen.getByTestId('publish-confirm-text').textContent).toBe(
+      'Publishes Finalisation Rental with 1 house type. It becomes visible to the public on the site.',
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Publish Development' }));
 
     await waitFor(() => expect(testState.createPublisherDevelopmentMock).toHaveBeenCalledTimes(1));
@@ -449,5 +450,177 @@ describe('FinalisationPhase', () => {
     } finally {
       testState.wizardState.getWizardData = original;
     }
+  });
+
+  describe('review in the new design', () => {
+    const baltimore = () => ({
+      ...testState.wizardState.getWizardData(),
+      name: 'Baltimore Lifestyle Estate',
+      transactionType: 'for_sale',
+      setting: 'estate',
+      estateType: 'lifestyle',
+      subtitle: 'Freestanding family homes',
+      phaseLabel: 'Phase 2',
+      status: 'selling',
+      salesStage: 'off_plan',
+      ownershipTypes: ['full-title'],
+      location: {
+        address: '',
+        noOfficialStreet: true,
+        suburbLabel: 'North Riding, Johannesburg',
+        postalCode: '2162',
+        latitude: -26.0412,
+        longitude: 28.0001,
+      },
+      rightsAndTaxes: { min: 2000, max: 2000 },
+      hasGoverningBody: true,
+      governanceType: 'hoa',
+      levyRange: { min: 1500, max: 1500 },
+      highlights: ['Security estate', 'Full title', 'Controlled access', 'Near schools', 'Pet friendly'],
+      media: {
+        heroImage: { url: 'https://cdn/c.jpg', category: 'featured', isPrimary: true },
+        photos: [
+          { id: 'c', url: 'https://cdn/c.jpg', category: 'featured', isPrimary: true },
+          { id: 'g', url: 'https://cdn/g.jpg', category: 'outdoors' },
+          { id: 'a1', url: 'https://cdn/a1.jpg', category: 'amenities' },
+          { id: 'a2', url: 'https://cdn/a2.jpg', category: 'amenities' },
+        ],
+        videos: [{ id: 'v', url: 'https://cdn/v.mp4' }],
+        documents: [{ id: 'd', url: 'https://cdn/b.pdf', documentType: 'brochure' }],
+      },
+      unitTypes: [
+        {
+          id: 'u1',
+          name: '91 m² 4-bedroom house',
+          bedrooms: 4,
+          bathrooms: 2,
+          unitSize: 91,
+          priceFrom: 1930000,
+          availableUnits: 50,
+          parkingType: 'carport',
+          parkingBays: 2,
+          unitCategory: 'house',
+          unitSubType: 'freestanding-house',
+          baseMedia: { gallery: [{ id: 'p', url: 'x' }], floorPlans: [{ id: 'f', url: 'y' }] },
+        },
+        { id: 'u2', name: 'Second', bedrooms: 3, bathrooms: 2, unitSize: 71, priceFrom: 1745000, availableUnits: 50 },
+      ],
+    });
+
+    const withData = (data: any, fn: () => void) => {
+      const original = testState.wizardState.getWizardData;
+      testState.wizardState.getWizardData = () => data;
+      testState.wizardState.stepData = { amenities_features: { amenities: ['controlled_gate_access', 'Padel court'] } } as any;
+      try {
+        fn();
+      } finally {
+        testState.wizardState.getWizardData = original;
+      }
+    };
+
+    it('shows one section per step with its truthful content and no raw amenity keys', () => {
+      testState.wizardState.stepData = {
+        amenities_features: { amenities: ['controlled_gate_access', '24_hour_security', 'Padel court'] },
+      } as any;
+      withData(baltimore(), () => {
+        render(<FinalisationPhase />);
+        for (const id of ['basics', 'about', 'location', 'costs', 'amenities', 'highlights', 'media', 'house_types']) {
+          expect(screen.getByTestId(`review-${id}`)).toBeInTheDocument();
+        }
+        expect(screen.getByText('Security estate · Lifestyle estate')).toBeInTheDocument();
+        expect(screen.getByText('No street address yet')).toBeInTheDocument();
+        expect(screen.getByText('North Riding, Johannesburg')).toBeInTheDocument();
+        expect(screen.getByText('-26.04120, 28.00010')).toBeInTheDocument();
+        expect(screen.queryByText(/map preview/i)).toBeNull();
+        expect(screen.getByText('R2000 a month (estimate)'.replace('R2000', 'R2,000'))).toBeInTheDocument();
+        expect(screen.getByText('HOA levy')).toBeInTheDocument();
+        const chips = screen.getByTestId('review-amenity-chips');
+        expect(chips.textContent).not.toMatch(/controlled_gate_access|24_hour_security|_/);
+        expect(within(chips).getByText('Padel court')).toBeInTheDocument();
+        // Highlights: first three then "+N more"
+        expect(screen.getByText('+2 more')).toBeInTheDocument();
+        // Media per slot, video and documents by type
+        expect(within(screen.getByTestId('review-media')).getByText('Cover photo').nextSibling?.textContent).toBe('1 photo');
+        expect(within(screen.getByTestId('review-media')).getByText('Amenities & lifestyle').nextSibling?.textContent).toBe('2 photos');
+        expect(within(screen.getByTestId('review-media')).getByText('Brochure').nextSibling?.textContent).toBe('Added');
+        expect(within(screen.getByTestId('review-media')).getByText('Price list').nextSibling?.textContent).toBe('Not added');
+        // House types
+        const cards = screen.getAllByTestId('review-house-type');
+        expect(cards).toHaveLength(2);
+        expect(cards[0].textContent).toContain('Carport · 2 bays');
+        expect(cards[0].textContent).toContain('50 available');
+        expect(cards[0].textContent).toContain('1 photo · 1 floor plan');
+        expect(cards[0].textContent).toContain('R1,930,000');
+      });
+    });
+
+    it('each section Edit jumps to its own step', () => {
+      withData(baltimore(), () => {
+        render(<FinalisationPhase />);
+        const expected: Record<string, string> = {
+          Basics: 'configuration',
+          About: 'identity_market',
+          Location: 'location',
+          'Monthly costs': 'governance_finances',
+          Amenities: 'amenities_features',
+          Highlights: 'amenities_features',
+          Media: 'development_media',
+          'House types': 'unit_types',
+        };
+        for (const [title, step] of Object.entries(expected)) {
+          testState.wizardState.setWorkflowStep.mockClear();
+          fireEvent.click(screen.getByRole('button', { name: `Edit ${title}` }));
+          expect(testState.wizardState.setWorkflowStep).toHaveBeenCalledWith(step);
+        }
+      });
+    });
+
+    it('lists what is missing, each linking to its step, and shows Ready when nothing is', () => {
+      testState.setValidationErrors(['Address is required', 'At least 1 image is required', 'Add at least one unit type']);
+      withData(baltimore(), () => {
+        render(<FinalisationPhase />);
+        const list = screen.getByTestId('review-missing');
+        expect(within(list).getAllByRole('listitem')).toHaveLength(3);
+        fireEvent.click(within(list).getByRole('button', { name: 'Fix in Location' }));
+        expect(testState.wizardState.setWorkflowStep).toHaveBeenLastCalledWith('location');
+        fireEvent.click(within(list).getByRole('button', { name: 'Fix in Media' }));
+        expect(testState.wizardState.setWorkflowStep).toHaveBeenLastCalledWith('development_media');
+        fireEvent.click(within(list).getByRole('button', { name: 'Fix in House types' }));
+        expect(testState.wizardState.setWorkflowStep).toHaveBeenLastCalledWith('unit_types');
+      });
+      testState.setValidationErrors([]);
+      withData(baltimore(), () => {
+        cleanup();
+        render(<FinalisationPhase />);
+        expect(screen.queryByTestId('review-missing')).toBeNull();
+        expect(screen.getByText('Ready to Submit for Review')).toBeInTheDocument();
+      });
+    });
+
+    it('the curated publish confirmation names the development, the publisher and the house types', () => {
+      testState.setActor({ id: 2, role: 'super_admin' }, {
+        cataloguePublisherId: 44,
+        publisherName: 'Cosmopolitan Projects',
+      } as any);
+      withData(baltimore(), () => {
+        render(<FinalisationPhase />);
+        fireEvent.click(screen.getByRole('button', { name: 'Publish Development' }));
+        expect(screen.getByTestId('publish-confirm-text').textContent).toBe(
+          'Publishes Baltimore Lifestyle Estate for Cosmopolitan Projects with 2 house types. It becomes visible to the public on the site.',
+        );
+        expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+      });
+    });
+
+    it('developer mode keeps its submit-for-review wording', () => {
+      withData(baltimore(), () => {
+        render(<FinalisationPhase />);
+        fireEvent.click(screen.getByRole('button', { name: /submit for review/i }));
+        expect(screen.getByTestId('publish-confirm-text').textContent).toBe(
+          'Submits Baltimore Lifestyle Estate with 2 house types for review. It will not be visible publicly until an authorised reviewer approves and publishes it.',
+        );
+        expect(screen.getByRole('button', { name: /confirm & submit/i })).toBeInTheDocument();
+      });
+    });
   });
 });
