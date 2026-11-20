@@ -1473,7 +1473,20 @@ const createActions = (
 
     ensureResidentialWorkflow: (transactionType: 'for_sale' | 'for_rent' = 'for_sale') => {
       const state = get();
-      if (state.workflowId && state.developmentType && state.transactionType) return;
+      if (state.workflowId && state.developmentType) {
+        // A workflow is already running (for example a resumed draft, whose root
+        // transactionType is not restored). Never restart it: that would send the
+        // publisher back to step 1 and clear every tick. Only back-fill the answer.
+        if (!state.transactionType) {
+          const known = normalizeTransactionType(
+            state.developmentData?.transactionType ??
+              state.stepData?.identity_market?.transactionType ??
+              state.stepData?.configuration?.transactionType,
+          );
+          set({ transactionType: known ?? (state.workflowId === 'residential_rent' ? 'for_rent' : 'for_sale') });
+        }
+        return;
+      }
       get().initializeWorkflow('residential', transactionType);
     },
 
@@ -2210,6 +2223,10 @@ const createActions = (
           workflowId: sourceWorkflowId,
           currentStepId: sourceCurrentStepId,
           completedSteps: sourceCompletedSteps,
+          // Restore the root answer too, so a resumed draft is not mistaken for a new one.
+          transactionType:
+            normalizeTransactionType(canonicalDevelopmentData.transactionType) ??
+            state.transactionType,
 
           developmentType:
             source.developmentType === 'mixed_use'
