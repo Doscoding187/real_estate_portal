@@ -14,6 +14,7 @@ const testState = vi.hoisted(() => {
   const updatePublisherDevelopmentMock = vi.fn();
   const publishPublisherDevelopmentMock = vi.fn();
   const assignSuburbMock = vi.fn();
+  const saveStepDataMock = vi.fn();
   const invalidateDevelopmentHomeMock = vi.fn().mockResolvedValue(undefined);
   const invalidateOperatingHomeMock = vi.fn().mockResolvedValue(undefined);
   const invalidatePublisherOperatingHomeMock = vi.fn().mockResolvedValue(undefined);
@@ -108,12 +109,14 @@ const testState = vi.hoisted(() => {
     }),
     getCardFieldRecommendations: () => [],
     setPhase: setPhaseMock,
+    saveWorkflowStepData: saveStepDataMock,
     reset: resetMock,
   };
 
   return {
     createDevelopmentMock,
     assignSuburbMock,
+    saveStepDataMock,
     createPublisherDevelopmentMock,
     navigateMock,
     publishDevelopmentMock,
@@ -391,8 +394,42 @@ describe('FinalisationPhase', () => {
         phaseId: null,
         placeId: 'place_north_riding',
         evidenceReference: expect.stringContaining('derived from the development map pin'),
+        replaceExisting: true,
       });
+      await waitFor(() =>
+        expect(testState.saveStepDataMock).toHaveBeenCalledWith('location', {
+          suburbAssignedPlaceId: 'place_north_riding',
+        }),
+      );
       expect(testState.navigateMock).toHaveBeenCalledWith('/admin/publisher');
+    } finally {
+      testState.wizardState.getWizardData = original;
+    }
+  });
+
+  it('a failed assignment after publish offers Retry, which calls it again and records it', async () => {
+    testState.setActor({ id: 2, role: 'super_admin' }, { cataloguePublisherId: 44 });
+    testState.assignSuburbMock.mockRejectedValueOnce(new Error('boom')).mockResolvedValue({ success: true });
+    const original = testState.wizardState.getWizardData;
+    testState.wizardState.getWizardData = () => ({
+      ...original(),
+      location: { ...original().location, suburbPlaceId: 'place_north_riding' },
+    });
+    try {
+      render(<FinalisationPhase />);
+      fireEvent.click(screen.getByRole('button', { name: 'Publish Development' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Publish Development' }));
+      await waitFor(() => expect(testState.toastErrorMock).toHaveBeenCalled());
+      const [message, options] = testState.toastErrorMock.mock.calls.at(-1)!;
+      expect(message).toMatch(/could not be recorded/);
+      expect(options.action.label).toBe('Retry');
+      options.action.onClick();
+      await waitFor(() => expect(testState.assignSuburbMock).toHaveBeenCalledTimes(2));
+      await waitFor(() =>
+        expect(testState.saveStepDataMock).toHaveBeenCalledWith('location', {
+          suburbAssignedPlaceId: 'place_north_riding',
+        }),
+      );
     } finally {
       testState.wizardState.getWizardData = original;
     }

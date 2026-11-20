@@ -1591,11 +1591,47 @@ export const adminRouter = router({
         placeId: z.string().trim().max(40),
         evidenceReference: z.string().trim().min(1).max(1000),
         reviewNote: z.string().trim().max(2000).optional(),
+        /**
+         * The wizard's idempotent form: skip when the same Place is already the
+         * accepted site assignment; otherwise withdraw the current accepted site
+         * assignment(s) (existing withdraw path) before recording the new one.
+         */
+        replaceExisting: z.boolean().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      const { replaceExisting, ...assignmentInput } = input;
+      if (replaceExisting) {
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
+        const current = await db
+          .select({
+            id: developmentPlaceAssignments.id,
+            placeId: developmentPlaceAssignments.placeId,
+            phaseId: developmentPlaceAssignments.phaseId,
+          })
+          .from(developmentPlaceAssignments)
+          .where(
+            and(
+              eq(developmentPlaceAssignments.developmentId, input.developmentId),
+              eq(developmentPlaceAssignments.assignmentKind, 'site'),
+              eq(developmentPlaceAssignments.reviewState, 'accepted'),
+            ),
+          );
+        const sameScope = current.filter(row => (row.phaseId ?? null) === input.phaseId);
+        if (sameScope.some(row => row.placeId === input.placeId)) {
+          return { success: true, skipped: true as const };
+        }
+        for (const row of sameScope) {
+          await withdrawReviewedDevelopmentPlaceAssignment({
+            assignmentId: row.id,
+            reviewerUserId: ctx.user.id,
+            reviewNote: 'Replaced by the suburb derived in the development wizard',
+          });
+        }
+      }
       await recordReviewedDevelopmentPlaceAssignment({
-        ...input,
+        ...assignmentInput,
         assignmentKind: 'site',
         reviewerUserId: ctx.user.id,
       });

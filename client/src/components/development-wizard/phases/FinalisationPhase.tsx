@@ -374,14 +374,24 @@ export function FinalisationPhase({
           );
         }
         if (suburbRequest) {
-          try {
-            await assignSuburb.mutateAsync(suburbRequest);
-          } catch (assignError: any) {
-            console.warn('[FinalisationPhase] Suburb assignment failed:', assignError);
-            toast.error(
-              'Published, but the suburb could not be recorded. Assign it in Development oversight.',
-            );
-          }
+          // replaceExisting makes the call idempotent: the same Place is skipped,
+          // a different one withdraws the old accepted site assignment first.
+          const request = { ...suburbRequest, replaceExisting: true as const };
+          const record = async (): Promise<void> => {
+            try {
+              await assignSuburb.mutateAsync(request);
+              (store as any).saveWorkflowStepData?.('location', {
+                suburbAssignedPlaceId: request.placeId,
+              });
+            } catch (assignError: any) {
+              console.warn('[FinalisationPhase] Suburb assignment failed:', assignError);
+              toast.error(
+                'Published, but the suburb could not be recorded. Retry, or assign it in Development oversight.',
+                { action: { label: 'Retry', onClick: () => void record() } },
+              );
+            }
+          };
+          await record();
         }
       } else {
         await publishDevelopment.mutateAsync({ id: developmentId });

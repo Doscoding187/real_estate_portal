@@ -121,7 +121,10 @@ export function LocationPhase() {
 
   return (
     <div className={cn(t.card, 'flex flex-col gap-6')}>
-      <p className="text-sm text-slate-600">Buyers see the suburb, not the street address.</p>
+      <p className="text-sm text-slate-600">
+        Buyers see the suburb in search; the street address shows on the development page for
+        directions.
+      </p>
 
       <div>
         <label htmlFor="address" className={t.sectionLabel}>
@@ -233,7 +236,7 @@ export function LocationPhase() {
             ? 'Drop the pin or enter coordinates to see the location buyers will see.'
             : !settled
               ? 'Finding the suburb…'
-              : derivedLocationText(derived)}
+              : derivedLocationText(derived, isCurated ? 'curated' : 'developer')}
         </p>
         {isCurated ? (
           <>

@@ -60,6 +60,40 @@ describe('development persisted submission readiness', () => {
     }
   });
 
+  it('accepts no street address only with the estateSpecs flag AND a valid pin', () => {
+    const noStreet = { ...validDevelopment, address: '', estateSpecs: JSON.stringify({ noStreetAddress: true }) };
+    expect(validatePersistedSubmissionReadiness(noStreet as never, [validUnit] as never)).toEqual([]);
+    expect(
+      validatePersistedSubmissionReadiness({ ...validDevelopment, address: '' } as never, [validUnit] as never).map(e => e.field),
+    ).toEqual(['address']);
+    expect(
+      validatePersistedSubmissionReadiness({ ...noStreet, latitude: null } as never, [validUnit] as never).map(e => e.field),
+    ).toEqual(['address', 'location']);
+  });
+
+  it('rejects a 0,0 pin with a clear message', () => {
+    const errors = validatePersistedSubmissionReadiness(
+      { ...validDevelopment, latitude: '0', longitude: '0' } as never,
+      [validUnit] as never,
+    );
+    expect(errors).toEqual([
+      expect.objectContaining({ field: 'location', message: expect.stringContaining('Place the pin') }),
+    ]);
+  });
+
+  it('counts trimmed highlights and enforces at most 8 and 24 characters each', () => {
+    const run = (highlights: string[]) =>
+      validatePersistedSubmissionReadiness(
+        { ...validDevelopment, highlights: JSON.stringify(highlights) } as never,
+        [validUnit] as never,
+      ).map(e => e.field);
+    expect(run(['One', '  ', 'Two', ''])).toEqual(['highlights']);
+    expect(run(['One', ' Two ', 'Three'])).toEqual([]);
+    expect(run(Array.from({ length: 9 }, (_, i) => `Tag ${i}`))).toEqual(['highlights']);
+    expect(run(['One', 'Two', 'x'.repeat(25)])).toEqual(['highlights']);
+    expect(run(['One', 'Two', 'x'.repeat(24)])).toEqual([]);
+  });
+
   it.each(['full-title', 'sectional-title', 'life-rights', 'leasehold', 'share-block', 'varies'])(
     'accepts "%s": every ownership answer the wizard offers is publishable',
     ownershipType => {

@@ -27,6 +27,7 @@ type PersistedDevelopment = Pick<
   | 'address'
   | 'latitude'
   | 'longitude'
+  | 'estateSpecs'
   | 'description'
   | 'ownershipType'
   | 'developmentType'
@@ -229,18 +230,28 @@ export function validatePersistedSubmissionReadiness(
   const transactionType = String(development.transactionType ?? '').trim();
 
   if (!name) errors.push({ field: 'name', message: 'Development name is required.' });
-  if (!address) errors.push({ field: 'address', message: 'Development address is required.' });
   const latitude = Number(String(development.latitude ?? '').trim() || Number.NaN);
   const longitude = Number(String(development.longitude ?? '').trim() || Number.NaN);
-  if (
-    !Number.isFinite(latitude) ||
-    !Number.isFinite(longitude) ||
-    Math.abs(latitude) > 90 ||
-    Math.abs(longitude) > 180
-  ) {
+  const hasValidPin =
+    Number.isFinite(latitude) &&
+    Number.isFinite(longitude) &&
+    Math.abs(latitude) <= 90 &&
+    Math.abs(longitude) <= 180 &&
+    !(latitude === 0 && longitude === 0);
+  // A new development may have no street address yet; then the pin carries the
+  // location. The flag lives in the existing estateSpecs JSON.
+  const estateSpecs = parseJsonMaybeTwice<Record<string, unknown> | null>(
+    development.estateSpecs,
+    null,
+  );
+  const noStreetAddress = estateSpecs?.noStreetAddress === true;
+  if (!address && !(noStreetAddress && hasValidPin)) {
+    errors.push({ field: 'address', message: 'Development address is required.' });
+  }
+  if (!hasValidPin) {
     errors.push({
       field: 'location',
-      message: 'Development map pin (latitude and longitude) is required.',
+      message: 'Place the pin on the development (latitude and longitude are required).',
     });
   }
   if (!['residential', 'commercial', 'mixed_use', 'land'].includes(developmentType)) {
@@ -265,11 +276,18 @@ export function validatePersistedSubmissionReadiness(
     });
   }
   const highlights = parseJsonMaybeTwice<unknown[]>(development.highlights, []);
-  if (
-    !Array.isArray(highlights) ||
-    highlights.filter(value => String(value ?? '').trim()).length < 3
-  ) {
+  const highlightTexts = Array.isArray(highlights)
+    ? highlights.map(value => String(value ?? '').trim()).filter(Boolean)
+    : [];
+  if (highlightTexts.length < 3) {
     errors.push({ field: 'highlights', message: 'At least three highlights are required.' });
+  } else if (highlightTexts.length > 8) {
+    errors.push({ field: 'highlights', message: 'At most eight highlights are allowed.' });
+  } else if (highlightTexts.some(text => text.length > 24)) {
+    errors.push({
+      field: 'highlights',
+      message: 'Each highlight must be 24 characters or fewer.',
+    });
   }
   if (!(CANONICAL_OWNERSHIP_TYPES as readonly string[]).includes(ownershipType)) {
     errors.push({ field: 'ownershipType', message: 'A supported ownership type is required.' });

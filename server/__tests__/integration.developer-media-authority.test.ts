@@ -109,6 +109,8 @@ function developmentInput(name: string, images: unknown[]) {
     developmentType: 'residential' as const,
     transactionType: 'for_sale' as const,
     address: '1 B06 Media Authority Road',
+    latitude: '-26.0',
+    longitude: '28.0',
     status: 'selling',
     ownershipType: 'sectional-title',
     description: 'A complete Developer media authority fixture with legitimate residential inventory.',

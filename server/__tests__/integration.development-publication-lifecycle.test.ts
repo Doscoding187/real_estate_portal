@@ -113,6 +113,8 @@ async function createDevelopmentFor(
     developmentType: 'residential',
     transactionType: options.transactionType ?? 'for_sale',
     address: '1 Lifecycle Road, Berea',
+    latitude: '-26.0',
+    longitude: '28.0',
     status: 'selling',
     ownershipType: options.ownershipType ?? 'sectional-title',
     highlights: ['Secure estate', 'Close to transport', 'Energy efficient'],

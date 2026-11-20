@@ -335,7 +335,7 @@ export class PublicDevelopmentDetailService {
       publicFacts,
       imageMedia: projectPublicDevelopmentImageMedia(row.images),
       address:
-        Number(row.showHouseAddress || 0) === 1 ? ((row.address as string | null) ?? null) : null,
+        Number(row.showHouseAddress || 0) === 1 ? ((row.address as string | null) || null) : null,
       showHouseAddress: Number(row.showHouseAddress || 0) === 1,
       latitude: coordinatesAreZeroPair ? null : latitude,
       longitude: coordinatesAreZeroPair ? null : longitude,

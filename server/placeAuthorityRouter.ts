@@ -132,7 +132,15 @@ export const placeAuthorityRouter = router({
         .object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) })
         .strict(),
     )
-    .query(({ input }) => placeFromPointService.locate(input)),
+    .query(async ({ input }) => {
+      // Best-effort helper for the wizard: any failure is "no match", never an error.
+      try {
+        return await placeFromPointService.locate(input);
+      } catch (error) {
+        console.warn('[placeAuthority.locateByPoint] lookup failed', error);
+        return null;
+      }
+    }),
 
   /** Resolve a selected Place identity for canonical search controls. */
   resolveSearchPlace: publicProcedure

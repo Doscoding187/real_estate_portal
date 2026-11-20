@@ -47,20 +47,15 @@ const parseCoordinate = (value: unknown): number | null => {
 };
 
 /**
- * The submit payload's address. A development with no street address yet (flag
- * `noOfficialStreet`, kept in the location data and in estateSpecs) is sent with
- * its pin as the address text, so the server's address requirement is met and the
- * pin, which the server also requires, carries the location.
+ * The submit payload's address: the typed street address, or "" when the
+ * publisher ticked "No street address yet" (flag `noOfficialStreet`, kept in the
+ * location data and in estateSpecs.noStreetAddress). The pin then carries the
+ * location and the server accepts it. Never a made-up string.
  */
 export function submitAddress(location: Record<string, any> | null | undefined): string | undefined {
   const address = String(location?.address ?? '').trim();
   if (address) return address;
-  if (location?.noOfficialStreet === true) {
-    const lat = String(location?.latitude ?? '').trim();
-    const lng = String(location?.longitude ?? '').trim();
-    if (lat && lng) return `Map pin ${lat}, ${lng} (no street address yet)`;
-  }
-  return undefined;
+  return location?.noOfficialStreet === true ? '' : undefined;
 }
 
 /**
@@ -83,6 +78,10 @@ export function validateLocationStep(location: Record<string, any> | null | unde
 
   const lat = parseCoordinate(loc.latitude);
   const lng = parseCoordinate(loc.longitude);
+  if (lat === 0 && lng === 0) {
+    errors.push({ field: 'latitude', message: 'Place the pin on the development' });
+    return errors;
+  }
   if (lat === null || Number.isNaN(lat) || lat < -90 || lat > 90) {
     errors.push({
       field: 'latitude',
@@ -101,14 +100,20 @@ export function validateLocationStep(location: Record<string, any> | null | unde
 export const SUBURB_EVIDENCE_REFERENCE =
   'Suburb derived from the development map pin (nearest suburb centre within 3 km) in the development wizard';
 
-/** The text shown under the pin. */
+/**
+ * The text shown under the pin. A developer's suburb is only a suggestion (a
+ * reviewer confirms it); for a curated listing it is what buyers see.
+ */
 export function derivedLocationText(
   derived: { suburb: string; city: string } | null | undefined,
+  mode: 'curated' | 'developer' = 'curated',
 ): string {
   if (!derived) {
     return 'We couldn’t match this pin to a suburb yet. Move the pin, or a reviewer will assign it.';
   }
-  return `Location buyers see: ${[derived.suburb, derived.city].filter(Boolean).join(', ')} — from the map pin`;
+  const name = [derived.suburb, derived.city].filter(Boolean).join(', ');
+  if (mode === 'developer') return `Suggested suburb: ${name} — a reviewer confirms it`;
+  return `Location buyers see: ${name} — from the map pin`;
 }
 
 export interface SuburbAssignmentRequest {
@@ -178,8 +183,12 @@ export function hasSavedRange(range: MoneyRange | null | undefined): boolean {
   return min > 0 && max > 0 && min !== max;
 }
 
-export function ratesPatch(amount: number): { rightsAndTaxes: { min: number; max: number } } {
-  return { rightsAndTaxes: { min: amount, max: amount } };
+/** One amount saved as min = max; nothing entered is null, never 0. */
+export function ratesPatch(amount: number): {
+  rightsAndTaxes: { min: number | null; max: number | null };
+} {
+  const value = amount > 0 ? amount : null;
+  return { rightsAndTaxes: { min: value, max: value } };
 }
 
 /** What the saved governance answers mean for the levy chips. null = not answered yet. */
@@ -203,13 +212,14 @@ export function levyPatch(choice: LevyChoice, amount: number): Record<string, un
     return {
       hasGoverningBody: false,
       governanceType: undefined,
-      levyRange: { min: 0, max: 0 },
+      levyRange: { min: null, max: null },
     };
   }
+  const value = amount > 0 ? amount : null;
   return {
     hasGoverningBody: true,
     governanceType: choice,
-    levyRange: { min: amount, max: amount },
+    levyRange: { min: value, max: value },
   };
 }
 
@@ -489,10 +499,27 @@ export function validateAmenitiesStep(data: Record<string, any> | null | undefin
     : Array.isArray(d.keySellingPoints)
       ? d.keySellingPoints
       : [];
-  const count = raw.filter(item => String(item ?? '').trim()).length;
-  return count < HIGHLIGHTS_MIN
-    ? [{ field: 'highlights', message: `Add at least ${HIGHLIGHTS_MIN} highlights` }]
-    : [];
+  return validateHighlightList(raw);
+}
+
+/** Trimmed non-empty entries only: 3 to 8, each at most 24 characters (the server's rule too). */
+export function validateHighlightList(raw: unknown[]): StepIssue[] {
+  const items = raw.map(item => String(item ?? '').trim()).filter(Boolean);
+  if (items.length < HIGHLIGHTS_MIN) {
+    return [{ field: 'highlights', message: `Add at least ${HIGHLIGHTS_MIN} highlights` }];
+  }
+  if (items.length > HIGHLIGHTS_MAX) {
+    return [{ field: 'highlights', message: `Choose at most ${HIGHLIGHTS_MAX} highlights` }];
+  }
+  if (items.some(item => item.length > HIGHLIGHT_MAX_LENGTH)) {
+    return [
+      {
+        field: 'highlights',
+        message: `Each highlight must be ${HIGHLIGHT_MAX_LENGTH} characters or fewer`,
+      },
+    ];
+  }
+  return [];
 }
 
 /** First three highlights show on the search card; the rest are "+N more". */

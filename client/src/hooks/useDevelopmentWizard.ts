@@ -8,6 +8,7 @@ import type {
   MarketingRole,
 } from '@/types/wizardTypes';
 import { AMENITY_REGISTRY } from '@/config/amenityRegistry';
+import { validateHighlightList } from '@/lib/wizardLocationCostsAmenities';
 import { WorkflowId, WizardStepId, WizardData } from '@/lib/types/wizard-workflows';
 import { WORKFLOWS, getWorkflow, getVisibleSteps } from '@/lib/workflows';
 import { computeWizardProgress } from '@/lib/wizardProgress';
@@ -819,6 +820,7 @@ const DEVELOPMENT_WIZARD_LOCATION_FIELDS = [
   'suburbPlaceId',
   'suburbLabel',
   'suburbCity',
+  'suburbAssignedPlaceId',
   'gpsAccuracy',
   'noOfficialStreet',
 ] as const;
@@ -992,11 +994,11 @@ const createActions = (
       }
 
       const highlightCount = Array.isArray(wizardData.highlights)
-        ? wizardData.highlights.length
+        ? wizardData.highlights.filter(item => String(item ?? '').trim()).length
         : 0;
-      if (highlightCount < 4) {
+      if (highlightCount < 3) {
         recommendations.push(
-          'Add at least 4 highlights to keep chips consistent across cards (only the first few are shown).',
+          'Add at least 3 highlights to keep chips consistent across cards (only the first few are shown).',
         );
       }
 
@@ -1254,6 +1256,8 @@ const createActions = (
             !Number.isFinite(Number(longitude))
           ) {
             errors.push('Verified development entrance coordinates are required');
+          } else if (Number(latitude) === 0 && Number(longitude) === 0) {
+            errors.push('Place the pin on the development');
           }
           break;
         }
@@ -1300,6 +1304,8 @@ const createActions = (
         const lng = String(wizardData.location?.longitude ?? '').trim();
         if (!lat || !lng || !Number.isFinite(Number(lat)) || !Number.isFinite(Number(lng))) {
           errors.push('Map pin (latitude and longitude) is required');
+        } else if (Number(lat) === 0 && Number(lng) === 0) {
+          errors.push('Place the pin on the development');
         }
       }
 
@@ -1317,8 +1323,11 @@ const createActions = (
       if (!state.classification?.type) errors.push('Classification Type is required');
 
       // Marketing Summary (canonical)
-      const highlightsLen = wizardData.highlights?.length ?? 0;
-      if (highlightsLen < 3) errors.push('Add at least 3 highlights');
+      for (const issue of validateHighlightList(
+        Array.isArray(wizardData.highlights) ? wizardData.highlights : [],
+      )) {
+        errors.push(issue.message);
+      }
 
       const descLen = String(wizardData.description ?? '').trim().length;
       if (descLen === 0) {
@@ -2070,13 +2079,15 @@ const createActions = (
         })();
 
         const estateSpecs = parse(source.estateSpecs, {});
+        // Nothing entered stays null; 0 is never stored for "not given".
+        const orNull = (value: number) => (value > 0 ? value : null);
         const resolvedLevyRange = {
-          min: toNumber(estateSpecs?.levyRange?.min ?? source.monthlyLevyFrom ?? 0, 0),
-          max: toNumber(estateSpecs?.levyRange?.max ?? source.monthlyLevyTo ?? 0, 0),
+          min: orNull(toNumber(estateSpecs?.levyRange?.min ?? source.monthlyLevyFrom ?? 0, 0)),
+          max: orNull(toNumber(estateSpecs?.levyRange?.max ?? source.monthlyLevyTo ?? 0, 0)),
         };
         const resolvedRightsAndTaxes = {
-          min: toNumber(estateSpecs?.rightsAndTaxes?.min ?? source.ratesFrom ?? 0, 0),
-          max: toNumber(estateSpecs?.rightsAndTaxes?.max ?? source.ratesTo ?? 0, 0),
+          min: orNull(toNumber(estateSpecs?.rightsAndTaxes?.min ?? source.ratesFrom ?? 0, 0)),
+          max: orNull(toNumber(estateSpecs?.rightsAndTaxes?.max ?? source.ratesTo ?? 0, 0)),
         };
 
         // Basics / About answers have no columns of their own; they were saved in estateSpecs.
@@ -2116,7 +2127,11 @@ const createActions = (
                 }
               : {}),
           },
-          location: { ...canonicalDevelopmentData.location },
+          location: {
+            ...canonicalDevelopmentData.location,
+            // "No street address yet" is kept in estateSpecs and read back here.
+            ...(estateSpecs?.noStreetAddress === true ? { noOfficialStreet: true } : {}),
+          },
           governance_finances: {
             hasGoverningBody: estateSpecs?.hasHOA ?? false,
             governanceType: estateSpecs?.governanceType ?? '',

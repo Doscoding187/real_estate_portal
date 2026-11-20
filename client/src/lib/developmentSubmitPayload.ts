@@ -717,12 +717,12 @@ export function buildDevelopmentSubmitPayload(input: DevelopmentSubmitPayloadInp
                 architecturalGuidelines: submitSource.architecturalGuidelines,
                 guidelinesSummary: submitSource.guidelinesSummary,
                 levyRange: {
-                  min: canonicalDevelopmentData.monthlyLevyFrom ?? 0,
-                  max: canonicalDevelopmentData.monthlyLevyTo ?? 0,
+                  min: canonicalDevelopmentData.monthlyLevyFrom ?? null,
+                  max: canonicalDevelopmentData.monthlyLevyTo ?? null,
                 },
                 rightsAndTaxes: {
-                  min: canonicalDevelopmentData.ratesFrom ?? 0,
-                  max: canonicalDevelopmentData.ratesTo ?? 0,
+                  min: canonicalDevelopmentData.ratesFrom ?? null,
+                  max: canonicalDevelopmentData.ratesTo ?? null,
                 },
               }
             : {}),

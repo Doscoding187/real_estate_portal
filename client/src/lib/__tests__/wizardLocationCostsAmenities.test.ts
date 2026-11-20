@@ -55,9 +55,33 @@ describe('location validation agrees with the server', () => {
     expect(validateLocationStep({ noOfficialStreet: true }).map(e => e.field)).toEqual(['latitude', 'longitude']);
   });
 
-  it('a no-street development is submitted with its pin as the address, which the server accepts', () => {
+  it('costs not given are null in estateSpecs, never 0', () => {
+    const payload = buildDevelopmentSubmitPayload({
+      amenities: [],
+      wizardData: {
+        developmentType: 'residential',
+        transactionType: 'for_sale',
+        name: 'Baltimore',
+        location: { address: '1 Main Road', latitude: '-26.05', longitude: '28.0' },
+        hasGoverningBody: false,
+        media: {},
+        unitTypes: [],
+      },
+    } as any);
+    expect(payload.estateSpecs).toMatchObject({
+      levyRange: { min: null, max: null },
+      rightsAndTaxes: { min: null, max: null },
+    });
+  });
+
+  it('rejects a 0,0 pin', () => {
+    const issues = validateLocationStep({ address: '1 Main Road', latitude: '0', longitude: '0' });
+    expect(issues).toEqual([{ field: 'latitude', message: 'Place the pin on the development' }]);
+  });
+
+  it('a no-street development is submitted with an empty address and the flag, never a made-up address', () => {
     const loc = { noOfficialStreet: true, latitude: '-26.05', longitude: '28.0' };
-    expect(submitAddress(loc)).toBe('Map pin -26.05, 28.0 (no street address yet)');
+    expect(submitAddress(loc)).toBe('');
     expect(submitAddress({ address: ' 1 Main Road ', ...loc })).toBe('1 Main Road');
     expect(submitAddress({ latitude: '1', longitude: '2' })).toBeUndefined();
     const payload = buildDevelopmentSubmitPayload({
@@ -71,7 +95,8 @@ describe('location validation agrees with the server', () => {
         unitTypes: [],
       },
     } as any);
-    expect(payload.address).toBe('Map pin -26.05, 28.0 (no street address yet)');
+    expect(payload.address).toBe('');
+    expect(JSON.stringify(payload)).not.toContain('no street address yet');
     expect(payload.latitude).toBe('-26.05');
     expect(payload.estateSpecs).toMatchObject({ noStreetAddress: true });
   });
@@ -81,6 +106,9 @@ describe('location validation agrees with the server', () => {
       'Location buyers see: North Riding, Johannesburg — from the map pin',
     );
     expect(derivedLocationText(null)).toMatch(/couldn’t match this pin/);
+    expect(derivedLocationText({ suburb: 'North Riding', city: 'Johannesburg' }, 'developer')).toBe(
+      'Suggested suburb: North Riding, Johannesburg — a reviewer confirms it',
+    );
   });
 });
 
@@ -122,7 +150,9 @@ describe('monthly costs mapping', () => {
     });
     expect(levyPatch('body_corporate', 2100)).toMatchObject({ governanceType: 'body_corporate' });
     const none = levyPatch('none', 0);
-    expect(none).toMatchObject({ hasGoverningBody: false, levyRange: { min: 0, max: 0 } });
+    expect(none).toMatchObject({ hasGoverningBody: false, levyRange: { min: null, max: null } });
+    expect(ratesPatch(0)).toEqual({ rightsAndTaxes: { min: null, max: null } });
+    expect(levyPatch('hoa', 0)).toMatchObject({ levyRange: { min: null, max: null } });
     expect(none).not.toHaveProperty('architecturalGuidelines');
     expect(levyChoiceOf({ hasGoverningBody: true, governanceType: 'hoa' })).toBe('hoa');
     expect(levyChoiceOf({ hasGoverningBody: true, governanceType: 'body_corporate' })).toBe(

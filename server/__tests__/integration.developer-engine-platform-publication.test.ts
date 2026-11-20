@@ -180,6 +180,8 @@ async function insertDevelopment(
       developmentType: 'residential',
       transactionType: options.transactionType ?? 'for_sale',
       address: '1 Platform Publication Road, Berea',
+      latitude: '-26.0',
+      longitude: '28.0',
       status: 'selling',
       ownershipType: 'sectional-title',
       highlights: ['Secure estate', 'Close to transport', 'Energy efficient'],
@@ -560,6 +562,8 @@ describeWithDb('Developer Engine platform-curated publication authority integrat
           developmentType: 'land',
           transactionType: 'for_sale',
           address: '1 Deferred Land Road, Berea',
+          latitude: '-26.0',
+          longitude: '28.0',
           status: 'selling',
           ownershipType: 'sectional-title',
           description:

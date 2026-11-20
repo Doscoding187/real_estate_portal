@@ -136,6 +136,46 @@ describe('LocationPhase', () => {
   });
 });
 
+describe('Location truth', () => {
+  it('uses truthful copy about the street address', () => {
+    render(<LocationPhase />);
+    expect(
+      screen.getByText(/Buyers see the suburb in search; the street address shows on the development page for directions/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/not the street address/)).not.toBeInTheDocument();
+  });
+
+  it('a developer sees the derived suburb as a suggestion a reviewer confirms', async () => {
+    auth.derived = { placeId: 'place_x', suburb: 'North Riding', city: 'Johannesburg', distanceKm: 1 };
+    render(<LocationPhase />);
+    fireEvent.change(screen.getByLabelText('Latitude'), { target: { value: '-26.05' } });
+    fireEvent.change(screen.getByLabelText('Longitude'), { target: { value: '28.01' } });
+    expect(
+      await screen.findByText(/Suggested suburb: North Riding, Johannesburg — a reviewer confirms it/, {}, { timeout: 2000 }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Location buyers see/)).not.toBeInTheDocument();
+  });
+
+  it('reopening a saved development keeps the no-street tick and an empty address', () => {
+    store().hydrateDevelopment({
+      id: 9,
+      name: 'Baltimore',
+      developmentType: 'residential',
+      transactionType: 'for_sale',
+      address: '',
+      latitude: '-26.05',
+      longitude: '28.0',
+      estateSpecs: JSON.stringify({ noStreetAddress: true, setting: 'estate' }),
+    } as any);
+    const location = store().getWizardData().location as Record<string, any>;
+    expect(location.noOfficialStreet).toBe(true);
+    expect(location.address).toBe('');
+    render(<LocationPhase />);
+    expect((screen.getByLabelText(/No street address yet/) as HTMLInputElement).checked).toBe(true);
+    expect((screen.getByLabelText(/Street address/) as HTMLInputElement).value).toBe('');
+  });
+});
+
 describe('Monthly costs (EstateProfilePhase)', () => {
   it('asks rates & taxes first as one amount, then the levy; old governance controls are gone', () => {
     render(<EstateProfilePhase />);
@@ -175,7 +215,7 @@ describe('Monthly costs (EstateProfilePhase)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'No levy' }));
     expect(store().stepData.governance_finances).toMatchObject({
       hasGoverningBody: false,
-      levyRange: { min: 0, max: 0 },
+      levyRange: { min: null, max: null },
       rightsAndTaxes: { min: 950, max: 950 },
     });
   });
