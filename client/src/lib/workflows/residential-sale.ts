@@ -1,6 +1,7 @@
 import { WizardWorkflow, WizardStep, type FieldError } from '../types/wizard-workflows';
 import { validateLocationStep, validateAmenitiesStep } from '../wizardLocationCostsAmenities';
 import { validateAboutStep } from '../wizardBasicsAbout';
+import { validateDevelopmentMedia } from '../wizardMedia';
 
 // Eight steps, in this order: Basics, About, Location, Monthly costs,
 // Amenities, Media, House types, Review & publish. The step ids are the same
@@ -67,17 +68,10 @@ const residentialSaleSteps: WizardStep[] = [
     title: 'Media',
     componentKey: 'MediaStep',
     required: true,
-    description: 'Upload high-quality images, documents, and videos.',
+    description: 'Photos, video and documents about the development as a whole.',
     validate: data => {
-      const errors: FieldError[] = [];
-      const d = data as any;
-      // Check for at least one photo (Hero Candidate)
-      const media = d.media || {};
-      const photos = media.photos || [];
-
-      if (photos.length === 0) {
-        errors.push({ field: 'media', message: 'At least one photo (Hero Image) is required' });
-      }
+      // A cover photo is required (matches the server's "persisted image" readiness).
+      const errors: FieldError[] = validateDevelopmentMedia((data as any).media || {});
       return { valid: errors.length === 0, errors };
     },
   },
