@@ -3,8 +3,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BadgeCheck, ClipboardCheck, MapPinned } from 'lucide-react';
 import { isJourneyRouteHeld } from '@/lib/publicNavigation';
+import { useApiAvailability } from '@/components/ApiAvailabilityBoundary';
 
 export default function AdvertiseServicesPage() {
+  const { isUnavailable } = useApiAvailability();
+
   return (
     <main className="min-h-screen bg-[#f7f4ec] px-4 py-12 md:px-6 md:py-20">
       <div className="mx-auto grid w-full max-w-6xl gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
@@ -22,15 +25,29 @@ export default function AdvertiseServicesPage() {
             business profile and individual service pages.
           </p>
           <div className="flex flex-wrap gap-3">
-            <Link href="/login?mode=register&role=service_provider">
-              <Button>Apply as a service provider</Button>
-            </Link>
+            {isUnavailable ? (
+              <Button disabled>Provider applications temporarily unavailable</Button>
+            ) : (
+              <Link href="/login?mode=register&role=service_provider">
+                <Button>Apply as a service provider</Button>
+              </Link>
+            )}
             {isJourneyRouteHeld('services') ? null : (
               <Link href="/services">
                 <Button variant="outline">Browse the directory</Button>
               </Link>
             )}
           </div>
+          {isUnavailable && (
+            <p
+              role="status"
+              className="max-w-2xl rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900"
+            >
+              Secure provider applications are temporarily unavailable while the application
+              service reconnects. No application has been accepted or saved. Please return once
+              availability is restored.
+            </p>
+          )}
           <p className="max-w-2xl text-sm leading-6 text-slate-600">
             Register, verify your email, complete your profile and submit it for review. Your
             profile stays private until an authorized reviewer approves publication. Applying does

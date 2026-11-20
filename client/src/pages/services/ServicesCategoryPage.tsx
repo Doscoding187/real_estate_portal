@@ -35,6 +35,7 @@ import type { ProviderDirectoryItem } from '@/components/services/ProviderCard';
 import { applySeo } from '@/lib/seo';
 import { buildServiceBreadcrumbStructuredData } from '@/features/services/seoStructuredData';
 import { useServicesLocation } from '@/features/services/useServicesLocation';
+import { useApiAvailability } from '@/components/ApiAvailabilityBoundary';
 import { getServiceTopicPage, ServiceTopicPage } from './ServiceTopicPage';
 
 function parsePriceParam(value: string | null): number | undefined {
@@ -64,6 +65,7 @@ function withResultSearchParams(
 export default function ServicesCategoryPage() {
   const [, params] = useRoute('/services/:category');
   const { search, setLocation } = useServicesLocation();
+  const { isUnavailable } = useApiAvailability();
   const categoryParam = String(params?.category || '').trim();
   const serviceTopic = getServiceTopicPage(slugifyLocationSegment(categoryParam));
   const parsedCategory = serviceCategoryFromSlug(categoryParam);
@@ -72,7 +74,7 @@ export default function ServicesCategoryPage() {
   const initialPlaceId = isCanonicalPlaceId(rawPlaceId) ? rawPlaceId : null;
   const resolvedPlaceQuery = trpc.placeAuthority.resolveSearchPlace.useQuery(
     { placeId: initialPlaceId || '' },
-    { enabled: Boolean(initialPlaceId), refetchOnWindowFocus: false },
+    { enabled: Boolean(initialPlaceId) && !isUnavailable, refetchOnWindowFocus: false },
   );
   const resolvedPlace = useMemo(
     () => canonicalPlaceSelectionFromResolved(resolvedPlaceQuery.data),
@@ -131,19 +133,11 @@ export default function ServicesCategoryPage() {
       sort: initialQuery.sort,
       limit: 20,
     },
-    { enabled: Boolean(parsedCategory) && !invalidPlaceAuthority },
+    { enabled: Boolean(parsedCategory) && !invalidPlaceAuthority && !isUnavailable },
   );
-  const providers = (providersQuery.data || []) as ProviderDirectoryItem[];
+  const providers = (isUnavailable ? [] : providersQuery.data || []) as ProviderDirectoryItem[];
   const categoryMeta = getCategoryMeta(category);
   const hasLocation = Boolean(initialPlaceId);
-
-  useEffect(() => {
-    if (!parsedCategory) return;
-    const canonicalCategorySlug = toServiceCategorySlug(parsedCategory);
-    if (categoryParam === canonicalCategorySlug) return;
-
-    setLocation(`/services/${canonicalCategorySlug}${search}`, { replace: true });
-  }, [categoryParam, parsedCategory, search, setLocation]);
 
   useEffect(() => {
     if (!parsedCategory) return;
@@ -324,16 +318,31 @@ export default function ServicesCategoryPage() {
           </div>
         )}
 
+        {isUnavailable && (
+          <div className="mx-auto mt-6 w-full max-w-7xl px-4 md:px-6">
+            <div
+              role="status"
+              className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-900"
+            >
+              Live provider availability is temporarily unavailable while the application service
+              reconnects. You can continue exploring this category, but no provider or coverage
+              information is being shown.
+            </div>
+          </div>
+        )}
+
         <div className="mx-auto w-full max-w-7xl px-4 py-8 md:px-6 md:py-10">
           <ServicesResultsPanel
             filters={filters}
             onApply={applyFilters}
             onReset={resetFilters}
             providers={providers}
-            isLoading={providersQuery.isLoading}
-            error={Boolean(providersQuery.error)}
+            isLoading={!isUnavailable && providersQuery.isLoading}
+            error={isUnavailable || Boolean(providersQuery.error)}
             summary={
-              hasLocation
+              isUnavailable
+                ? 'Live provider availability is temporarily unavailable'
+                : hasLocation
                 ? `Showing ${providers.length} provider${providers.length === 1 ? '' : 's'} in ${placeSelection?.label || 'the selected Place'} for ${categoryMeta.label}`
                 : `Showing ${providers.length} published ${categoryMeta.label} provider${providers.length === 1 ? '' : 's'}`
             }

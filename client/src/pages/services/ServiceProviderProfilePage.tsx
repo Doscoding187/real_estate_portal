@@ -39,6 +39,7 @@ import { ServicesSiteFooter } from '@/components/services/ServicesSiteFooter';
 import { trpc } from '@/lib/trpc';
 import { applySeo } from '@/lib/seo';
 import { useServicesLocation } from '@/features/services/useServicesLocation';
+import { useApiAvailability } from '@/components/ApiAvailabilityBoundary';
 
 type ProfileTab = 'overview' | 'services' | 'areas' | 'contact';
 
@@ -60,6 +61,7 @@ function safeDecode(value: string) {
 export default function ServiceProviderProfilePage() {
   const [, params] = useRoute('/services/provider/:slug');
   const { search, setLocation } = useServicesLocation();
+  const { isUnavailable } = useApiAvailability();
   const slug = String(params?.slug || '');
   const providerId = providerIdFromSlug(safeDecode(slug));
   const journeyContext = serviceJourneyContextFromSearch(search);
@@ -69,7 +71,7 @@ export default function ServiceProviderProfilePage() {
   const [activeTab, setActiveTab] = useState<ProfileTab>('overview');
   const profileQuery = trpc.servicesEngine.getProviderPublicProfile.useQuery(
     { providerId: providerId || 0 },
-    { enabled: Boolean(providerId) },
+    { enabled: Boolean(providerId) && !isUnavailable },
   );
   const profile = profileQuery.data;
   const [selectedServiceCode, setSelectedServiceCode] = useState<string | null>(
@@ -123,6 +125,32 @@ export default function ServiceProviderProfilePage() {
         <main className="min-h-screen bg-[#FDFDFD] px-4 py-8 md:px-6">
           <div className={`${servicesUi.surface} mx-auto max-w-4xl p-6 text-sm text-[#4B5C6B]`}>
             This provider link is not valid.
+          </div>
+        </main>
+      </>
+    );
+  }
+
+  if (isUnavailable) {
+    return (
+      <>
+        <EnhancedNavbar />
+        <main className="min-h-screen bg-[#FDFDFD] px-4 py-8 md:px-6">
+          <div className={`${servicesUi.surface} mx-auto max-w-3xl p-8`} role="status">
+            <h1 className="font-['Sora'] text-2xl font-bold tracking-[-0.03em] text-[#0B1B2A]">
+              Provider profile temporarily unavailable
+            </h1>
+            <p className="mt-3 text-sm leading-6 text-[#4B5C6B]">
+              The application service is reconnecting. This does not confirm whether this provider
+              is published. Please return once availability is restored.
+            </p>
+            <button
+              type="button"
+              onClick={() => setLocation('/services')}
+              className={`${servicesUi.action} mt-6`}
+            >
+              Browse services
+            </button>
           </div>
         </main>
       </>

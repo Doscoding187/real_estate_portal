@@ -4,7 +4,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/NotFound';
 import { AgentListingAccessGate } from './components/agent/AgentListingAccessGate';
-import { Route, Switch, Redirect } from 'wouter';
+import { Route, Switch, Redirect, useLocation } from 'wouter';
 import ErrorBoundary from './components/ErrorBoundary';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { BrandingProvider } from './contexts/BrandingContext';
@@ -24,6 +24,7 @@ import { isLandPublicDiscoveryAvailable, isLandVerticalAvailable } from '@shared
 // Eager Imports (Critical Path)
 import Home from './pages/Home';
 import { HeldJourneyGate } from './pages/JourneyHeldPage';
+import { ApiAvailabilityGate } from './components/ApiAvailabilityBoundary';
 import JourneyComingSoonPage from './pages/JourneyComingSoonPage';
 import { RequireRole } from '@/components/RequireRole';
 import AgencySetupAccountBoundary from '@/components/AgencySetupAccountBoundary';
@@ -210,10 +211,12 @@ function Router() {
 
   // Enable keyboard navigation mode detection
   useKeyboardMode();
+  const [pathname] = useLocation();
 
   // make sure to consider if you need authentication for certain routes
   return (
-    <>
+    <ApiAvailabilityGate pathname={pathname}>
+      <>
       <nav aria-label="Skip navigation">
         <SkipToContent targetId="main-content" />
       </nav>
@@ -541,7 +544,7 @@ function Router() {
           <Route path="/pro/profile">
             <Redirect to="/service/profile" />
           </Route>
-          {/* Consumer Services routes are held until the directory is stocked (LAUNCH_HELD_JOURNEYS) */}
+          {/* Public Services discovery stays available; server-side publication rules govern supply. */}
           <Route path="/services/request/:category">
             <HeldJourneyGate journey="services">
               <ServicesRequestPage />
@@ -862,7 +865,8 @@ function Router() {
           <Route component={NotFound} />
         </Switch>
       </Suspense>
-    </>
+      </>
+    </ApiAvailabilityGate>
   );
 }
 

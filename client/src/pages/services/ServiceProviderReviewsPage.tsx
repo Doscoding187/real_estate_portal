@@ -10,6 +10,7 @@ import { EnhancedNavbar } from '@/components/EnhancedNavbar';
 import { ProviderRating, StarRating } from '@/components/services/ProviderShowcaseCard';
 import { ServicesSiteFooter } from '@/components/services/ServicesSiteFooter';
 import { useServicesLocation } from '@/features/services/useServicesLocation';
+import { useApiAvailability } from '@/components/ApiAvailabilityBoundary';
 
 function parsePositiveInteger(value: string | undefined): number | null {
   if (!value || !/^\d+$/.test(value)) return null;
@@ -20,6 +21,7 @@ function parsePositiveInteger(value: string | undefined): number | null {
 export default function ServiceProviderReviewsPage() {
   const { user } = useAuth();
   const { search } = useServicesLocation();
+  const { isUnavailable } = useApiAvailability();
   const [, params] = useRoute('/services/reviews/:providerId');
   const providerId = parsePositiveInteger(params?.providerId);
   const routeProviderId = providerId || 0;
@@ -36,15 +38,15 @@ export default function ServiceProviderReviewsPage() {
 
   const profileQuery = trpc.servicesEngine.getProviderPublicProfile.useQuery(
     { providerId: routeProviderId },
-    { enabled: Boolean(providerId) },
+    { enabled: Boolean(providerId) && !isUnavailable },
   );
   const reviewsQuery = trpc.servicesEngine.getProviderReviews.useQuery(
     { providerId: routeProviderId, limit: 100 },
-    { enabled: Boolean(providerId) },
+    { enabled: Boolean(providerId) && !isUnavailable },
   );
   const eligibilityQuery = trpc.servicesEngine.getProviderReviewEligibility.useQuery(
     { providerId: routeProviderId },
-    { enabled: Boolean(providerId && user) },
+    { enabled: Boolean(providerId && user) && !isUnavailable },
   );
   const utils = trpc.useUtils();
   const submitReview = trpc.servicesEngine.submitProviderReview.useMutation({
@@ -101,6 +103,28 @@ export default function ServiceProviderReviewsPage() {
         <main className="min-h-screen bg-[#FDFDFD] px-4 py-12 md:px-6">
           <div className={`${servicesUi.surface} mx-auto max-w-3xl p-8 text-sm text-[#4B5C6B]`}>
             This review link is not valid.
+          </div>
+        </main>
+      </>
+    );
+  }
+
+  if (isUnavailable) {
+    return (
+      <>
+        <EnhancedNavbar />
+        <main className="min-h-screen bg-[#FDFDFD] px-4 py-12 md:px-6">
+          <div className={`${servicesUi.surface} mx-auto max-w-3xl p-8`} role="status">
+            <h1 className="font-['Sora'] text-2xl font-bold tracking-[-0.03em] text-[#0B1B2A]">
+              Provider reviews temporarily unavailable
+            </h1>
+            <p className="mt-3 text-sm leading-6 text-[#4B5C6B]">
+              The application service is reconnecting. This does not confirm whether this provider
+              is published or has reviews. Please return once availability is restored.
+            </p>
+            <Link href="/services" className={`${servicesUi.action} mt-6`}>
+              Browse services
+            </Link>
           </div>
         </main>
       </>

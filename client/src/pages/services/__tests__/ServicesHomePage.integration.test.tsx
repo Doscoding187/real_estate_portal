@@ -88,7 +88,7 @@ describe('ServicesHomePage', () => {
     render(<ServicesHomePage />);
 
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
-      /trusted local service providers/i,
+      /property services for every step/i,
     );
     expect(screen.getByRole('combobox', { name: /service category/i })).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/Choose an approved Place/i)).toBeInTheDocument();

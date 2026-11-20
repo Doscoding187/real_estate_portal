@@ -41,6 +41,7 @@ import {
 } from '@/components/location/CanonicalPlaceSelector';
 import { canonicalPlaceSelectionFromResolved } from '@/lib/canonicalPlaceSelection';
 import { isCanonicalPlaceId } from '@shared/placeAuthority';
+import { useApiAvailability } from '@/components/ApiAvailabilityBoundary';
 
 const DIRECTORY_SCAN_LIMIT = 50;
 const RAIL_SIZE = 8;
@@ -53,35 +54,35 @@ const HOW_IT_WORKS = [
   },
   {
     title: 'Compare providers',
-    description: 'Browse verified professionals in your area.',
+    description: 'Review approved provider profiles available in your area.',
     icon: ClipboardList,
   },
   {
     title: 'Send an enquiry',
-    description: 'Get in touch directly with the provider you choose.',
+    description: 'Send a private request to the provider you choose.',
     icon: MessageSquare,
   },
   {
-    title: 'Get it done',
-    description: 'The provider will contact you to discuss your needs.',
+    title: 'Receive a response',
+    description: 'The provider can respond and update the request from its workspace.',
     icon: UserCheck,
   },
 ];
 
 const TRUST_POINTS = [
   {
-    title: 'Verified professionals',
-    description: 'All providers are platform verified for your peace of mind.',
+    title: 'Reviewed publication',
+    description: 'Public profiles appear only after Property Listify approval.',
     icon: BadgeCheck,
   },
   {
-    title: 'Local & trusted',
-    description: 'Real professionals in your area, ready to help.',
+    title: 'Clear availability',
+    description: 'Availability reflects active published services and listed coverage.',
     icon: ShieldCheck,
   },
   {
-    title: 'Easy enquiries',
-    description: 'Get in touch directly with the right provider, fast and simple.',
+    title: 'Private enquiries',
+    description: 'A request is attributed to the provider you choose.',
     icon: MessageSquare,
   },
 ];
@@ -93,12 +94,13 @@ function providerCategory(provider: ProviderDirectoryItem): ServiceCategory {
 
 export default function ServicesHomePage() {
   const { search, setLocation } = useServicesLocation();
+  const { isUnavailable } = useApiAvailability();
   const journeyContext = serviceJourneyContextFromSearch(search);
   const rawPlaceId = new URLSearchParams(search).get('canonicalPlaceId');
   const initialPlaceId = isCanonicalPlaceId(rawPlaceId) ? rawPlaceId : '';
   const resolvedPlaceQuery = trpc.placeAuthority.resolveSearchPlace.useQuery(
     { placeId: initialPlaceId },
-    { enabled: Boolean(initialPlaceId), refetchOnWindowFocus: false },
+    { enabled: Boolean(initialPlaceId) && !isUnavailable, refetchOnWindowFocus: false },
   );
   const resolvedPlace = useMemo(
     () => canonicalPlaceSelectionFromResolved(resolvedPlaceQuery.data),
@@ -110,16 +112,20 @@ export default function ServicesHomePage() {
   );
   const activePlace = selectedPlace === undefined ? resolvedPlace : selectedPlace;
 
-  const directoryQuery = trpc.servicesEngine.directorySearch.useQuery({
-    limit: DIRECTORY_SCAN_LIMIT,
-    sort: 'rating',
-  });
-  const providers = useMemo(
-    () => (directoryQuery.data || []) as ProviderDirectoryItem[],
-    [directoryQuery.data],
+  const directoryQuery = trpc.servicesEngine.directorySearch.useQuery(
+    {
+      limit: DIRECTORY_SCAN_LIMIT,
+      sort: 'rating',
+    },
+    { enabled: !isUnavailable },
   );
-  const isLoading = directoryQuery.isLoading;
+  const providers = useMemo(
+    () => (isUnavailable ? [] : (directoryQuery.data || [])) as ProviderDirectoryItem[],
+    [directoryQuery.data, isUnavailable],
+  );
+  const isLoading = !isUnavailable && directoryQuery.isLoading;
   const hasError = Boolean(directoryQuery.error);
+  const directoryUnavailable = isUnavailable || hasError;
 
   const rankedServices = useMemo(() => rankPopularServiceGroups(providers), [providers]);
   const railServices = rankedServices.slice(0, RAIL_SIZE);
@@ -195,11 +201,11 @@ export default function ServicesHomePage() {
               Services
             </p>
             <h1 className="mt-4 max-w-3xl font-['Sora'] text-[34px] font-bold leading-[1.08] tracking-[-0.04em] text-white md:text-[52px]">
-              Trusted Local Service Providers for Your Property &amp; Home
+              Property services for every step of your journey
             </h1>
             <p className="mt-5 max-w-2xl text-[15px] leading-7 text-slate-200 md:text-lg">
-              Find verified professionals across 6 service categories. From home repairs to
-              renovations, connect with the right experts in your area.
+              Explore six service categories. Published provider availability is shown for your
+              selected area, and enquiries go only to the provider you choose.
             </p>
 
             <div className="mt-10 rounded-2xl border border-white/20 bg-white p-3 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)] md:mt-14 md:p-4">
@@ -239,6 +245,16 @@ export default function ServicesHomePage() {
           </div>
         </section>
 
+        {isUnavailable && (
+          <div className="border-b border-amber-200 bg-amber-50 px-4 py-3 md:px-6" role="status">
+            <p className="mx-auto max-w-7xl text-sm leading-6 text-amber-900">
+              Live provider availability is temporarily unavailable while the application service
+              reconnects. You can continue exploring service categories, but no provider or request
+              information has been confirmed.
+            </p>
+          </div>
+        )}
+
         {/* ── Ranked service rail ────────────────────────────────────────── */}
         <section className="border-b border-[#E3EBF0] bg-white">
           <div className="mx-auto w-full max-w-7xl px-4 py-9 md:px-6 md:py-10">
@@ -263,8 +279,8 @@ export default function ServicesHomePage() {
                 <p className={servicesUi.eyebrow}>More property services</p>
                 <h2 className={`mt-2 ${servicesUi.heading}`}>The rest of the directory</h2>
                 <p className="mt-2 max-w-2xl text-sm text-[#8A99A6]">
-                  The most-requested services are ranked in the rail above. Every other service
-                  group follows here, with no duplicate cards.
+                  Browse additional property service types and choose the category that best fits
+                  what you need done.
                 </p>
               </div>
               <button
@@ -299,13 +315,13 @@ export default function ServicesHomePage() {
           </div>
         </section>
 
-        {/* ── Featured providers ─────────────────────────────────────────── */}
+        {/* ── Published providers ────────────────────────────────────────── */}
         <section className="bg-white px-4 py-14 md:px-6 md:py-16">
           <div className="mx-auto w-full max-w-7xl">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
-                <p className={servicesUi.eyebrow}>Featured service providers</p>
-                <h2 className={`mt-2 ${servicesUi.heading}`}>Published and platform verified</h2>
+                <p className={servicesUi.eyebrow}>Provider directory</p>
+                <h2 className={`mt-2 ${servicesUi.heading}`}>Published providers, when available</h2>
               </div>
               <button
                 type="button"
@@ -334,13 +350,15 @@ export default function ServicesHomePage() {
               </div>
             )}
 
-            {!isLoading && hasError && (
+            {!isLoading && directoryUnavailable && (
               <div className="mt-8 rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-800">
-                We could not load the provider directory. Please try again.
+                {isUnavailable
+                  ? 'Live provider availability is temporarily unavailable. No provider information is being shown until the application service reconnects.'
+                  : 'We could not load the provider directory. Please try again.'}
               </div>
             )}
 
-            {!isLoading && !hasError && featuredProviders.length > 0 && (
+            {!isLoading && !directoryUnavailable && featuredProviders.length > 0 && (
               <div className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
                 {featuredProviders.map(provider => (
                   <ProviderShowcaseCard
@@ -352,7 +370,7 @@ export default function ServicesHomePage() {
               </div>
             )}
 
-            {!isLoading && !hasError && featuredProviders.length === 0 && (
+            {!isLoading && !directoryUnavailable && featuredProviders.length === 0 && (
               <div className="mt-8 rounded-2xl border border-dashed border-[#CBD8E0] bg-white p-8 text-sm leading-6 text-[#4B5C6B]">
                 No published providers are available yet. The Services directory opens as providers
                 complete review and publication.
@@ -380,7 +398,7 @@ export default function ServicesHomePage() {
                 </div>
                 <div className="p-7 md:p-9">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#5FD3AC]">
-                    Featured provider
+                    Provider spotlight
                   </p>
                   <h2 className="mt-3 font-['Sora'] text-2xl font-bold tracking-[-0.03em] text-white md:text-[26px]">
                     {spotlightProvider.companyName}
