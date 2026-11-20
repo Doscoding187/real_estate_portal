@@ -9,6 +9,7 @@ import {
   getCanonicalDevelopmentUnitTypes,
 } from '../../../shared/developmentCanonicalSelectors';
 import { communityTypesForSetting } from './wizardBasicsAbout';
+import { SERVER_UNIT_OWNERSHIP_VALUES } from './wizardHouseTypes';
 import { submitAddress } from './wizardLocationCostsAmenities';
 import {
   CANONICAL_PARTIAL_UPDATE_MODE,
@@ -435,7 +436,7 @@ export function normalizeSubmitUnitTypes(
       isActive: typeof unit?.isActive === 'boolean' ? unit.isActive : undefined,
       structuralType: unit?.structuralType,
       // Per-house-type ownership (only asked when the development says "Varies by house type").
-      ownershipType: ['full-title', 'sectional-title', 'leasehold', 'life-rights'].includes(
+      ownershipType: (SERVER_UNIT_OWNERSHIP_VALUES as readonly string[]).includes(
         unit?.ownershipType,
       )
         ? unit.ownershipType

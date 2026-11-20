@@ -145,12 +145,27 @@ export const needsUnitOwnership = (developmentOwnership: unknown): boolean => {
   return value === 'varies';
 };
 
+/**
+ * The ownership values the server stores for a unit type
+ * (server/services/developmentService.ts, unit ownershipType sanitizeEnum).
+ * Only these are offered per house type, so nothing chosen is silently dropped.
+ */
+export const SERVER_UNIT_OWNERSHIP_VALUES = [
+  'full-title',
+  'sectional-title',
+  'leasehold',
+  'life-rights',
+] as const;
+
 export const UNIT_OWNERSHIP_OPTIONS = [
   { value: 'full-title', label: 'Full title' },
   { value: 'sectional-title', label: 'Sectional title' },
   { value: 'life-rights', label: 'Life rights' },
   { value: 'leasehold', label: 'Leasehold' },
 ];
+
+/** Share block has no server unit value and no identical neighbour, so it is not offered per house type. */
+export const UNIT_OWNERSHIP_HINT = 'Share block is set at development level.';
 
 export const isReadyNow = (unit: any): boolean =>
   unit?.readyNow === true || parseSpecs(unit?.specifications)?.readyNow === true;

@@ -60,6 +60,7 @@ import { HouseMeasureIcon } from '@/components/icons/HouseMeasureIcon';
 import { IMAGE_TYPES, PDF_TYPE, floorPlanRejection, rejectionMessage, sizeHint } from '@/lib/wizardMedia';
 import {
   HOME_TYPES,
+  UNIT_OWNERSHIP_HINT,
   UNIT_OWNERSHIP_OPTIONS,
   applyAutoNames,
   classificationFor,
@@ -1512,6 +1513,7 @@ export function UnitTypesPhase() {
                             ))}
                           </SelectContent>
                         </Select>
+                        <p className="text-xs text-slate-500">{UNIT_OWNERSHIP_HINT}</p>
                       </div>
                     )}
                   </div>

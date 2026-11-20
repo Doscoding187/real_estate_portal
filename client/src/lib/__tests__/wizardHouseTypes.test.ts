@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   HOME_TYPES,
+  SERVER_UNIT_OWNERSHIP_VALUES,
+  UNIT_OWNERSHIP_HINT,
+  UNIT_OWNERSHIP_OPTIONS,
   applyAutoNames,
   classificationFor,
   duplicateUnitType,
@@ -169,6 +172,18 @@ describe('sale house type payload and readiness', () => {
     expect(unit.specifications?.readyNow).toBe(true);
     expect(unit.monthlyRentFrom).toBeUndefined();
     expect(unit.startingBid).toBeUndefined();
+  });
+
+  it('every per-unit ownership option round-trips through the submit payload', () => {
+    expect(UNIT_OWNERSHIP_OPTIONS.map(o => o.value).sort()).toEqual(
+      [...SERVER_UNIT_OWNERSHIP_VALUES].sort(),
+    );
+    expect(UNIT_OWNERSHIP_OPTIONS.some(o => o.value === 'share-block')).toBe(false);
+    expect(UNIT_OWNERSHIP_HINT).toBe('Share block is set at development level.');
+    for (const option of UNIT_OWNERSHIP_OPTIONS) {
+      const [unit] = normalizeSubmitUnitTypes([{ ...sale, ownershipType: option.value }], 'for_sale');
+      expect(unit.ownershipType).toBe(option.value);
+    }
   });
 
   it('drops an ownership value the server does not know', () => {
