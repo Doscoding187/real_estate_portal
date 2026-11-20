@@ -15,6 +15,9 @@ describe('public Developments search authority', () => {
       'Commercial development records are not an alternate public Commercial',
     );
     expect(service).toContain('listDevelopmentIdsForCanonicalPlace(');
+    // City and province searches include the developments of the suburbs beneath them.
+    expect(service).toContain('developmentSearchPlaceIds(');
+    expect(service).toContain('listDevelopmentIdsForCanonicalPlaces(');
     expect(service).toContain('locationContext: { canonicalPlaceId: input.canonicalPlaceId }');
     expect(service).not.toContain('input.province');
     expect(service).not.toContain('input.city');
