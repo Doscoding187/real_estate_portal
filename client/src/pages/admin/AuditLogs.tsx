@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
+import { summarizeAuditDetails } from './dashboard/auditSummary';
+import { ADMIN_PAGE_CLASS } from '@/components/admin/adminPageLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -59,7 +61,7 @@ export default function AuditLogs() {
   );
 
   return (
-    <div className="max-w-7xl mx-auto py-6 space-y-5">
+    <div className={`${ADMIN_PAGE_CLASS} space-y-5`}>
       <div>
         <h1 className="text-2xl font-bold text-slate-900">System and security</h1>
         <p className="text-sm text-slate-600">
@@ -162,9 +164,17 @@ export default function AuditLogs() {
                     </TableCell>
                     <TableCell>
                       {log.metadata && Object.keys(log.metadata).length > 0 ? (
-                        <div className="text-sm text-muted-foreground max-w-xs truncate">
-                          {JSON.stringify(log.metadata)}
-                        </div>
+                        <details className="text-sm text-slate-700 max-w-sm">
+                          <summary className="cursor-pointer truncate">
+                            {summarizeAuditDetails(log.metadata) || 'Show details'}
+                          </summary>
+                          <pre
+                            aria-label="Raw details"
+                            className="mt-1 whitespace-pre-wrap break-all rounded bg-slate-50 p-2 text-xs"
+                          >
+                            {JSON.stringify(log.metadata, null, 2)}
+                          </pre>
+                        </details>
                       ) : (
                         <span className="text-muted-foreground">-</span>
                       )}

@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { EditCataloguePublisherDialog } from '@/components/admin/publisher/EditCataloguePublisherDialog';
 import { trpc } from '@/lib/trpc';
+import { ADMIN_PAGE_CLASS } from '@/components/admin/adminPageLayout';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { publisherTheme, animations, cardElevation, glassEffect } from '@/lib/publisherTheme';
@@ -217,7 +218,7 @@ export const SuperAdminPublisher: React.FC = () => {
   return (
     <DeveloperContextProvider>
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20">
-        <div className="container mx-auto py-8 max-w-7xl">
+        <div className={ADMIN_PAGE_CLASS}>
           {/* Enhanced Header with Gradient Background */}
           <div className="relative mb-8 rounded-2xl overflow-hidden shadow-xl bg-white border border-slate-200">
             {/* Clean Background */}

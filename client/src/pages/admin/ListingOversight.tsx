@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
+import { ADMIN_PAGE_CLASS } from '@/components/admin/adminPageLayout';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { isSuperAdminRole } from '@/_core/roles';
 import { Button } from '@/components/ui/button';
@@ -38,8 +39,6 @@ import {
   CheckCircle,
   XCircle,
   Archive,
-  ArrowLeft,
-  Filter,
   Home,
   MapPin,
   DollarSign,
@@ -258,22 +257,8 @@ export default function ListingOversight() {
 
   return (
     <div className="min-h-screen bg-transparent">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => setLocation('/admin/overview')}>
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <Eye className="h-8 w-8 text-primary" />
-            <div>
-              <h2 className="text-xl font-bold text-slate-800">Listing Approvals</h2>
-              <p className="text-muted-foreground">Review and moderate property listings</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Filters */}
+      <div className={ADMIN_PAGE_CLASS}>
+        {/* Filters (the Approvals page above provides the title) */}
         <GlassCard className="mb-6 border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)]">
           <CardContent className="pt-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -308,13 +293,6 @@ export default function ListingOversight() {
                   <SelectItem value="archived">Archived</SelectItem>
                 </SelectContent>
               </Select>
-              <Button
-                variant="outline"
-                className="flex items-center gap-2 bg-white/50 hover:bg-white"
-              >
-                <Filter className="h-4 w-4" />
-                Advanced Filters
-              </Button>
             </div>
           </CardContent>
         </GlassCard>

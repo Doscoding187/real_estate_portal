@@ -49,6 +49,7 @@ import {
 import { excludeLandFromGenericListingWorkflow } from './services/landLaunchContainmentService';
 import { resolveMediaDeliveryUrl } from './_core/mediaStorage';
 import { safeErrorSummary } from './_core/safeError';
+import { buildAgencyListWhere } from './services/adminAgencyListQuery';
 
 async function withDeadlockRetry(operation: () => Promise<any>): Promise<any> {
   for (let attempt = 0; ; attempt += 1) {
@@ -4605,47 +4606,38 @@ export const agencyRouter = router({
       throw new Error('Database not available');
     }
 
-    let query = db.select().from(agencies);
+    const where = buildAgencyListWhere(input);
 
-    // Apply filters
-    const conditions: SQL[] = [];
+    try {
+      const results = await db
+        .select()
+        .from(agencies)
+        .where(where)
+        .orderBy(desc(agencies.createdAt))
+        .limit(input.limit)
+        .offset(input.offset);
 
-    const search = input.search?.trim();
-    if (search) {
-      conditions.push(
-        or(
-          like(agencies.name, `%${search}%`),
-          like(agencies.email, `%${search}%`),
-        )!,
-      );
+      // Total for the same filters. This used to select a bare id column instead of COUNT(*),
+      // so the total was one agency's id, not a count.
+      const [countRow] = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(agencies)
+        .where(where);
+
+      return {
+        agencies: results,
+        total: Number(countRow?.count) || 0,
+        limit: input.limit,
+        offset: input.offset,
+      };
+    } catch (error) {
+      console.error('[agency.list] query failed:', safeErrorSummary(error));
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Agencies could not be loaded',
+        cause: error,
+      });
     }
-
-    if (input.subscriptionPlan) {
-      conditions.push(eq(agencies.subscriptionPlan, input.subscriptionPlan));
-    }
-
-    if (input.isVerified !== undefined) {
-      conditions.push(eq(agencies.isVerified, input.isVerified ? 1 : 0));
-    }
-
-    if (conditions.length > 0) {
-      query = query.where(or(...conditions)!);
-    }
-
-    const results = await query
-      .orderBy(desc(agencies.createdAt))
-      .limit(input.limit)
-      .offset(input.offset);
-
-    // Get total count
-    const [{ count }] = await db.select({ count: agencies.id }).from(agencies);
-
-    return {
-      agencies: results,
-      total: Number(count) || 0,
-      limit: input.limit,
-      offset: input.offset,
-    };
   }),
 
   /**

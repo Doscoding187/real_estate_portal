@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { GlassCard } from '@/components/ui/glass-card';
 import { trpc } from '@/lib/trpc';
+import { ADMIN_PAGE_CLASS } from '@/components/admin/adminPageLayout';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 type UsersPageProps = {
@@ -76,7 +77,7 @@ const UsersPage: React.FC<UsersPageProps> = ({ initialRole }) => {
   const totalPages = data?.pagination?.totalPages || 1;
 
   return (
-    <div className="space-y-5 max-w-7xl mx-auto py-6">
+    <div className={`${ADMIN_PAGE_CLASS} space-y-5`}>
       <div>
         <h1 className="text-2xl font-bold text-slate-800">
           {initialRole === 'agent' ? 'Agents' : 'Users'}

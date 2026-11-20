@@ -1,5 +1,6 @@
 import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
+import { ADMIN_PAGE_CLASS } from '@/components/admin/adminPageLayout';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { isSuperAdminRole } from '@/_core/roles';
 import { Button } from '@/components/ui/button';
@@ -58,7 +59,7 @@ export default function PlatformSettings() {
   const stale = emailRows.filter(r => r.stale).length;
 
   return (
-    <div className="max-w-5xl mx-auto py-6 space-y-5">
+    <div className={`${ADMIN_PAGE_CLASS} space-y-5`}>
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Settings and integrations</h1>
         <p className="text-sm text-slate-600">

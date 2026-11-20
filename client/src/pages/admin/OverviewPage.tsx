@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { CheckCircle, Plus, Receipt, Users } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
+import { ADMIN_PAGE_CLASS } from '@/components/admin/adminPageLayout';
 import { useLocation } from 'wouter';
 import GrowthChart from './dashboard/GrowthChart';
 import {
@@ -104,7 +105,7 @@ const OverviewPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-[1240px] mx-auto py-6 flex flex-wrap gap-6 items-start">
+    <div className={`${ADMIN_PAGE_CLASS} flex flex-wrap gap-6 items-start`}>
       <section className="flex-[999_1_520px] min-w-0 flex flex-col gap-5">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Dashboard</h1>
