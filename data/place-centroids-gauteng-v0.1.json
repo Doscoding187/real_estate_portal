@@ -9,7 +9,17 @@
  "overrides": {
   "path": "data/place-centroid-overrides-gauteng-v0.1.json"
  },
- "generatedAt": "2026-11-18T14:13:06.719Z",
+ "external": {
+  "path": "data/place-centroid-external-gauteng-v0.1.json",
+  "sha256": "ad3698ee2c00cafbfaf212fa6938132973e56f92d6a8a6c73867ee30604f7d42",
+  "source": {
+   "name": "Wikidata",
+   "licence": "CC0-1.0",
+   "url": "https://query.wikidata.org",
+   "retrievedAt": "2026-11-20"
+  }
+ },
+ "generatedAt": "2026-11-20T00:51:26.014Z",
  "entries": [
   {
    "canonicalPlaceId": "pl-place-01-00a5071b3470f996c7856dd5",
@@ -133,9 +143,9 @@
    "naturalKey": "gauteng/johannesburg/bassonia",
    "level": "suburb",
    "parentCityPlaceId": "pl-place-01-21f154cd5d0954c29ec7525f",
-   "lat": null,
-   "lng": null,
-   "matchMethod": "tier1_exact_path"
+   "lat": -26.277778,
+   "lng": 28.063889,
+   "matchMethod": "external_wikidata"
   },
   {
    "canonicalPlaceId": "pl-place-01-0394546b8616b4dea2cc52c0",
@@ -246,6 +256,15 @@
    "matchMethod": "tier1_exact_path"
   },
   {
+   "canonicalPlaceId": "pl-place-01-062d7829177a57a6dfca09eb",
+   "naturalKey": "gauteng/boksburg/boksburg-noord",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-f32a20dcdd9bda610b044611",
+   "lat": -26.2044444,
+   "lng": 28.2577778,
+   "matchMethod": "manual-reviewed"
+  },
+  {
    "canonicalPlaceId": "pl-place-01-068fdf97d7b3194a4736c2df",
    "naturalKey": "gauteng/johannesburg/homestead-park",
    "level": "suburb",
@@ -309,6 +328,15 @@
    "matchMethod": "tier3_slug_name_unique"
   },
   {
+   "canonicalPlaceId": "pl-place-01-07fee0a92389fd3ee867b44a",
+   "naturalKey": "gauteng/vanderbijlpark/se1",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-c86eeee4b401f586c125025b",
+   "lat": -26.71434445,
+   "lng": 27.841728929766703,
+   "matchMethod": "tier3b_grid_code"
+  },
+  {
    "canonicalPlaceId": "pl-place-01-088e7dd2ac89b7be688324eb",
    "naturalKey": "gauteng/evaton/beverley-hills",
    "level": "suburb",
@@ -361,6 +389,15 @@
    "lat": -26.3747222,
    "lng": 28.1577778,
    "matchMethod": "tier3_slug_name_unique"
+  },
+  {
+   "canonicalPlaceId": "pl-place-01-09ab79fd3e467b98f8176a5c",
+   "naturalKey": "gauteng/vanderbijlpark/se8",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-c86eeee4b401f586c125025b",
+   "lat": -26.72556635,
+   "lng": 27.86620558913681,
+   "matchMethod": "tier3b_grid_code"
   },
   {
    "canonicalPlaceId": "pl-place-01-09c0a503ef4b1c7b871a0461",
@@ -421,9 +458,9 @@
    "naturalKey": "gauteng/johannesburg/barbeque-downs",
    "level": "suburb",
    "parentCityPlaceId": "pl-place-01-21f154cd5d0954c29ec7525f",
-   "lat": null,
-   "lng": null,
-   "matchMethod": "tier3_slug_name_unique"
+   "lat": -26.009722,
+   "lng": 28.074722,
+   "matchMethod": "external_wikidata"
   },
   {
    "canonicalPlaceId": "pl-place-01-0b0cf1a74f8998c481854e95",
@@ -471,6 +508,15 @@
    "matchMethod": "tier1_exact_path"
   },
   {
+   "canonicalPlaceId": "pl-place-01-0c25cd961d354fd187d0329c",
+   "naturalKey": "gauteng/ekurhuleni/midrand",
+   "level": "suburb",
+   "parentCityPlaceId": null,
+   "lat": -25.9954,
+   "lng": 28.1348,
+   "matchMethod": "external_wikidata"
+  },
+  {
    "canonicalPlaceId": "pl-place-01-0c416b8e998a679805cb8c03",
    "naturalKey": "gauteng/germiston/meadowbrook",
    "level": "suburb",
@@ -484,9 +530,9 @@
    "naturalKey": "gauteng/johannesburg/mulbarton",
    "level": "suburb",
    "parentCityPlaceId": "pl-place-01-21f154cd5d0954c29ec7525f",
-   "lat": null,
-   "lng": null,
-   "matchMethod": "tier1_exact_path"
+   "lat": -26.290414,
+   "lng": 28.049297,
+   "matchMethod": "external_wikidata"
   },
   {
    "canonicalPlaceId": "pl-place-01-0caefe4f9b6b60bc35cdcf6e",
@@ -597,6 +643,15 @@
    "matchMethod": "tier3_slug_name_unique"
   },
   {
+   "canonicalPlaceId": "pl-place-01-0e5cec911a1ff0804b369977",
+   "naturalKey": "gauteng/city-of-johannesburg/broadacres-ah",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-21f154cd5d0954c29ec7525f",
+   "lat": -25.993889,
+   "lng": 27.991389,
+   "matchMethod": "external_wikidata"
+  },
+  {
    "canonicalPlaceId": "pl-place-01-0e92631ce2fb9b6ef413ec04",
    "naturalKey": "gauteng/blinkpoort",
    "level": "city",
@@ -631,6 +686,15 @@
    "lat": -26.3905556,
    "lng": 27.6002778,
    "matchMethod": "tier3_slug_name_unique"
+  },
+  {
+   "canonicalPlaceId": "pl-place-01-0f887de57e44e9ba436afcba",
+   "naturalKey": "gauteng/vanderbijlpark/ce1",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-c86eeee4b401f586c125025b",
+   "lat": -26.701459749999998,
+   "lng": 27.844039071216905,
+   "matchMethod": "tier3b_grid_code"
   },
   {
    "canonicalPlaceId": "pl-place-01-0f8a09151902139e48460df0",
@@ -685,6 +749,15 @@
    "lat": -26.1613889,
    "lng": 27.6961111,
    "matchMethod": "tier3_slug_name_unique"
+  },
+  {
+   "canonicalPlaceId": "pl-place-01-10c55aee6c00817961842e7c",
+   "naturalKey": "gauteng/vanderbijlpark/se2",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-c86eeee4b401f586c125025b",
+   "lat": -26.7271775,
+   "lng": 27.845136991983228,
+   "matchMethod": "tier3b_grid_code"
   },
   {
    "canonicalPlaceId": "pl-place-01-1155d9c07cbfe7e749e6231c",
@@ -817,9 +890,9 @@
    "naturalKey": "gauteng/pretoria/wierdapark",
    "level": "suburb",
    "parentCityPlaceId": "pl-place-01-d0401eba0f556a60bb02e528",
-   "lat": null,
-   "lng": null,
-   "matchMethod": "tier2b_city_alias"
+   "lat": -25.8605,
+   "lng": 28.1445,
+   "matchMethod": "external_wikidata"
   },
   {
    "canonicalPlaceId": "pl-place-01-13630fce5592a0e889e0ff35",
@@ -871,9 +944,9 @@
    "naturalKey": "gauteng/pretoria/doringkloof",
    "level": "suburb",
    "parentCityPlaceId": "pl-place-01-d0401eba0f556a60bb02e528",
-   "lat": null,
-   "lng": null,
-   "matchMethod": "tier2b_city_alias"
+   "lat": -25.8559,
+   "lng": 28.2115,
+   "matchMethod": "external_wikidata"
   },
   {
    "canonicalPlaceId": "pl-place-01-144810506b0f17cff9266921",
@@ -912,6 +985,15 @@
    "matchMethod": "tier3_slug_name_unique"
   },
   {
+   "canonicalPlaceId": "pl-place-01-1528d7c573f7882c9807cd54",
+   "naturalKey": "gauteng/johannesburg/newlands",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-21f154cd5d0954c29ec7525f",
+   "lat": -26.17562,
+   "lng": 27.9644444,
+   "matchMethod": "manual-reviewed"
+  },
+  {
    "canonicalPlaceId": "pl-place-01-1646a2730db9a32e6a91da17",
    "naturalKey": "gauteng/johannesburg/breaunanda",
    "level": "suburb",
@@ -937,6 +1019,15 @@
    "lat": -26.1879529,
    "lng": 28.1041774,
    "matchMethod": "tier1_exact_path"
+  },
+  {
+   "canonicalPlaceId": "pl-place-01-16f9225a5e6a3bada9f4d2f0",
+   "naturalKey": "gauteng/pretoria/val-de-grace",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-d0401eba0f556a60bb02e528",
+   "lat": -25.7444447,
+   "lng": 28.2966255,
+   "matchMethod": "manual-reviewed"
   },
   {
    "canonicalPlaceId": "pl-place-01-179295e3f3bc3ec124348cc8",
@@ -991,6 +1082,15 @@
    "lat": -25.72336,
    "lng": 28.495995,
    "matchMethod": "tier1_exact_path"
+  },
+  {
+   "canonicalPlaceId": "pl-place-01-184b60c72070d81595d10cf5",
+   "naturalKey": "gauteng/midrand/halfway-house",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-0614f47352b29b431aee83fd",
+   "lat": -25.993,
+   "lng": 28.132,
+   "matchMethod": "external_wikidata"
   },
   {
    "canonicalPlaceId": "pl-place-01-18d69ace508c5f326b6e649a",
@@ -1236,6 +1336,15 @@
    "matchMethod": "tier3_slug_name_unique"
   },
   {
+   "canonicalPlaceId": "pl-place-01-1e961dc852bc987934fd04ce",
+   "naturalKey": "gauteng/vanderbijlpark/ce4",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-c86eeee4b401f586c125025b",
+   "lat": -26.68784865,
+   "lng": 27.85409755810683,
+   "matchMethod": "tier3b_grid_code"
+  },
+  {
    "canonicalPlaceId": "pl-place-01-1ea99dc47f8dd9fd17a3c8f5",
    "naturalKey": "gauteng/benoni/northmead-ext-4",
    "level": "suburb",
@@ -1342,6 +1451,15 @@
    "lat": -25.3775546,
    "lng": 28.3894645,
    "matchMethod": "tier2b_city_alias"
+  },
+  {
+   "canonicalPlaceId": "pl-place-01-21606f4125d51d49ee761d41",
+   "naturalKey": "gauteng/western-township",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-de64523ea374afb6295fcdc6",
+   "lat": -26.1666685,
+   "lng": 27.8833315,
+   "matchMethod": "tier4_level_bridge"
   },
   {
    "canonicalPlaceId": "pl-place-01-2169a4c4fc9a22ca2e45c0d9",
@@ -1645,9 +1763,9 @@
    "naturalKey": "gauteng/johannesburg/winchester-hills",
    "level": "suburb",
    "parentCityPlaceId": "pl-place-01-21f154cd5d0954c29ec7525f",
-   "lat": null,
-   "lng": null,
-   "matchMethod": "tier1_exact_path"
+   "lat": -26.268,
+   "lng": 28.017,
+   "matchMethod": "external_wikidata"
   },
   {
    "canonicalPlaceId": "pl-place-01-26b9f9f01c42c5709ab8ffb2",
@@ -1816,9 +1934,9 @@
    "naturalKey": "gauteng/johannesburg/northgate",
    "level": "suburb",
    "parentCityPlaceId": "pl-place-01-21f154cd5d0954c29ec7525f",
-   "lat": null,
-   "lng": null,
-   "matchMethod": "tier3_slug_name_unique"
+   "lat": -26.06,
+   "lng": 27.947,
+   "matchMethod": "external_wikidata"
   },
   {
    "canonicalPlaceId": "pl-place-01-2a65f8f6061064814a962942",
@@ -2068,9 +2186,9 @@
    "naturalKey": "gauteng/pretoria/wapadrand",
    "level": "suburb",
    "parentCityPlaceId": "pl-place-01-d0401eba0f556a60bb02e528",
-   "lat": null,
-   "lng": null,
-   "matchMethod": "tier2b_city_alias"
+   "lat": -25.781,
+   "lng": 28.339,
+   "matchMethod": "external_wikidata"
   },
   {
    "canonicalPlaceId": "pl-place-01-2f781de8a8d2d037071b61ab",
@@ -2433,6 +2551,15 @@
    "matchMethod": "tier1_exact_path"
   },
   {
+   "canonicalPlaceId": "pl-place-01-370693940d74268946b6d5d6",
+   "naturalKey": "gauteng/pimville",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-99b91be60755ea1f09bf6349",
+   "lat": -26.2723,
+   "lng": 27.906818,
+   "matchMethod": "tier4_level_bridge"
+  },
+  {
    "canonicalPlaceId": "pl-place-01-3720a034848b42d966dd30ad",
    "naturalKey": "gauteng/johannesburg/strathavon",
    "level": "suburb",
@@ -2512,6 +2639,15 @@
    "lat": -26.10016725,
    "lng": 28.19009635,
    "matchMethod": "tier3_slug_name_unique"
+  },
+  {
+   "canonicalPlaceId": "pl-place-01-388347582530c67a93b63ab5",
+   "naturalKey": "gauteng/localities/mogale-city",
+   "level": "suburb",
+   "parentCityPlaceId": null,
+   "lat": -25.98708,
+   "lng": 27.68304,
+   "matchMethod": "external_wikidata"
   },
   {
    "canonicalPlaceId": "pl-place-01-38c86a72cc0e841471e33ed5",
@@ -2701,6 +2837,15 @@
    "lat": -26.1027778,
    "lng": 27.9894444,
    "matchMethod": "tier3_slug_name_unique"
+  },
+  {
+   "canonicalPlaceId": "pl-place-01-3e7101522c871ceffaccf447",
+   "naturalKey": "gauteng/vanderbijlpark/cw3",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-c86eeee4b401f586c125025b",
+   "lat": -26.689568100000002,
+   "lng": 27.83089912025756,
+   "matchMethod": "tier3b_grid_code"
   },
   {
    "canonicalPlaceId": "pl-place-01-3e7fbd9b97f19481aa905fdc",
@@ -2932,9 +3077,9 @@
    "naturalKey": "gauteng/johannesburg/vorna-valley",
    "level": "suburb",
    "parentCityPlaceId": "pl-place-01-21f154cd5d0954c29ec7525f",
-   "lat": null,
-   "lng": null,
-   "matchMethod": "tier3_slug_name_unique"
+   "lat": -25.99833,
+   "lng": 28.10722,
+   "matchMethod": "external_wikidata"
   },
   {
    "canonicalPlaceId": "pl-place-01-44d2bf1e86dde2971fcd5247",
@@ -2980,6 +3125,15 @@
    "lat": -26.223654444,
    "lng": 27.86695335,
    "matchMethod": "tier3_slug_name_unique"
+  },
+  {
+   "canonicalPlaceId": "pl-place-01-45deb9d31c356f7cd40bc1cb",
+   "naturalKey": "gauteng/dube",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-99b91be60755ea1f09bf6349",
+   "lat": -26.23605555,
+   "lng": 27.8923614,
+   "matchMethod": "tier4_level_bridge"
   },
   {
    "canonicalPlaceId": "pl-place-01-45ecfb1153594d0c95c43db8",
@@ -3094,9 +3248,9 @@
    "naturalKey": "gauteng/johannesburg/noordwyk",
    "level": "suburb",
    "parentCityPlaceId": "pl-place-01-21f154cd5d0954c29ec7525f",
-   "lat": null,
-   "lng": null,
-   "matchMethod": "tier3_slug_name_unique"
+   "lat": -25.955,
+   "lng": 28.119,
+   "matchMethod": "external_wikidata"
   },
   {
    "canonicalPlaceId": "pl-place-01-47f92e3134babc4c0cc127f2",
@@ -3229,9 +3383,9 @@
    "naturalKey": "gauteng/johannesburg/blue-hills",
    "level": "suburb",
    "parentCityPlaceId": "pl-place-01-21f154cd5d0954c29ec7525f",
-   "lat": null,
-   "lng": null,
-   "matchMethod": "tier3_slug_name_unique"
+   "lat": -25.9492,
+   "lng": 28.0844,
+   "matchMethod": "external_wikidata"
   },
   {
    "canonicalPlaceId": "pl-place-01-4afbaad6fad01f48eb377b62",
@@ -3297,6 +3451,15 @@
    "matchMethod": "tier1_exact_path"
   },
   {
+   "canonicalPlaceId": "pl-place-01-4c233aba04f002510223030e",
+   "naturalKey": "gauteng/mid-ennerdale",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-27505a2efcfeee12ccf09ccb",
+   "lat": -26.414051,
+   "lng": 27.842557,
+   "matchMethod": "tier4_level_bridge"
+  },
+  {
    "canonicalPlaceId": "pl-place-01-4c27e2028accb0e7f2355194",
    "naturalKey": "gauteng/hartebeestspruit",
    "level": "city",
@@ -3310,9 +3473,9 @@
    "naturalKey": "gauteng/johannesburg/glenvista",
    "level": "suburb",
    "parentCityPlaceId": "pl-place-01-21f154cd5d0954c29ec7525f",
-   "lat": null,
-   "lng": null,
-   "matchMethod": "tier1_exact_path"
+   "lat": -26.281389,
+   "lng": 28.047222,
+   "matchMethod": "external_wikidata"
   },
   {
    "canonicalPlaceId": "pl-place-01-4c94d13dbdcb08f78945ad70",
@@ -3583,6 +3746,15 @@
    "lat": -25.7351287,
    "lng": 28.0819305,
    "matchMethod": "tier2b_city_alias"
+  },
+  {
+   "canonicalPlaceId": "pl-place-01-5159f63d97fae7cf54050da7",
+   "naturalKey": "gauteng/doornkop",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-99b91be60755ea1f09bf6349",
+   "lat": -26.24263555,
+   "lng": 27.8067572,
+   "matchMethod": "tier4_level_bridge"
   },
   {
    "canonicalPlaceId": "pl-place-01-51c977be6471bfc182d7f9a8",
@@ -4035,6 +4207,15 @@
    "matchMethod": "tier2b_city_alias"
   },
   {
+   "canonicalPlaceId": "pl-place-01-5c5bd7523939cad6f9008ff5",
+   "naturalKey": "gauteng/vanderbijlpark/sw2",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-c86eeee4b401f586c125025b",
+   "lat": -26.71781735,
+   "lng": 27.821212755481923,
+   "matchMethod": "tier3b_grid_code"
+  },
+  {
    "canonicalPlaceId": "pl-place-01-5cb58f97460970352e3875be",
    "naturalKey": "gauteng/benoni/gordon-s-view",
    "level": "suburb",
@@ -4233,6 +4414,15 @@
    "matchMethod": "tier3_slug_name_unique"
   },
   {
+   "canonicalPlaceId": "pl-place-01-6262425dd5762d1859b03e55",
+   "naturalKey": "gauteng/vanderbijlpark/cw2",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-c86eeee4b401f586c125025b",
+   "lat": -26.693220250000003,
+   "lng": 27.826956245573854,
+   "matchMethod": "tier3b_grid_code"
+  },
+  {
    "canonicalPlaceId": "pl-place-01-62cdf6adbb4e87e58207a195",
    "naturalKey": "gauteng/pretoria/dibutsu",
    "level": "suburb",
@@ -4249,6 +4439,15 @@
    "lat": -26.2338889,
    "lng": 27.9994444,
    "matchMethod": "tier1_exact_path"
+  },
+  {
+   "canonicalPlaceId": "pl-place-01-6322b2905230d05aec556424",
+   "naturalKey": "gauteng/brink-s-vlakfontein",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-8f9ae41ec68191eec8e2c101",
+   "lat": -26.1833315,
+   "lng": 27.8,
+   "matchMethod": "tier4_level_bridge"
   },
   {
    "canonicalPlaceId": "pl-place-01-63336847cdf9dfb0933d94a7",
@@ -4357,6 +4556,15 @@
    "lat": -26.31999955,
    "lng": 27.831708888500003,
    "matchMethod": "tier1_exact_path"
+  },
+  {
+   "canonicalPlaceId": "pl-place-01-657dfbe461ff470767f4ddca",
+   "naturalKey": "gauteng/johannesburg/roodekrans",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-21f154cd5d0954c29ec7525f",
+   "lat": -26.1038889,
+   "lng": 27.8472222,
+   "matchMethod": "manual-reviewed"
   },
   {
    "canonicalPlaceId": "pl-place-01-6590292dbfa3924cab295f19",
@@ -4555,6 +4763,15 @@
    "lat": -26.1261439,
    "lng": 27.98035555,
    "matchMethod": "tier3_slug_name_unique"
+  },
+  {
+   "canonicalPlaceId": "pl-place-01-6a145c6d642ba208a2c12de7",
+   "naturalKey": "gauteng/randburg/north-riding",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-7e92e438655b8d2b97c1a395",
+   "lat": -26.051,
+   "lng": 27.939,
+   "matchMethod": "external_wikidata"
   },
   {
    "canonicalPlaceId": "pl-place-01-6a8472c3f2f7b6515c864d3d",
@@ -4759,9 +4976,9 @@
    "naturalKey": "gauteng/johannesburg/rosettenville",
    "level": "suburb",
    "parentCityPlaceId": "pl-place-01-21f154cd5d0954c29ec7525f",
-   "lat": null,
-   "lng": null,
-   "matchMethod": "tier1_exact_path"
+   "lat": -26.251389,
+   "lng": 28.055278,
+   "matchMethod": "external_wikidata"
   },
   {
    "canonicalPlaceId": "pl-place-01-6f722d9b361fa2d8efbb95c0",
@@ -5088,6 +5305,15 @@
    "matchMethod": "tier3_slug_name_unique"
   },
   {
+   "canonicalPlaceId": "pl-place-01-75554f8ae5bf9b3262fd824a",
+   "naturalKey": "gauteng/grasmere",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-27505a2efcfeee12ccf09ccb",
+   "lat": -26.42616,
+   "lng": 27.86023,
+   "matchMethod": "tier4_level_bridge"
+  },
+  {
    "canonicalPlaceId": "pl-place-01-7560e150a9e4b8eecdd2639e",
    "naturalKey": "gauteng/boksburg/atlasville",
    "level": "suburb",
@@ -5155,9 +5381,9 @@
    "naturalKey": "gauteng/pretoria/the-reeds",
    "level": "suburb",
    "parentCityPlaceId": "pl-place-01-d0401eba0f556a60bb02e528",
-   "lat": null,
-   "lng": null,
-   "matchMethod": "tier2b_city_alias"
+   "lat": -25.902,
+   "lng": 28.134,
+   "matchMethod": "external_wikidata"
   },
   {
    "canonicalPlaceId": "pl-place-01-76e4dfe1053bfa025b71bc75",
@@ -5227,9 +5453,9 @@
    "naturalKey": "gauteng/johannesburg/carlswald",
    "level": "suburb",
    "parentCityPlaceId": "pl-place-01-21f154cd5d0954c29ec7525f",
-   "lat": null,
-   "lng": null,
-   "matchMethod": "tier3_slug_name_unique"
+   "lat": -25.982778,
+   "lng": 28.103611,
+   "matchMethod": "external_wikidata"
   },
   {
    "canonicalPlaceId": "pl-place-01-77e8891cf17e28a0e8fe1b6a",
@@ -5470,9 +5696,9 @@
    "naturalKey": "gauteng/pretoria/lynnwood",
    "level": "suburb",
    "parentCityPlaceId": "pl-place-01-d0401eba0f556a60bb02e528",
-   "lat": null,
-   "lng": null,
-   "matchMethod": "tier2b_city_alias"
+   "lat": -25.7644,
+   "lng": 28.2689,
+   "matchMethod": "external_wikidata"
   },
   {
    "canonicalPlaceId": "pl-place-01-7c141bd0aceae9680c32e8e1",
@@ -5664,6 +5890,15 @@
    "matchMethod": "tier3_slug_name_unique"
   },
   {
+   "canonicalPlaceId": "pl-place-01-7ff7be973b8630ae6546b9b4",
+   "naturalKey": "gauteng/vanderbijlpark/ce2",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-c86eeee4b401f586c125025b",
+   "lat": -26.69063805,
+   "lng": 27.840842536531298,
+   "matchMethod": "tier3b_grid_code"
+  },
+  {
    "canonicalPlaceId": "pl-place-01-80841bed32edb0281e35ed86",
    "naturalKey": "gauteng/kempton-park",
    "level": "city",
@@ -5671,6 +5906,15 @@
    "lat": null,
    "lng": null,
    "matchMethod": "tier1_exact_path"
+  },
+  {
+   "canonicalPlaceId": "pl-place-01-80b8ff2f0631c7095ab71382",
+   "naturalKey": "gauteng/protea",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-99b91be60755ea1f09bf6349",
+   "lat": -26.286101000000002,
+   "lng": 27.8409905,
+   "matchMethod": "tier4_level_bridge"
   },
   {
    "canonicalPlaceId": "pl-place-01-80ff6fb371334f1e741e015a",
@@ -5772,13 +6016,22 @@
    "matchMethod": "tier3_slug_name_unique"
   },
   {
+   "canonicalPlaceId": "pl-place-01-8283c702c622596993f2dd3b",
+   "naturalKey": "gauteng/vanderbijlpark/cw6",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-c86eeee4b401f586c125025b",
+   "lat": -26.69962785,
+   "lng": 27.816307618449677,
+   "matchMethod": "tier3b_grid_code"
+  },
+  {
    "canonicalPlaceId": "pl-place-01-82cbe60296563ca7fcae6f4c",
    "naturalKey": "gauteng/johannesburg/magaliessig",
    "level": "suburb",
    "parentCityPlaceId": "pl-place-01-21f154cd5d0954c29ec7525f",
-   "lat": null,
-   "lng": null,
-   "matchMethod": "tier2b_city_alias"
+   "lat": -26.025,
+   "lng": 28.019,
+   "matchMethod": "external_wikidata"
   },
   {
    "canonicalPlaceId": "pl-place-01-82d345640771de631263bd3f",
@@ -5788,6 +6041,15 @@
    "lat": -26.1152778,
    "lng": 28.3158333,
    "matchMethod": "tier3_slug_name_unique"
+  },
+  {
+   "canonicalPlaceId": "pl-place-01-82f026325e658e3a01f9f392",
+   "naturalKey": "gauteng/discovery",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-de64523ea374afb6295fcdc6",
+   "lat": -26.161889,
+   "lng": 27.89445,
+   "matchMethod": "tier4_level_bridge"
   },
   {
    "canonicalPlaceId": "pl-place-01-82f799f45f21dee54da3959b",
@@ -6022,6 +6284,15 @@
    "lat": -26.08665,
    "lng": 27.8022222,
    "matchMethod": "tier3_slug_name_unique"
+  },
+  {
+   "canonicalPlaceId": "pl-place-01-86dab32a9b731659885c1bd2",
+   "naturalKey": "gauteng/benoni/westdene",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-a883dbe0691336eb38a8ee14",
+   "lat": -26.1969444,
+   "lng": 28.2958333,
+   "matchMethod": "manual-reviewed"
   },
   {
    "canonicalPlaceId": "pl-place-01-871db5cefe7cc5d4dc3837e7",
@@ -6307,9 +6578,9 @@
    "naturalKey": "gauteng/johannesburg/johannesburg-north",
    "level": "suburb",
    "parentCityPlaceId": "pl-place-01-21f154cd5d0954c29ec7525f",
-   "lat": null,
-   "lng": null,
-   "matchMethod": "tier3_slug_name_unique"
+   "lat": -26.042,
+   "lng": 27.975,
+   "matchMethod": "external_wikidata"
   },
   {
    "canonicalPlaceId": "pl-place-01-8ce3d69bf338150a32578fe5",
@@ -6393,6 +6664,15 @@
    "matchMethod": "tier3_slug_name_unique"
   },
   {
+   "canonicalPlaceId": "pl-place-01-8f74ef140443dc3f78fb09c3",
+   "naturalKey": "gauteng/johannesburg/claremont",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-21f154cd5d0954c29ec7525f",
+   "lat": -26.180416899999997,
+   "lng": 27.957499849999998,
+   "matchMethod": "manual-reviewed"
+  },
+  {
    "canonicalPlaceId": "pl-place-01-8f7b2ccba6150bcf86fc33d6",
    "naturalKey": "gauteng/thembisa/sithame",
    "level": "suburb",
@@ -6418,6 +6698,15 @@
    "lat": -26.1901021,
    "lng": 27.80339,
    "matchMethod": "tier1_exact_path"
+  },
+  {
+   "canonicalPlaceId": "pl-place-01-8fa4b64a1e76ae20e0b45fc0",
+   "naturalKey": "gauteng/vanderbijlpark/se6",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-c86eeee4b401f586c125025b",
+   "lat": -26.7240038,
+   "lng": 27.857770422056582,
+   "matchMethod": "tier3b_grid_code"
   },
   {
    "canonicalPlaceId": "pl-place-01-8fb8e44e491d492dc2723cb8",
@@ -6607,6 +6896,15 @@
    "lat": -26.0225,
    "lng": 28.2216667,
    "matchMethod": "tier3_slug_name_unique"
+  },
+  {
+   "canonicalPlaceId": "pl-place-01-939f6d3c973882ffd8d6b75c",
+   "naturalKey": "gauteng/vanderbijlpark/cw1",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-c86eeee4b401f586c125025b",
+   "lat": -26.70261115,
+   "lng": 27.829077048380324,
+   "matchMethod": "tier3b_grid_code"
   },
   {
    "canonicalPlaceId": "pl-place-01-93a9063dbca4097613260c57",
@@ -6973,9 +7271,9 @@
    "naturalKey": "gauteng/pretoria/muckleneuk",
    "level": "suburb",
    "parentCityPlaceId": "pl-place-01-d0401eba0f556a60bb02e528",
-   "lat": null,
-   "lng": null,
-   "matchMethod": "tier2b_city_alias"
+   "lat": -25.7604,
+   "lng": 28.2035,
+   "matchMethod": "external_wikidata"
   },
   {
    "canonicalPlaceId": "pl-place-01-99fefe9118eef0ee62d36a2b",
@@ -7131,6 +7429,15 @@
    "matchMethod": "tier2b_city_alias"
   },
   {
+   "canonicalPlaceId": "pl-place-01-9cae641895ece966ee4ee3ce",
+   "naturalKey": "gauteng/vanderbijlpark/cw5",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-c86eeee4b401f586c125025b",
+   "lat": -26.6876,
+   "lng": 27.818112992472514,
+   "matchMethod": "tier3b_grid_code"
+  },
+  {
    "canonicalPlaceId": "pl-place-01-9d0cdcbf25888aabf15e9387",
    "naturalKey": "gauteng/boksburg/windmill-park",
    "level": "suburb",
@@ -7201,6 +7508,15 @@
    "lat": -26.1792439,
    "lng": 27.813518,
    "matchMethod": "tier2b_city_alias"
+  },
+  {
+   "canonicalPlaceId": "pl-place-01-9e51d3b80d36e6c7983e63ca",
+   "naturalKey": "gauteng/moroka",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-99b91be60755ea1f09bf6349",
+   "lat": -26.259422,
+   "lng": 27.876816,
+   "matchMethod": "tier4_level_bridge"
   },
   {
    "canonicalPlaceId": "pl-place-01-9eab198e6606e1fe6b57eedf",
@@ -7311,6 +7627,15 @@
    "matchMethod": "tier1_exact_path"
   },
   {
+   "canonicalPlaceId": "pl-place-01-9fd3d1c999db15433da9ebb4",
+   "naturalKey": "gauteng/vanderbijlpark/ce6",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-c86eeee4b401f586c125025b",
+   "lat": -26.704014649999998,
+   "lng": 27.855061897918596,
+   "matchMethod": "tier3b_grid_code"
+  },
+  {
    "canonicalPlaceId": "pl-place-01-9fdd636f76c3686acde49889",
    "naturalKey": "gauteng/johannesburg/honeydew",
    "level": "suburb",
@@ -7405,9 +7730,9 @@
    "naturalKey": "gauteng/pretoria/faerie-glen",
    "level": "suburb",
    "parentCityPlaceId": "pl-place-01-d0401eba0f556a60bb02e528",
-   "lat": null,
-   "lng": null,
-   "matchMethod": "tier2b_city_alias"
+   "lat": -25.787778,
+   "lng": 28.316667,
+   "matchMethod": "external_wikidata"
   },
   {
    "canonicalPlaceId": "pl-place-01-a1484c5e75bcfe25c76a3325",
@@ -7444,6 +7769,15 @@
    "lat": -25.384861100000002,
    "lng": 28.2928889,
    "matchMethod": "tier2b_city_alias"
+  },
+  {
+   "canonicalPlaceId": "pl-place-01-a1aa63b7e5c1f030337fde1e",
+   "naturalKey": "gauteng/vanderbijlpark/sw1",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-c86eeee4b401f586c125025b",
+   "lat": -26.714330099999998,
+   "lng": 27.830045495593318,
+   "matchMethod": "tier3b_grid_code"
   },
   {
    "canonicalPlaceId": "pl-place-01-a1df67cf49daad810db36f96",
@@ -7684,9 +8018,9 @@
    "naturalKey": "gauteng/pretoria/brooklyn",
    "level": "suburb",
    "parentCityPlaceId": "pl-place-01-d0401eba0f556a60bb02e528",
-   "lat": null,
-   "lng": null,
-   "matchMethod": "tier2b_city_alias"
+   "lat": -25.770117,
+   "lng": 28.236569,
+   "matchMethod": "external_wikidata"
   },
   {
    "canonicalPlaceId": "pl-place-01-a68be4102fbf69a1c4ebd42a",
@@ -7810,9 +8144,9 @@
    "naturalKey": "gauteng/johannesburg/olivedale",
    "level": "suburb",
    "parentCityPlaceId": "pl-place-01-21f154cd5d0954c29ec7525f",
-   "lat": null,
-   "lng": null,
-   "matchMethod": "tier3_slug_name_unique"
+   "lat": -26.058,
+   "lng": 27.976,
+   "matchMethod": "external_wikidata"
   },
   {
    "canonicalPlaceId": "pl-place-01-a80882623fdea2e2359d0fbc",
@@ -7887,6 +8221,15 @@
    "matchMethod": "tier1_exact_path"
   },
   {
+   "canonicalPlaceId": "pl-place-01-a99dcb3d548897c5e84e3425",
+   "naturalKey": "gauteng/zonnehoeve",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-de64523ea374afb6295fcdc6",
+   "lat": -26.070270999999998,
+   "lng": 27.8754015,
+   "matchMethod": "tier4_level_bridge"
+  },
+  {
    "canonicalPlaceId": "pl-place-01-a9a0bb2dd44bcb3ca56c6585",
    "naturalKey": "gauteng/pretoria/rietvalleipark",
    "level": "suburb",
@@ -7894,6 +8237,15 @@
    "lat": -25.8474083,
    "lng": 28.253659,
    "matchMethod": "tier2b_city_alias"
+  },
+  {
+   "canonicalPlaceId": "pl-place-01-aa224f64b1e9b95db5be418a",
+   "naturalKey": "gauteng/vanderbijlpark/ce3",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-c86eeee4b401f586c125025b",
+   "lat": -26.685374250000002,
+   "lng": 27.843007457542427,
+   "matchMethod": "tier3b_grid_code"
   },
   {
    "canonicalPlaceId": "pl-place-01-aa42b7cea7619f35a19ab53d",
@@ -8413,9 +8765,9 @@
    "naturalKey": "gauteng/johannesburg/oakdene",
    "level": "suburb",
    "parentCityPlaceId": "pl-place-01-21f154cd5d0954c29ec7525f",
-   "lat": null,
-   "lng": null,
-   "matchMethod": "tier1_exact_path"
+   "lat": -26.265,
+   "lng": 28.052,
+   "matchMethod": "external_wikidata"
   },
   {
    "canonicalPlaceId": "pl-place-01-b547f873d7820e483548c3cb",
@@ -8745,10 +9097,10 @@
    "canonicalPlaceId": "pl-place-01-bbe8dbb14d11d1383a3a8d54",
    "naturalKey": "gauteng/fourways",
    "level": "suburb",
-   "parentCityPlaceId": null,
-   "lat": null,
-   "lng": null,
-   "matchMethod": "manual-reviewed"
+   "parentCityPlaceId": "pl-place-01-21f154cd5d0954c29ec7525f",
+   "lat": -26.021111,
+   "lng": 28.009167,
+   "matchMethod": "external_wikidata"
   },
   {
    "canonicalPlaceId": "pl-place-01-bc3d574db98569086a92d532",
@@ -8940,6 +9292,15 @@
    "matchMethod": "tier1_exact_path"
   },
   {
+   "canonicalPlaceId": "pl-place-01-c05fd3fb57579c596c4c4d89",
+   "naturalKey": "gauteng/vanderbijlpark/sw5",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-c86eeee4b401f586c125025b",
+   "lat": -26.735590600000002,
+   "lng": 27.832492980531654,
+   "matchMethod": "tier3b_grid_code"
+  },
+  {
    "canonicalPlaceId": "pl-place-01-c064cd5c05dceed3b8f1c90f",
    "naturalKey": "gauteng/sebokeng/cyferpan",
    "level": "suburb",
@@ -9118,6 +9479,15 @@
    "lat": -26.2475,
    "lng": 28.0330556,
    "matchMethod": "tier1_exact_path"
+  },
+  {
+   "canonicalPlaceId": "pl-place-01-c5af3ed193a7a5860d4d3eac",
+   "naturalKey": "gauteng/alberton/eden-park",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-17dec3188c1a55debd727832",
+   "lat": -26.37995,
+   "lng": 28.12109,
+   "matchMethod": "manual-reviewed"
   },
   {
    "canonicalPlaceId": "pl-place-01-c5fc2637b2e1248f7b15ed5b",
@@ -9352,6 +9722,15 @@
    "lat": -25.871117,
    "lng": 28.1296668,
    "matchMethod": "tier2b_city_alias"
+  },
+  {
+   "canonicalPlaceId": "pl-place-01-c99102768b2e6f4c99fefd54",
+   "naturalKey": "gauteng/city-of-johannesburg/kyalami",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-21f154cd5d0954c29ec7525f",
+   "lat": -25.998028,
+   "lng": 28.068917,
+   "matchMethod": "external_wikidata"
   },
   {
    "canonicalPlaceId": "pl-place-01-c9baafad079b533421f56dcd",
@@ -9831,6 +10210,15 @@
    "matchMethod": "tier3_slug_name_unique"
   },
   {
+   "canonicalPlaceId": "pl-place-01-d31b64a523f3819d1bf952de",
+   "naturalKey": "gauteng/vanderbijlpark/ce5",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-c86eeee4b401f586c125025b",
+   "lat": -26.69877965,
+   "lng": 27.852104187099343,
+   "matchMethod": "tier3b_grid_code"
+  },
+  {
    "canonicalPlaceId": "pl-place-01-d34db40e2910081ba97de482",
    "naturalKey": "gauteng/glenharvie",
    "level": "city",
@@ -9921,6 +10309,15 @@
    "matchMethod": "tier1_exact_path"
   },
   {
+   "canonicalPlaceId": "pl-place-01-d6a18daf88e8ec0a99629975",
+   "naturalKey": "gauteng/albertynsville",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-99b91be60755ea1f09bf6349",
+   "lat": -26.2666685,
+   "lng": 27.85,
+   "matchMethod": "tier4_level_bridge"
+  },
+  {
    "canonicalPlaceId": "pl-place-01-d730af1e85733b27ab53eae6",
    "naturalKey": "gauteng/johannesburg/bromhof",
    "level": "suburb",
@@ -9964,6 +10361,15 @@
    "lat": -26.2737453,
    "lng": 28.028187850000002,
    "matchMethod": "tier1_exact_path"
+  },
+  {
+   "canonicalPlaceId": "pl-place-01-d7d45475e985dcabbeb7d55d",
+   "naturalKey": "gauteng/vanderbijlpark/se10",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-c86eeee4b401f586c125025b",
+   "lat": -26.71889005,
+   "lng": 27.865489250291716,
+   "matchMethod": "tier3b_grid_code"
   },
   {
    "canonicalPlaceId": "pl-place-01-d818e5cf22ebfaff9da36e13",
@@ -10407,6 +10813,15 @@
    "matchMethod": "tier3_slug_name_unique"
   },
   {
+   "canonicalPlaceId": "pl-place-01-e0d77982e6995b083448709f",
+   "naturalKey": "gauteng/vanderbijlpark/cw4",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-c86eeee4b401f586c125025b",
+   "lat": -26.68063205,
+   "lng": 27.826643545395683,
+   "matchMethod": "tier3b_grid_code"
+  },
+  {
    "canonicalPlaceId": "pl-place-01-e0e3ec5338958d9dccd40a3c",
    "naturalKey": "gauteng/johannesburg/fleurhof",
    "level": "suburb",
@@ -10474,9 +10889,9 @@
    "naturalKey": "gauteng/johannesburg/glen-austin",
    "level": "suburb",
    "parentCityPlaceId": "pl-place-01-21f154cd5d0954c29ec7525f",
-   "lat": null,
-   "lng": null,
-   "matchMethod": "tier3_slug_name_unique"
+   "lat": -25.966667,
+   "lng": 28.15,
+   "matchMethod": "external_wikidata"
   },
   {
    "canonicalPlaceId": "pl-place-01-e1ceeb8554ced38c283c8551",
@@ -10825,9 +11240,9 @@
    "naturalKey": "gauteng/johannesburg/mondeor",
    "level": "suburb",
    "parentCityPlaceId": "pl-place-01-21f154cd5d0954c29ec7525f",
-   "lat": null,
-   "lng": null,
-   "matchMethod": "tier1_exact_path"
+   "lat": -26.271,
+   "lng": 27.998,
+   "matchMethod": "external_wikidata"
   },
   {
    "canonicalPlaceId": "pl-place-01-e91a67374cb37a86ff19f695",
@@ -10837,6 +11252,15 @@
    "lat": -25.7891667,
    "lng": 28.2730556,
    "matchMethod": "tier2b_city_alias"
+  },
+  {
+   "canonicalPlaceId": "pl-place-01-e951fed9fa20f3628d05c55f",
+   "naturalKey": "gauteng/vereeniging/nw7",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-875445f291958fedd2ac7f6b",
+   "lat": -26.6780245,
+   "lng": 27.806172792040087,
+   "matchMethod": "tier3b_grid_code"
   },
   {
    "canonicalPlaceId": "pl-place-01-e962a1a3f3dba00c82c87a1d",
@@ -11046,6 +11470,15 @@
    "matchMethod": "tier3_slug_name_unique"
   },
   {
+   "canonicalPlaceId": "pl-place-01-ee228e69face5c1492023d91",
+   "naturalKey": "gauteng/mofolo",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-99b91be60755ea1f09bf6349",
+   "lat": -26.253018,
+   "lng": 27.88829,
+   "matchMethod": "tier4_level_bridge"
+  },
+  {
    "canonicalPlaceId": "pl-place-01-ee5e5c7de03b32a42a877ed7",
    "naturalKey": "gauteng/boksburg/klippoortjie",
    "level": "suburb",
@@ -11086,9 +11519,9 @@
    "naturalKey": "gauteng/pretoria/waterkloof-ridge",
    "level": "suburb",
    "parentCityPlaceId": "pl-place-01-d0401eba0f556a60bb02e528",
-   "lat": null,
-   "lng": null,
-   "matchMethod": "tier2b_city_alias"
+   "lat": -25.7667,
+   "lng": 28.2333,
+   "matchMethod": "external_wikidata"
   },
   {
    "canonicalPlaceId": "pl-place-01-eeff96709466d4f995df28f5",
@@ -11158,9 +11591,9 @@
    "naturalKey": "gauteng/johannesburg/kibler-park",
    "level": "suburb",
    "parentCityPlaceId": "pl-place-01-21f154cd5d0954c29ec7525f",
-   "lat": null,
-   "lng": null,
-   "matchMethod": "tier1_exact_path"
+   "lat": -26.304,
+   "lng": 28.006,
+   "matchMethod": "external_wikidata"
   },
   {
    "canonicalPlaceId": "pl-place-01-efad94ef355372b5237bf51f",
@@ -11262,13 +11695,22 @@
    "matchMethod": "tier3_slug_name_unique"
   },
   {
+   "canonicalPlaceId": "pl-place-01-f1424fc59f9bf8ac8328cea8",
+   "naturalKey": "gauteng/city-of-johannesburg/douglasdale",
+   "level": "suburb",
+   "parentCityPlaceId": "pl-place-01-21f154cd5d0954c29ec7525f",
+   "lat": -26.039722,
+   "lng": 27.994722,
+   "matchMethod": "external_wikidata"
+  },
+  {
    "canonicalPlaceId": "pl-place-01-f175328139bb845a4645b9d4",
    "naturalKey": "gauteng/johannesburg/bryanston",
    "level": "suburb",
    "parentCityPlaceId": "pl-place-01-21f154cd5d0954c29ec7525f",
-   "lat": null,
-   "lng": null,
-   "matchMethod": "tier2b_city_alias"
+   "lat": -26.048611,
+   "lng": 28.033889,
+   "matchMethod": "external_wikidata"
   },
   {
    "canonicalPlaceId": "pl-place-01-f1a8576603cfa4f3f3eb4804",
@@ -11689,9 +12131,9 @@
    "naturalKey": "gauteng/pretoria/menlyn",
    "level": "suburb",
    "parentCityPlaceId": "pl-place-01-d0401eba0f556a60bb02e528",
-   "lat": null,
-   "lng": null,
-   "matchMethod": "tier2b_city_alias"
+   "lat": -25.781944,
+   "lng": 28.277778,
+   "matchMethod": "external_wikidata"
   },
   {
    "canonicalPlaceId": "pl-place-01-f9ffa89fc85ea5877b1d6054",
