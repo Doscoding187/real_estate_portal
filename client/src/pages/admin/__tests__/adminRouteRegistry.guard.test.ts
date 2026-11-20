@@ -7,6 +7,13 @@ import {
 } from '../adminRouteRegistry';
 
 describe('adminRouteRegistry', () => {
+  it('mounts the development wizard inside the admin shell, keeping Publisher active', () => {
+    const route = ADMIN_DASHBOARD_ROUTES.find(r => r.path === '/admin/publisher/developments/new');
+    expect(route).toBeDefined();
+    expect(getAdminNavItemForPath('/admin/publisher/developments/new?draftId=3')).toBe(
+      '/admin/publisher',
+    );
+  });
   it('contains unique route paths', () => {
     const paths = ADMIN_DASHBOARD_ROUTES.map(r => r.path);
     expect(new Set(paths).size).toBe(paths.length);

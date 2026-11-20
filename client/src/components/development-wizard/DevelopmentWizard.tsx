@@ -672,7 +672,9 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
               </button>
               <button
                 type="button"
-                onClick={() => setLocation('/developer/developments')}
+                onClick={() =>
+                  setLocation(shouldUsePublisherApi ? '/admin/publisher' : '/developer/developments')
+                }
                 className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-400"
               >
                 Back to developments
