@@ -5,11 +5,11 @@
  *
  * STORAGE (no migration; every answer lands in something that already exists)
  *   Location       stepData.location.address / postalCode / latitude / longitude   (existing columns)
- *                  stepData.location.suburbPlaceId / suburbLabel / suburbCity   DERIVED from the
- *                  pin (placeAuthority.locateByPoint), never hand-picked. Not a column; for a
- *                  curated listing the derived Place is recorded after the development is saved
- *                  through the existing adminReviewDevelopmentPlaceAssignment mutation
- *                  (accepted "site" assignment). See suburbAssignmentRequest().
+ *                  stepData.location.suburbPlaceId / suburbLabel   the suburb, chosen from OUR
+ *                  canonical geography (never from Google). Carried in estateSpecs
+ *                  (suburbPlaceId / suburbLabel); for a curated listing it is recorded after the
+ *                  development is saved through the existing adminReviewDevelopmentPlaceAssignment
+ *                  mutation (accepted "site" assignment). See suburbAssignmentRequest().
  *   Monthly costs  stepData.governance_finances.rightsAndTaxes {min,max}  -> ratesFrom / ratesTo
  *                  stepData.governance_finances.levyRange {min,max}        -> monthlyLevyFrom / To
  *                  stepData.governance_finances.hasGoverningBody + governanceType
@@ -76,6 +76,10 @@ export function validateLocationStep(location: Record<string, any> | null | unde
     });
   }
 
+  if (!String(loc.suburbPlaceId ?? '').trim()) {
+    errors.push({ field: 'suburbPlaceId', message: 'Choose the suburb from the list' });
+  }
+
   const lat = parseCoordinate(loc.latitude);
   const lng = parseCoordinate(loc.longitude);
   if (lat === 0 && lng === 0) {
@@ -98,22 +102,40 @@ export function validateLocationStep(location: Record<string, any> | null | unde
 }
 
 export const SUBURB_EVIDENCE_REFERENCE =
-  'Suburb derived from the development map pin (nearest suburb centre within 3 km) in the development wizard';
+  'Suburb chosen from our canonical geography in the development wizard';
+
+/** Informal settlements are never offered as a suburb. */
+export const isInformalSettlementName = (value: string | null | undefined): boolean =>
+  /informal[\s-]*settlement/i.test(String(value ?? ''));
+
+/** Great-circle distance in kilometres. */
+export function distanceKm(
+  a: { lat: number; lng: number },
+  b: { lat: number; lng: number },
+): number {
+  const rad = (d: number) => (d * Math.PI) / 180;
+  const dLat = rad(b.lat - a.lat);
+  const dLng = rad(b.lng - a.lng);
+  const h =
+    Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * 6371.0088 * Math.asin(Math.sqrt(h));
+}
+
+export const PIN_FAR_FROM_SUBURB_KM = 5;
 
 /**
- * The text shown under the pin. A developer's suburb is only a suggestion (a
- * reviewer confirms it); for a curated listing it is what buyers see.
+ * A warning (never blocking) when the pin is more than 5 km from the centre of
+ * the chosen suburb. No centre in our data, or no pin yet, means no warning.
  */
-export function derivedLocationText(
-  derived: { suburb: string; city: string } | null | undefined,
-  mode: 'curated' | 'developer' = 'curated',
-): string {
-  if (!derived) {
-    return 'We couldn’t match this pin to a suburb yet. Move the pin, or a reviewer will assign it.';
-  }
-  const name = [derived.suburb, derived.city].filter(Boolean).join(', ');
-  if (mode === 'developer') return `Suggested suburb: ${name} — a reviewer confirms it`;
-  return `Location buyers see: ${name} — from the map pin`;
+export function pinDistanceWarning(
+  pin: { lat: number; lng: number } | null,
+  centre: { lat: number; lng: number } | null | undefined,
+  suburbLabel: string,
+): string | null {
+  if (!pin || !centre) return null;
+  const km = distanceKm(pin, centre);
+  if (km <= PIN_FAR_FROM_SUBURB_KM) return null;
+  return `This pin is ${Math.round(km)} km from ${suburbLabel || 'the chosen suburb'} — check the address or the pin.`;
 }
 
 export interface SuburbAssignmentRequest {
@@ -124,7 +146,7 @@ export interface SuburbAssignmentRequest {
 }
 
 /**
- * The call that records the suburb derived from the pin as the development's accepted
+ * The call that records the chosen suburb as the development's accepted
  * "site" Place assignment (adminReviewDevelopmentPlaceAssignment). Null when no
  * suburb was picked in this wizard session, or the picked one is already recorded.
  */

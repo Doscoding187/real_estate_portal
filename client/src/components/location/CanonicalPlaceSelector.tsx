@@ -97,6 +97,7 @@ export function CanonicalPlaceSelectorView({
   placeholder,
   hint,
   compact = false,
+  optionFilter,
 }: {
   value: CanonicalPlaceSelection | null;
   onChange: (value: CanonicalPlaceSelection | null) => void;
@@ -111,6 +112,8 @@ export function CanonicalPlaceSelectorView({
   placeholder?: string;
   hint?: string;
   compact?: boolean;
+  /** Extra restriction on the options offered (for example suburbs only). */
+  optionFilter?: (option: CanonicalPlaceOption) => boolean;
 }) {
   const generatedId = useId();
   const inputId = suppliedInputId ?? generatedId;
@@ -127,7 +130,8 @@ export function CanonicalPlaceSelectorView({
           candidate.searchEligible &&
           isCanonicalPlaceId(candidate.placeId) &&
           Boolean(candidate.preferredPublicLabel?.trim()) &&
-          candidate.searchScope !== null,
+          candidate.searchScope !== null &&
+          (!optionFilter || optionFilter(candidate)),
       )
     : [];
   const options = buildCanonicalPlaceDisplayOptions(eligibleOptions);
@@ -305,6 +309,7 @@ export function CanonicalPlaceSelector({
   hint,
   compact,
   initialQuery,
+  optionFilter,
 }: {
   value: CanonicalPlaceSelection | null;
   onChange: (value: CanonicalPlaceSelection | null) => void;
@@ -315,6 +320,7 @@ export function CanonicalPlaceSelector({
   hint?: string;
   compact?: boolean;
   initialQuery?: string;
+  optionFilter?: (option: CanonicalPlaceOption) => boolean;
 }) {
   const [query, setQuery] = useState(value?.label ?? initialQuery ?? '');
   const [debounced, setDebounced] = useState(query);
@@ -345,6 +351,7 @@ export function CanonicalPlaceSelector({
       placeholder={placeholder}
       hint={hint}
       compact={compact}
+      optionFilter={optionFilter}
       query={query}
       onQueryChange={setQuery}
       discovery={lookup.data}

@@ -248,6 +248,11 @@ export function validatePersistedSubmissionReadiness(
   if (!address && !(noStreetAddress && hasValidPin)) {
     errors.push({ field: 'address', message: 'Development address is required.' });
   }
+  // The suburb is part of the address, chosen from our canonical geography; it is
+  // carried in estateSpecs and recorded as the Place assignment on publication.
+  if (!String(estateSpecs?.suburbPlaceId ?? '').trim()) {
+    errors.push({ field: 'suburb', message: 'Choose the suburb from the list.' });
+  }
   if (!hasValidPin) {
     errors.push({
       field: 'location',

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback } from 'react';
 import { useDevelopmentWizard } from '@/hooks/useDevelopmentWizard';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { usePublisherContext } from '@/hooks/usePublisherContext';
@@ -6,7 +6,14 @@ import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
 import { LocationMapPicker, type LocationData } from '@/components/location/LocationMapPicker';
 import { WizardData } from '@/lib/types/wizard-workflows';
-import { derivedLocationText } from '@/lib/wizardLocationCostsAmenities';
+import {
+  isInformalSettlementName,
+  pinDistanceWarning,
+} from '@/lib/wizardLocationCostsAmenities';
+import {
+  CanonicalPlaceSelector,
+  type CanonicalPlaceSelection,
+} from '@/components/location/CanonicalPlaceSelector';
 import { cn } from '@/lib/utils';
 import { wizardTokens as t } from '../../wizard/ui/wizardTokens';
 import { WizardSection } from '../../wizard/ui/WizardUi';
@@ -39,12 +46,11 @@ function CurrentSuburb({ developmentId }: { developmentId: number }) {
 }
 
 /**
- * Location: street address and the map pin, both required (the server's
- * readiness check needs both). The suburb buyers see is DERIVED from the pin
- * (placeAuthority.locateByPoint) and shown read-only; it is never hand-picked.
- * For a curated listing the derived Place is recorded as the accepted site Place
- * assignment once the development is saved; a developer's suburb is assigned by
- * a reviewer (the derived one is only a suggestion).
+ * Location: street address (unless "No street address yet"), the suburb (part of
+ * the official address, chosen from OUR canonical geography), postal code and the
+ * map pin (required to publish). For a curated listing the chosen suburb is
+ * recorded as the accepted site Place assignment on publish; for a developer a
+ * reviewer confirms it.
  */
 export function LocationPhase() {
   const store = useDevelopmentWizard() as any;
@@ -83,37 +89,34 @@ export function LocationPhase() {
     toast.success('Address and coordinates updated');
   };
 
-  // Derive the suburb from the pin (debounced while typing coordinates).
-  const lat = Number(String(location.latitude ?? '').trim() || Number.NaN);
-  const lng = Number(String(location.longitude ?? '').trim() || Number.NaN);
-  const pinValid =
-    Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
-  const [pin, setPin] = useState<{ lat: number; lng: number } | null>(
-    pinValid ? { lat, lng } : null,
-  );
-  useEffect(() => {
-    const timer = setTimeout(() => setPin(pinValid ? { lat, lng } : null), 400);
-    return () => clearTimeout(timer);
-  }, [pinValid, lat, lng]);
-  const lookup = trpc.placeAuthority.locateByPoint.useQuery(pin ?? { lat: 0, lng: 0 }, {
-    enabled: pin !== null,
-    retry: false,
-  });
-  const derived = pin && lookup.data ? lookup.data : null;
-  const settled = pin === null || (!lookup.isLoading && !lookup.isFetching);
-
-  // Keep the derived suburb in the wizard data (cleared when the pin has no match).
-  const derivedId = derived?.placeId ?? undefined;
-  useEffect(() => {
-    if (!settled) return;
-    if ((location.suburbPlaceId ?? undefined) === derivedId) return;
+  // The suburb is chosen from our canonical geography (suburb-level, published and
+  // searchable places only, informal settlements excluded). Never from Google.
+  const suburbValue: CanonicalPlaceSelection | null = location.suburbPlaceId
+    ? {
+        canonicalPlaceId: String(location.suburbPlaceId),
+        label: String(location.suburbLabel ?? ''),
+        placeType: 'suburb',
+        scope: 'locality' as any,
+        administrativeContext: null,
+      }
+    : null;
+  const pickSuburb = (selection: CanonicalPlaceSelection | null) =>
     handleUpdate({
-      suburbPlaceId: derivedId,
-      suburbLabel: derived?.suburb ?? undefined,
-      suburbCity: derived?.city ?? undefined,
+      suburbPlaceId: selection?.canonicalPlaceId ?? undefined,
+      suburbLabel: selection?.label ?? undefined,
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settled, derivedId]);
+
+  // Safety net: warn (never block) when the pin is far from the chosen suburb's centre.
+  const pinLat = Number(String(location.latitude ?? '').trim() || Number.NaN);
+  const pinLng = Number(String(location.longitude ?? '').trim() || Number.NaN);
+  const pin = Number.isFinite(pinLat) && Number.isFinite(pinLng) ? { lat: pinLat, lng: pinLng } : null;
+  const centreQuery = trpc.placeAuthority.getPlaceCentre.useQuery(
+    { placeId: String(location.suburbPlaceId ?? '') },
+    { enabled: Boolean(location.suburbPlaceId), retry: false },
+  );
+  const farWarning = location.suburbPlaceId
+    ? pinDistanceWarning(pin, centreQuery.data, String(location.suburbLabel ?? ''))
+    : null;
 
   const noStreet = location.noOfficialStreet === true;
   const latitude = location.latitude ? parseFloat(location.latitude) : undefined;
@@ -156,6 +159,34 @@ export function LocationPhase() {
         </label>
       </div>
 
+      <div>
+        <span className={t.sectionLabel}>
+          Suburb (part of the official address){' '}
+          <span className="font-normal text-red-700">(required)</span>
+        </span>
+        <CanonicalPlaceSelector
+          value={suburbValue}
+          onChange={pickSuburb}
+          label="Suburb"
+          inputId="suburb-picker"
+          placeholder="Start typing, e.g. North Riding"
+          compact
+          optionFilter={option =>
+            option.searchScope === 'locality' &&
+            !isInformalSettlementName(option.preferredPublicLabel) &&
+            !isInformalSettlementName(option.canonicalPath) &&
+            !isInformalSettlementName(option.matchedName)
+          }
+        />
+        <FieldError message={errorFor('suburbPlaceId')} />
+        <p className={t.hint}>
+          {isCurated
+            ? 'Recorded for search when you publish.'
+            : 'A reviewer confirms the suburb.'}
+        </p>
+        {isCurated && editingId ? <CurrentSuburb developmentId={editingId} /> : null}
+      </div>
+
       <div className="max-w-[280px]">
         <label htmlFor="postalCode" className={t.sectionLabel}>
           Postal code
@@ -172,7 +203,7 @@ export function LocationPhase() {
 
       <WizardSection
         label="Drop the pin at the entrance or show house (required)"
-        hint="Buyers use it for directions. Search the address and the pin fills in; or drag the pin, or type the coordinates for new land. The suburb buyers see is worked out from the pin."
+        hint="Buyers use it for directions. Search the address and the pin fills in; or drag the pin, or type the coordinates for new land."
       >
         <div className="h-[320px] overflow-hidden rounded-lg border border-slate-200">
           <LocationMapPicker
@@ -225,27 +256,15 @@ export function LocationPhase() {
         <p className={t.hint}>
           If the map is unavailable, type the entrance latitude and longitude.
         </p>
-        <p
-          data-testid="derived-location"
-          className={cn(
-            'mt-4 rounded-md border p-3 text-sm',
-            derived ? 'border-green-200 bg-green-50 text-green-900' : 'border-slate-200 bg-slate-50 text-slate-700',
-          )}
-        >
-          {pin === null
-            ? 'Drop the pin or enter coordinates to see the location buyers will see.'
-            : !settled
-              ? 'Finding the suburb…'
-              : derivedLocationText(derived, isCurated ? 'curated' : 'developer')}
-        </p>
-        {isCurated ? (
-          <>
-            <p className={t.hint}>When you publish, this suburb is recorded for search.</p>
-            {editingId ? <CurrentSuburb developmentId={editingId} /> : null}
-          </>
-        ) : (
-          <p className={t.hint}>A reviewer confirms the suburb after checking the site.</p>
-        )}
+        {farWarning ? (
+          <p
+            role="status"
+            data-testid="pin-far-warning"
+            className="mt-4 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900"
+          >
+            {farWarning}
+          </p>
+        ) : null}
       </WizardSection>
     </div>
   );

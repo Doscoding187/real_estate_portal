@@ -819,7 +819,6 @@ const DEVELOPMENT_WIZARD_LOCATION_FIELDS = [
   // Derived from the map pin (never hand-picked): the suburb buyers see.
   'suburbPlaceId',
   'suburbLabel',
-  'suburbCity',
   'suburbAssignedPlaceId',
   'gpsAccuracy',
   'noOfficialStreet',
@@ -1246,6 +1245,9 @@ const createActions = (
             state.developmentData?.location?.noOfficialStreet !== true
           )
             errors.push('Location is required');
+          if (!(state.stepData?.location as any)?.suburbPlaceId) {
+            errors.push('Choose the suburb from the list');
+          }
           const latitude = state.developmentData?.location?.latitude?.trim();
           const longitude = state.developmentData?.location?.longitude?.trim();
           // The server's readiness check needs the address and the map pin.
@@ -1299,6 +1301,7 @@ const createActions = (
       // Location (canonical)
       if (!wizardData.location?.address && wizardData.location?.noOfficialStreet !== true)
         errors.push('Location Address is required');
+      if (!wizardData.location?.suburbPlaceId) errors.push('Choose the suburb from the list');
       {
         const lat = String(wizardData.location?.latitude ?? '').trim();
         const lng = String(wizardData.location?.longitude ?? '').trim();
@@ -2131,6 +2134,9 @@ const createActions = (
             ...canonicalDevelopmentData.location,
             // "No street address yet" is kept in estateSpecs and read back here.
             ...(estateSpecs?.noStreetAddress === true ? { noOfficialStreet: true } : {}),
+            ...(estateSpecs?.suburbPlaceId
+              ? { suburbPlaceId: estateSpecs.suburbPlaceId, suburbLabel: estateSpecs.suburbLabel }
+              : {}),
           },
           governance_finances: {
             hasGoverningBody: estateSpecs?.hasHOA ?? false,

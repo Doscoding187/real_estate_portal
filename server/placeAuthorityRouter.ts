@@ -12,7 +12,7 @@ import { placeIndexability } from './services/placeIndexabilityService';
 import { isPlaceIndexAllowlistedPath } from '../shared/placeIndexAllowlist';
 import { placeGuideService } from './services/placeGuideService';
 import { nearbyPlacesService } from './services/nearbyPlacesService';
-import { placeFromPointService } from './services/placeFromPointService';
+import { placeCentreService } from './services/placeCentreService';
 import { MULTI_LOCATION_MAX } from '../shared/searchScope';
 import { PLACE_ID_REGEX, isCanonicalPlaceId } from '../shared/placeAuthority';
 import {
@@ -123,24 +123,12 @@ export const placeAuthorityRouter = router({
     .query(({ input }) => nearbyPlacesService.getNearbyPlaces([...new Set(input.canonicalPlaceIds)])),
 
   /**
-   * The canonical suburb a map pin belongs to (nearest suburb centre within 3 km),
-   * or null. Read-only; used by the development wizard's Location step.
+   * The centre of a canonical suburb from our committed centroid data, or null.
+   * Read-only; used by the development wizard's "pin is far from the suburb" warning.
    */
-  locateByPoint: publicProcedure
-    .input(
-      z
-        .object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) })
-        .strict(),
-    )
-    .query(async ({ input }) => {
-      // Best-effort helper for the wizard: any failure is "no match", never an error.
-      try {
-        return await placeFromPointService.locate(input);
-      } catch (error) {
-        console.warn('[placeAuthority.locateByPoint] lookup failed', error);
-        return null;
-      }
-    }),
+  getPlaceCentre: publicProcedure
+    .input(z.object({ placeId: z.string().trim().regex(PLACE_ID_REGEX) }).strict())
+    .query(({ input }) => placeCentreService.getCentre(input.placeId)),
 
   /** Resolve a selected Place identity for canonical search controls. */
   resolveSearchPlace: publicProcedure

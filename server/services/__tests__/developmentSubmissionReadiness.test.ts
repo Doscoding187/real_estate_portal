@@ -14,6 +14,7 @@ const validDevelopment = {
   address: '1 Harbour Road',
   latitude: '-33.9',
   longitude: '18.4',
+  estateSpecs: JSON.stringify({ suburbPlaceId: 'pl-place-01-000000000000000000000001' }),
   description:
     'A valid persisted description that contains more than fifty characters for submission.',
   ownershipType: 'sectional-title',
@@ -61,7 +62,11 @@ describe('development persisted submission readiness', () => {
   });
 
   it('accepts no street address only with the estateSpecs flag AND a valid pin', () => {
-    const noStreet = { ...validDevelopment, address: '', estateSpecs: JSON.stringify({ noStreetAddress: true }) };
+    const noStreet = {
+      ...validDevelopment,
+      address: '',
+      estateSpecs: JSON.stringify({ noStreetAddress: true, suburbPlaceId: 'pl-place-01-000000000000000000000001' }),
+    };
     expect(validatePersistedSubmissionReadiness(noStreet as never, [validUnit] as never)).toEqual([]);
     expect(
       validatePersistedSubmissionReadiness({ ...validDevelopment, address: '' } as never, [validUnit] as never).map(e => e.field),
@@ -69,6 +74,17 @@ describe('development persisted submission readiness', () => {
     expect(
       validatePersistedSubmissionReadiness({ ...noStreet, latitude: null } as never, [validUnit] as never).map(e => e.field),
     ).toEqual(['address', 'location']);
+  });
+
+  it('requires the suburb chosen from our geography (carried in estateSpecs)', () => {
+    for (const estateSpecs of [null, JSON.stringify({}), JSON.stringify({ suburbPlaceId: ' ' })]) {
+      expect(
+        validatePersistedSubmissionReadiness(
+          { ...validDevelopment, estateSpecs } as never,
+          [validUnit] as never,
+        ).map(e => e.field),
+      ).toEqual(['suburb']);
+    }
   });
 
   it('rejects a 0,0 pin with a clear message', () => {

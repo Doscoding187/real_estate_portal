@@ -528,6 +528,8 @@ function buildBasicsAboutEstateSpecs(canonical: Record<string, any>): Record<str
     handoverInPhases: phased,
     firstHandoverDate: phased ? asOptionalString(canonical.expectedFirstHandoverDate) : undefined,
     noStreetAddress: canonical.location?.noOfficialStreet === true ? true : undefined,
+    suburbPlaceId: asOptionalString(canonical.location?.suburbPlaceId),
+    suburbLabel: asOptionalString(canonical.location?.suburbLabel),
   };
   return Object.fromEntries(Object.entries(facts).filter(([, value]) => value !== undefined));
 }

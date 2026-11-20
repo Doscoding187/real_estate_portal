@@ -115,6 +115,7 @@ async function createDevelopmentFor(
     address: '1 Lifecycle Road, Berea',
     latitude: '-26.0',
     longitude: '28.0',
+    estateSpecs: { suburbPlaceId: 'pl-place-01-000000000000000000000001' },
     status: 'selling',
     ownershipType: options.ownershipType ?? 'sectional-title',
     highlights: ['Secure estate', 'Close to transport', 'Energy efficient'],

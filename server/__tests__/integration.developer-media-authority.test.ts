@@ -111,6 +111,7 @@ function developmentInput(name: string, images: unknown[]) {
     address: '1 B06 Media Authority Road',
     latitude: '-26.0',
     longitude: '28.0',
+    estateSpecs: { suburbPlaceId: 'pl-place-01-000000000000000000000001' },
     status: 'selling',
     ownershipType: 'sectional-title',
     description: 'A complete Developer media authority fixture with legitimate residential inventory.',

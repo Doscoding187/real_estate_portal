@@ -153,6 +153,7 @@ function publicationFields(slug: string, publisherType: 'platform' | 'developer'
     address: '1 S2 Authority Road',
     latitude: '-26.0',
     longitude: '28.0',
+    estateSpecs: { suburbPlaceId: 'pl-place-01-000000000000000000000001' },
     city: 'Johannesburg',
     province: 'Gauteng',
     slug,

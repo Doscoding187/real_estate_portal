@@ -93,6 +93,7 @@ async function createLeadFixture(label: string): Promise<Fixture> {
     address: '1 Assignment Authority Road',
     latitude: '-26.0',
     longitude: '28.0',
+    estateSpecs: { suburbPlaceId: 'pl-place-01-000000000000000000000001' },
     ownershipType: 'sectional-title',
     status: 'selling',
     description: 'Developer lead assignment authority fixture with legitimate development data.',

@@ -169,6 +169,17 @@ export function getCanonicalDevelopmentLocation(payload: CanonicalRecord): Canon
       payload.longitude,
       payloadLocation.longitude,
     ),
+    // The suburb chosen from our canonical geography (not a column; see estateSpecs).
+    suburbPlaceId: firstDefined(
+      locationStep.suburbPlaceId,
+      location.suburbPlaceId,
+      payloadLocation.suburbPlaceId,
+    ),
+    suburbLabel: firstDefined(
+      locationStep.suburbLabel,
+      location.suburbLabel,
+      payloadLocation.suburbLabel,
+    ),
     // "No street address yet": kept with the location, not a database column.
     noOfficialStreet: firstDefined(
       locationStep.noOfficialStreet,

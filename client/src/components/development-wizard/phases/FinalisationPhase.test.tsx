@@ -355,9 +355,8 @@ describe('FinalisationPhase', () => {
       developmentId: 456,
     });
     expect(testState.publishDevelopmentMock).not.toHaveBeenCalled();
-    // The pin matched no suburb, so no Place assignment is recorded and the operator is told.
+    // No suburb in the wizard data, so no Place assignment is attempted.
     expect(testState.assignSuburbMock).not.toHaveBeenCalled();
-    expect(testState.toastInfoMock).toHaveBeenCalledWith(expect.stringContaining('left for review'));
     expect(testState.toastSuccessMock).toHaveBeenCalledWith('Curated development published!');
     expect(testState.navigateMock).toHaveBeenCalledWith('/admin/publisher');
     expect(testState.invalidatePublisherOperatingHomeMock).toHaveBeenCalledWith({
@@ -370,7 +369,7 @@ describe('FinalisationPhase', () => {
     });
   });
 
-  it('records the suburb derived from the map pin as the accepted site Place assignment', async () => {
+  it('records the chosen suburb as the accepted site Place assignment', async () => {
     testState.setActor({ id: 2, role: 'super_admin' }, { cataloguePublisherId: 44 });
     testState.assignSuburbMock.mockResolvedValue({ success: true });
     const original = testState.wizardState.getWizardData;
@@ -393,7 +392,7 @@ describe('FinalisationPhase', () => {
         developmentId: 456,
         phaseId: null,
         placeId: 'place_north_riding',
-        evidenceReference: expect.stringContaining('derived from the development map pin'),
+        evidenceReference: expect.stringContaining('chosen from our canonical geography'),
         replaceExisting: true,
       });
       await waitFor(() =>

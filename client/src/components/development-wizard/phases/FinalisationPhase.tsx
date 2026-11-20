@@ -363,16 +363,11 @@ export function FinalisationPhase({
           cataloguePublisherId: publisherId,
           developmentId,
         });
-        // The suburb derived from the map pin is recorded through the existing
-        // super-admin Place review (accepted "site" assignment); it is never
-        // hand-picked. The development is already saved and published, so a
-        // failure or a pin with no match is reported, not fatal.
+        // The suburb chosen in the Location step (from our canonical geography) is
+        // recorded through the existing super-admin Place review (accepted "site"
+        // assignment). The development is already saved and published, so a
+        // failure is reported with a Retry, not fatal.
         const suburbRequest = suburbAssignmentRequest(developmentId, wizardData.location);
-        if (!suburbRequest && !wizardData.location?.suburbPlaceId && !editingId) {
-          toast.info(
-            'Published. The map pin did not match a suburb, so the suburb is left for review.',
-          );
-        }
         if (suburbRequest) {
           // replaceExisting makes the call idempotent: the same Place is skipped,
           // a different one withdraws the old accepted site assignment first.

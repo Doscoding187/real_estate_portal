@@ -182,6 +182,7 @@ async function insertDevelopment(
       address: '1 Platform Publication Road, Berea',
       latitude: '-26.0',
       longitude: '28.0',
+      estateSpecs: { suburbPlaceId: 'pl-place-01-000000000000000000000001' },
       status: 'selling',
       ownershipType: 'sectional-title',
       highlights: ['Secure estate', 'Close to transport', 'Energy efficient'],
@@ -564,6 +565,7 @@ describeWithDb('Developer Engine platform-curated publication authority integrat
           address: '1 Deferred Land Road, Berea',
           latitude: '-26.0',
           longitude: '28.0',
+          estateSpecs: { suburbPlaceId: 'pl-place-01-000000000000000000000001' },
           status: 'selling',
           ownershipType: 'sectional-title',
           description:

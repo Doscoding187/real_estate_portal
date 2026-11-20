@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const auth = vi.hoisted(() => ({
   user: { id: 1, role: 'property_developer' } as { id: number; role: string },
   publisher: null as { cataloguePublisherId: number } | null,
-  derived: null as null | { placeId: string; suburb: string; city: string; distanceKm: number },
+  centre: null as null | { lat: number; lng: number },
 }));
 
 vi.mock('@/_core/hooks/useAuth', () => ({ useAuth: () => ({ user: auth.user }) }));
@@ -15,11 +15,9 @@ vi.mock('@/hooks/usePublisherContext', () => ({
 vi.mock('@/lib/trpc', () => ({
   trpc: {
     placeAuthority: {
-      locateByPoint: {
+      getPlaceCentre: {
         useQuery: (_input: unknown, opts: { enabled?: boolean }) => ({
-          data: opts?.enabled ? (auth.derived ?? null) : undefined,
-          isLoading: false,
-          isFetching: false,
+          data: opts?.enabled ? auth.centre : undefined,
         }),
       },
     },
@@ -48,6 +46,38 @@ vi.mock('@/components/location/LocationMapPicker', () => ({
     </button>
   ),
 }));
+vi.mock('@/components/location/CanonicalPlaceSelector', () => {
+  const options = [
+    { placeId: 'pl-north-riding', preferredPublicLabel: 'North Riding', searchScope: 'locality', matchedName: 'North Riding', canonicalPath: '/gauteng/randburg/north-riding' },
+    { placeId: 'pl-kya-informal', preferredPublicLabel: 'Kya Sands Informal Settlement', searchScope: 'locality', matchedName: 'Kya Sands Informal Settlement', canonicalPath: '/gauteng/johannesburg/kya-sands-informal-settlement' },
+    { placeId: 'pl-johannesburg', preferredPublicLabel: 'Johannesburg', searchScope: 'metro_city', matchedName: 'Johannesburg', canonicalPath: '/gauteng/johannesburg' },
+  ];
+  return {
+    CanonicalPlaceSelector: ({ onChange, optionFilter }: { onChange: (v: any) => void; optionFilter?: (o: any) => boolean }) => (
+      <div>
+        {options
+          .filter(o => !optionFilter || optionFilter(o))
+          .map(o => (
+            <button
+              key={o.placeId}
+              type="button"
+              onClick={() =>
+                onChange({
+                  canonicalPlaceId: o.placeId,
+                  label: o.preferredPublicLabel,
+                  placeType: 'suburb',
+                  scope: o.searchScope,
+                  administrativeContext: null,
+                })
+              }
+            >
+              Offer: {o.preferredPublicLabel}
+            </button>
+          ))}
+      </div>
+    ),
+  };
+});
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() } }));
 
 import { useDevelopmentWizard } from '@/hooks/useDevelopmentWizard';
@@ -64,14 +94,17 @@ beforeEach(() => {
   store().reset();
   auth.user = { id: 1, role: 'property_developer' };
   auth.publisher = null;
-  auth.derived = null;
+  auth.centre = null;
 });
 
 describe('LocationPhase', () => {
-  it('marks the address and the map pin required and keeps manual latitude/longitude entry', () => {
+  it('marks the address, the suburb and the map pin required; manual lat/lng entry stays', () => {
     render(<LocationPhase />);
-    expect(screen.getByText('(required)')).toBeInTheDocument();
-    expect(screen.getByText(/Drop the pin at the entrance or show house \(required\)/)).toBeInTheDocument();
+    expect(screen.getAllByText('(required)').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText(/Suburb \(part of the official address\)/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Drop the pin at the entrance or show house \(required\)/),
+    ).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText(/Street address/), {
       target: { value: '499 Boundary Road' },
     });
@@ -84,7 +117,7 @@ describe('LocationPhase', () => {
     });
   });
 
-  it('an address search fills the pin automatically', () => {
+  it('an address search fills the pin automatically but never the suburb', () => {
     render(<LocationPhase />);
     fireEvent.click(screen.getByText('Search address (mock)'));
     expect(store().getWizardData().location).toMatchObject({
@@ -93,7 +126,7 @@ describe('LocationPhase', () => {
       latitude: '-26.0412',
       longitude: '27.9561',
     });
-    expect((screen.getByLabelText('Latitude') as HTMLInputElement).value).toBe('-26.0412');
+    expect((store().getWizardData().location as any).suburbPlaceId).toBeUndefined();
   });
 
   it('"No street address yet" makes the address optional but the pin stays required', () => {
@@ -101,62 +134,54 @@ describe('LocationPhase', () => {
     fireEvent.click(screen.getByLabelText(/No street address yet/));
     expect(store().getWizardData().location).toMatchObject({ noOfficialStreet: true });
     expect(screen.getByText('(optional)')).toBeInTheDocument();
-    expect(screen.getByText(/Drop the pin at the entrance or show house/)).toBeInTheDocument();
   });
 
-  it('the hand-pick suburb picker is gone for everyone', () => {
-    auth.user = { id: 2, role: 'super_admin' };
-    auth.publisher = { cataloguePublisherId: 44 };
+  it('offers suburbs only, never informal settlements, and saves the choice for the preview', () => {
     render(<LocationPhase />);
-    expect(screen.queryByText('Suburb shown to buyers')).not.toBeInTheDocument();
-    expect(screen.queryByPlaceholderText(/Start typing, e\.g\. North Riding/)).not.toBeInTheDocument();
-    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    expect(screen.getByText('Offer: North Riding')).toBeInTheDocument();
+    expect(screen.queryByText(/Informal Settlement/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Offer: Johannesburg')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText('Offer: North Riding'));
+    const location = store().getWizardData().location as Record<string, any>;
+    expect(location.suburbPlaceId).toBe('pl-north-riding');
+    expect(location.suburbLabel).toBe('North Riding');
+    expect(buildPreviewModel(store().getWizardData()).locationLabel).toBe('North Riding');
   });
 
-  it('shows the suburb derived from the pin read-only, keeps it for the assignment and in the preview', async () => {
-    auth.user = { id: 2, role: 'super_admin' };
-    auth.publisher = { cataloguePublisherId: 44 };
-    auth.derived = { placeId: 'place_north_riding', suburb: 'North Riding', city: 'Johannesburg', distanceKm: 0.4 };
+  it('warns in amber when the pin is over 5 km from the suburb centre, and not otherwise', () => {
+    auth.centre = { lat: -26.0, lng: 28.0 };
     render(<LocationPhase />);
-    fireEvent.change(screen.getByLabelText('Latitude'), { target: { value: '-26.05' } });
+    fireEvent.click(screen.getByText('Offer: North Riding'));
+    fireEvent.change(screen.getByLabelText('Latitude'), { target: { value: '-26.01' } });
     fireEvent.change(screen.getByLabelText('Longitude'), { target: { value: '28.01' } });
-    expect(await screen.findByText(/North Riding, Johannesburg — from the map pin/, {}, { timeout: 2000 })).toBeInTheDocument();
-    await waitFor(() => expect((store().getWizardData().location as any).suburbPlaceId).toBe('place_north_riding'));
-    expect((store().getWizardData().location as any).suburbLabel).toBe('North Riding');
-    expect(buildPreviewModel(store().getWizardData()).locationLabel).toBe('North Riding, Johannesburg');
+    expect(screen.queryByTestId('pin-far-warning')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Latitude'), { target: { value: '-26.2' } });
+    expect(screen.getByTestId('pin-far-warning')).toHaveTextContent(
+      /This pin is \d+ km from North Riding — check the address or the pin\./,
+    );
   });
 
-  it('says so when the pin matches no suburb, and a developer still gets the read-only suggestion', async () => {
-    auth.derived = null;
+  it('no centre in our data means no warning', () => {
+    auth.centre = null;
     render(<LocationPhase />);
-    fireEvent.change(screen.getByLabelText('Latitude'), { target: { value: '10' } });
-    fireEvent.change(screen.getByLabelText('Longitude'), { target: { value: '10' } });
-    expect(await screen.findByText(/couldn’t match this pin to a suburb/, {}, { timeout: 2000 })).toBeInTheDocument();
-    expect(screen.getByText(/A reviewer confirms the suburb/)).toBeInTheDocument();
-  });
-});
-
-describe('Location truth', () => {
-  it('uses truthful copy about the street address', () => {
-    render(<LocationPhase />);
-    expect(
-      screen.getByText(/Buyers see the suburb in search; the street address shows on the development page for directions/),
-    ).toBeInTheDocument();
-    expect(screen.queryByText(/not the street address/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText('Offer: North Riding'));
+    fireEvent.change(screen.getByLabelText('Latitude'), { target: { value: '-20' } });
+    fireEvent.change(screen.getByLabelText('Longitude'), { target: { value: '20' } });
+    expect(screen.queryByTestId('pin-far-warning')).not.toBeInTheDocument();
   });
 
-  it('a developer sees the derived suburb as a suggestion a reviewer confirms', async () => {
-    auth.derived = { placeId: 'place_x', suburb: 'North Riding', city: 'Johannesburg', distanceKm: 1 };
+  it('there is no derived "from the map pin" line; copy is truthful and a reviewer confirms the suburb', () => {
     render(<LocationPhase />);
-    fireEvent.change(screen.getByLabelText('Latitude'), { target: { value: '-26.05' } });
-    fireEvent.change(screen.getByLabelText('Longitude'), { target: { value: '28.01' } });
-    expect(
-      await screen.findByText(/Suggested suburb: North Riding, Johannesburg — a reviewer confirms it/, {}, { timeout: 2000 }),
-    ).toBeInTheDocument();
     expect(screen.queryByText(/Location buyers see/)).not.toBeInTheDocument();
+    expect(screen.getByText(/A reviewer confirms the suburb/)).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /Buyers see the suburb in search; the street address shows on the development page for directions/,
+      ),
+    ).toBeInTheDocument();
   });
 
-  it('reopening a saved development keeps the no-street tick and an empty address', () => {
+  it('reopening a saved development keeps the no-street tick, the empty address and the suburb', () => {
     store().hydrateDevelopment({
       id: 9,
       name: 'Baltimore',
@@ -165,14 +190,21 @@ describe('Location truth', () => {
       address: '',
       latitude: '-26.05',
       longitude: '28.0',
-      estateSpecs: JSON.stringify({ noStreetAddress: true, setting: 'estate' }),
+      estateSpecs: JSON.stringify({
+        noStreetAddress: true,
+        setting: 'estate',
+        suburbPlaceId: 'pl-north-riding',
+        suburbLabel: 'North Riding',
+      }),
     } as any);
-    const location = store().getWizardData().location as Record<string, any>;
-    expect(location.noOfficialStreet).toBe(true);
-    expect(location.address).toBe('');
+    expect(store().getWizardData().location).toMatchObject({
+      noOfficialStreet: true,
+      address: '',
+      suburbPlaceId: 'pl-north-riding',
+      suburbLabel: 'North Riding',
+    });
     render(<LocationPhase />);
     expect((screen.getByLabelText(/No street address yet/) as HTMLInputElement).checked).toBe(true);
-    expect((screen.getByLabelText(/Street address/) as HTMLInputElement).value).toBe('');
   });
 });
 

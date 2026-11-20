@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   addCustomAmenity,
   addHighlight,
-  derivedLocationText,
+  pinDistanceWarning,
+  isInformalSettlementName,
   amenityChipsByGroup,
   cardHighlightSplit,
   estimatedAmount,
@@ -23,36 +24,52 @@ import { buildDevelopmentSubmitPayload } from '../developmentSubmitPayload';
 import { residentialSaleWorkflow } from '../workflows/residential-sale';
 import { iconForAmenity, FALLBACK_ICON } from '@/components/wizard/wizardIcons';
 
+const SUB = { suburbPlaceId: 'pl-north-riding', suburbLabel: 'North Riding' };
+const PIN = { latitude: '-26.05', longitude: '28.0' };
+
 describe('location validation agrees with the server', () => {
-  it('requires the address and the map pin (the server readiness rule)', () => {
-    expect(validateLocationStep({}).map(e => e.field)).toEqual(['address', 'latitude', 'longitude']);
-    expect(validateLocationStep({ address: '1 Main Road' }).map(e => e.field)).toEqual([
+  it('requires the address, the suburb and the map pin', () => {
+    expect(validateLocationStep({}).map(e => e.field)).toEqual([
+      'address',
+      'suburbPlaceId',
       'latitude',
       'longitude',
     ]);
-    expect(validateLocationStep({ address: '1 Main Road', latitude: '-26.05', longitude: '28.0' })).toEqual([]);
+    expect(validateLocationStep({ address: '1 Main Road', ...SUB }).map(e => e.field)).toEqual([
+      'latitude',
+      'longitude',
+    ]);
+    expect(validateLocationStep({ address: '1 Main Road', ...SUB, ...PIN })).toEqual([]);
+  });
+
+  it('the suburb is required even with no street address', () => {
+    expect(validateLocationStep({ noOfficialStreet: true, ...PIN }).map(e => e.field)).toEqual([
+      'suburbPlaceId',
+    ]);
+    expect(validateLocationStep({ noOfficialStreet: true, ...SUB, ...PIN })).toEqual([]);
   });
 
   it('coordinates must be a valid pair', () => {
-    const base = { address: '1 Main Road' };
+    const base = { address: '1 Main Road', ...SUB };
     expect(validateLocationStep({ ...base, latitude: '-26.05' }).map(e => e.field)).toEqual(['longitude']);
     expect(validateLocationStep({ ...base, latitude: '120', longitude: '28' }).map(e => e.field)).toEqual(['latitude']);
   });
 
-  it('the sale workflow Location step blocks Continue without a pin', () => {
-    const step = residentialSaleWorkflow.steps.find(s => s.id === 'location')!;
-    expect(step.validate!({ location: { address: '1 Main Road' } } as any).valid).toBe(false);
-    expect(
-      step.validate!({ location: { address: '1 Main Road', latitude: '-26.05', longitude: '28.0' } } as any).valid,
-    ).toBe(true);
+  it('an address without a pin blocks with a clear message', () => {
+    const issues = validateLocationStep({ address: '1 Main Road', ...SUB });
+    expect(issues[0].message).toMatch(/drop the map pin/i);
   });
 
-  it('an address without a pin blocks with a clear message; no-street plus a pin passes', () => {
-    const issues = validateLocationStep({ address: '1 Main Road' });
-    expect(issues.map(e => e.field)).toEqual(['latitude', 'longitude']);
-    expect(issues[0].message).toMatch(/drop the map pin/i);
-    expect(validateLocationStep({ noOfficialStreet: true, latitude: '-26.05', longitude: '28.0' })).toEqual([]);
-    expect(validateLocationStep({ noOfficialStreet: true }).map(e => e.field)).toEqual(['latitude', 'longitude']);
+  it('rejects a 0,0 pin', () => {
+    const issues = validateLocationStep({ address: '1 Main Road', ...SUB, latitude: '0', longitude: '0' });
+    expect(issues).toEqual([{ field: 'latitude', message: 'Place the pin on the development' }]);
+  });
+
+  it('the sale workflow Location step blocks Continue without a suburb or a pin', () => {
+    const step = residentialSaleWorkflow.steps.find(s => s.id === 'location')!;
+    expect(step.validate!({ location: { address: '1 Main Road', ...PIN } } as any).valid).toBe(false);
+    expect(step.validate!({ location: { address: '1 Main Road', ...SUB } } as any).valid).toBe(false);
+    expect(step.validate!({ location: { address: '1 Main Road', ...SUB, ...PIN } } as any).valid).toBe(true);
   });
 
   it('costs not given are null in estateSpecs, never 0', () => {
@@ -62,7 +79,7 @@ describe('location validation agrees with the server', () => {
         developmentType: 'residential',
         transactionType: 'for_sale',
         name: 'Baltimore',
-        location: { address: '1 Main Road', latitude: '-26.05', longitude: '28.0' },
+        location: { address: '1 Main Road', ...PIN },
         hasGoverningBody: false,
         media: {},
         unitTypes: [],
@@ -74,13 +91,8 @@ describe('location validation agrees with the server', () => {
     });
   });
 
-  it('rejects a 0,0 pin', () => {
-    const issues = validateLocationStep({ address: '1 Main Road', latitude: '0', longitude: '0' });
-    expect(issues).toEqual([{ field: 'latitude', message: 'Place the pin on the development' }]);
-  });
-
   it('a no-street development is submitted with an empty address and the flag, never a made-up address', () => {
-    const loc = { noOfficialStreet: true, latitude: '-26.05', longitude: '28.0' };
+    const loc = { noOfficialStreet: true, ...SUB, ...PIN };
     expect(submitAddress(loc)).toBe('');
     expect(submitAddress({ address: ' 1 Main Road ', ...loc })).toBe('1 Main Road');
     expect(submitAddress({ latitude: '1', longitude: '2' })).toBeUndefined();
@@ -101,14 +113,38 @@ describe('location validation agrees with the server', () => {
     expect(payload.estateSpecs).toMatchObject({ noStreetAddress: true });
   });
 
-  it('describes the derived location, or says it could not match', () => {
-    expect(derivedLocationText({ suburb: 'North Riding', city: 'Johannesburg' })).toBe(
-      'Location buyers see: North Riding, Johannesburg — from the map pin',
+  it('the chosen suburb travels in estateSpecs, which is what the server checks', () => {
+    const payload = buildDevelopmentSubmitPayload({
+      amenities: [],
+      wizardData: {
+        developmentType: 'residential',
+        transactionType: 'for_sale',
+        name: 'Baltimore',
+        location: { address: '1 Main Road', ...SUB, ...PIN },
+        media: {},
+        unitTypes: [],
+      },
+    } as any);
+    expect(payload.estateSpecs).toMatchObject({
+      suburbPlaceId: 'pl-north-riding',
+      suburbLabel: 'North Riding',
+    });
+  });
+
+  it('warns only when the pin is more than 5 km from a known suburb centre', () => {
+    const centre = { lat: -26.0, lng: 28.0 };
+    expect(pinDistanceWarning({ lat: -26.01, lng: 28.01 }, centre, 'North Riding')).toBeNull();
+    expect(pinDistanceWarning({ lat: -26.2, lng: 28.0 }, centre, 'North Riding')).toBe(
+      'This pin is 22 km from North Riding — check the address or the pin.',
     );
-    expect(derivedLocationText(null)).toMatch(/couldn’t match this pin/);
-    expect(derivedLocationText({ suburb: 'North Riding', city: 'Johannesburg' }, 'developer')).toBe(
-      'Suggested suburb: North Riding, Johannesburg — a reviewer confirms it',
-    );
+    expect(pinDistanceWarning({ lat: -26.2, lng: 28.0 }, null, 'North Riding')).toBeNull();
+    expect(pinDistanceWarning(null, centre, 'North Riding')).toBeNull();
+  });
+
+  it('recognises informal settlement names', () => {
+    expect(isInformalSettlementName('Kya Sands Informal Settlement')).toBe(true);
+    expect(isInformalSettlementName('gauteng/jhb/lucky-7-informal-settlement')).toBe(true);
+    expect(isInformalSettlementName('North Riding')).toBe(false);
   });
 });
 

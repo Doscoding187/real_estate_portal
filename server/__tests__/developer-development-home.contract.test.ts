@@ -86,6 +86,7 @@ const ownedDevelopment = {
   address: '1 Harbour Road',
   latitude: '-33.9',
   longitude: '18.4',
+  estateSpecs: JSON.stringify({ suburbPlaceId: 'pl-place-01-000000000000000000000001' }),
   transactionType: 'for_sale',
   approvalStatus: 'approved',
   isPublished: 1,
