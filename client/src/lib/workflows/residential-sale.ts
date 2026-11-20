@@ -2,6 +2,7 @@ import { WizardWorkflow, WizardStep, type FieldError } from '../types/wizard-wor
 import { validateLocationStep, validateAmenitiesStep } from '../wizardLocationCostsAmenities';
 import { validateAboutStep } from '../wizardBasicsAbout';
 import { validateDevelopmentMedia } from '../wizardMedia';
+import { needsUnitOwnership } from '../wizardHouseTypes';
 
 // Eight steps, in this order: Basics, About, Location, Monthly costs,
 // Amenities, Media, House types, Review & publish. The step ids are the same
@@ -111,6 +112,12 @@ const residentialSaleSteps: WizardStep[] = [
               errors.push({
                 field: `unitTypes.${id}.priceFrom`,
                 message: `${label} is missing a base price`,
+              });
+            // Ownership is asked per house type only when the development says "Varies by house type".
+            if (needsUnitOwnership((data as any).ownershipTypes) && !u.ownershipType)
+              errors.push({
+                field: `unitTypes.${id}.ownershipType`,
+                message: `${label} is missing its ownership`,
               });
           });
         }

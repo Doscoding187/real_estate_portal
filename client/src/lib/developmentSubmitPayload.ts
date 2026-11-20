@@ -51,6 +51,7 @@ export type SubmitUnitType = {
   availabilityNotProvided?: boolean;
   isActive?: boolean;
   structuralType?: string;
+  ownershipType?: string;
   unitCategory?: 'house' | 'apartment';
   unitSubType?: string;
   specifications?: Record<string, any>;
@@ -433,6 +434,12 @@ export function normalizeSubmitUnitTypes(
       availabilityNotProvided: unit?.availabilityNotProvided === true,
       isActive: typeof unit?.isActive === 'boolean' ? unit.isActive : undefined,
       structuralType: unit?.structuralType,
+      // Per-house-type ownership (only asked when the development says "Varies by house type").
+      ownershipType: ['full-title', 'sectional-title', 'leasehold', 'life-rights'].includes(
+        unit?.ownershipType,
+      )
+        ? unit.ownershipType
+        : undefined,
       unitCategory,
       unitSubType,
       specifications,

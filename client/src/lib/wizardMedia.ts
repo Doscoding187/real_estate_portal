@@ -210,6 +210,22 @@ export function validateMediaFile(
   return null;
 }
 
+/** Floor plans may be a PDF or a picture; check the file against the matching rule. */
+export const kindForFloorPlan = (file: { type: string }): MediaKind =>
+  (file.type || '').toLowerCase() === PDF_TYPE ? 'pdf' : 'image';
+
+/** Inline error for a rejected floor plan (picture or PDF), or null when it may be uploaded. */
+export function floorPlanRejection(file: { name: string; type: string; size: number }): string | null {
+  const type = (file.type || '').toLowerCase();
+  if (type !== PDF_TYPE && !IMAGE_TYPES.includes(type)) {
+    if (SPREADSHEET_EXT.test(file.name) || SPREADSHEET_TYPE.test(type)) {
+      return `${file.name}: ${SPREADSHEET_MESSAGE}`;
+    }
+    return `${file.name}: floor plans must be a picture (JPG, PNG, WebP) or a PDF.`;
+  }
+  return rejectionMessage(file, kindForFloorPlan(file));
+}
+
 /** "<file name>: <reason>" for the inline error under a slot, or null when the file is fine. */
 export function rejectionMessage(
   file: { name: string; type: string; size: number },
