@@ -47,6 +47,7 @@ import { eq, desc, asc, and, or, like, sql, type SQL, gte, lte, inArray } from '
 import { logAudit, AuditActions } from './_core/auditLog';
 import { nowAsDbTimestamp } from './utils/dbTypeUtils';
 import { developmentService } from './services/developmentService';
+import { buildUserListConditions, toSafeAdminUser } from './services/adminUserView';
 import {
   loadAdminInbox,
   loadAuditLogs,
@@ -552,6 +553,11 @@ export const adminRouter = router({
   /** Super Admin: most recent audit log entries (read-only). */
   getRecentAdminActivity: superAdminProcedure.query(async () => loadRecentAdminActivity(8)),
 
+  /** Super Admin: every action name the audit log can record, for the filter (read-only). */
+  getAuditActionOptions: superAdminProcedure.query(() =>
+    Object.values(AuditActions).sort((a, b) => a.localeCompare(b)),
+  ),
+
   /** Super Admin: audit trail, newest first, cursor-paged (read-only). */
   getAuditLogs: superAdminProcedure
     .input(
@@ -581,8 +587,8 @@ export const adminRouter = router({
   listUsers: superAdminProcedure
     .input(
       z.object({
-        page: z.number().default(1),
-        limit: z.number().default(50),
+        page: z.number().int().min(1).default(1),
+        limit: z.number().int().min(1).max(100).default(50),
         role: z
           .enum([
             'visitor',
@@ -620,19 +626,7 @@ export const adminRouter = router({
 
         // Build where conditions. (A listings-only Land filter used to sit here by mistake;
         // it referenced the listings table inside a users query and could not be valid SQL.)
-        const conditions: SQL[] = [];
-        if (input.role) conditions.push(eq(users.role, input.role));
-        if (input.agencyId) conditions.push(eq(users.agencyId, input.agencyId));
-        const search = input.search?.trim();
-        if (search) {
-          conditions.push(
-            or(
-              like(users.email, `%${search}%`),
-              like(users.firstName, `%${search}%`),
-              like(users.lastName, `%${search}%`),
-            )!,
-          );
-        }
+        const conditions = buildUserListConditions(input);
 
         const where = conditions.length > 0 ? and(...conditions) : undefined;
 
@@ -653,10 +647,8 @@ export const adminRouter = router({
         const total = Number(totalResult[0]?.count || 0);
 
         return {
-          users: usersList.map(u => ({
-            ...u,
-            passwordHash: undefined, // Never expose password hash
-          })),
+          // Explicit allow-list: tokens, hashes and session data never leave the server.
+          users: usersList.map(toSafeAdminUser),
           pagination: {
             page: input.page,
             limit: input.limit,
@@ -794,10 +786,7 @@ export const adminRouter = router({
       .where(and(eq(users.isSubaccount, 1), agencyId ? eq(users.agencyId, agencyId) : undefined))
       .orderBy(desc(users.createdAt));
 
-    return subaccounts.map(u => ({
-      ...u,
-      passwordHash: undefined,
-    }));
+    return subaccounts.map(toSafeAdminUser);
   }),
 
   /**
@@ -1307,7 +1296,7 @@ export const adminRouter = router({
         agents: Number(totalAgents[0]?.count || 0),
       },
       recentActivity: {
-        users: recentUsers,
+        users: recentUsers.map(toSafeAdminUser),
         listings: recentListings,
       },
     };

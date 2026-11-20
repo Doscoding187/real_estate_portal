@@ -23,16 +23,10 @@ import { Search } from 'lucide-react';
 
 const PAGE_SIZE = 50;
 
-const ACTION_OPTIONS: [string, string][] = [
-  ['view_all_users', 'Viewed users'],
-  ['view_all_properties', 'Viewed listings'],
-  ['view_all_agencies', 'Viewed agencies'],
-  ['update_user_role', 'Changed a user role'],
-  ['delete_user', 'Deleted a user'],
-  ['approve_property', 'Approved a listing'],
-  ['reject_property', 'Rejected a listing'],
-  ['update_subscription', 'Updated a subscription'],
-];
+const actionLabel = (action: string) => {
+  const text = action.replace(/[._]/g, ' ');
+  return text.charAt(0).toUpperCase() + text.slice(1);
+};
 
 const getActionBadgeVariant = (action: string) => {
   if (action.includes('approve') || action.includes('verify')) return 'default';
@@ -54,6 +48,7 @@ export default function AuditLogs() {
     beforeId,
   });
 
+  const { data: actionOptions } = trpc.admin.getAuditActionOptions.useQuery();
   const needle = searchTerm.trim().toLowerCase();
   const logs = (data?.logs ?? []).filter(
     log =>
@@ -81,8 +76,8 @@ export default function AuditLogs() {
                 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground"
               />
               <Input
-                aria-label="Search this page by action, admin or target"
-                placeholder="Search this page by action, admin or target..."
+                aria-label="Filter this page by action, admin or target"
+                placeholder="Filter this page by action, admin or target..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -100,9 +95,9 @@ export default function AuditLogs() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All actions</SelectItem>
-                {ACTION_OPTIONS.map(([value, label]) => (
+                {(actionOptions ?? []).map(value => (
                   <SelectItem key={value} value={value}>
-                    {label}
+                    {actionLabel(value)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -185,6 +180,7 @@ export default function AuditLogs() {
               <span className="text-sm text-muted-foreground">
                 Showing {data.logs.length}
                 {data.hasMore ? ' (older entries available)' : ''}
+                {needle ? ` · ${logs.length} on this page match` : ''}
               </span>
               <div className="flex gap-2">
                 <Button

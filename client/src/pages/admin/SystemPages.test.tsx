@@ -23,6 +23,7 @@ vi.mock('@/lib/trpc', () => ({
           return h.audit;
         },
       },
+      getAuditActionOptions: { useQuery: () => ({ data: ['approve_property', 'invite_agent'] }) },
       getCommercialActivationStatus: { useQuery: () => h.activation },
       getTransactionalEmailBacklog: { useQuery: () => h.email },
     },
@@ -55,6 +56,14 @@ describe('System and security (audit trail)', () => {
     render(<AuditLogs />);
     expect(screen.getAllByText('Edward')).toHaveLength(2);
     expect(screen.getByText('Showing 2 (older entries available)')).toBeTruthy();
+  });
+
+  it('labels the search as a page filter and counts matches', () => {
+    render(<AuditLogs />);
+    fireEvent.change(screen.getByLabelText('Filter this page by action, admin or target'), {
+      target: { value: 'zzz' },
+    });
+    expect(screen.getByText(/0 on this page match/)).toBeTruthy();
   });
 
   it('pages older with the id cursor and back to newer', () => {

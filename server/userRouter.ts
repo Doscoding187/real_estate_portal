@@ -4,6 +4,7 @@ import { protectedProcedure, router, superAdminProcedure } from './_core/trpc';
 import { billableAccounts, userOnboardingState, users } from '../drizzle/schema';
 import { eq, like, or, desc, and, isNull } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
+import { escapeLike, toSafeAdminUser } from './services/adminUserView';
 import { getDb } from './db';
 import { createOrReadOnboardingState } from './services/onboardingStateCreation';
 import { logAudit } from './_core/auditLog';
@@ -234,12 +235,13 @@ export const userRouter = router({
 
     const search = input.search?.trim();
     if (search) {
+      const pattern = `%${escapeLike(search)}%`;
       conditions.push(
         or(
-          like(users.email, `%${search}%`),
-          like(users.name, `%${search}%`),
-          like(users.firstName, `%${search}%`),
-          like(users.lastName, `%${search}%`),
+          like(users.email, pattern),
+          like(users.name, pattern),
+          like(users.firstName, pattern),
+          like(users.lastName, pattern),
         )!,
       );
     }
@@ -270,7 +272,7 @@ export const userRouter = router({
     const total = allUsers.length;
 
     return {
-      users: results,
+      users: results.map(toSafeAdminUser),
       total,
       limit: input.limit,
       offset: input.offset,
@@ -292,7 +294,7 @@ export const userRouter = router({
       throw new Error('User not found');
     }
 
-    return user;
+    return toSafeAdminUser(user);
   }),
 
   /**
@@ -313,7 +315,7 @@ export const userRouter = router({
     });
 
     const [updated] = await db.select().from(users).where(eq(users.id, input.userId));
-    return updated;
+    return updated ? toSafeAdminUser(updated) : updated;
   }),
 
   /**
@@ -358,7 +360,7 @@ export const userRouter = router({
       });
 
       const [updated] = await db.select().from(users).where(eq(users.id, input.userId));
-      return updated;
+      return updated ? toSafeAdminUser(updated) : updated;
     }),
 
   /**

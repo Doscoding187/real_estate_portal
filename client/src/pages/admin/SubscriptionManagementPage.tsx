@@ -139,6 +139,7 @@ export default function SubscriptionManagementPage({
       void utils.admin.getAdminActionItems.invalidate();
       void utils.admin.getLaunchDashboardStats.invalidate();
       void utils.admin.getDailyInbox.invalidate();
+      void utils.billing.admin.subscriptions.invalidate();
     },
     onError: error => {
       toast.error(`Verification failed: ${error.message}`);

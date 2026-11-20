@@ -2,7 +2,8 @@
  * Super Admin daily inbox: read-only queries over existing tables.
  * No writes, no schema change. Every row returned is a real pending work item.
  */
-import { and, desc, eq, gte, inArray, lt, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, sql } from 'drizzle-orm';
+import { buildAuditLogConditions } from './adminUserView';
 import {
   agents,
   auditLogs,
@@ -330,10 +331,7 @@ export async function loadAuditLogs(input: {
   beforeId?: number;
 }): Promise<{ logs: AdminAuditLogRow[]; hasMore: boolean }> {
   const db = await requireDb();
-  const conditions = [
-    input.action ? eq(auditLogs.action, input.action) : undefined,
-    input.beforeId ? lt(auditLogs.id, input.beforeId) : undefined,
-  ].filter(Boolean) as ReturnType<typeof eq>[];
+  const conditions = buildAuditLogConditions(input);
   const rows = await db
     .select({
       id: auditLogs.id,
