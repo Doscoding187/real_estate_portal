@@ -18,17 +18,19 @@ export default function PublisherDevelopmentWizard() {
     ) ?? '',
     10,
   );
-  const hasPublisher =
-    Boolean(context?.cataloguePublisherId) ||
-    (Number.isFinite(queryPublisherId) && queryPublisherId > 0);
+  const contextPublisherId = context?.cataloguePublisherId;
+  const hasQueryPublisher = Number.isFinite(queryPublisherId) && queryPublisherId > 0;
+  const mismatch = hasQueryPublisher && contextPublisherId !== queryPublisherId;
 
-  if (hasPublisher) return <CreateDevelopment />;
+  if (contextPublisherId && !mismatch) return <CreateDevelopment />;
 
   return (
     <div className="flex items-center justify-center p-6">
       <div className="w-full max-w-md rounded-2xl border border-slate-100 bg-white p-8 text-center shadow-soft">
         <h1 className="mb-2 text-2xl font-semibold text-slate-900">
-          Choose which publisher this development is for
+          {mismatch
+            ? 'This development belongs to another publisher — choose it first'
+            : 'Choose which publisher this development is for'}
         </h1>
         <p className="mb-6 text-slate-600">
           Pick a publisher brand first, then come back to build the development under it.

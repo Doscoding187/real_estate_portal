@@ -38,8 +38,26 @@ describe('PublisherDevelopmentWizard gate', () => {
     expect(screen.getByText('Wizard body')).toBeInTheDocument();
   });
 
-  it('shows the wizard when the cataloguePublisherId query param is present', () => {
+  it('shows the gate for a query param without a publisher context', () => {
     contextMock.mockReturnValue(null);
+    window.history.pushState({}, '', '/admin/publisher/developments/new?id=5&cataloguePublisherId=9');
+    render(createElement(PublisherDevelopmentWizard));
+    expect(screen.queryByText('Wizard body')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Choose a publisher' })).toBeInTheDocument();
+  });
+
+  it('shows the gate when the query param differs from the context', () => {
+    contextMock.mockReturnValue({ cataloguePublisherId: 4 });
+    window.history.pushState({}, '', '/admin/publisher/developments/new?id=5&cataloguePublisherId=9');
+    render(createElement(PublisherDevelopmentWizard));
+    expect(screen.queryByText('Wizard body')).not.toBeInTheDocument();
+    expect(
+      screen.getByText('This development belongs to another publisher — choose it first'),
+    ).toBeInTheDocument();
+  });
+
+  it('shows the wizard when the query param matches the context', () => {
+    contextMock.mockReturnValue({ cataloguePublisherId: 9 });
     window.history.pushState({}, '', '/admin/publisher/developments/new?id=5&cataloguePublisherId=9');
     render(createElement(PublisherDevelopmentWizard));
     expect(screen.getByText('Wizard body')).toBeInTheDocument();
