@@ -278,6 +278,14 @@ type DeveloperMediaWriteContext = {
   developmentId: number | null;
 };
 
+/** The estateSpecs JSON as stored: a string, as the update path writes it; null when empty. */
+export function serializeEstateSpecsForCreate(value: unknown): string | null {
+  if (value === null || value === undefined || value === '') return null;
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object') return JSON.stringify(value);
+  return null;
+}
+
 function parseMediaCollection(value: unknown): unknown[] {
   if (Array.isArray(value)) return value;
   if (value === null || value === undefined || value === '') return [];
@@ -1384,7 +1392,10 @@ export async function createDevelopment(
     totalDevelopmentArea: sanitizeInt((developmentData as any).totalDevelopmentArea),
     customClassification: sanitizeString((developmentData as any).customClassification),
 
-    estateSpecs: (developmentData as any).estateSpecs || null,
+    // estateSpecs was destructured out of `data` above (as estateSpecsData), so it is not
+    // on developmentData: reading it from there stored null and dropped the suburb, the
+    // setting, "no street address" and the rest of the Basics/Location facts on create.
+    estateSpecs: serializeEstateSpecsForCreate(estateSpecsData),
     launchDate: sanitizeDate((developmentData as any).launchDate),
     completionDate: sanitizeDate((developmentData as any).completionDate),
 

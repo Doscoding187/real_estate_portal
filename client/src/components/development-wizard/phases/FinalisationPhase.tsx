@@ -98,6 +98,8 @@ export function FinalisationPhase({
 
   // Get editingId from store for edit mode detection
   const editingId = (store as any).editingId as number | undefined;
+  // The development a previous attempt created from this draft (survives a reload).
+  const draftCreatedId = (store as any).createdDevelopmentId as number | undefined;
 
   const reviewAmenities = (() => {
     if (stepAmenities && stepAmenities.length > 0) return stepAmenities;
@@ -214,7 +216,7 @@ export function FinalisationPhase({
       let developmentId: number;
       // Editing an existing development, or retrying after a refused first attempt that
       // already created one (never create a second copy).
-      const existingId = editingId ?? createdIdRef.current ?? undefined;
+      const existingId = editingId ?? draftCreatedId ?? createdIdRef.current ?? undefined;
       if (existingId && shouldUseSuperAdminFlow) {
         await updatePublisherDevelopment.mutateAsync({
           cataloguePublisherId: publisherId,
@@ -258,6 +260,14 @@ export function FinalisationPhase({
           developmentId = result.development.id;
         }
         createdIdRef.current = developmentId;
+        // Remember it on the draft itself (store, local copy and the server draft), so a
+        // retry after a refusal or a reload updates this development, never a second one.
+        (store as any).setCreatedDevelopmentId?.(developmentId);
+        try {
+          await onSaveDraft?.();
+        } catch (draftError) {
+          console.warn('[FinalisationPhase] Could not save the created development id on the draft:', draftError);
+        }
       }
 
       // Curated records use the privileged platform publication transition;
@@ -404,6 +414,15 @@ export function FinalisationPhase({
         <h2 className="text-xl font-semibold text-slate-900">{finalisationCopy.heading}</h2>
         <p className="mt-1 text-sm text-slate-600">{finalisationCopy.description}</p>
       </div>
+
+      {draftCreatedId && !editingId ? (
+        <p
+          data-testid="review-created-note"
+          className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-900"
+        >
+          This draft already created development #{draftCreatedId} — publishing updates it.
+        </p>
+      ) : null}
 
       {/* Readiness: ready, or exactly what is missing, each linking to its step */}
       <section

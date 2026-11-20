@@ -475,6 +475,13 @@ export interface DevelopmentWizardState {
   draftId?: number;
   /** When (ms since epoch) the server last confirmed this draft, for the resume dialog. */
   draftSavedAt?: number;
+  /**
+   * The development a first publish attempt created from this draft. Kept on the draft
+   * (draftData.createdDevelopmentId) so a retry after a refused publish, even after a
+   * reload, updates that development instead of creating a second copy.
+   */
+  createdDevelopmentId?: number;
+  setCreatedDevelopmentId?: (id: number | undefined) => void;
   editingId?: number; // ID of development being edited
 
   // NEW: Unit Type Draft (Persistence against accidental closing)
@@ -1516,6 +1523,7 @@ const createActions = (
         editingId: undefined,
         draftId: undefined,
         draftSavedAt: undefined,
+        createdDevelopmentId: undefined,
         developerId: undefined,
         currentStepId: null,
         workflowId: null,
@@ -1534,6 +1542,8 @@ const createActions = (
       }),
 
     setWorkflowStep: (stepId: WizardStepId) => set({ currentStepId: stepId }),
+
+    setCreatedDevelopmentId: (id: number | undefined) => set({ createdDevelopmentId: id }),
 
     goWorkflowNext: (fromStepId?: string) =>
       set(state => {
@@ -2222,6 +2232,10 @@ const createActions = (
           workflowId: sourceWorkflowId,
           currentStepId: sourceCurrentStepId,
           completedSteps: sourceCompletedSteps,
+          createdDevelopmentId:
+            isDraft && Number.isSafeInteger(Number(source.createdDevelopmentId)) && Number(source.createdDevelopmentId) > 0
+              ? Number(source.createdDevelopmentId)
+              : undefined,
           // Restore the root answer too, so a resumed draft is not mistaken for a new one.
           transactionType:
             normalizeTransactionType(canonicalDevelopmentData.transactionType) ??
@@ -2490,6 +2504,8 @@ const createActions = (
         workflowId: state.workflowId,
         currentStepId: state.currentStepId,
         completedSteps: state.completedSteps,
+        // Remembered on the draft so a retry never creates a second development.
+        ...(state.createdDevelopmentId ? { createdDevelopmentId: state.createdDevelopmentId } : {}),
         stepData: {
           ...state.stepData,
           unit_types: {
@@ -2583,6 +2599,7 @@ export const useDevelopmentWizard = create<DevelopmentWizardState>()(
         // Server draft this local copy belongs to, so resuming never forks a duplicate.
         draftId: state.draftId,
         draftSavedAt: state.draftSavedAt,
+        createdDevelopmentId: state.createdDevelopmentId,
 
         residentialConfig: state.residentialConfig,
         landConfig: state.landConfig,

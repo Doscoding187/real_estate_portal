@@ -112,6 +112,20 @@ describe('Continue moves exactly one step', () => {
     expect(store().transactionType).toBe('for_sale');
   });
 
+  it('the created development id is saved with the draft and restored when the draft is reopened', () => {
+    store().setCreatedDevelopmentId?.(456);
+    const draft = JSON.parse(JSON.stringify(store().getDraftData()));
+    expect(draft.createdDevelopmentId).toBe(456);
+    store().reset();
+    expect(store().createdDevelopmentId).toBeUndefined();
+    store().hydrateDevelopment({ draftData: draft });
+    expect(store().createdDevelopmentId).toBe(456);
+    // A development opened for editing (not a draft) never inherits it.
+    store().reset();
+    store().hydrateDevelopment({ id: 9, name: 'Existing', createdDevelopmentId: 456 });
+    expect(store().createdDevelopmentId).toBeUndefined();
+  });
+
   it('a repeated or stale next call for a step already left does nothing', () => {
     store().goWorkflowNext('configuration');
     store().goWorkflowNext('configuration');

@@ -110,6 +110,10 @@ const testState = vi.hoisted(() => {
     getCardFieldRecommendations: () => [],
     setPhase: setPhaseMock,
     setWorkflowStep: vi.fn(),
+    createdDevelopmentId: undefined as number | undefined,
+    setCreatedDevelopmentId: (id: number | undefined) => {
+      wizardState.createdDevelopmentId = id;
+    },
     saveWorkflowStepData: saveStepDataMock,
     reset: resetMock,
   };
@@ -225,6 +229,7 @@ describe('FinalisationPhase', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     testState.wizardState.editingId = undefined;
+    testState.wizardState.createdDevelopmentId = undefined;
     testState.setValidationErrors([]);
     testState.setActor();
     testState.createDevelopmentMock.mockResolvedValue({ development: { id: 123 } });
@@ -584,6 +589,41 @@ describe('FinalisationPhase', () => {
       await waitFor(() => expect(testState.publishPublisherDevelopmentMock).toHaveBeenCalledTimes(2));
       expect(testState.createPublisherDevelopmentMock).toHaveBeenCalledTimes(1);
       expect(testState.updatePublisherDevelopmentMock).toHaveBeenCalledWith(
+        expect.objectContaining({ developmentId: 456 }),
+      );
+    });
+
+    it('a refused publish, then a reload, then a retry updates the same development and never creates again', async () => {
+      testState.setActor({ id: 2, role: 'super_admin' }, { cataloguePublisherId: 44 });
+      testState.publishPublisherDevelopmentMock.mockRejectedValueOnce(
+        new Error('Development is not ready for submission.'),
+      );
+      const onSaveDraft = vi.fn().mockResolvedValue(undefined);
+      withData(baltimore(), () => {
+        render(<FinalisationPhase onSaveDraft={onSaveDraft} />);
+        fireEvent.click(screen.getByRole('button', { name: 'Publish Development' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Publish Development' }));
+      });
+      await screen.findByTestId('publish-error');
+      // The created id was put on the draft and the draft was saved.
+      expect(testState.wizardState.createdDevelopmentId).toBe(456);
+      expect(onSaveDraft).toHaveBeenCalledTimes(1);
+      expect(testState.createPublisherDevelopmentMock).toHaveBeenCalledTimes(1);
+
+      // Reload: the component and its in-memory ref are gone; the draft still holds the id.
+      cleanup();
+      withData(baltimore(), () => {
+        render(<FinalisationPhase onSaveDraft={onSaveDraft} />);
+        expect(screen.getByTestId('review-created-note').textContent).toContain('development #456');
+        fireEvent.click(screen.getByRole('button', { name: 'Publish Development' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Publish Development' }));
+      });
+      await waitFor(() => expect(testState.publishPublisherDevelopmentMock).toHaveBeenCalledTimes(2));
+      expect(testState.createPublisherDevelopmentMock).toHaveBeenCalledTimes(1);
+      expect(testState.updatePublisherDevelopmentMock).toHaveBeenCalledWith(
+        expect.objectContaining({ developmentId: 456 }),
+      );
+      expect(testState.publishPublisherDevelopmentMock).toHaveBeenLastCalledWith(
         expect.objectContaining({ developmentId: 456 }),
       );
     });
