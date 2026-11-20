@@ -48,6 +48,11 @@ import { logAudit, AuditActions } from './_core/auditLog';
 import { nowAsDbTimestamp } from './utils/dbTypeUtils';
 import { developmentService } from './services/developmentService';
 import {
+  loadAdminInbox,
+  loadRecentAdminActivity,
+  loadWeeklyGrowth,
+} from './services/adminInboxService';
+import {
   listDevelopmentPlaceGeography,
   recordReviewedDevelopmentPlaceAssignment,
   withdrawReviewedDevelopmentPlaceAssignment,
@@ -539,6 +544,15 @@ export const adminRouter = router({
       };
     },
   ),
+
+  /** Super Admin: "Needs you today" inbox, merged real pending work (read-only). */
+  getDailyInbox: superAdminProcedure.query(async () => loadAdminInbox()),
+
+  /** Super Admin: most recent audit log entries (read-only). */
+  getRecentAdminActivity: superAdminProcedure.query(async () => loadRecentAdminActivity(8)),
+
+  /** Super Admin: weekly sign-ups, verified payments and enquiries, last 8 weeks (read-only). */
+  getWeeklyGrowth: superAdminProcedure.query(async () => loadWeeklyGrowth()),
 
   /**
    * Super Admin: Get Ecosystem Overview Stats
