@@ -237,14 +237,14 @@ const OverviewPage: React.FC = () => {
 
       <aside className="flex-[1_1_360px] max-w-[420px] flex flex-col gap-5">
         <div className={`${card} p-5`}>
-          <h2 className="text-base font-semibold text-slate-900">Pilot pulse</h2>
+          <h2 className="text-sm font-semibold text-slate-900">Pilot pulse</h2>
           <div className="grid grid-cols-2 gap-2.5 mt-3">
             {pulse.map(p => (
               <div key={p.label} className="border border-slate-100 rounded-md p-3 min-w-0">
-                <div className="text-xs text-slate-600 whitespace-nowrap overflow-hidden text-ellipsis">
+                <div className="text-[11px] text-slate-600 whitespace-nowrap overflow-hidden text-ellipsis">
                   {p.label}
                 </div>
-                <div className="text-xl font-bold text-slate-900 mt-1.5 whitespace-nowrap">
+                <div className="text-lg font-bold text-slate-900 mt-1.5 whitespace-nowrap">
                   {p.value}
                 </div>
               </div>
@@ -265,7 +265,7 @@ const OverviewPage: React.FC = () => {
         </div>
 
         <div className={`${card} p-5`}>
-          <h2 className="text-base font-semibold text-slate-900 mb-3">Quick actions</h2>
+          <h2 className="text-sm font-semibold text-slate-900 mb-3">Quick actions</h2>
           <div className="grid grid-cols-2 gap-2.5">
             {quick.map(q => (
               <button
@@ -275,15 +275,15 @@ const OverviewPage: React.FC = () => {
                 className={`flex flex-col items-start gap-2 p-3 min-h-[44px] rounded-lg border border-slate-200 bg-white text-left hover:shadow-md transition-shadow ${focus}`}
               >
                 <q.icon aria-hidden="true" className="h-5 w-5 text-blue-700" />
-                <span className="text-sm font-semibold text-slate-900">{q.label}</span>
+                <span className="text-xs font-semibold text-slate-900">{q.label}</span>
               </button>
             ))}
           </div>
         </div>
 
         <div className={`${card} p-5`}>
-          <h2 className="text-base font-semibold text-slate-900">Are we growing?</h2>
-          <p className="text-sm text-slate-600 mt-1 mb-3">
+          <h2 className="text-sm font-semibold text-slate-900">Are we growing?</h2>
+          <p className="text-xs text-slate-600 mt-1 mb-3">
             Per week, last 8 weeks. Verified payments are counted per payment, not per account.
           </p>
           {growth.isLoading ? (

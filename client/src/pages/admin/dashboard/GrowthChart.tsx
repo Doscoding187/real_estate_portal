@@ -27,7 +27,7 @@ const GrowthChart: React.FC<{ points: WeeklyPoint[] }> = ({ points }) => {
             type="button"
             aria-pressed={m.id === metric}
             onClick={() => setMetric(m.id)}
-            className={`inline-flex items-center gap-2 min-h-[36px] px-3 rounded-md border text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 ${
+            className={`inline-flex items-center gap-2 min-h-[32px] px-2.5 rounded-md border text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 ${
               m.id === metric
                 ? 'bg-slate-900 border-slate-900 text-white font-semibold'
                 : 'bg-white border-slate-300 text-slate-700'
@@ -43,9 +43,9 @@ const GrowthChart: React.FC<{ points: WeeklyPoint[] }> = ({ points }) => {
         ))}
       </div>
       <div className="flex items-baseline gap-2 mt-4 mb-2">
-        <span className="text-3xl font-bold text-slate-900">{latest}</span>
-        <span className="text-sm text-slate-600">this week</span>
-        {change ? <span className="text-sm font-semibold text-slate-700">{change}</span> : null}
+        <span className="text-2xl font-bold text-slate-900">{latest}</span>
+        <span className="text-xs text-slate-600">this week</span>
+        {change ? <span className="text-xs font-semibold text-slate-700">{change}</span> : null}
       </div>
       <div
         role="group"
@@ -90,12 +90,12 @@ const GrowthChart: React.FC<{ points: WeeklyPoint[] }> = ({ points }) => {
       <button
         type="button"
         onClick={() => setAsTable(v => !v)}
-        className="mt-2 text-sm text-blue-700 underline focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
+        className="mt-2 text-xs text-blue-700 underline focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
       >
         {asTable ? 'Hide table' : 'Show as table'}
       </button>
       {asTable ? (
-        <table className="w-full text-sm mt-2">
+        <table className="w-full text-xs mt-2">
           <thead>
             <tr>
               <th scope="col" className="text-left p-1.5 border-b border-slate-200">
