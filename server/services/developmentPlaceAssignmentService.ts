@@ -579,3 +579,28 @@ export async function loadSuburbReadinessContext(
     .limit(1);
   return { suburbPlaceValid, hasAcceptedSiteAssignment: accepted.length > 0 };
 }
+
+/**
+ * The same readiness context as loadSuburbReadinessContext, for read models that
+ * already hold the development's reviewed geography (Home and operating lists):
+ * an accepted site assignment shows up there, so no extra query is needed. The
+ * chosen suburb is taken as valid when present; publish re-checks it for real.
+ */
+export function suburbReadinessContextFromGeography(
+  development: { estateSpecs?: unknown },
+  geography: DevelopmentPlaceGeography,
+): SuburbReadinessContext {
+  let specs: any = development.estateSpecs;
+  if (typeof specs === 'string') {
+    try {
+      specs = JSON.parse(specs);
+    } catch {
+      specs = null;
+    }
+  }
+  return {
+    suburbPlaceValid: String(specs?.suburbPlaceId ?? '').trim() !== '',
+    hasAcceptedSiteAssignment:
+      geography.canonicalPlaceId !== null || geography.locationLabels.length > 0,
+  };
+}
