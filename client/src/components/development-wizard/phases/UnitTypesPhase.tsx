@@ -69,6 +69,7 @@ import {
   homeTypeOf,
   houseTypeCard,
   isReadyNow,
+  missingFactMessage,
   needsUnitOwnership,
   suggestUnitName,
   withReadyNow,
@@ -262,12 +263,11 @@ export function UnitTypesPhase() {
   >({
     name: '',
     description: '',
-    bedrooms: 1,
-    bathrooms: 1,
-
-    // Initialize with UI defaults, will be hydrated
-    parkingKind: 'none',
-    parkingBays: 0,
+    // Facts start empty and stay required: pre-filled values would be published by accident.
+    bedrooms: undefined,
+    bathrooms: undefined,
+    parkingKind: undefined,
+    parkingBays: undefined,
     garageLayout: undefined,
 
     unitSize: 0,
@@ -380,10 +380,10 @@ export function UnitTypesPhase() {
     setFormData({
       name: '',
       description: '',
-      bedrooms: 1,
-      bathrooms: 1,
-      parkingKind: 'open',
-      parkingBays: 1,
+      bedrooms: undefined,
+      bathrooms: undefined,
+      parkingKind: undefined,
+      parkingBays: undefined,
       garageLayout: undefined,
       unitSize: 0,
       yardSize: 0,
@@ -633,14 +633,13 @@ export function UnitTypesPhase() {
 
   const handleSave = (addAnother = false) => {
     // Validation
-    if (!formData.name) return toast.error('Unit Name is required');
+    // Facts first (the suggested name comes from them); nothing is pre-filled.
+    const missingFact = missingFactMessage(formData);
+    if (missingFact) return toast.error(missingFact);
+    if (!formData.name) return toast.error('House type name is required');
     if (!formData.description) return toast.error('Description is required');
-    if (!formData.unitCategory) return toast.error('Unit category is required');
-    if (!formData.unitSubType) return toast.error('Unit subtype is required');
-    if (!formData.bedrooms && formData.bedrooms !== 0) return toast.error('Bedrooms are required');
-    if (!formData.bathrooms && formData.bathrooms !== 0)
-      return toast.error('Bathrooms are required');
-    if (!formData.unitSize || formData.unitSize <= 0) return toast.error('Unit Size is required');
+    if (!formData.unitCategory) return toast.error('Home type is required');
+    if (!formData.unitSubType) return toast.error('Home type is required');
     if (formData.unitCategory === 'house' && (!formData.yardSize || formData.yardSize <= 0)) {
       toast.warning('Erf/Garden size is recommended for house unit types');
     }
@@ -684,8 +683,6 @@ export function UnitTypesPhase() {
     if (askUnitOwnership && !formData.ownershipType) {
       return toast.error('Choose the ownership for this house type');
     }
-    if (formData.parkingKind !== 'none' && (!formData.parkingBays || formData.parkingBays <= 0))
-      return toast.error('Parking Bays are required');
 
     const availabilityNotProvided =
       isCuratedPublisherMode && Boolean(formData.availabilityNotProvided);
@@ -1534,11 +1531,11 @@ export function UnitTypesPhase() {
                         Bedrooms <span className="text-red-500">*</span>
                       </Label>
                       <Select
-                        value={formData.bedrooms?.toString() ?? '1'}
+                        value={formData.bedrooms?.toString() ?? ''}
                         onValueChange={v => setFormData(p => ({ ...p, bedrooms: parseFloat(v) }))}
                       >
-                        <SelectTrigger>
-                          <SelectValue />
+                        <SelectTrigger aria-label="Bedrooms">
+                          <SelectValue placeholder="Select…" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="0">Studio</SelectItem>
@@ -1555,11 +1552,11 @@ export function UnitTypesPhase() {
                         Bathrooms <span className="text-red-500">*</span>
                       </Label>
                       <Select
-                        value={formData.bathrooms?.toString() ?? '1'}
+                        value={formData.bathrooms?.toString() ?? ''}
                         onValueChange={v => setFormData(p => ({ ...p, bathrooms: parseFloat(v) }))}
                       >
-                        <SelectTrigger>
-                          <SelectValue />
+                        <SelectTrigger aria-label="Bathrooms">
+                          <SelectValue placeholder="Select…" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="1">1</SelectItem>
@@ -1577,20 +1574,20 @@ export function UnitTypesPhase() {
                         Parking Type <span className="text-red-500">*</span>
                       </Label>
                       <Select
-                        value={formData.parkingKind || 'none'}
+                        value={formData.parkingKind || ''}
                         onValueChange={v => {
                           const kind = v as any;
                           setFormData(p => ({
                             ...p,
                             parkingKind: kind,
-                            // Default logic when switching types
-                            parkingBays: kind === 'none' ? 0 : p.parkingBays || 1,
+                            // No parking means 0 bays; otherwise the publisher types the number.
+                            parkingBays: kind === 'none' ? 0 : p.parkingBays || undefined,
                             garageLayout: kind === 'garage' ? p.garageLayout : undefined,
                           }));
                         }}
                       >
-                        <SelectTrigger>
-                          <SelectValue />
+                        <SelectTrigger aria-label="Parking type">
+                          <SelectValue placeholder="Select…" />
                         </SelectTrigger>
                         <SelectContent>
                           {PARKING_TYPE_OPTIONS.map(o => (
@@ -1602,29 +1599,30 @@ export function UnitTypesPhase() {
                       </Select>
                     </div>
 
-                    <div className="space-y-2">
-                      <Label>
-                        Parking Bays <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        type="number"
-                        value={formData.parkingBays ?? ''}
-                        disabled={formData.parkingKind === 'none'}
-                        min={formData.parkingKind === 'none' ? 0 : 1}
-                        onFocus={e => e.target.select()}
-                        onChange={e => {
-                          const raw = e.target.value;
-                          const n = raw === '' ? undefined : Number(raw);
-                          setFormData(p => ({
-                            ...p,
-                            parkingBays:
-                              p.parkingKind === 'none'
-                                ? 0
-                                : Math.max(1, Number.isFinite(n as any) ? (n as number) : 1),
-                          }));
-                        }}
-                      />
-                    </div>
+                    {formData.parkingKind !== 'none' && (
+                      <div className="space-y-2">
+                        <Label>
+                          Parking Bays <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          type="number"
+                          aria-label="Parking bays"
+                          placeholder="How many?"
+                          value={formData.parkingBays ?? ''}
+                          disabled={!formData.parkingKind}
+                          min={1}
+                          onFocus={e => e.target.select()}
+                          onChange={e => {
+                            const raw = e.target.value;
+                            const n = raw === '' ? undefined : Number(raw);
+                            setFormData(p => ({
+                              ...p,
+                              parkingBays: Number.isFinite(n as any) ? (n as number) : undefined,
+                            }));
+                          }}
+                        />
+                      </div>
+                    )}
 
                     {/* Conditional Garage Layout */}
                     {formData.parkingKind === 'garage' && (formData.parkingBays || 0) >= 2 && (

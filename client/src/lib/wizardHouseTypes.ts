@@ -147,6 +147,30 @@ export function applyAutoNames<T extends Record<string, any>>(units: T[]): T[] {
   });
 }
 
+/**
+ * The facts a house type form must have, checked in form order. Nothing is
+ * pre-filled, so each one names itself when missing. Parking bays are only asked
+ * when there is parking ("No Parking" means 0 bays, hidden).
+ */
+export function missingFactMessage(form: {
+  unitSize?: unknown;
+  bedrooms?: unknown;
+  bathrooms?: unknown;
+  parkingKind?: unknown;
+  parkingBays?: unknown;
+}): string | null {
+  const size = num(form.unitSize);
+  if (size == null || size <= 0) return 'Unit size is required';
+  if (num(form.bedrooms) == null) return 'Bedrooms are required';
+  if (num(form.bathrooms) == null) return 'Bathrooms are required';
+  if (!form.parkingKind) return 'Parking type is required';
+  if (form.parkingKind !== 'none') {
+    const bays = num(form.parkingBays);
+    if (bays == null || bays < 1) return 'Parking bays are required';
+  }
+  return null;
+}
+
 /** True when each house type needs its own ownership. */
 export const needsUnitOwnership = (developmentOwnership: unknown): boolean => {
   const value = Array.isArray(developmentOwnership) ? developmentOwnership[0] : developmentOwnership;

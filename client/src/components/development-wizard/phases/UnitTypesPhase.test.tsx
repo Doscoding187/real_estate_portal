@@ -111,15 +111,39 @@ describe('House type cards', () => {
   });
 
   it('suggests the name from size, beds and home type, and stops once the name is edited', async () => {
+    h.unitTypes = [unit()];
     render(<UnitTypesPhase />);
-    fireEvent.click(screen.getAllByRole('button', { name: /Add house type/ })[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
     const size = await screen.findByPlaceholderText('e.g. 70');
-    fireEvent.change(size, { target: { value: '91' } });
+    fireEvent.change(size, { target: { value: '120' } });
     const name = screen.getByLabelText('House type name') as HTMLInputElement;
-    await waitFor(() => expect(name.value).toBe('91 m² 1-bedroom house'));
+    await waitFor(() => expect(name.value).toBe('120 m² 4-bedroom house'));
+    fireEvent.change(size, { target: { value: '91' } });
+    await waitFor(() => expect(name.value).toBe('91 m² 4-bedroom house'));
     fireEvent.change(name, { target: { value: 'The Ebony' } });
     fireEvent.change(size, { target: { value: '120' } });
     expect((screen.getByLabelText('House type name') as HTMLInputElement).value).toBe('The Ebony');
+  });
+
+  it('starts bedrooms, bathrooms, parking type and parking bays empty', async () => {
+    render(<UnitTypesPhase />);
+    fireEvent.click(screen.getAllByRole('button', { name: /Add house type/ })[0]);
+    await screen.findByLabelText('House type name');
+    for (const label of ['Bedrooms', 'Bathrooms', 'Parking type']) {
+      expect(within(screen.getByLabelText(label)).getByText('Select…')).toBeTruthy();
+    }
+    const bays = screen.getByLabelText('Parking bays') as HTMLInputElement;
+    expect(bays.value).toBe('');
+    expect(bays.disabled).toBe(true);
+    expect((screen.getByLabelText('House type name') as HTMLInputElement).value).toBe('');
+  });
+
+  it('Duplicate still copies the facts', () => {
+    h.unitTypes = [unit({ parkingType: 'garage', parkingBays: 2 })];
+    render(<UnitTypesPhase />);
+    fireEvent.click(screen.getByRole('button', { name: 'Duplicate' }));
+    const copy = h.saved.at(-1).data.unitTypes[1];
+    expect(copy).toMatchObject({ bedrooms: 4, bathrooms: 2, parkingType: 'garage', parkingBays: 2 });
   });
 
   it('asks ownership per house type only when the development ownership varies', async () => {

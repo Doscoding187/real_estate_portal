@@ -10,6 +10,7 @@ import {
   houseTypeCard,
   houseTypeProblems,
   homeTypeOf,
+  missingFactMessage,
   needsUnitOwnership,
   suggestUnitName,
   withReadyNow,
@@ -58,6 +59,26 @@ describe('house type name suggestion', () => {
     expect(out[0].name).toBe('130 m² 4-bedroom house (2.5 baths)');
     expect(out[1].name).toBe('130 m² 4-bedroom house (3.5 baths)');
     expect(out[2].name).toBe('The Ebony');
+  });
+});
+
+describe('house type facts start empty and are required', () => {
+  const full = { unitSize: 91, bedrooms: 3, bathrooms: 2, parkingKind: 'garage', parkingBays: 2 };
+
+  it('names the first missing fact', () => {
+    expect(missingFactMessage({})).toBe('Unit size is required');
+    expect(missingFactMessage({ unitSize: 91 })).toBe('Bedrooms are required');
+    expect(missingFactMessage({ unitSize: 91, bedrooms: 3 })).toBe('Bathrooms are required');
+    expect(missingFactMessage({ unitSize: 91, bedrooms: 3, bathrooms: 2 })).toBe('Parking type is required');
+    expect(missingFactMessage({ ...full, parkingBays: undefined })).toBe('Parking bays are required');
+    expect(missingFactMessage({ ...full, parkingBays: 0 })).toBe('Parking bays are required');
+    expect(missingFactMessage(full)).toBeNull();
+  });
+
+  it('a studio (0 bedrooms) is a real answer; No Parking needs no bays', () => {
+    expect(missingFactMessage({ ...full, bedrooms: 0 })).toBeNull();
+    expect(missingFactMessage({ ...full, parkingKind: 'none', parkingBays: 0 })).toBeNull();
+    expect(missingFactMessage({ ...full, parkingKind: 'none', parkingBays: undefined })).toBeNull();
   });
 });
 
