@@ -10,10 +10,16 @@ describe.each([
   it('credits GeoNames (CC BY 4.0) and Wikidata with a noopener link', () => {
     render(<Component />);
     expect(screen.getByTestId('footer-data-attribution')).toHaveTextContent(
-      'Place data includes GeoNames (geonames.org, CC BY 4.0) and Wikidata.',
+      'Place data includes GeoNames (geonames.org, CC BY 4.0) and Wikidata (CC0).',
     );
-    const link = screen.getByRole('link', { name: /GeoNames/ });
-    expect(link).toHaveAttribute('href', 'https://www.geonames.org');
-    expect(link.getAttribute('rel')).toContain('noopener');
+    for (const [name, href] of [
+      ['GeoNames', 'https://www.geonames.org'],
+      ['Wikidata', 'https://www.wikidata.org'],
+    ]) {
+      const link = screen.getByRole('link', { name });
+      expect(link).toHaveAttribute('href', href);
+      expect(link).toHaveAttribute('target', '_blank');
+      expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    }
   });
 });

@@ -13,8 +13,13 @@
  * Usage: pnpm exec tsx scripts/build-place-centroids.ts
  */
 import { createHash } from 'node:crypto';
-import { readFileSync, writeFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+/** Inputs and the output are resolved from the repo root, never from process.cwd(). */
+const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const fromRoot = (path: string) => resolve(REPO_ROOT, path);
 
 const SOURCE_PATH =
   'data/geography-coverage-v0.1/output/gauteng_runtime_reference_projection_v0.2.json';
@@ -94,7 +99,16 @@ export type PlaceCentroidEntry = {
   lat: number | null;
   lng: number | null;
   matchMethod: MatchMethod;
+  /** 'coarse': both coordinates sit on a whole arc-minute grid, so the point is approximate. */
+  precision: 'coarse' | 'normal';
 };
+
+/** Coordinates are coarse when lat*60 and lng*60 are both within 1e-3 of an integer. */
+export function precisionOf(lat: number | null, lng: number | null): 'coarse' | 'normal' {
+  if (lat === null || lng === null) return 'normal';
+  const onGrid = (value: number) => Math.abs(value * 60 - Math.round(value * 60)) <= 1e-3;
+  return onGrid(lat) && onGrid(lng) ? 'coarse' : 'normal';
+}
 
 export type CentroidOverride = { naturalKey: string; canonicalPath: string; reason: string };
 
@@ -485,6 +499,7 @@ export function buildPlaceCentroids(input: {
       lat: centre?.lat ?? null,
       lng: centre?.lng ?? null,
       matchMethod: hit.method,
+      precision: 'normal',
     });
   }
 
@@ -557,12 +572,14 @@ export function buildPlaceCentroids(input: {
         lat: ext.lat,
         lng: ext.lng,
         matchMethod: method,
+        precision: 'normal',
       };
       output.push(created);
       outputByPlaceId.set(created.canonicalPlaceId, created);
     }
   }
   output.sort((a, b) => a.canonicalPlaceId.localeCompare(b.canonicalPlaceId));
+  for (const item of output) item.precision = precisionOf(item.lat, item.lng);
 
   return {
     output,
@@ -577,33 +594,47 @@ export function buildPlaceCentroids(input: {
 }
 
 function main() {
-  const sourceBytes = readFileSync(resolve(process.cwd(), SOURCE_PATH));
-  const sourceSha256 = createHash('sha256').update(sourceBytes).digest('hex');
+  const sha = (bytes: Buffer | string) => createHash('sha256').update(bytes).digest('hex');
+  const sourceBytes = readFileSync(fromRoot(SOURCE_PATH));
+  const sourceSha256 = sha(sourceBytes);
   const rows = (JSON.parse(sourceBytes.toString('utf8')) as { rows: SourceRow[] }).rows;
   const entries = (
-    JSON.parse(readFileSync(resolve(process.cwd(), URL_PROJECTION_PATH), 'utf8')) as {
+    JSON.parse(readFileSync(fromRoot(URL_PROJECTION_PATH), 'utf8')) as {
       entries: UrlEntry[];
     }
   ).entries;
+  const overridesBytes = readFileSync(fromRoot(OVERRIDES_PATH));
   const overrides = (
-    JSON.parse(readFileSync(resolve(process.cwd(), OVERRIDES_PATH), 'utf8')) as {
-      overrides: CentroidOverride[];
-    }
+    JSON.parse(overridesBytes.toString('utf8')) as { overrides: CentroidOverride[] }
   ).overrides;
-  const externalBytes = readFileSync(resolve(process.cwd(), EXTERNAL_PATH));
+  const externalBytes = readFileSync(fromRoot(EXTERNAL_PATH));
   const external = JSON.parse(externalBytes.toString('utf8')) as ExternalFile;
-  const geonamesBytes = readFileSync(resolve(process.cwd(), GEONAMES_PATH));
+  const geonamesBytes = readFileSync(fromRoot(GEONAMES_PATH));
   const geonames = JSON.parse(geonamesBytes.toString('utf8')) as ExternalFile;
 
   const result = buildPlaceCentroids({ rows, entries, overrides, external, geonames });
 
+  // generatedAt only moves when the content does.
+  const contentSha256 = sha(
+    JSON.stringify({ entries: result.output, derivedParentCentres: result.derivedParentCentres }),
+  );
+  let generatedAt = new Date().toISOString();
+  if (existsSync(fromRoot(OUTPUT_PATH))) {
+    const previous = JSON.parse(readFileSync(fromRoot(OUTPUT_PATH), 'utf8')) as {
+      contentSha256?: string;
+      generatedAt?: string;
+    };
+    if (previous.contentSha256 === contentSha256 && previous.generatedAt)
+      generatedAt = previous.generatedAt;
+  }
+
   writeFileSync(
-    resolve(process.cwd(), OUTPUT_PATH),
+    fromRoot(OUTPUT_PATH),
     `${JSON.stringify(
       {
         source: { path: SOURCE_PATH, sha256: sourceSha256 },
         urlProjection: { path: URL_PROJECTION_PATH },
-        overrides: { path: OVERRIDES_PATH },
+        overrides: { path: OVERRIDES_PATH, sha256: sha(overridesBytes) },
         external: {
           path: EXTERNAL_PATH,
           sha256: createHash('sha256').update(externalBytes).digest('hex'),
@@ -614,7 +645,8 @@ function main() {
           sha256: createHash('sha256').update(geonamesBytes).digest('hex'),
           source: geonames.source,
         },
-        generatedAt: new Date().toISOString(),
+        generatedAt,
+        contentSha256,
         derivedParentCentres: result.derivedParentCentres,
         entries: result.output,
       },

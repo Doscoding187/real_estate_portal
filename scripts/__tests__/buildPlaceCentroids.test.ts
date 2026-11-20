@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildPlaceCentroids,
   normaliseGridCode,
+  precisionOf,
   type ExternalFile,
   type PlaceCentroidEntry,
   type SourceRow,
@@ -68,6 +69,26 @@ describe('normaliseGridCode', () => {
     expect(normaliseGridCode('N.W. 7')).toBe('nw7');
     expect(normaliseGridCode('Sandton')).toBeNull();
     expect(normaliseGridCode('ES1')).toBeNull();
+  });
+});
+
+describe('precisionOf', () => {
+  it('marks whole arc-minute coordinates coarse and others normal', () => {
+    expect(precisionOf(-26.2, 28.083333)).toBe('coarse');
+    expect(precisionOf(-26.166667, 27.883333)).toBe('coarse');
+    expect(precisionOf(-26.2, 28.0841)).toBe('normal');
+    expect(precisionOf(-26.17562, 28.083333)).toBe('normal');
+    expect(precisionOf(null, null)).toBe('normal');
+  });
+
+  it('is set on every output entry without changing coordinates', () => {
+    const grid = entry('/gauteng/localities/c-e-1', 'C.E. 1', 'locality');
+    const { output } = buildPlaceCentroids({
+      rows: [row('gauteng/vanderbijlpark/ce1', 'CE1', 'suburb', null, -26.2, 28.083333)],
+      entries: [grid],
+      overrides: [],
+    });
+    expect(output[0]).toMatchObject({ lat: -26.2, lng: 28.083333, precision: 'coarse' });
   });
 });
 
