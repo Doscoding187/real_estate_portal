@@ -143,6 +143,7 @@ type DevelopmentDetailPageProps = {
 const IMAGE_CATEGORY_LABELS: Record<string, string> = {
   featured: 'Development',
   general: 'Development overview',
+  interior: 'Interior',
   amenities: 'Lifestyle & amenities',
   outdoors: 'Exteriors & outdoors',
   photo: 'Location & views',

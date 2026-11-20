@@ -227,7 +227,7 @@ export function extractSubmitDocumentUrls(wizardData: Record<string, any>): stri
     .filter(Boolean) as string[];
 }
 
-function extractConfirmedMediaItems(value: unknown): Array<string | Record<string, unknown>> {
+export function extractConfirmedMediaItems(value: unknown): Array<string | Record<string, unknown>> {
   if (!Array.isArray(value)) return [];
   return value
     .map(item => {
@@ -237,9 +237,22 @@ function extractConfirmedMediaItems(value: unknown): Array<string | Record<strin
       const hasAuthority = ['uploadReceipt', 'mediaReceipt', 'storageKey', 'key'].some(
         field => source[field] !== undefined,
       );
-      if (!hasAuthority) return source.url as string;
+      // Which buyer document this is (brochure, site plan, ...) must survive save and reopen.
+      const documentFields = ['documentType', 'title', 'label'].filter(
+        field => typeof source[field] === 'string' && source[field] !== '',
+      );
+      if (!hasAuthority && documentFields.length === 0) return source.url as string;
       const result: Record<string, unknown> = { url: source.url };
-      for (const field of ['uploadReceipt', 'mediaReceipt', 'storageKey', 'key', 'fileName', 'fileSize', 'type']) {
+      for (const field of [
+        'uploadReceipt',
+        'mediaReceipt',
+        'storageKey',
+        'key',
+        'fileName',
+        'fileSize',
+        'type',
+        ...documentFields,
+      ]) {
         if (source[field] !== undefined) result[field] = source[field];
       }
       return result;

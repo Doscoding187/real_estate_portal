@@ -110,21 +110,28 @@ type NameFacts = { unitSize?: unknown; bedrooms?: unknown; bathrooms?: unknown }
 export function suggestUnitName(
   unit: NameFacts & { homeType: HomeTypeId },
   others: NameFacts[] = [],
+  /** Types listed before this one (defaults to all `others`); used to number identical twins. */
+  earlier: NameFacts[] = others,
 ): string | null {
   const size = num(unit.unitSize);
   const beds = num(unit.bedrooms);
   if (size == null || size <= 0 || beds == null) return null;
   const word = homeTypeById(unit.homeType).nameWord;
-  const base =
+  let name =
     beds === 0
       ? `${fmtNumber(size)} m² studio`
       : `${fmtNumber(size)} m² ${fmtNumber(beds)}-bedroom ${word}`;
   const collides = others.some(o => num(o.unitSize) === size && num(o.bedrooms) === beds);
   const baths = num(unit.bathrooms);
   if (collides && baths != null) {
-    return `${base} (${fmtNumber(baths)} ${baths === 1 ? 'bath' : 'baths'})`;
+    name = `${name} (${fmtNumber(baths)} ${baths === 1 ? 'bath' : 'baths'})`;
   }
-  return base;
+  // Same size, beds AND baths: number the twins so every name stays unique: (2), (3), ...
+  const twins = earlier.filter(
+    o =>
+      num(o.unitSize) === size && num(o.bedrooms) === beds && num(o.bathrooms) === baths,
+  ).length;
+  return twins > 0 ? `${name} (${twins + 1})` : name;
 }
 
 /** Re-suggest names for every unit still on an auto name, now that the full list is known. */
@@ -134,6 +141,7 @@ export function applyAutoNames<T extends Record<string, any>>(units: T[]): T[] {
     const suggested = suggestUnitName(
       { ...unit, homeType: homeTypeOf(unit) },
       units.filter((_, i) => i !== index),
+      units.slice(0, index),
     );
     return suggested && suggested !== unit.name ? { ...unit, name: suggested } : unit;
   });

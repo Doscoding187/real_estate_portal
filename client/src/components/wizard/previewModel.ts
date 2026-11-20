@@ -4,6 +4,7 @@
  */
 
 import { COMMUNITY_TYPE_OPTIONS } from '@/types/wizardTypes';
+import { resolveCover } from '@/lib/wizardMedia';
 import {
   buildTimelineLine,
   ownershipTagLabel,
@@ -98,11 +99,11 @@ export function buildPreviewModel(
       ? d.unitTypes
       : [];
 
+  // Same single cover rule as the Media step; an explicit null means "no cover".
   const coverUrl =
-    mediaUrl(d.media?.heroImage) ??
-    mediaUrl(d.heroImage) ??
-    mediaUrl(d.media?.photos?.find((p: any) => p?.isPrimary)) ??
-    mediaUrl(d.media?.photos?.[0]);
+    d.media?.heroImage === null
+      ? null
+      : (mediaUrl(resolveCover(d.media)) ?? mediaUrl(d.heroImage));
 
   const prices = unitTypes.map(u => toNumber(u?.priceFrom)).filter((n): n is number => n != null);
   const beds = unitTypes.map(u => Number(u?.bedrooms)).filter(n => Number.isFinite(n) && n >= 0);

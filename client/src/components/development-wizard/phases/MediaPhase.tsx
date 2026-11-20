@@ -14,12 +14,14 @@ import {
   VIDEO_TYPES,
   documentMeta,
   documentSlotOf,
-  hasCoverPhoto,
+  groupDocuments,
+  normalizePhotosForCover,
   photosForSlot,
+  rejectionMessage,
+  resolveCover,
   sizeHint,
   slotById,
-  sortDocuments,
-  rejectionMessage,
+  stampDocuments,
   type DocumentSlotId,
   type MediaKind,
   type PhotoSlotId,
@@ -64,22 +66,48 @@ export function MediaPhase() {
   const wizardMedia = ((getWizardData() as Record<string, any>)?.media ?? {}) as Record<string, any>;
   const photos: any[] = saved.photos ?? wizardMedia.photos ?? [];
   const videos: any[] = saved.videos ?? wizardMedia.videos ?? [];
-  const documents: any[] =
-    saved.documents ?? wizardMedia.documents ?? wizardMedia.brochures ?? [];
+  // Older drafts may hold documents as bare URLs; give them an id and a file name.
+  const documents: any[] = (
+    saved.documents ??
+    wizardMedia.documents ??
+    wizardMedia.brochures ??
+    []
+  ).map((doc: any, index: number) =>
+    typeof doc === 'string'
+      ? { id: `doc-legacy-${index}`, url: doc, fileName: doc.split('/').pop() || 'Document.pdf' }
+      : { id: doc?.id ?? `doc-legacy-${index}`, ...doc },
+  );
+
+  // ONE cover rule (lib/wizardMedia.ts resolveCover): the draft's heroImage; older drafts
+  // without one show their first photo as the cover; null means it was removed on purpose.
+  const heroSource = 'heroImage' in saved ? saved.heroImage : wizardMedia.heroImage;
+  const cover = resolveCover({ heroImage: heroSource, photos });
+  const coverUrl: string | null = cover?.url ?? null;
+  const { bySlot: docBySlot, other: otherDocs } = groupDocuments(documents);
 
   const errors = (currentStepId && stepErrors?.[currentStepId]) || [];
   const mediaError = errors.find((e: any) => e?.field === 'media')?.message as string | undefined;
 
-  const persist = (next: { photos?: any[]; videos?: any[]; documents?: any[] }) => {
+  /**
+   * Saves the step. `cover` is the URL of the new cover, `null` for "no cover", or
+   * left out to keep the current one. Exactly one photo is saved as the cover; the
+   * heroImage mirrors it so the preview and the publish payload agree.
+   */
+  const persist = (next: {
+    photos?: any[];
+    videos?: any[];
+    documents?: any[];
+    cover?: string | null;
+  }) => {
     const nextPhotos = next.photos ?? photos;
-    const cover =
-      nextPhotos.find(p => photosForSlot([p], 'cover').length > 0 && p.url) ?? null;
+    const wantedCover = next.cover !== undefined ? next.cover : coverUrl;
+    const normalized = normalizePhotosForCover(nextPhotos, wantedCover);
+    const hero = wantedCover ? (normalized.find(p => p.url === wantedCover) ?? null) : null;
     saveWorkflowStepData('development_media', {
-      photos: nextPhotos,
+      photos: normalized,
       videos: next.videos ?? videos,
-      documents: sortDocuments(next.documents ?? documents),
-      // Keeps the live preview and the publish payload pointing at the cover.
-      heroImage: cover,
+      documents: stampDocuments(next.documents ?? documents),
+      heroImage: hero,
     });
   };
 
@@ -192,24 +220,39 @@ export function MediaPhase() {
     if (added.length === 0) return;
 
     if (kind === 'image') {
-      const slotId = slot as PhotoSlotId;
-      // A new cover replaces the old one.
-      const kept = slotId === 'cover' ? photos.filter(p => photosForSlot([p], 'cover').length === 0) : photos;
+      // A new cover replaces the old one, which stops being featured/primary.
+      const kept = slot === 'cover' ? photos.filter(p => p.url !== coverUrl) : photos;
       const known = new Set(kept.map(p => p.url));
-      persist({ photos: [...kept, ...added.filter(p => !known.has(p.url))] });
+      const fresh = added.filter(p => !known.has(p.url));
+      persist({
+        photos: [...kept, ...fresh],
+        ...(slot === 'cover' ? { cover: fresh[0]?.url ?? coverUrl } : {}),
+      });
     } else if (kind === 'video') {
       persist({ videos: added });
     } else {
       // One document per slot: a new upload replaces that slot's file.
-      const kept = documents.filter(d => documentSlotOf(d) !== slot);
+      const kept = documents.filter(
+        d => d !== docBySlot[slot as DocumentSlotId] && documentSlotOf(d) !== slot,
+      );
       persist({ documents: [...kept, ...added] });
     }
     toast.success(accepted.length === 1 ? `Uploaded ${accepted[0].name}` : `Uploaded ${added.length} files`);
   };
 
   const remove = (id: string) => {
-    if (photos.some(p => p.id === id)) persist({ photos: photos.filter(p => p.id !== id) });
-    else if (videos.some(v => v.id === id)) persist({ videos: videos.filter(v => v.id !== id) });
+    if (id === 'cover-hero') {
+      persist({ cover: null });
+      return;
+    }
+    const photo = photos.find(p => p.id === id);
+    if (photo) {
+      // Removing the cover leaves the draft without one (no other photo is promoted).
+      persist({
+        photos: photos.filter(p => p.id !== id),
+        ...(photo.url === coverUrl ? { cover: null } : {}),
+      });
+    } else if (videos.some(v => v.id === id)) persist({ videos: videos.filter(v => v.id !== id) });
     else persist({ documents: documents.filter(d => d.id !== id) });
   };
 
@@ -255,7 +298,8 @@ export function MediaPhase() {
     </button>
   );
 
-  const coverPresent = hasCoverPhoto(photos);
+  const coverPresent = Boolean(coverUrl);
+  const otherPhotos = photosForSlot(photos, 'other', coverUrl);
 
   return (
     <div className={cn(t.card, 'flex flex-col gap-7')}>
@@ -277,7 +321,12 @@ export function MediaPhase() {
       <WizardSection label="Photos" hint={sizeHint('image')}>
         <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
           {PHOTO_SLOTS.map(slot => {
-            const items = photosForSlot(photos, slot.id);
+            const inSlot = photosForSlot(photos, slot.id, coverUrl);
+            // A cover that is only held as the draft's heroImage still shows in its slot.
+            const items =
+              slot.id === 'cover' && cover && inSlot.length === 0
+                ? [{ id: 'cover-hero', fileName: 'Cover photo', ...cover }]
+                : inSlot;
             const missingCover = slot.id === 'cover' && !coverPresent && Boolean(mediaError);
             return (
               <div
@@ -336,6 +385,36 @@ export function MediaPhase() {
             {mediaError}
           </p>
         ) : null}
+        {otherPhotos.length > 0 ? (
+          <div data-testid="media-other-photos" className="mt-3.5 rounded-lg border border-slate-200 bg-white p-3.5">
+            <div className="text-sm font-semibold text-slate-900">Other photos</div>
+            <p className="text-[13px] text-slate-600">
+              Saved earlier and kept as they are. They still show on the development page.
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {otherPhotos.map(item => (
+                <div
+                  key={item.id}
+                  className="relative h-16 w-24 overflow-hidden rounded-md border border-slate-200 bg-slate-100"
+                >
+                  <img
+                    src={item.url}
+                    alt={item.fileName || 'Other photo'}
+                    className="h-full w-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    aria-label={`Remove ${item.fileName || 'other photo'}`}
+                    onClick={() => remove(item.id)}
+                    className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded bg-black/60 text-white hover:bg-black/80"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </WizardSection>
 
       <WizardSection label="Video" hint={sizeHint('video')}>
@@ -370,7 +449,7 @@ export function MediaPhase() {
       <WizardSection label="Documents for buyers" hint={sizeHint('pdf')}>
         <div className="flex flex-col gap-2.5">
           {DOCUMENT_SLOTS.map(slot => {
-            const doc = documents.find(d => documentSlotOf(d) === slot.id);
+            const doc = docBySlot[slot.id];
             return (
               <div
                 key={slot.id}
@@ -405,6 +484,32 @@ export function MediaPhase() {
               </div>
             );
           })}
+          {otherDocs.length > 0 ? (
+            <div data-testid="media-other-docs" className="rounded-lg border border-slate-200 bg-white p-3.5">
+              <div className="text-sm font-semibold text-slate-900">Other documents</div>
+              <p className="text-[13px] text-slate-600">
+                Saved earlier and not matched to a slot above. Remove any you no longer want.
+              </p>
+              <ul className="mt-2 flex flex-col gap-1.5">
+                {otherDocs.map(doc => (
+                  <li key={doc.id} className="flex items-center justify-between gap-2 text-xs text-slate-700">
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <FileText className="h-4 w-4 flex-none text-red-600" />
+                      <span className="truncate">{doc.fileName || doc.title || 'Document'}</span>
+                    </span>
+                    <button
+                      type="button"
+                      aria-label={`Remove ${doc.fileName || doc.title || 'document'}`}
+                      onClick={() => remove(doc.id)}
+                      className="flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 hover:bg-slate-50"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </div>
       </WizardSection>
     </div>

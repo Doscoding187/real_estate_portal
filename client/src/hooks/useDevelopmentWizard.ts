@@ -867,11 +867,14 @@ const createActions = (
     const derivedMedia = {
       ...state.developmentData.media,
       ...mediaData,
+      // An explicit null means the cover was removed on purpose: no stale or first-photo fallback.
       heroImage:
-        mediaData.heroImage ??
-        state.developmentData.media?.heroImage ??
-        (mediaData.photos?.find((p: MediaItem) => p.category === 'featured' || p.isPrimary) ||
-          mediaData.photos?.[0]),
+        mediaData.heroImage === null
+          ? null
+          : (mediaData.heroImage ??
+            state.developmentData.media?.heroImage ??
+            (mediaData.photos?.find((p: MediaItem) => p.category === 'featured' || p.isPrimary) ||
+              mediaData.photos?.[0])),
     };
 
     // 3. Construct Wizard Data with Strict Precedence
@@ -933,9 +936,11 @@ const createActions = (
       media: derivedMedia,
       // Root-level heroImage for validation (Phase 2I.1)
       heroImage:
-        derivedMedia.heroImage?.url ??
-        (typeof derivedMedia.heroImage === 'string' ? derivedMedia.heroImage : undefined) ??
-        derivedMedia.photos?.[0]?.url,
+        derivedMedia.heroImage === null
+          ? undefined
+          : (derivedMedia.heroImage?.url ??
+            (typeof derivedMedia.heroImage === 'string' ? derivedMedia.heroImage : undefined) ??
+            derivedMedia.photos?.[0]?.url),
 
       // Unit Types (Canonical Persistence)
       unitTypes: state.stepData?.unit_types?.unitTypes ?? state.unitTypes ?? [],

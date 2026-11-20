@@ -48,18 +48,22 @@ describe('guided photo slots', () => {
 
 describe('cover photo is required', () => {
   it('needs a cover, not just any photo', () => {
-    expect(hasCoverPhoto([])).toBe(false);
-    expect(hasCoverPhoto([{ category: 'amenities', url: 'a.jpg' }])).toBe(false);
-    expect(hasCoverPhoto([{ category: 'featured', url: 'a.jpg' }])).toBe(true);
-    expect(hasCoverPhoto([{ category: 'hero', url: 'a.jpg' }])).toBe(true);
-    expect(hasCoverPhoto([{ category: 'general', isPrimary: true, url: 'a.jpg' }])).toBe(true);
+    expect(hasCoverPhoto({ photos: [] })).toBe(false);
+    // Removed on purpose: no cover, even though a photo remains.
+    expect(hasCoverPhoto({ heroImage: null, photos: [{ category: 'amenities', url: 'a.jpg' }] })).toBe(false);
+    expect(hasCoverPhoto({ photos: [{ category: 'featured', url: 'a.jpg' }] })).toBe(true);
+    expect(hasCoverPhoto({ photos: [{ category: 'hero', url: 'a.jpg' }] })).toBe(true);
+    expect(hasCoverPhoto({ photos: [{ category: 'general', isPrimary: true, url: 'a.jpg' }] })).toBe(true);
+    expect(hasCoverPhoto({ heroImage: { url: 'h.jpg' }, photos: [] })).toBe(true);
     expect(validateDevelopmentMedia({ photos: [] })).toHaveLength(1);
     expect(validateDevelopmentMedia({ photos: [{ category: 'featured', url: 'a.jpg' }] })).toEqual([]);
   });
 
   it('gates the Media step of the sale workflow', () => {
     const step = residentialSaleWorkflow.steps.find(s => s.id === 'development_media')!;
-    expect(step.validate({ media: { photos: [{ category: 'outdoors', url: 'x.jpg' }] } } as any).valid).toBe(false);
+    expect(
+      step.validate({ media: { heroImage: null, photos: [{ category: 'outdoors', url: 'x.jpg' }] } } as any).valid,
+    ).toBe(false);
     expect(step.validate({ media: { photos: [{ category: 'featured', url: 'x.jpg' }] } } as any).valid).toBe(true);
     expect(step.validate({} as any).valid).toBe(false);
   });

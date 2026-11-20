@@ -328,6 +328,16 @@ export function UnitTypesPhase() {
         homeType: homeTypeOf(formData),
       },
       unitTypes.filter(u => u.id !== editingId),
+      // Identical twins are numbered in list order; a new type goes last.
+      editingId
+        ? unitTypes.slice(
+            0,
+            Math.max(
+              0,
+              unitTypes.findIndex(u => u.id === editingId),
+            ),
+          )
+        : unitTypes,
     );
     if (suggested && suggested !== formData.name) {
       setFormData(p => ({ ...p, name: suggested }));

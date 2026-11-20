@@ -81,6 +81,7 @@ import {
   SA_PRIME_RATE_LABEL,
 } from '@/lib/bond-calculator';
 import { trackCTAClick, trackFunnelStep } from '@/lib/analytics/advertiseTracking';
+import { pickBrochureUrl, pickSpecSheetUrl } from '@/lib/developmentDocuments';
 import {
   appendDevelopmentSearchReturn,
   getDevelopmentSearchReturn,
@@ -1302,36 +1303,11 @@ export default function DevelopmentDetail() {
     unifiedMedia: unifiedMedia,
   };
 
-  const brochureUrl = (() => {
-    const brochureItems = Array.isArray((dev as any).brochures) ? (dev as any).brochures : [];
-    for (const item of brochureItems) {
-      const url = resolveDocumentUrl(item);
-      if (url) return url;
-    }
-    return null;
-  })();
-  const specificationSheetUrl = (() => {
-    const brochureItems = Array.isArray((dev as any).brochures) ? (dev as any).brochures : [];
-    for (const item of brochureItems) {
-      const url = resolveDocumentUrl(item);
-      if (!url) continue;
-      const metadata =
-        item && typeof item === 'object'
-          ? [
-              item.name,
-              item.title,
-              item.label,
-              item.fileName,
-              item.filename,
-              item.category,
-              item.documentType,
-              url,
-            ].filter(Boolean).join(' ')
-          : `${item} ${url}`;
-      if (/spec(?:ification)?|finish(?:es)?|fitting/i.test(metadata)) return url;
-    }
-    return null;
-  })();
+  const publishedDocuments = Array.isArray((dev as any).brochures) ? (dev as any).brochures : [];
+  // The brochure button is only for a brochure, never the first document of any type.
+  // Site plans and price lists have no area on this page yet, so they are not shown.
+  const brochureUrl = pickBrochureUrl(publishedDocuments, resolveDocumentUrl);
+  const specificationSheetUrl = pickSpecSheetUrl(publishedDocuments, resolveDocumentUrl);
 
   const derivedPriceFrom = publicFacts.priceFrom;
   const priceToDisplay =

@@ -89,29 +89,85 @@ export const PHOTO_SLOTS: PhotoSlot[] = [
 export const slotById = (id: PhotoSlotId): PhotoSlot =>
   PHOTO_SLOTS.find(slot => slot.id === id) as PhotoSlot;
 
-/** Which guided slot a saved photo belongs to. */
-export function slotForPhoto(photo: { category?: string | null; isPrimary?: boolean } | null | undefined): PhotoSlotId {
+type PhotoLike = { category?: string | null; isPrimary?: boolean; url?: string };
+
+/** Photos the guided slots do not cover (for example legacy 'interior') are listed as "Other photos". */
+export type PhotoGroupId = PhotoSlotId | 'other';
+
+/**
+ * ONE cover rule, used by validation, slotting, saving and the preview:
+ * the cover is the draft's heroImage. When a draft has no explicit heroImage
+ * (older drafts) it is the photo marked featured/hero/primary, else the first
+ * photo. An explicit `heroImage: null` means the cover was removed on purpose.
+ */
+export const isCoverCategory = (photo: PhotoLike | null | undefined): boolean =>
+  photo?.category === 'featured' || photo?.category === 'hero' || photo?.isPrimary === true;
+
+export function resolveCover<T extends PhotoLike>(
+  media: { heroImage?: T | string | null; photos?: T[] | null } | null | undefined,
+): T | null {
+  if (!media) return null;
+  if (media.heroImage === null) return null;
+  const hero = media.heroImage;
+  if (hero && typeof hero === 'object' && hero.url) return hero;
+  const photos = (media.photos ?? []).filter(p => Boolean(p?.url));
+  if (typeof hero === 'string' && hero) {
+    return photos.find(p => p.url === hero) ?? ({ url: hero } as T);
+  }
+  return photos.find(isCoverCategory) ?? photos[0] ?? null;
+}
+
+/**
+ * Which guided slot a saved photo belongs to. Pass the resolved cover URL to
+ * apply the single cover rule; without it the stored category decides.
+ */
+export function slotForPhoto(photo: PhotoLike | null | undefined, coverUrl?: string | null): PhotoGroupId {
   const category = photo?.category ?? '';
-  if (category === 'featured' || category === 'hero') return 'cover';
+  if (coverUrl !== undefined) {
+    if (coverUrl && photo?.url === coverUrl) return 'cover';
+    // A leftover featured/hero/primary photo that is not the cover is an ordinary site photo.
+    if (category === 'featured' || category === 'hero') return 'streetscape';
+  } else if (category === 'featured' || category === 'hero') {
+    return 'cover';
+  }
   if (category === 'outdoors') return 'entrance';
   if (category === 'amenities') return 'amenities';
   if (category === 'photo') return 'neighbourhood';
+  if (category === 'interior') return 'other';
   // 'general' and legacy 'render' (aerial)
   return 'streetscape';
 }
 
-export const photosForSlot = <T extends { category?: string | null }>(
+export const photosForSlot = <T extends PhotoLike>(
   photos: T[] | null | undefined,
-  slot: PhotoSlotId,
-): T[] => (photos ?? []).filter(photo => slotForPhoto(photo) === slot);
+  slot: PhotoGroupId,
+  coverUrl?: string | null,
+): T[] => (photos ?? []).filter(photo => slotForPhoto(photo, coverUrl) === slot);
 
 /** A cover photo exists (matches the server's "persisted image" readiness need). */
 export function hasCoverPhoto(
-  photos: Array<{ category?: string | null; isPrimary?: boolean; url?: string }> | null | undefined,
+  media: { heroImage?: PhotoLike | string | null; photos?: PhotoLike[] | null } | null | undefined,
 ): boolean {
-  return (photos ?? []).some(
-    photo => Boolean(photo?.url) && (slotForPhoto(photo) === 'cover' || photo?.isPrimary === true),
-  );
+  return Boolean(resolveCover(media as any)?.url);
+}
+
+/**
+ * Photos as they are saved: exactly one photo is the cover (featured +
+ * primary); no other photo keeps a featured/hero/primary mark. Stored
+ * categories otherwise stay unchanged.
+ */
+export function normalizePhotosForCover<T extends PhotoLike>(
+  photos: T[],
+  coverUrl: string | null,
+): T[] {
+  return photos.map(photo => {
+    if (coverUrl && photo.url === coverUrl) {
+      return { ...photo, category: 'featured', isPrimary: true };
+    }
+    const wasCover = photo.category === 'featured' || photo.category === 'hero';
+    if (!wasCover && !photo.isPrimary) return photo;
+    return { ...photo, category: wasCover ? 'general' : photo.category, isPrimary: false };
+  });
 }
 
 export type DocumentSlotId = 'brochure' | 'site_plan' | 'spec_sheet' | 'price_list';
@@ -161,13 +217,61 @@ export function documentMeta(slot: DocumentSlotId): {
   return { documentType: slot, title, label: title, category: 'document' };
 }
 
-export function documentSlotOf(doc: { documentType?: string | null } | null | undefined): DocumentSlotId | null {
+type DocLike = {
+  documentType?: string | null;
+  fileName?: string | null;
+  title?: string | null;
+  label?: string | null;
+  name?: string | null;
+  url?: string | null;
+};
+
+/** The slot a document was saved with (its documentType), or null for untyped documents. */
+export function documentSlotOf(doc: DocLike | null | undefined): DocumentSlotId | null {
   const type = doc?.documentType;
   return DOCUMENT_SLOTS.some(slot => slot.id === type) ? (type as DocumentSlotId) : null;
 }
 
-/** Keep documents in slot order (brochure first); untyped legacy documents go last. */
-export function sortDocuments<T extends { documentType?: string | null }>(docs: T[]): T[] {
+/** Best guess for an untyped (legacy) document from its file name or title. */
+export function guessDocumentSlot(doc: DocLike | null | undefined): DocumentSlotId | null {
+  const text = [doc?.fileName, doc?.title, doc?.label, doc?.name]
+    .filter((v): v is string => typeof v === 'string')
+    .join(' ');
+  if (/brochure/i.test(text)) return 'brochure';
+  if (/site[\s_-]*plan|layout/i.test(text)) return 'site_plan';
+  if (/spec(?:ification)?|finish(?:es)?|fitting/i.test(text)) return 'spec_sheet';
+  if (/price/i.test(text)) return 'price_list';
+  return null;
+}
+
+/**
+ * Sorts documents into the four slots: saved type first, then the file-name
+ * guess for legacy documents. One document per slot; anything else (a second
+ * document for a slot, or one that cannot be placed) goes to `other`, so no
+ * saved document is ever invisible.
+ */
+export function groupDocuments<T extends DocLike>(
+  docs: T[] | null | undefined,
+): { bySlot: Partial<Record<DocumentSlotId, T>>; other: T[] } {
+  const bySlot: Partial<Record<DocumentSlotId, T>> = {};
+  const rest: T[] = [];
+  const list = (docs ?? []).filter(d => d && d.url);
+  for (const doc of list) {
+    const slot = documentSlotOf(doc);
+    if (slot && !bySlot[slot]) bySlot[slot] = doc;
+    else rest.push(doc);
+  }
+  const other: T[] = [];
+  for (const doc of rest) {
+    const slot = documentSlotOf(doc) ? null : guessDocumentSlot(doc);
+    if (slot && !bySlot[slot]) bySlot[slot] = doc;
+    else other.push(doc);
+  }
+  return { bySlot, other };
+}
+
+/** Keep documents in slot order (brochure first); documents without a slot go last. */
+export function sortDocuments<T extends DocLike>(docs: T[]): T[] {
   const rank = (doc: T) => {
     const slot = documentSlotOf(doc);
     return slot ? DOCUMENT_SLOTS.findIndex(s => s.id === slot) : DOCUMENT_SLOTS.length;
@@ -176,6 +280,19 @@ export function sortDocuments<T extends { documentType?: string | null }>(docs: 
     .map((doc, index) => ({ doc, index }))
     .sort((a, b) => rank(a.doc) - rank(b.doc) || a.index - b.index)
     .map(entry => entry.doc);
+}
+
+/** Documents as they are saved: slotted ones get their type, title and label. */
+export function stampDocuments<T extends DocLike>(docs: T[]): T[] {
+  const { bySlot } = groupDocuments(docs);
+  const slotOfDoc = new Map<T, DocumentSlotId>();
+  (Object.keys(bySlot) as DocumentSlotId[]).forEach(slot => slotOfDoc.set(bySlot[slot] as T, slot));
+  return sortDocuments(
+    docs.map(doc => {
+      const slot = slotOfDoc.get(doc);
+      return slot ? { ...doc, ...documentMeta(slot) } : doc;
+    }),
+  );
 }
 
 export const SPREADSHEET_MESSAGE =
@@ -244,9 +361,9 @@ export const sizeHint = (kind: MediaKind): string =>
 
 /** Media step validation for the sale workflow: a cover photo is required. */
 export function validateDevelopmentMedia(
-  media: { photos?: any[] } | null | undefined,
+  media: { heroImage?: any; photos?: any[] } | null | undefined,
 ): Array<{ field: string; message: string }> {
-  return hasCoverPhoto(media?.photos)
+  return hasCoverPhoto(media)
     ? []
     : [{ field: 'media', message: 'Add a cover photo: it is the first image buyers see.' }];
 }

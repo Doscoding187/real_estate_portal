@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const h = vi.hoisted(() => ({
@@ -131,6 +131,55 @@ describe('MediaPhase guided slots', () => {
     pick('amenities', new File(['x'], 'pool.jpg', { type: 'image/jpeg' }));
     await waitFor(() => expect(h.saved.length).toBe(1));
     await waitFor(() => expect(screen.queryByTestId('media-error-amenities')).toBeNull());
+  });
+
+  it('removing the cover saves heroImage: null and promotes no other photo', () => {
+    const cover = { id: 'c', url: 'https://cdn/c.jpg', category: 'featured', isPrimary: true };
+    const gate = { id: 'g', url: 'https://cdn/g.jpg', category: 'outdoors', isPrimary: false };
+    h.stepData = { development_media: { photos: [cover, gate], heroImage: cover } };
+    render(<MediaPhase />);
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Cover photo' }));
+    const saved = h.saved.at(-1).data;
+    expect(saved.heroImage).toBeNull();
+    expect(saved.photos.map((p: any) => p.id)).toEqual(['g']);
+    expect(saved.photos[0]).toMatchObject({ category: 'outdoors', isPrimary: false });
+  });
+
+  it('a legacy draft shows its first photo as the cover and saves it as the cover', async () => {
+    const a = { id: 'a', url: 'https://cdn/a.jpg', category: 'general', fileName: 'a.jpg' };
+    const interior = { id: 'i', url: 'https://cdn/i.jpg', category: 'interior', fileName: 'i.jpg' };
+    h.stepData = { development_media: { photos: [a, interior] } };
+    render(<MediaPhase />);
+    expect(within(screen.getByTestId('media-slot-cover')).getByRole('img')).toBeTruthy();
+    expect(within(screen.getByTestId('media-other-photos')).getByRole('img')).toBeTruthy();
+    pick('entrance', new File(['x'], 'gate.jpg', { type: 'image/jpeg' }));
+    await waitFor(() => expect(h.saved.length).toBe(1));
+    const data = h.saved[0].data;
+    expect(data.heroImage).toMatchObject({ id: 'a', category: 'featured', isPrimary: true });
+    expect(data.photos.find((p: any) => p.id === 'i').category).toBe('interior');
+  });
+
+  it('lists untyped documents under Other documents with Remove, and re-uploading a slot replaces it', async () => {
+    h.stepData = {
+      development_media: {
+        photos: [],
+        documents: [
+          { id: 'd1', url: 'https://cdn/brochure.pdf', fileName: 'brochure.pdf' },
+          { id: 'd2', url: 'https://cdn/mystery.pdf', fileName: 'mystery.pdf' },
+        ],
+      },
+    };
+    render(<MediaPhase />);
+    expect(within(screen.getByTestId('media-doc-brochure')).getByText('brochure.pdf')).toBeTruthy();
+    const other = screen.getByTestId('media-other-docs');
+    expect(within(other).getByText('mystery.pdf')).toBeTruthy();
+    fireEvent.click(within(other).getByRole('button', { name: 'Remove mystery.pdf' }));
+    expect(h.saved.at(-1).data.documents.map((d: any) => d.id)).toEqual(['d1']);
+    pick('brochure', new File(['x'], 'new.pdf', { type: 'application/pdf' }));
+    await waitFor(() => expect(h.saved.length).toBe(2));
+    const docs = h.saved.at(-1).data.documents;
+    expect(docs.filter((d: any) => d.documentType === 'brochure')).toHaveLength(1);
+    expect(docs.some((d: any) => d.id === 'd1')).toBe(false);
   });
 
   it('labels the buttons without a doubled plus', () => {
