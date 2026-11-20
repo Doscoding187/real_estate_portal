@@ -267,6 +267,52 @@ export function buildReviewModel(
   };
 }
 
+export type PublishFailure = { message: string; details: string[] };
+
+/**
+ * What to show when a create, save, publish or submit call is refused: the
+ * server's own message plus any field details (readiness blockers or zod field
+ * errors). Always returns something readable, never an empty string.
+ */
+export function describePublishFailure(error: any, fallback: string): PublishFailure {
+  const message = String(error?.message ?? '').trim() || fallback;
+  const details: string[] = [];
+  const data = error?.data ?? error?.shape?.data ?? {};
+  const blockers = data?.validationErrors ?? data?.cause?.validationErrors;
+  if (Array.isArray(blockers)) {
+    for (const entry of blockers) {
+      const text = typeof entry === 'string' ? entry : String(entry?.message ?? '').trim();
+      if (text && !details.includes(text)) details.push(text);
+    }
+  }
+  const legacy = data?.cause?.errors;
+  if (Array.isArray(legacy)) {
+    for (const entry of legacy) {
+      const text = String(entry ?? '').trim();
+      if (text && !details.includes(text)) details.push(text);
+    }
+  }
+  const zod = data?.zodError ?? data?._zod;
+  const fieldErrors = zod?.fieldErrors;
+  if (fieldErrors && typeof fieldErrors === 'object') {
+    for (const [field, messages] of Object.entries(fieldErrors as Record<string, unknown>)) {
+      if (Array.isArray(messages)) {
+        for (const m of messages) {
+          const text = `${field}: ${String(m)}`;
+          if (!details.includes(text)) details.push(text);
+        }
+      }
+    }
+  }
+  if (Array.isArray(zod?.formErrors)) {
+    for (const m of zod.formErrors) {
+      const text = String(m ?? '').trim();
+      if (text && !details.includes(text)) details.push(text);
+    }
+  }
+  return { message, details };
+}
+
 /** The sentence the publish confirmation shows, stating exactly what happens. */
 export function publishConfirmText(input: {
   name: string;

@@ -549,6 +549,57 @@ describe('FinalisationPhase', () => {
       });
     });
 
+    it('a refused curated publish shows the server reason in the open dialog and retries without creating a second copy', async () => {
+      testState.setActor({ id: 2, role: 'super_admin' }, { cataloguePublisherId: 44 });
+      testState.publishPublisherDevelopmentMock.mockRejectedValueOnce(
+        Object.assign(new Error('Development is not ready for submission.'), {
+          data: {
+            validationErrors: [
+              { field: 'suburb', message: 'The chosen suburb is not an active searchable suburb. Choose it again.' },
+            ],
+          },
+        }),
+      );
+      withData(baltimore(), () => {
+        render(<FinalisationPhase />);
+        fireEvent.click(screen.getByRole('button', { name: 'Publish Development' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Publish Development' }));
+      });
+      const alert = await screen.findByTestId('publish-error');
+      expect(alert.getAttribute('role')).toBe('alert');
+      expect(alert.textContent).toContain('Development is not ready for submission.');
+      expect(alert.textContent).toContain('The chosen suburb is not an active searchable suburb');
+      expect(testState.toastErrorMock).toHaveBeenCalledWith(
+        'Development is not ready for submission.',
+        expect.objectContaining({ description: expect.stringContaining('active searchable suburb') }),
+      );
+      // The dialog stays open and the buttons work again.
+      expect(screen.getByTestId('publish-confirm-text')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Cancel' })).toBeEnabled();
+      const retry = screen.getByRole('button', { name: 'Publish Development' });
+      expect(retry).toBeEnabled();
+      expect(testState.createPublisherDevelopmentMock).toHaveBeenCalledTimes(1);
+      // Retry: updates the development the first attempt created, then publishes.
+      withData(baltimore(), () => fireEvent.click(retry));
+      await waitFor(() => expect(testState.publishPublisherDevelopmentMock).toHaveBeenCalledTimes(2));
+      expect(testState.createPublisherDevelopmentMock).toHaveBeenCalledTimes(1);
+      expect(testState.updatePublisherDevelopmentMock).toHaveBeenCalledWith(
+        expect.objectContaining({ developmentId: 456 }),
+      );
+    });
+
+    it('a failed create shows its message too (developer submit)', async () => {
+      testState.createDevelopmentMock.mockRejectedValueOnce(new Error('Name is already taken'));
+      withData(baltimore(), () => {
+        render(<FinalisationPhase />);
+        fireEvent.click(screen.getByRole('button', { name: /submit for review/i }));
+        fireEvent.click(screen.getByRole('button', { name: /confirm & submit/i }));
+      });
+      expect((await screen.findByTestId('publish-error')).textContent).toContain('Name is already taken');
+      expect(testState.toastErrorMock).toHaveBeenCalled();
+      expect(screen.getByRole('button', { name: 'Cancel' })).toBeEnabled();
+    });
+
     it('developer mode keeps its submit-for-review wording', () => {
       withData(baltimore(), () => {
         render(<FinalisationPhase />);

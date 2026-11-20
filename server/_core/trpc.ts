@@ -16,10 +16,24 @@ export function formatTrpcError({ shape, error }: any) {
     ? ((cause as any).flatten?.() ?? { formErrors: [], fieldErrors: {} })
     : undefined;
 
+  // The readiness blockers ({ field, message } pairs written by our own rules) are the
+  // one cause detail that is safe and needed on screen: without them a refused
+  // publication only says "not ready" and the publisher cannot tell what to fix.
+  const rawBlockers = (cause as any)?.validationErrors;
+  const validationErrors = Array.isArray(rawBlockers)
+    ? rawBlockers
+        .filter(
+          (entry: any) =>
+            entry && typeof entry.field === 'string' && typeof entry.message === 'string',
+        )
+        .map((entry: any) => ({ field: entry.field, message: entry.message }))
+    : undefined;
+
   return {
     ...shape,
     data: {
       ...shape.data,
+      ...(validationErrors && validationErrors.length > 0 ? { validationErrors } : {}),
       // Safe optional payload for client-side display/debugging
       zodError,
       _zod: zodError, // Backwards compatibility for some client versions

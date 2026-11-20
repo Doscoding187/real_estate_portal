@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useDevelopmentWizard } from '@/hooks/useDevelopmentWizard';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -26,7 +26,9 @@ import {
   REVIEW_SECTION_STEP,
   REVIEW_SECTION_TITLES,
   buildReviewModel,
+  describePublishFailure,
   publishConfirmText,
+  type PublishFailure,
   stepForIssue,
   stepTitle,
   type ReviewRow,
@@ -87,7 +89,6 @@ export function FinalisationPhase({
   // Keep only UI-needed refs
   const {
     listingIdentity,
-    setPhase,
     setWorkflowStep,
     reset,
     validateForPublish,
@@ -108,6 +109,10 @@ export function FinalisationPhase({
 
   const [showConfirmPublish, setShowConfirmPublish] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [publishError, setPublishError] = useState<PublishFailure | null>(null);
+  // The development a first attempt created: a retry after a refused publish updates it
+  // instead of creating a second copy.
+  const createdIdRef = useRef<number | null>(null);
   const utils = trpc.useUtils();
 
   // Backend mutations
@@ -184,11 +189,14 @@ export function FinalisationPhase({
     }
 
     if (isSuperAdmin && !publisherContext?.cataloguePublisherId) {
-      toast.error('Select a publisher brand context before publishing.');
+      const message = 'Select a publisher brand context before publishing.';
+      setPublishError({ message, details: [] });
+      toast.error(message);
       return;
     }
 
     if (isPublishing) return;
+    setPublishError(null);
     setIsPublishing(true);
 
     try {
@@ -204,24 +212,27 @@ export function FinalisationPhase({
       });
 
       let developmentId: number;
-      if (editingId && shouldUseSuperAdminFlow) {
+      // Editing an existing development, or retrying after a refused first attempt that
+      // already created one (never create a second copy).
+      const existingId = editingId ?? createdIdRef.current ?? undefined;
+      if (existingId && shouldUseSuperAdminFlow) {
         await updatePublisherDevelopment.mutateAsync({
           cataloguePublisherId: publisherId,
-          developmentId: editingId,
+          developmentId: existingId,
           data: {
             ...payload,
             cataloguePublisherId: publisherId,
           },
         });
-        developmentId = editingId;
+        developmentId = existingId;
         toast.success('Development saved successfully!');
-      } else if (editingId) {
+      } else if (existingId) {
         // UPDATE OPERATION
         await updateDevelopment.mutateAsync({
-          id: editingId,
+          id: existingId,
           data: payload,
         });
-        developmentId = editingId;
+        developmentId = existingId;
         toast.success('Development saved successfully!');
       } else {
         // CREATE OPERATION
@@ -246,6 +257,7 @@ export function FinalisationPhase({
           const result = await createDevelopment.mutateAsync(createPayload);
           developmentId = result.development.id;
         }
+        createdIdRef.current = developmentId;
       }
 
       // Curated records use the privileged platform publication transition;
@@ -302,107 +314,13 @@ export function FinalisationPhase({
     } catch (error: any) {
       console.error('[FinalisationPhase] Publish failed:', error);
 
-      const cause = error?.data?.cause ?? error?.shape?.data?.cause;
-
-      const validationErrors = cause?.validationErrors;
-      const legacyErrors = cause?.errors;
-      const primaryMessage = error?.message || finalisationCopy.fallbackError;
-
-      const focusField = (fieldKey: string) => {
-        const base = fieldKey.split('[')[0];
-        const root = base.split('.')[0];
-
-        const fieldToPhase: Record<string, number> = {
-          name: 4,
-          developmentName: 4,
-          nature: 4,
-          status: 4,
-          launchDate: 4,
-          completionDate: 4,
-          expectedFirstHandoverDate: 4,
-          handoverDuringConstruction: 4,
-          ownershipType: 4,
-          ownershipTypes: 4,
-          transactionType: 4,
-
-          address: 5,
-          postalCode: 5,
-          latitude: 5,
-          longitude: 5,
-          location: 5,
-          'location.address': 5,
-          'location.latitude': 5,
-          'location.longitude': 5,
-
-          media: 9,
-          images: 9,
-          heroImage: 9,
-          'media.heroImage': 9,
-          'media.heroImage.url': 9,
-
-          unitTypes: 10,
-          parkingType: 10,
-          parkingBays: 10,
-          bedrooms: 10,
-          bathrooms: 10,
-          basePriceFrom: 10,
-        };
-
-        const targetPhase = fieldToPhase[fieldKey] ?? fieldToPhase[base] ?? fieldToPhase[root];
-
-        if (targetPhase) setPhase(targetPhase);
-
-        setTimeout(() => {
-          const el =
-            document.querySelector(`[data-field="${fieldKey}"]`) ||
-            document.querySelector(`[data-field="${base}"]`) ||
-            document.querySelector(`[name="${fieldKey}"]`) ||
-            document.querySelector(`[name="${base}"]`);
-          el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          (el as HTMLElement | null)?.focus?.();
-        }, 250);
-      };
-
-      if (Array.isArray(validationErrors) && validationErrors.length > 0) {
-        toast.error(
-          <div className="max-w-md">
-            <p className="font-semibold mb-2">{finalisationCopy.validationErrorTitle}</p>
-            <ul className="space-y-1 text-sm">
-              {validationErrors.map((err: { field: string; message: string }, idx: number) => (
-                <li key={idx} className="flex items-start gap-2">
-                  <span className="text-red-500 mt-0.5">•</span>
-                  <span>{err.message}</span>
-                </li>
-              ))}
-            </ul>
-          </div>,
-          { duration: 10000 },
-        );
-
-        if (validationErrors[0]?.field) focusField(validationErrors[0].field);
-        return;
-      }
-
-      if (Array.isArray(legacyErrors) && legacyErrors.length > 0) {
-        toast.error(
-          <div className="max-w-md">
-            <p className="font-semibold mb-2">{finalisationCopy.validationErrorTitle}</p>
-            <ul className="space-y-1 text-sm">
-              {legacyErrors.map((msg: string, idx: number) => (
-                <li key={idx} className="flex items-start gap-2">
-                  <span className="text-red-500 mt-0.5">•</span>
-                  <span>{msg}</span>
-                </li>
-              ))}
-            </ul>
-          </div>,
-          { duration: 10000 },
-        );
-        return;
-      }
-
-      toast.error(primaryMessage, {
-        description: 'Please check your connection and try again.',
+      // Never swallow a refusal: the reason is shown inside the confirm dialog (which
+      // stays open so it can be cancelled or retried) and as a toast.
+      const failure = describePublishFailure(error, finalisationCopy.fallbackError);
+      setPublishError(failure);
+      toast.error(failure.message, {
+        description: failure.details.length > 0 ? failure.details.join(' · ') : undefined,
+        duration: 10000,
       });
     } finally {
       setIsPublishing(false);
@@ -711,14 +629,42 @@ export function FinalisationPhase({
       </section>
 
       {/* Confirmation: states exactly what happens */}
-      <Dialog open={showConfirmPublish} onOpenChange={setShowConfirmPublish}>
+      <Dialog
+        open={showConfirmPublish}
+        onOpenChange={open => {
+          setShowConfirmPublish(open);
+          if (!open) setPublishError(null);
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{finalisationCopy.confirmTitle}</DialogTitle>
             <DialogDescription data-testid="publish-confirm-text">{confirmText}</DialogDescription>
           </DialogHeader>
+          {publishError ? (
+            <div
+              role="alert"
+              data-testid="publish-error"
+              className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-900"
+            >
+              <p className="font-semibold">{publishError.message}</p>
+              {publishError.details.length > 0 ? (
+                <ul className="mt-1 list-disc pl-5">
+                  {publishError.details.map(detail => (
+                    <li key={detail}>{detail}</li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+          ) : null}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowConfirmPublish(false)}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowConfirmPublish(false);
+                setPublishError(null);
+              }}
+            >
               Cancel
             </Button>
             <Button
