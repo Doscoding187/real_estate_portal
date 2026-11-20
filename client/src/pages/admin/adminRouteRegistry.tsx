@@ -20,7 +20,6 @@ import {
   Settings,
   Shield,
   Star,
-  TrendingUp,
   User,
   Users,
 } from 'lucide-react';
@@ -57,12 +56,17 @@ const CreateAgency = lazy(() => import('./CreateAgency'));
 const ComingSoonModule = lazy(() => import('./ComingSoonModule'));
 const LovableIntegrationHub = lazy(() => import('../LovableIntegrationHub'));
 
-export type AdminNavGroupId = 'core' | 'ecosystem' | 'revenue' | 'insights' | 'system';
+export type AdminNavGroupId = 'today' | 'catalogue' | 'people' | 'system' | 'hidden';
+
+/** Which real queue feeds an item's count badge. */
+export type AdminNavBadgeKey = 'payments' | 'approvals';
 
 export type AdminNavItem = {
   label: string;
   path: string;
   icon: LucideIcon;
+  /** Count badge fed by a real pending-work query. */
+  badge?: AdminNavBadgeKey;
   /** Launch focus: hidden from the sidebar, route stays reachable by URL. Remove the flag to restore. */
   launchHidden?: boolean;
 };
@@ -214,37 +218,53 @@ export const ADMIN_DASHBOARD_ROUTES: AdminDashboardRoute[] = [
 
 export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
   {
-    id: 'core',
-    title: 'CORE OPERATIONS',
+    id: 'today',
+    title: 'TODAY',
     icon: Layers,
     items: [
       { label: 'Dashboard', path: ROUTES.overview.path, icon: LayoutDashboard },
-      { label: 'Approvals', path: ROUTES.approvals.path, icon: CheckCircle },
-      { label: 'Listings', path: ROUTES.properties.path, icon: Home },
-      { label: 'Developments', path: ROUTES.developmentApprovals.path, icon: Building2 },
+      { label: 'Approvals', path: ROUTES.approvals.path, icon: CheckCircle, badge: 'approvals' },
+      // Finance opens on the EFT verification tab; Subscriptions is a tab of the same page.
+      { label: 'Finance', path: ROUTES.finance.path, icon: FileText, badge: 'payments' },
+    ],
+  },
+  {
+    id: 'catalogue',
+    title: 'CATALOGUE',
+    icon: Building2,
+    items: [
       { label: 'Publisher', path: ROUTES.publisher.path, icon: Building2 },
+      { label: 'Developments', path: ROUTES.developmentApprovals.path, icon: Building2 },
+      { label: 'Listings', path: ROUTES.properties.path, icon: Home },
+    ],
+  },
+  {
+    id: 'people',
+    title: 'PEOPLE',
+    icon: Globe,
+    items: [
+      { label: 'Users', path: ROUTES.users.path, icon: User },
+      { label: 'Agents', path: ROUTES.agents.path, icon: Users },
+      { label: 'Agencies', path: ROUTES.agencies.path, icon: Building2 },
+      { label: 'Developers', path: ROUTES.developers.path, icon: Code },
       // Leads: the platform-custody enquiry queue lives on the Ecosystem overview page.
       { label: 'Leads', path: ROUTES.ecosystem.path, icon: MessageSquare },
     ],
   },
   {
-    id: 'ecosystem',
-    title: 'ECOSYSTEM',
-    icon: Globe,
+    id: 'system',
+    title: 'SYSTEM',
+    icon: Settings,
     items: [
-      { label: 'Agencies', path: ROUTES.agencies.path, icon: Building2 },
-      { label: 'Agents', path: ROUTES.agents.path, icon: Users },
-      { label: 'Developers', path: ROUTES.developers.path, icon: Code },
-      { label: 'Users', path: ROUTES.users.path, icon: User },
+      { label: 'Settings & Integrations', path: ROUTES.settings.path, icon: Settings },
+      { label: 'System & Security', path: ROUTES.system.path, icon: Shield },
     ],
   },
   {
-    id: 'revenue',
-    title: 'REVENUE & GROWTH',
-    icon: TrendingUp,
+    id: 'hidden',
+    title: 'HIDDEN FOR LAUNCH',
+    icon: Activity,
     items: [
-      // Finance opens on the verification tab; Subscriptions is a tab of the same page.
-      { label: 'Finance', path: ROUTES.finance.path, icon: FileText },
       { label: 'Subscriptions', path: ROUTES.subscriptions.path, icon: CreditCard, launchHidden: true },
       { label: 'Revenue Center', path: ROUTES.revenue.path, icon: DollarSign, launchHidden: true },
       { label: 'Featured Placements', path: ROUTES.marketing.path, icon: Star, launchHidden: true },
@@ -255,13 +275,6 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         icon: Briefcase,
         launchHidden: true,
       },
-    ],
-  },
-  {
-    id: 'insights',
-    title: 'INSIGHTS',
-    icon: Activity,
-    items: [
       { label: 'Platform Analytics', path: ROUTES.analytics.path, icon: BarChart3, launchHidden: true },
       { label: 'Discovery Ops', path: ROUTES.discoveryOps.path, icon: Activity, launchHidden: true },
       {
@@ -276,15 +289,6 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         icon: Layers,
         launchHidden: true,
       },
-    ],
-  },
-  {
-    id: 'system',
-    title: 'SYSTEM',
-    icon: Settings,
-    items: [
-      { label: 'Settings & Integrations', path: ROUTES.settings.path, icon: Settings },
-      { label: 'System & Security', path: ROUTES.system.path, icon: Shield },
       { label: 'Content Manager', path: ROUTES.content.path, icon: FileText, launchHidden: true },
       {
         label: 'Communications',
@@ -312,8 +316,7 @@ export const getAdminNavGroupForPath = (location: string): AdminNavGroupId => {
     if (location.startsWith(`${pair.path}/`)) return pair.groupId;
   }
 
-  if (location === '/admin') return 'core';
-  return 'core';
+  return 'today';
 };
 
 /** Review and dedicated approval routes belong to the Approvals navigation item. */
@@ -328,6 +331,7 @@ export function getAdminNavItemForPath(location: string): string | undefined {
     return ROUTES.approvals.path;
   if (pathname === ROUTES.subscriptions.path || pathname === ROUTES.planEditor.path)
     return ROUTES.finance.path;
+  if (pathname === '/admin' || pathname === '/admin/dashboard') return ROUTES.overview.path;
   return sidebarPathGroupPairs.find(
     pair => pathname === pair.path || pathname.startsWith(`${pair.path}/`),
   )?.path;
