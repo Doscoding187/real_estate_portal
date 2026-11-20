@@ -44,6 +44,10 @@ export interface WizardShellProps {
   /** Omit to hide the Continue button (last step has its own publish action). */
   onNext?: () => void;
   nextLabel?: string;
+  /** Heading used when no numbered step is current (the start screen). */
+  heading?: string;
+  /** Hides the Back button (start screen). */
+  hideBack?: boolean;
   /** Rendered above the step content (validation messages, banners). */
   notice?: React.ReactNode;
   children: React.ReactNode;
@@ -51,8 +55,8 @@ export interface WizardShellProps {
 
 const STEP_TIPS: Record<string, string> = {
   project_setup: 'Two quick choices to begin.',
-  configuration: 'Describe what kind of place this is.',
-  identity_market: 'Name it, say where it is in its life.',
+  configuration: 'What kind of place is it?',
+  identity_market: 'Name it and say where it is in its life.',
   location: 'Buyers see the suburb, not the street.',
   governance_finances: 'The running costs every buyer asks about.',
   amenities_features: 'Tap what the development really has.',
@@ -129,6 +133,8 @@ export function WizardShell({
   onNext,
   nextLabel = 'Continue',
   notice,
+  heading,
+  hideBack = false,
   children,
 }: WizardShellProps) {
   const current = steps[currentIndex];
@@ -174,11 +180,13 @@ export function WizardShell({
         </div>
       </header>
 
-      <div className="mx-auto grid w-full max-w-[1440px] grid-cols-1 items-start gap-6 px-4 py-6 sm:px-7 lg:grid-cols-[240px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1fr)_340px]">
+      <div className="mx-auto grid w-full max-w-[1600px] grid-cols-1 items-start gap-4 px-3 py-6 sm:px-5 lg:grid-cols-[190px_minmax(0,1fr)] lg:gap-4 xl:grid-cols-[190px_minmax(0,1fr)_300px] xl:gap-4">
         <nav aria-label="Wizard steps" className="min-w-0">
-          <div className="hidden px-2.5 pb-2 pt-1 text-xs font-semibold uppercase tracking-wider text-slate-600 lg:block">
-            Step {progress.position} of {progress.total}
-          </div>
+          {progress.total > 0 && (
+            <div className="hidden px-2.5 pb-2 pt-1 text-xs font-semibold uppercase tracking-wider text-slate-600 lg:block">
+              Step {progress.position} of {progress.total}
+            </div>
+          )}
           <ol className="flex gap-1 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
             {steps.map((step, index) => {
               const Icon = iconForStep(step.id);
@@ -224,10 +232,11 @@ export function WizardShell({
               <HeadIcon className="h-[26px] w-[26px]" strokeWidth={1.8} aria-hidden="true" />
             </span>
             <div className="min-w-0 flex-1">
-              <h1 className="text-[22px] font-bold leading-tight">{current?.title}</h1>
+              <h1 className="text-[22px] font-bold leading-tight">{current?.title ?? heading}</h1>
               <div className="text-[13px] text-slate-600">
-                Step {progress.position} of {progress.total}
-                {current && STEP_TIPS[current.id] ? ` · ${STEP_TIPS[current.id]}` : ''}
+                {current
+                  ? `Step ${progress.position} of ${progress.total}${STEP_TIPS[current.id] ? ` · ${STEP_TIPS[current.id]}` : ''}`
+                  : 'Before we begin'}
               </div>
               {description && <div className="sr-only">{description}</div>}
               <div className="mt-2">
@@ -241,10 +250,14 @@ export function WizardShell({
           <div>{children}</div>
 
           <div className="flex flex-wrap justify-between gap-3">
-            <button type="button" onClick={onBack} disabled={!canGoBack} className={t.button}>
-              <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-              Back
-            </button>
+            {hideBack ? (
+              <span />
+            ) : (
+              <button type="button" onClick={onBack} disabled={!canGoBack} className={t.button}>
+                <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+                Back
+              </button>
+            )}
             {onNext && (
               <button type="button" onClick={onNext} className={cn(t.button, t.buttonPrimary)}>
                 {nextLabel}

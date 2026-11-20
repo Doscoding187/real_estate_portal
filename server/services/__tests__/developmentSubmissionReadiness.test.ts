@@ -47,6 +47,42 @@ describe('development persisted submission readiness', () => {
     ).toEqual([]);
   });
 
+  it.each(['full-title', 'sectional-title', 'life-rights', 'leasehold', 'share-block', 'varies'])(
+    'accepts "%s": every ownership answer the wizard offers is publishable',
+    ownershipType => {
+      expect(
+        validatePersistedSubmissionReadiness(
+          { ...validDevelopment, ownershipType } as never,
+          [validUnit] as never,
+        ),
+      ).toEqual([]);
+    },
+  );
+
+  it('still blocks an ownership value the wizard does not offer, and a missing one', () => {
+    for (const ownershipType of ['freehold-ish', '', null]) {
+      expect(
+        validatePersistedSubmissionReadiness(
+          { ...validDevelopment, ownershipType } as never,
+          [validUnit] as never,
+        ),
+      ).toEqual([
+        { field: 'ownershipType', message: 'A supported ownership type is required.' },
+      ]);
+    }
+  });
+
+  it('asks for nothing about setting, estate type, phase, tagline or dates (the wizard treats them as optional)', () => {
+    const fields = validatePersistedSubmissionReadiness(
+      {
+        ...validDevelopment,
+        // No tagline/subtitle, phase, launch or completion dates on the row.
+      } as never,
+      [validUnit] as never,
+    ).map(error => error.field);
+    expect(fields).toEqual([]);
+  });
+
   it('returns the exact persisted submission blocker for invalid data', () => {
     expect(
       validatePersistedSubmissionReadiness(

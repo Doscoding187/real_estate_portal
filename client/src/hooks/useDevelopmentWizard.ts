@@ -472,6 +472,8 @@ export interface DevelopmentWizardState {
   documents?: any[];
   developerId?: number;
   draftId?: number;
+  /** When (ms since epoch) the server last confirmed this draft, for the resume dialog. */
+  draftSavedAt?: number;
   editingId?: number; // ID of development being edited
 
   // NEW: Unit Type Draft (Persistence against accidental closing)
@@ -550,6 +552,13 @@ export interface DevelopmentWizardState {
   goWorkflowNext: () => void;
   goWorkflowBack: () => void;
   saveWorkflowStepData: (stepId: WizardStepId, data: Record<string, any>) => void;
+  /**
+   * Starts the residential workflow without asking a separate Project Setup
+   * question (sale unless told otherwise). Does nothing if one is running.
+   */
+  ensureResidentialWorkflow: (transactionType?: 'for_sale' | 'for_rent') => void;
+  /** Changes sale / rent in place: keeps the current step and everything entered. */
+  switchResidentialTransaction: (transactionType: 'for_sale' | 'for_rent') => void;
 
   // Phase 2A Actions
   initializeWorkflow: (
@@ -871,6 +880,9 @@ const createActions = (
       marketingRole: identity.marketingRole ?? state.developmentData.marketingRole,
       ownershipTypes: identity.ownershipTypes ?? state.developmentData.ownershipTypes,
       nature: identity.nature ?? state.developmentData.nature,
+      // About step: sales stage (off-plan / ready) and the optional phase label.
+      salesStage: identity.salesStage ?? (state.developmentData as any).salesStage,
+      phaseLabel: identity.phaseLabel ?? (state.developmentData as any).phaseLabel,
       auctionType: identity.auctionType ?? state.developmentData.auctionType,
       launchDate: identity.launchDate ?? state.developmentData.launchDate,
       completionDate: identity.completionDate ?? state.developmentData.completionDate,
@@ -1408,11 +1420,39 @@ const createActions = (
         return newState;
       }),
 
+    ensureResidentialWorkflow: (transactionType: 'for_sale' | 'for_rent' = 'for_sale') => {
+      const state = get();
+      if (state.workflowId && state.developmentType && state.transactionType) return;
+      get().initializeWorkflow('residential', transactionType);
+    },
+
+    switchResidentialTransaction: (transactionType: 'for_sale' | 'for_rent') =>
+      set(state => {
+        if (!state.workflowId) return {};
+        const workflowId = transactionType === 'for_rent' ? 'residential_rent' : 'residential_sale';
+        // The transaction type is also read from these step slices first, so
+        // keep any copy that already exists in step with the new answer.
+        const stepData: Record<string, any> = { ...state.stepData };
+        for (const stepId of ['identity_market', 'configuration']) {
+          if (stepData[stepId]?.transactionType !== undefined) {
+            stepData[stepId] = { ...stepData[stepId], transactionType };
+          }
+        }
+        return {
+          transactionType,
+          workflowId: workflowId as WorkflowId,
+          stepData,
+          developmentData: { ...state.developmentData, transactionType },
+          stepErrors: {},
+        };
+      }),
+
     reset: () =>
       set(() => ({
         ...initialState,
         editingId: undefined,
         draftId: undefined,
+        draftSavedAt: undefined,
         developerId: undefined,
         currentStepId: null,
         workflowId: null,
@@ -2007,8 +2047,23 @@ const createActions = (
           max: toNumber(estateSpecs?.rightsAndTaxes?.max ?? source.ratesTo ?? 0, 0),
         };
 
+        // Basics / About answers have no columns of their own; they were saved in estateSpecs.
+        const hasSavedAboutFacts = Boolean(
+          estateSpecs?.setting || estateSpecs?.salesStage || estateSpecs?.phaseLabel,
+        );
         const reconstructedStepData = {
+          ...(estateSpecs?.setting
+            ? {
+                configuration: {
+                  setting: estateSpecs.setting,
+                  estateType: estateSpecs.estateType,
+                },
+              }
+            : {}),
           identity_market: {
+            ...(hasSavedAboutFacts
+              ? { salesStage: estateSpecs?.salesStage, phaseLabel: estateSpecs?.phaseLabel }
+              : {}),
             name: canonicalDevelopmentData.name,
             subtitle: canonicalDevelopmentData.subtitle,
             status: canonicalDevelopmentData.status,
@@ -2020,6 +2075,14 @@ const createActions = (
             launchDate: canonicalDevelopmentData.launchDate,
             expectedFirstHandoverDate: canonicalDevelopmentData.expectedFirstHandoverDate,
             handoverDuringConstruction: canonicalDevelopmentData.handoverDuringConstruction,
+            ...(estateSpecs?.handoverInPhases
+              ? {
+                  handoverDuringConstruction: true,
+                  expectedFirstHandoverDate:
+                    estateSpecs.firstHandoverDate ??
+                    canonicalDevelopmentData.expectedFirstHandoverDate,
+                }
+              : {}),
           },
           location: { ...canonicalDevelopmentData.location },
           governance_finances: {
@@ -2367,7 +2430,6 @@ const createActions = (
           return computeWizardProgress({
             visibleStepIds,
             currentStepId: state.currentStepId,
-            onProjectSetup: !workflow,
           }).percent;
         })(),
 
@@ -2441,6 +2503,7 @@ export const useDevelopmentWizard = create<DevelopmentWizardState>()(
         developmentType: state.developmentType,
         // Server draft this local copy belongs to, so resuming never forks a duplicate.
         draftId: state.draftId,
+        draftSavedAt: state.draftSavedAt,
 
         residentialConfig: state.residentialConfig,
         landConfig: state.landConfig,

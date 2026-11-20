@@ -70,20 +70,23 @@ describe('hasMeaningfulDraft', () => {
 describe('computeWizardProgress', () => {
   const ids = ['configuration', 'identity_market', 'location'];
 
-  it('counts Project Setup plus the real visible steps (not currentPhase / 11)', () => {
-    expect(computeWizardProgress({ visibleStepIds: ids, currentStepId: null, onProjectSetup: true }))
-      .toEqual({ position: 1, total: 4, percent: 25 });
-    expect(
-      computeWizardProgress({ visibleStepIds: ids, currentStepId: 'configuration', onProjectSetup: false }),
-    ).toEqual({ position: 2, total: 4, percent: 50 });
-    expect(
-      computeWizardProgress({ visibleStepIds: ids, currentStepId: 'location', onProjectSetup: false }),
-    ).toEqual({ position: 4, total: 4, percent: 100 });
+  it('counts the real visible steps (not currentPhase / 11) and has no separate setup stop', () => {
+    expect(computeWizardProgress({ visibleStepIds: ids, currentStepId: 'configuration' })).toEqual({
+      position: 1,
+      total: 3,
+      percent: 33,
+    });
+    expect(computeWizardProgress({ visibleStepIds: ids, currentStepId: 'location' })).toEqual({
+      position: 3,
+      total: 3,
+      percent: 100,
+    });
   });
 
-  it('is 0 when the current step is unknown', () => {
-    expect(
-      computeWizardProgress({ visibleStepIds: ids, currentStepId: 'nope', onProjectSetup: false }).percent,
-    ).toBe(0);
+  it('is 0 when the current step is unknown, such as a step an old draft used', () => {
+    expect(computeWizardProgress({ visibleStepIds: ids, currentStepId: 'nope' }).percent).toBe(0);
+    expect(computeWizardProgress({ visibleStepIds: ids, currentStepId: 'marketing_summary' })
+      .position).toBe(0);
+    expect(computeWizardProgress({ visibleStepIds: [], currentStepId: null }).percent).toBe(0);
   });
 });

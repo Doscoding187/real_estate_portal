@@ -80,17 +80,25 @@ vi.mock('@/hooks/useAutoSave', () => ({
 }));
 
 vi.mock('@/components/wizard/DraftManager', () => ({
-  DraftManager: ({ open, onResume, onStartFresh }: any) =>
+  DraftManager: ({ open, onResume, onStartFresh, draftData }: any) =>
     open ? (
       <div>
+        <span data-testid="draft-data">
+          {JSON.stringify({
+            name: draftData?.developmentName,
+            lastModified: draftData?.lastModified
+              ? new Date(draftData.lastModified).toISOString()
+              : null,
+          })}
+        </span>
         <button onClick={onResume}>Resume draft</button>
         <button onClick={onStartFresh}>Start new</button>
       </div>
     ) : null,
 }));
 
-vi.mock('@/components/development-wizard/phases/DevelopmentTypePhase', () => ({
-  DevelopmentTypePhase: () => <div>Development type setup</div>,
+vi.mock('@/components/development-wizard/phases/BasicsPhase', () => ({
+  BasicsPhase: () => <div>Basics step body</div>,
 }));
 
 vi.mock('@/_core/hooks/useAuth', () => ({
@@ -174,10 +182,10 @@ describe('DevelopmentWizard publisher context initialization', () => {
     render(<DevelopmentWizard />);
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Project Setup' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Start a new development' })).toBeInTheDocument();
     });
 
-    expect(screen.getByText('Development type setup')).toBeInTheDocument();
+    expect(screen.getByText('What are you listing?')).toBeInTheDocument();
     expect(testState.setListingIdentity).toHaveBeenCalledWith({
       identityType: 'brand',
       cataloguePublisherId: 1109,
@@ -191,10 +199,10 @@ describe('DevelopmentWizard publisher context initialization', () => {
     render(<DevelopmentWizard />);
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Project Setup' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Start a new development' })).toBeInTheDocument();
     });
 
-    expect(screen.getByText('Development type setup')).toBeInTheDocument();
+    expect(screen.getByText('What are you listing?')).toBeInTheDocument();
     expect(testState.setListingIdentity).not.toHaveBeenCalled();
   });
 
@@ -315,7 +323,7 @@ describe('DevelopmentWizard edit-mode lifecycle truth', () => {
         screen.getByRole('heading', { name: 'Unable to open this development' }),
       ).toBeInTheDocument();
     });
-    expect(screen.queryByRole('heading', { name: 'Project Setup' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Start a new development' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(testState.editRefetch).toHaveBeenCalledOnce();
@@ -402,6 +410,52 @@ describe('DevelopmentWizard draft safety and autosave', () => {
     );
     expect(testState.wizardState.reset).toHaveBeenCalledTimes(1); // account-key switch only
     expect(screen.queryByRole('button', { name: 'Resume draft' })).not.toBeInTheDocument();
+  });
+
+  it('after a reload with ?draftId the save badge says "Saved {time}" from the server draft, not "Not saved yet"', async () => {
+    window.history.replaceState({}, '', '/developer/create-development?draftId=42');
+    // The server stores "YYYY-MM-DD HH:mm:ss" in UTC.
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000)
+      .toISOString()
+      .replace('T', ' ')
+      .slice(0, 19);
+    testState.draftQueryResult.current = {
+      data: {
+        lastModified: fiveMinutesAgo,
+        draftData: { workflowId: 'residential_sale', developmentData: { name: 'Saved one' } },
+      },
+      error: null,
+      isLoading: false,
+    };
+
+    render(<DevelopmentWizard />);
+
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(/^Saved 5 min ago/));
+    expect(screen.queryByText('Not saved yet')).not.toBeInTheDocument();
+  });
+
+  it('shows "Not saved yet" for a brand-new wizard that has never been saved', async () => {
+    render(<DevelopmentWizard />);
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Not saved yet'));
+  });
+
+  it('the Resume dialog gets the draft name (or Untitled) and the last saved time', async () => {
+    const savedAt = Date.now() - 10 * 60 * 1000;
+    testState.wizardState.developmentData = { name: '', transactionType: 'for_sale' };
+    testState.wizardState.workflowId = 'residential_sale' as any;
+    (testState.wizardState as any).draftSavedAt = savedAt;
+
+    const view = render(<DevelopmentWizard />);
+    const untitled = JSON.parse((await screen.findByTestId('draft-data')).textContent ?? '{}');
+    expect(untitled.name).toBe('Untitled');
+    expect(untitled.lastModified).toBe(new Date(savedAt).toISOString());
+    view.unmount();
+
+    testState.wizardState.developmentData = { name: 'Baltimore Lifestyle Estate', transactionType: 'for_sale' };
+    render(<DevelopmentWizard />);
+    const named = JSON.parse((await screen.findByTestId('draft-data')).textContent ?? '{}');
+    expect(named.name).toBe('Baltimore Lifestyle Estate');
+    (testState.wizardState as any).draftSavedAt = undefined;
   });
 
   it('arms real autosave (debounced, developer path) once the wizard is ready', async () => {

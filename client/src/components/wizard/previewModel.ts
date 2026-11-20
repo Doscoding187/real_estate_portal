@@ -4,6 +4,12 @@
  */
 
 import { COMMUNITY_TYPE_OPTIONS } from '@/types/wizardTypes';
+import {
+  buildTimelineLine,
+  ownershipTagLabel,
+  salesChoiceOf,
+  settingTagLabel,
+} from '@/lib/wizardBasicsAbout';
 
 export interface PreviewUnit {
   name: string;
@@ -27,6 +33,12 @@ export interface DevelopmentPreviewModel {
   highlights: string[];
   moreHighlights: number;
   tags: string[];
+  /** "For sale" / "To rent", from the start screen answer. */
+  transactionLabel: string | null;
+  /** Optional "Phase 2" badge. */
+  phaseLabel: string;
+  /** "First homes handed over from Mar 2027 · final completion Dec 2029", "Launching Mar 2027", or null. */
+  timelineLine: string | null;
   unit: PreviewUnit | null;
 }
 
@@ -41,23 +53,7 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const SETTING_LABELS: Record<string, string> = {
-  standalone: 'Standalone',
-  gated: 'Gated community',
-  estate: 'Security estate',
   security_estate: 'Security estate',
-};
-
-const OWNERSHIP_LABELS: Record<string, string> = {
-  'full-title': 'Full title',
-  full_title: 'Full title',
-  freehold: 'Full title',
-  'sectional-title': 'Sectional title',
-  sectional_title: 'Sectional title',
-  'life-rights': 'Life rights',
-  life_rights: 'Life rights',
-  leasehold: 'Leasehold',
-  'share-block': 'Share block',
-  share_block: 'Share block',
 };
 
 export const PREVIEW_CARD_HIGHLIGHTS = 3;
@@ -120,12 +116,21 @@ export function buildPreviewModel(
 
   const communityKey = asString(d.communityTypes?.[0]);
   const settingLabel =
+    settingTagLabel(asString(d.setting), asString(d.estateType)) ??
     SETTING_LABELS[asString(d.setting)] ??
     COMMUNITY_TYPE_OPTIONS.find(option => option.value === communityKey)?.label;
   const ownershipKey = asString(d.ownershipTypes?.[0]) || asString(d.ownershipType);
-  const tags = [settingLabel, OWNERSHIP_LABELS[ownershipKey]].filter((tag): tag is string =>
+  const tags = [settingLabel, ownershipTagLabel(ownershipKey)].filter((tag): tag is string =>
     Boolean(tag),
   );
+
+  const choice = salesChoiceOf(d);
+  const statusBadge =
+    choice === 'off_plan' && d.salesStage === 'off_plan'
+      ? 'Selling off-plan'
+      : choice === 'ready'
+        ? 'Ready to move in'
+        : (STATUS_LABELS[asString(d.status)] ?? null);
 
   const firstUnit = unitTypes[0];
   const unit: PreviewUnit | null = firstUnit
@@ -143,7 +148,7 @@ export function buildPreviewModel(
 
   return {
     coverUrl,
-    statusBadge: STATUS_LABELS[asString(d.status)] ?? null,
+    statusBadge,
     name: asString(d.name),
     tagline: asString(d.subtitle) || asString(d.tagline),
     locationLabel,
@@ -154,6 +159,14 @@ export function buildPreviewModel(
     highlights: highlights.slice(0, PREVIEW_CARD_HIGHLIGHTS),
     moreHighlights: Math.max(0, highlights.length - PREVIEW_CARD_HIGHLIGHTS),
     tags,
+    transactionLabel:
+      d.transactionType === 'for_sale' || d.transactionType === 'sale'
+        ? 'For sale'
+        : d.transactionType === 'for_rent' || d.transactionType === 'rent'
+          ? 'To rent'
+          : null,
+    phaseLabel: asString(d.phaseLabel),
+    timelineLine: buildTimelineLine(d),
     unit,
   };
 }

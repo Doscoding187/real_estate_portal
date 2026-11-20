@@ -32,6 +32,7 @@ export function OptionCard({
   selected,
   onClick,
   disabled,
+  stacked = false,
 }: {
   icon: LucideIcon;
   title: string;
@@ -39,6 +40,8 @@ export function OptionCard({
   selected: boolean;
   onClick: () => void;
   disabled?: boolean;
+  /** Icon tile on top, then title, then description, full card width. */
+  stacked?: boolean;
 }) {
   return (
     <button
@@ -57,11 +60,11 @@ export function OptionCard({
           <Check className="h-3.5 w-3.5" strokeWidth={3} />
         </span>
       )}
-      <span className="flex items-start gap-3.5">
+      <span className={cn('flex gap-3.5', stacked ? 'flex-col items-stretch' : 'items-start')}>
         <span className={cn(t.iconTile, selected && t.iconTileOn)}>
           <Icon className="h-[22px] w-[22px]" strokeWidth={1.8} aria-hidden="true" />
         </span>
-        <span className="flex flex-col gap-1 pr-5">
+        <span className={cn('flex flex-col gap-1', stacked ? 'w-full' : 'pr-5')}>
           <b className="text-[15px] text-slate-900">{title}</b>
           {description ? (
             <span className="text-[13px] leading-snug text-slate-600">{description}</span>

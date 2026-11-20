@@ -19,7 +19,7 @@ import { trpc } from '@/lib/trpc';
 import { WORKFLOWS, getVisibleSteps, getWorkflow } from '@/lib/workflows';
 import { usePublisherContext } from '@/hooks/usePublisherContext';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
-import { hasMeaningfulDraft } from '@/lib/wizardSaveStatus';
+import { draftDisplayName, hasMeaningfulDraft, parseServerTimestamp } from '@/lib/wizardSaveStatus';
 import { computeWizardProgress } from '@/lib/wizardProgress';
 
 import {
@@ -278,6 +278,8 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
         : cataloguePublisherId,
       setCurrentDraftId,
     });
+    // Remember when the server confirmed this draft; the resume dialog shows it.
+    useDevelopmentWizard.setState?.({ draftSavedAt: Date.now() });
 
     if (isNewDraft && result?.id) {
       // A reload now resumes this draft instead of starting over.
@@ -496,6 +498,9 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
   const refetchEdit = shouldUsePublisherApi ? refetchPublisherEdit : refetchDeveloperEdit;
   const activeLoadedDraft = shouldUsePublisherApi ? loadedPublisherDraft : loadedDraft;
   const activeDraftError = shouldUsePublisherApi ? publisherDraftError : draftError;
+  // After a reload with ?draftId the badge shows the server draft's own saved time.
+  const loadedDraftSavedAt =
+    isHydrated && !isEditMode ? parseServerTimestamp(activeLoadedDraft?.lastModified) : null;
 
   // --- Error handling ---
   useEffect(() => {
@@ -562,8 +567,11 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
     if (!activeLoadedDraft?.draftData || isHydrated) return;
 
     hydrateDevelopment(activeLoadedDraft.draftData);
-    // Remember which server draft this local copy belongs to.
-    useDevelopmentWizard.setState?.({ draftId: currentDraftId });
+    // Remember which server draft this local copy belongs to, and when it was saved.
+    useDevelopmentWizard.setState?.({
+      draftId: currentDraftId,
+      draftSavedAt: parseServerTimestamp(activeLoadedDraft.lastModified)?.getTime(),
+    });
     setIsHydrated(true);
     toast.success('Draft loaded successfully');
   }, [persistReady, isEditMode, activeLoadedDraft, isHydrated, hydrateDevelopment]);
@@ -690,8 +698,13 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
         onExit={() => setShowExitDialog(true)}
         onSaveDraft={handleManualSaveDraft}
         isSavingDraft={saveDraftMutation.isPending || savePublisherDraftMutation.isPending}
-        // "Saved" is only ever shown after a confirmed server write.
-        save={{ isSaving, hasError: Boolean(autoSaveError), lastSavedAt: lastSaved }}
+        // "Saved" is only ever shown after a confirmed server write: this
+        // session's, or (after a reload with ?draftId) the loaded server draft's.
+        save={{
+          isSaving,
+          hasError: Boolean(autoSaveError),
+          lastSavedAt: lastSaved ?? loadedDraftSavedAt,
+        }}
         onRetrySave={retrySave}
         publisherName={shouldUsePublisherApi ? publisherContext?.publisherName : null}
         changePublisherHref={shouldUsePublisherApi ? '/admin/publisher' : undefined}
@@ -707,8 +720,12 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
       ? getVisibleSteps(draftWorkflow, store.getWizardData?.() ?? developmentData).map(s => s.id)
       : [],
     currentStepId,
-    onProjectSetup: !draftWorkflow,
   });
+  // The resume dialog: when the server last confirmed this draft.
+  const localDraftSavedAt = (useDevelopmentWizard.getState?.() as any)?.draftSavedAt;
+  const resumeDialogSavedAt =
+    parseServerTimestamp(localDraftSavedAt ? new Date(localDraftSavedAt) : null) ??
+    parseServerTimestamp(activeLoadedDraft?.lastModified);
 
   return (
     <>
@@ -737,10 +754,10 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
         wizardType="development"
         draftData={{
           currentStep: Math.max(1, draftProgress.position),
-          totalSteps: draftProgress.total,
-          developmentName: developmentData.name || '',
+          totalSteps: draftProgress.total || WORKFLOWS.residential_sale.steps.length,
+          developmentName: draftDisplayName(developmentData.name),
           address: developmentData.location?.address || '',
-          lastModified: activeLoadedDraft?.lastModified || undefined,
+          lastModified: resumeDialogSavedAt ?? undefined,
         }}
       />
 

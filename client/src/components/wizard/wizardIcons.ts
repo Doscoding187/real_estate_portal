@@ -1,5 +1,4 @@
 import {
-  Building,
   Building2,
   CalendarClock,
   Cctv,
@@ -47,7 +46,7 @@ export const FALLBACK_ICON: LucideIcon = Star;
 /** Steps, keyed by workflow step id (and a few friendly aliases). */
 export const STEP_ICONS: Record<string, LucideIcon> = {
   project_setup: Home,
-  configuration: Building,
+  configuration: Home,
   identity_market: PenLine,
   location: MapPin,
   governance_finances: Wallet,
@@ -87,6 +86,18 @@ export const STATUS_ICONS: Record<string, LucideIcon> = {
   ready_to_move_in: KeyRound,
   sold_out: Tag,
 };
+
+/** The four sales-status cards on the About step. */
+export const SALES_CHOICE_ICONS: Record<string, LucideIcon> = {
+  launching: CalendarClock,
+  off_plan: Construction,
+  ready: KeyRound,
+  sold_out: Tag,
+};
+
+export function iconForSalesChoice(value: string | null | undefined): LucideIcon {
+  return (value && SALES_CHOICE_ICONS[value]) || Hourglass;
+}
 
 /** Ordered rules; first match wins. Patterns run on the lower-cased label. */
 const AMENITY_RULES: Array<{ icon: LucideIcon; pattern: RegExp }> = [

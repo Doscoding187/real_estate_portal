@@ -38,6 +38,26 @@ export function describeSaveStatus({
 }
 
 /**
+ * The server stores draft times as "2026-11-19 10:00:00" (UTC, no zone) or as
+ * ISO text. Returns a real Date, or null when there is no usable time.
+ */
+export function parseServerTimestamp(value: unknown): Date | null {
+  if (value === null || value === undefined || value === '') return null;
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
+  const text = String(value).trim();
+  const hasZone = /(Z|[+-]\d{2}:?\d{2})$/.test(text);
+  const normalized = hasZone ? text : `${text.replace(' ', 'T')}Z`;
+  const date = new Date(normalized);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+/** What the draft dialog shows as the draft's name. */
+export function draftDisplayName(name: unknown): string {
+  const text = typeof name === 'string' ? name.trim() : '';
+  return text || 'Untitled';
+}
+
+/**
  * True when the local wizard state holds something a publisher would be upset
  * to lose. Used to decide between a clean start and "Resume draft / Start new".
  */
