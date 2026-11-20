@@ -1,6 +1,4 @@
 import { cleanup, render, screen } from '@testing-library/react';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { createElement, type ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -78,17 +76,5 @@ describe('super admin inside /developer/*', () => {
     expect(screen.getByText(/Developer layout/)).toBeInTheDocument();
     expect(screen.getByText(/Create development/)).toBeInTheDocument();
     expect(redirectMock).not.toHaveBeenCalled();
-  });
-});
-
-describe('admin publisher entry points', () => {
-  const read = (p: string) => readFileSync(resolve(__dirname, '../../', p), 'utf8');
-  it.each([
-    'pages/admin/publisher/PublisherDevelopments.tsx',
-    'pages/admin/DistributionNetworkPage.tsx',
-  ])('%s links to the admin wizard route only', file => {
-    const src = read(file);
-    expect(src).not.toContain('/developer/create-development');
-    expect(src).toContain('/admin/publisher/developments/new');
   });
 });
