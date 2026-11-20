@@ -45,6 +45,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useInvalidateAdminQueues } from './dashboard/useInvalidateAdminQueues';
 import {
   CanonicalPlaceSelector,
   type CanonicalPlaceSelection,
@@ -77,6 +78,8 @@ export default function DevelopmentOversight() {
     return `${hours}h`;
   };
 
+  const invalidateQueues = useInvalidateAdminQueues();
+
   // Mutations
   const approveMutation = trpc.admin.adminApproveDevelopment.useMutation({
     onSuccess: result => {
@@ -88,6 +91,7 @@ export default function DevelopmentOversight() {
         );
       }
       refetch();
+      invalidateQueues();
       closeDialog();
     },
     onError: error => {
@@ -99,6 +103,7 @@ export default function DevelopmentOversight() {
     onSuccess: () => {
       toast.success('Development rejected successfully');
       refetch();
+      invalidateQueues();
       closeDialog();
     },
     onError: error => {
@@ -110,6 +115,7 @@ export default function DevelopmentOversight() {
     onSuccess: () => {
       toast.success('Feedback sent to developer');
       refetch();
+      invalidateQueues();
       closeDialog();
     },
     onError: error => {
@@ -189,7 +195,7 @@ export default function DevelopmentOversight() {
           <div className="flex items-center gap-3">
             <Building2 className="h-8 w-8 text-primary" />
             <div>
-              <h1 className="text-3xl font-bold text-slate-800">Development Management</h1>
+              <h2 className="text-xl font-bold text-slate-800">Development Management</h2>
               <p className="text-muted-foreground">Review and moderate development applications</p>
             </div>
           </div>

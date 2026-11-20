@@ -17,6 +17,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { CheckCircle, XCircle, Clock, User, Phone, FileText, Award, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useInvalidateAdminQueues } from './dashboard/useInvalidateAdminQueues';
 
 type AgentStatus = 'pending' | 'approved' | 'rejected' | 'suspended';
 
@@ -30,14 +31,17 @@ export default function AgentApprovals() {
   const {
     data: agents,
     isLoading,
+    isError,
     refetch,
   } = trpc.admin.getPendingAgents.useQuery({ status: selectedStatus }, { enabled: true });
+  const invalidateQueues = useInvalidateAdminQueues();
 
   // Approve mutation
   const approveMutation = trpc.admin.approveAgent.useMutation({
     onSuccess: () => {
       toast.success('Agent approved successfully!');
       refetch();
+      invalidateQueues();
     },
     onError: error => {
       toast.error('Failed to approve agent: ' + error.message);
@@ -52,6 +56,7 @@ export default function AgentApprovals() {
       setRejectionReason('');
       setSelectedAgentId(null);
       refetch();
+      invalidateQueues();
     },
     onError: error => {
       toast.error('Failed to reject agent: ' + error.message);
@@ -95,10 +100,12 @@ export default function AgentApprovals() {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-slate-900">Agent Approvals</h1>
-        <p className="text-slate-600 mt-1">Review and manage agent registration applications</p>
+        <h2 className="text-xl font-bold text-slate-900">Agent Approvals</h2>
+        <p className="text-sm text-slate-600 mt-1">
+          Review and manage agent registration applications
+        </p>
       </div>
 
       <Tabs value={selectedStatus} onValueChange={v => setSelectedStatus(v as AgentStatus)}>
@@ -113,6 +120,13 @@ export default function AgentApprovals() {
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            </div>
+          ) : isError ? (
+            <div role="alert" className="flex items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+              <span>Could not load agent applications.</span>
+              <Button variant="outline" onClick={() => refetch()}>
+                Retry
+              </Button>
             </div>
           ) : agents && agents.length > 0 ? (
             <div className="grid gap-4">
@@ -193,7 +207,7 @@ export default function AgentApprovals() {
                       <div className="flex gap-2 pt-2 border-t">
                         <Button
                           onClick={() => handleApprove(agent.id)}
-                          disabled={approveMutation.isLoading}
+                          disabled={approveMutation.isPending}
                           className="flex-1 bg-green-600 hover:bg-green-700"
                         >
                           <CheckCircle className="h-4 w-4 mr-2" />
@@ -202,7 +216,7 @@ export default function AgentApprovals() {
                         {agent.status === 'pending' && (
                           <Button
                             onClick={() => handleRejectClick(agent.id)}
-                            disabled={rejectMutation.isLoading}
+                            disabled={rejectMutation.isPending}
                             variant="destructive"
                             className="flex-1"
                           >
@@ -254,9 +268,9 @@ export default function AgentApprovals() {
             <Button
               variant="destructive"
               onClick={handleRejectConfirm}
-              disabled={rejectMutation.isLoading}
+              disabled={rejectMutation.isPending}
             >
-              {rejectMutation.isLoading ? (
+              {rejectMutation.isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   Rejecting...

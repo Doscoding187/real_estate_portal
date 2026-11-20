@@ -46,6 +46,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useInvalidateAdminQueues } from './dashboard/useInvalidateAdminQueues';
 
 function getSourceListingId(property: { listingId?: unknown } | null): number | null {
   const id = property?.listingId;
@@ -89,6 +90,8 @@ export default function ListingOversight() {
     status: statusFilter !== 'all' ? statusFilter : undefined,
   });
 
+  const invalidateQueues = useInvalidateAdminQueues();
+
   // Client-side pagination
   const data = allData ? allData.slice((page - 1) * limit, page * limit) : [];
   const totalPages = allData ? Math.ceil(allData.length / limit) : 1;
@@ -98,6 +101,7 @@ export default function ListingOversight() {
     onSuccess: () => {
       toast.success('Property approved successfully');
       refetch();
+      invalidateQueues();
       setIsActionDialogOpen(false);
       setSelectedProperty(null);
       setActionReason('');
@@ -111,6 +115,7 @@ export default function ListingOversight() {
     onSuccess: () => {
       toast.success('Property rejected successfully');
       refetch();
+      invalidateQueues();
       setIsActionDialogOpen(false);
       setSelectedProperty(null);
       setActionReason('');
@@ -124,6 +129,7 @@ export default function ListingOversight() {
     onSuccess: () => {
       toast.success('Property deleted successfully');
       refetch();
+      invalidateQueues();
       setIsDeleteDialogOpen(false);
       setPropertyToDelete(null);
     },
@@ -261,7 +267,7 @@ export default function ListingOversight() {
             </Button>
             <Eye className="h-8 w-8 text-primary" />
             <div>
-              <h1 className="text-3xl font-bold text-slate-800">Listing Approvals</h1>
+              <h2 className="text-xl font-bold text-slate-800">Listing Approvals</h2>
               <p className="text-muted-foreground">Review and moderate property listings</p>
             </div>
           </div>

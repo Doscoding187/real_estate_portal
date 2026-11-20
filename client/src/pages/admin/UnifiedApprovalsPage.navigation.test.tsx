@@ -6,6 +6,21 @@ vi.mock('wouter', () => ({
   useLocation: () => ['/admin/approvals', harness.navigate],
   useSearch: () => harness.search,
 }));
+vi.mock('@/lib/trpc', () => ({
+  trpc: {
+    admin: {
+      getAdminActionItems: {
+        useQuery: () => ({
+          data: {
+            pendingAgentApprovals: 3,
+            pendingListingApprovals: 0,
+            pendingDevelopmentApprovals: 1,
+          },
+        }),
+      },
+    },
+  },
+}));
 vi.mock('./AgentApprovals', () => ({ default: () => <div>Agent review queue</div> }));
 vi.mock('./ListingOversight', () => ({ default: () => <div>Listing review queue</div> }));
 vi.mock('./DevelopmentOversight', () => ({ default: () => <div>Development review queue</div> }));
@@ -20,6 +35,15 @@ describe('approvals category routing', () => {
     harness.search = search;
     render(<UnifiedApprovalsPage />);
     expect(screen.getByText(queue)).toBeVisible();
+  });
+  it('shows the real pending count on a tab only when there is one', () => {
+    harness.search = '';
+    render(<UnifiedApprovalsPage />);
+    expect(screen.getByRole('tab', { name: 'Agent Approvals' }).textContent).toContain('3');
+    expect(screen.getByRole('tab', { name: 'Development Approvals' }).textContent).toContain('1');
+    expect(screen.getByRole('tab', { name: 'Listing Approvals' }).textContent).toBe(
+      'Listing Approvals',
+    );
   });
   it('keeps a changed category in the URL', () => {
     harness.search = '?tab=agents';
