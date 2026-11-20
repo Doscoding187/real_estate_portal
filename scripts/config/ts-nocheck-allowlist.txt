@@ -43,14 +43,12 @@ client/src/components/ui/sidebar.tsx
 client/src/components/wizard/DevelopmentPreview.tsx
 client/src/contexts/BrandingContext.tsx
 client/src/pages/admin/AgentApprovals.tsx
-client/src/pages/admin/AuditLogs.tsx
 client/src/pages/admin/CampaignInsights.tsx
 client/src/pages/admin/CreateCampaignWizard.tsx
 client/src/pages/admin/DevelopersPage.tsx
 client/src/pages/admin/DevelopmentOversight.tsx
 client/src/pages/admin/MarketingCampaignsPage.tsx
 client/src/pages/admin/PlanEditor.tsx
-client/src/pages/admin/PlatformSettings.tsx
 client/src/pages/admin/RevenueCenterPage.tsx
 client/src/pages/admin/SubscriptionManagement.tsx
 client/src/pages/admin/SubscriptionManagementPage.tsx

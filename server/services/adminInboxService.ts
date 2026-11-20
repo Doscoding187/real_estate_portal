@@ -2,7 +2,7 @@
  * Super Admin daily inbox: read-only queries over existing tables.
  * No writes, no schema change. Every row returned is a real pending work item.
  */
-import { and, desc, eq, gte, inArray, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, lt, sql } from 'drizzle-orm';
 import {
   agents,
   auditLogs,
@@ -297,4 +297,65 @@ export async function loadWeeklyGrowth(): Promise<AdminWeeklyPoint[]> {
       .groupBy(leadBucket),
   ]);
   return fillWeeklySeries(now, { signups, paidAccounts, enquiries });
+}
+
+export type AdminAuditLogRow = {
+  id: number;
+  userId: number;
+  actorName: string | null;
+  action: string;
+  targetType: string | null;
+  targetId: number | null;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
+};
+
+export function parseAuditMetadata(raw: string | null): Record<string, unknown> | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : { value: parsed };
+  } catch {
+    return { note: raw };
+  }
+}
+
+/**
+ * Read-only audit trail, newest first, paged by a primary-key cursor (no created_at index
+ * needed). Fetches one extra row to tell whether older entries exist.
+ */
+export async function loadAuditLogs(input: {
+  limit: number;
+  action?: string;
+  beforeId?: number;
+}): Promise<{ logs: AdminAuditLogRow[]; hasMore: boolean }> {
+  const db = await requireDb();
+  const conditions = [
+    input.action ? eq(auditLogs.action, input.action) : undefined,
+    input.beforeId ? lt(auditLogs.id, input.beforeId) : undefined,
+  ].filter(Boolean) as ReturnType<typeof eq>[];
+  const rows = await db
+    .select({
+      id: auditLogs.id,
+      userId: auditLogs.userId,
+      actorName: users.name,
+      action: auditLogs.action,
+      targetType: auditLogs.targetType,
+      targetId: auditLogs.targetId,
+      metadata: auditLogs.metadata,
+      createdAt: auditLogs.createdAt,
+    })
+    .from(auditLogs)
+    .leftJoin(users, eq(auditLogs.userId, users.id))
+    .where(conditions.length ? and(...conditions) : undefined)
+    .orderBy(desc(auditLogs.id))
+    .limit(input.limit + 1);
+  const hasMore = rows.length > input.limit;
+  return {
+    hasMore,
+    logs: rows.slice(0, input.limit).flatMap(row => {
+      const createdAt = toIsoUtc(row.createdAt);
+      return createdAt ? [{ ...row, metadata: parseAuditMetadata(row.metadata), createdAt }] : [];
+    }),
+  };
 }

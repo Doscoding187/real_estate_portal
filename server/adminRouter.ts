@@ -49,6 +49,7 @@ import { nowAsDbTimestamp } from './utils/dbTypeUtils';
 import { developmentService } from './services/developmentService';
 import {
   loadAdminInbox,
+  loadAuditLogs,
   loadRecentAdminActivity,
   loadWeeklyGrowth,
 } from './services/adminInboxService';
@@ -550,6 +551,17 @@ export const adminRouter = router({
 
   /** Super Admin: most recent audit log entries (read-only). */
   getRecentAdminActivity: superAdminProcedure.query(async () => loadRecentAdminActivity(8)),
+
+  /** Super Admin: audit trail, newest first, cursor-paged (read-only). */
+  getAuditLogs: superAdminProcedure
+    .input(
+      z.object({
+        limit: z.number().int().min(1).max(100).default(50),
+        action: z.string().min(1).max(100).optional(),
+        beforeId: z.number().int().positive().optional(),
+      }),
+    )
+    .query(async ({ input }) => loadAuditLogs(input)),
 
   /** Super Admin: weekly sign-ups, verified payments and enquiries, last 8 weeks (read-only). */
   getWeeklyGrowth: superAdminProcedure.query(async () => loadWeeklyGrowth()),

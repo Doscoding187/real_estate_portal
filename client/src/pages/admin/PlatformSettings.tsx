@@ -1,276 +1,146 @@
-// @ts-nocheck
-import { useState } from 'react';
 import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { isSuperAdminRole } from '@/_core/roles';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { Settings, ArrowLeft, Save, Key, Tag, DollarSign, Bell, Shield, Zap } from 'lucide-react';
-import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
+
+const Row = ({ label, value }: { label: string; value: string }) => (
+  <div className="flex items-baseline justify-between gap-4 py-2 border-b border-slate-100 text-sm">
+    <span className="text-slate-600 whitespace-nowrap">{label}</span>
+    <span className="font-medium text-slate-900 text-right break-all">{value}</span>
+  </div>
+);
+
+const Skeleton = () => <div className="h-24 animate-pulse rounded bg-slate-100" />;
+
+const ErrorRetry = ({ what, onRetry }: { what: string; onRetry: () => void }) => (
+  <div role="alert" className="flex items-center justify-between gap-3 text-sm text-red-800">
+    <span>Could not load {what}.</span>
+    <Button variant="outline" onClick={onRetry}>
+      Retry
+    </Button>
+  </div>
+);
+
+/** State groups that need an operator, in the order they should be read. */
+const EMAIL_STATE_LABELS: Record<string, string> = {
+  unknown: 'Outcome unknown',
+  permanent_failed: 'Failed permanently',
+  retryable_failed: 'Failed, will retry',
+  pending: 'Waiting to send',
+  claimed: 'Sending now',
+};
+
+export function countByState(rows: { state: string; stale?: boolean }[]) {
+  const counts: Record<string, number> = {};
+  for (const row of rows) counts[row.state] = (counts[row.state] ?? 0) + 1;
+  return counts;
+}
 
 export default function PlatformSettings() {
   const [, setLocation] = useLocation();
   const { user, isAuthenticated } = useAuth();
-  const [settings, setSettings] = useState<Record<string, any>>({});
-  const [modifiedKeys, setModifiedKeys] = useState<Set<string>>(new Set());
   const isSuperAdmin = isSuperAdminRole(user?.role);
 
-  const { data: currentSettings, isLoading } = trpc.admin.getPlatformSettings.useQuery();
+  const activation = trpc.admin.getCommercialActivationStatus.useQuery();
+  const email = trpc.admin.getTransactionalEmailBacklog.useQuery();
 
-  const updateSettingMutation = trpc.admin.updatePlatformSetting.useMutation({
-    onSuccess: () => {
-      toast.success('Setting updated successfully');
-      setModifiedKeys(new Set());
-    },
-    onError: error => {
-      toast.error(error.message || 'Failed to update setting');
-    },
-  });
-
-  // Redirect if not authenticated or not super admin
   if (!isAuthenticated || !isSuperAdmin) {
     setLocation('/login');
     return null;
   }
 
-  const handleSettingChange = (key: string, value: any) => {
-    setSettings(prev => ({ ...prev, [key]: value }));
-    setModifiedKeys(prev => new Set(prev).add(key));
-  };
-
-  const handleSaveSetting = (key: string) => {
-    const value = settings[key];
-    if (value === undefined) return;
-
-    updateSettingMutation.mutate({
-      key,
-      value,
-    });
-  };
-
-  const getSettingValue = (key: string, defaultValue: any = '') => {
-    if (settings[key] !== undefined) return settings[key];
-
-    const setting = currentSettings?.find((s: any) => s.key === key);
-    if (setting) {
-      try {
-        return JSON.parse(setting.value);
-      } catch {
-        return setting.value;
-      }
-    }
-
-    return defaultValue;
-  };
-
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case 'pricing':
-        return <DollarSign className="h-4 w-4" />;
-      case 'features':
-        return <Zap className="h-4 w-4" />;
-      case 'notifications':
-        return <Bell className="h-4 w-4" />;
-      case 'limits':
-        return <Shield className="h-4 w-4" />;
-      default:
-        return <Key className="h-4 w-4" />;
-    }
-  };
-
-  const categories = ['pricing', 'features', 'notifications', 'limits', 'other'];
-  const categoryTitles = {
-    pricing: 'Pricing & Billing',
-    features: 'Feature Toggles',
-    notifications: 'Notifications',
-    limits: 'Limits & Restrictions',
-    other: 'Other Settings',
-  };
-
-  const defaultSettings = {
-    pricing: [],
-    features: [
-      {
-        key: 'featured_listings_enabled',
-        label: 'Enable Featured Listings',
-        type: 'boolean',
-        default: true,
-      },
-      {
-        key: 'explore_videos_enabled',
-        label: 'Enable Explore Videos',
-        type: 'boolean',
-        default: true,
-      },
-      {
-        key: 'voice_transcription_enabled',
-        label: 'Enable Voice Transcription',
-        type: 'boolean',
-        default: false,
-      },
-      {
-        key: 'ai_agent_enabled',
-        label: 'Enable AI Agent Features',
-        type: 'boolean',
-        default: false,
-      },
-    ],
-    notifications: [
-      {
-        key: 'email_notifications_enabled',
-        label: 'Enable Email Notifications',
-        type: 'boolean',
-        default: true,
-      },
-      {
-        key: 'subscription_reminder_days',
-        label: 'Subscription Reminder (Days Before Expiry)',
-        type: 'number',
-        default: 7,
-      },
-    ],
-    limits: [
-      {
-        key: 'max_properties_per_agency',
-        label: 'Max Properties Per Agency',
-        type: 'number',
-        default: 100,
-      },
-      {
-        key: 'max_images_per_property',
-        label: 'Max Images Per Property',
-        type: 'number',
-        default: 20,
-      },
-      {
-        key: 'max_video_duration_seconds',
-        label: 'Max Video Duration (Seconds)',
-        type: 'number',
-        default: 60,
-      },
-    ],
-    other: [
-      { key: 'platform_name', label: 'Platform Name', type: 'text', default: 'SA Property Portal' },
-      {
-        key: 'support_email',
-        label: 'Support Email',
-        type: 'text',
-        default: 'support@propertyportal.co.za',
-      },
-      { key: 'terms_url', label: 'Terms of Service URL', type: 'text', default: '' },
-      { key: 'privacy_url', label: 'Privacy Policy URL', type: 'text', default: '' },
-    ],
-  };
+  const a = activation.data;
+  const emailRows = email.data ?? [];
+  const emailCounts = countByState(emailRows);
+  const stale = emailRows.filter(r => r.stale).length;
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => setLocation('/admin/overview')}>
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <Settings className="h-8 w-8 text-primary" />
-            <div>
-              <h1 className="text-3xl font-bold">Platform Settings</h1>
-              <p className="text-muted-foreground">
-                Configure global platform settings and features
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Settings by Category */}
-        {isLoading ? (
-          <Card>
-            <CardContent className="py-12 text-center text-muted-foreground">
-              Loading settings...
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-6">
-            {categories.map(category => (
-              <Card key={category}>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    {getCategoryIcon(category)}
-                    {categoryTitles[category as keyof typeof categoryTitles]}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {defaultSettings[category as keyof typeof defaultSettings].map((setting: any) => (
-                    <div
-                      key={setting.key}
-                      className="flex items-center justify-between p-4 border rounded-lg"
-                    >
-                      <div className="flex-1">
-                        <Label htmlFor={setting.key} className="text-sm font-medium">
-                          {setting.label}
-                        </Label>
-                        {setting.type === 'boolean' ? (
-                          <div className="mt-2">
-                            <Switch
-                              id={setting.key}
-                              checked={getSettingValue(setting.key, setting.default)}
-                              onCheckedChange={checked => handleSettingChange(setting.key, checked)}
-                            />
-                          </div>
-                        ) : setting.type === 'number' ? (
-                          <div className="mt-2">
-                            <Input
-                              id={setting.key}
-                              type="number"
-                              value={getSettingValue(setting.key, setting.default)}
-                              onChange={e =>
-                                handleSettingChange(setting.key, parseInt(e.target.value) || 0)
-                              }
-                              className="w-32"
-                            />
-                          </div>
-                        ) : (
-                          <div className="mt-2">
-                            <Input
-                              id={setting.key}
-                              type="text"
-                              value={getSettingValue(setting.key, setting.default)}
-                              onChange={e => handleSettingChange(setting.key, e.target.value)}
-                              className="w-64"
-                            />
-                          </div>
-                        )}
-                      </div>
-
-                      {modifiedKeys.has(setting.key) && (
-                        <Button
-                          size="sm"
-                          onClick={() => handleSaveSetting(setting.key)}
-                          disabled={updateSettingMutation.isPending}
-                        >
-                          <Save className="h-3 w-3 mr-1" />
-                          Save
-                        </Button>
-                      )}
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+    <div className="max-w-5xl mx-auto py-6 space-y-5">
+      <div>
+        <h1 className="text-2xl font-bold text-slate-900">Settings and integrations</h1>
+        <p className="text-sm text-slate-600">
+          Live status of paid access and email delivery. Read-only.
+        </p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Paid access</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {activation.isLoading ? (
+            <Skeleton />
+          ) : activation.isError || !a ? (
+            <ErrorRetry what="paid access status" onRetry={() => activation.refetch()} />
+          ) : (
+            <div>
+              <Row
+                label="Mode"
+                value={a.status === 'preparation_only' ? 'Preparation only (paid access off)' : 'Live'}
+              />
+              <Row label="Paid products enabled" value={a.enabled ? 'Yes' : 'No'} />
+              <Row label="New sales" value={a.salesPaused ? 'Paused' : 'Open'} />
+              <Row
+                label="Enabled products"
+                value={a.enabledProductKeys?.length ? a.enabledProductKeys.join(', ') : 'None'}
+              />
+              <Row label="Release" value={a.releaseId || 'Not set'} />
+              <Row label="Build" value={a.buildSha} />
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Email delivery</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {email.isLoading ? (
+            <Skeleton />
+          ) : email.isError ? (
+            <ErrorRetry what="the email backlog" onRetry={() => email.refetch()} />
+          ) : emailRows.length === 0 ? (
+            <p className="text-sm text-slate-700">No emails are waiting or failing. All clear.</p>
+          ) : (
+            <div>
+              {Object.entries(EMAIL_STATE_LABELS)
+                .filter(([state]) => emailCounts[state])
+                .map(([state, label]) => (
+                  <div
+                    key={state}
+                    className="flex items-center justify-between py-2 border-b border-slate-100 text-sm"
+                  >
+                    <span className="text-slate-700">{label}</span>
+                    <Badge variant={state === 'permanent_failed' || state === 'unknown' ? 'destructive' : 'secondary'}>
+                      {emailCounts[state]}
+                    </Badge>
+                  </div>
+                ))}
+              {stale > 0 ? (
+                <p className="text-sm text-amber-900 mt-3">
+                  {stale} {stale === 1 ? 'email has' : 'emails have'} been waiting longer than
+                  expected.
+                </p>
+              ) : null}
+              {emailRows.length >= 200 ? (
+                <p className="text-xs text-slate-600 mt-2">Showing the oldest 200.</p>
+              ) : null}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="pt-6 text-sm text-slate-700">
+          Platform toggles (featured listings, upload limits, support email and similar) are not
+          offered here because no part of the platform reads them yet. They return when they are
+          wired to real behaviour.
+        </CardContent>
+      </Card>
     </div>
   );
 }

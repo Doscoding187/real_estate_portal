@@ -2,7 +2,13 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../db', () => ({ getDb: vi.fn() }));
 
-import { fillWeeklySeries, sortInbox, toIsoUtc, type AdminInboxItem } from '../adminInboxService';
+import {
+  fillWeeklySeries,
+  parseAuditMetadata,
+  sortInbox,
+  toIsoUtc,
+  type AdminInboxItem,
+} from '../adminInboxService';
 
 const item = (id: string, waitingSince: string): AdminInboxItem => ({
   id,
@@ -45,6 +51,13 @@ describe('adminInboxService helpers', () => {
     expect(points[6].enquiries).toBe(3);
     expect(points.every(p => p.paidAccounts === 0)).toBe(true);
     expect(points[7].weekStart).toBe('2026-11-13');
+  });
+
+  it('parses audit metadata safely', () => {
+    expect(parseAuditMetadata(null)).toBeNull();
+    expect(parseAuditMetadata('{"a":1}')).toEqual({ a: 1 });
+    expect(parseAuditMetadata('not json')).toEqual({ note: 'not json' });
+    expect(parseAuditMetadata('[1,2]')).toEqual({ value: [1, 2] });
   });
 
   it('ignores buckets outside the window', () => {
