@@ -1,4 +1,5 @@
 import { Link } from 'wouter';
+import { PlaceDataAttribution } from '@/components/PlaceDataAttribution';
 import { isHomepageHeroJourneyEnabled } from '@/lib/publicNavigation';
 import { CITY_GUIDES } from '@/lib/cityGuides';
 import {
@@ -155,18 +156,7 @@ export function ModernFooter() {
           </a>
         </p>
 
-        <p data-testid="footer-data-attribution" className="mt-4 text-xs text-slate-500">
-          Place data includes{' '}
-          <a
-            href="https://www.geonames.org"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline transition-colors hover:text-blue-400"
-          >
-            GeoNames (geonames.org, CC BY 4.0)
-          </a>{' '}
-          and Wikidata.
-        </p>
+        <PlaceDataAttribution className="mt-4" />
 
         <div className="mt-4 flex flex-col gap-3 border-t border-slate-800 pt-6 text-sm text-slate-400 sm:flex-row sm:items-center sm:justify-between">
           <span>© 2026 Property Listify. All rights reserved.</span>
