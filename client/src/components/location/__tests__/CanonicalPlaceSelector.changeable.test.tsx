@@ -64,4 +64,24 @@ describe('CanonicalPlaceSelector can be changed', () => {
     render(<RebuildingParent clearable={false} />);
     expect(screen.queryByRole('button', { name: 'Change' })).not.toBeInTheDocument();
   });
+
+  it('remounting the picker (as LocationPhase does for a stale suburb) leaves no typed text behind', () => {
+    function Parent() {
+      const [key, setKey] = useState(0);
+      return (
+        <>
+          <button type="button" onClick={() => setKey(k => k + 1)}>
+            drop
+          </button>
+          <CanonicalPlaceSelector key={key} value={null} onChange={() => undefined} inputId="p" />
+        </>
+      );
+    }
+    render(<Parent />);
+    const input = screen.getByRole('combobox') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'Kya Sands' } });
+    expect(input.value).toBe('Kya Sands');
+    fireEvent.click(screen.getByText('drop'));
+    expect((screen.getByRole('combobox') as HTMLInputElement).value).toBe('');
+  });
 });

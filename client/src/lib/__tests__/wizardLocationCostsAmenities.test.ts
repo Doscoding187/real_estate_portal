@@ -14,7 +14,6 @@ import {
   parseMonthlyAmount,
   ratesPatch,
   submitAddress,
-  suburbAssignmentRequest,
   toggleAmenity,
   toggleHighlight,
   validateAmenitiesStep,
@@ -145,24 +144,6 @@ describe('location validation agrees with the server', () => {
     expect(isInformalSettlementName('Kya Sands Informal Settlement')).toBe(true);
     expect(isInformalSettlementName('gauteng/jhb/lucky-7-informal-settlement')).toBe(true);
     expect(isInformalSettlementName('North Riding')).toBe(false);
-  });
-});
-
-describe('suburb assignment request (derived place)', () => {
-  it('records the derived Place as a site assignment for the saved development', () => {
-    expect(suburbAssignmentRequest(77, { suburbPlaceId: 'place_1', suburbLabel: 'North Riding' })).toEqual({
-      developmentId: 77,
-      phaseId: null,
-      placeId: 'place_1',
-      evidenceReference: expect.any(String),
-    });
-  });
-  it('is null with no derived place, no development id, or an already recorded one', () => {
-    expect(suburbAssignmentRequest(77, {})).toBeNull();
-    expect(suburbAssignmentRequest(0, { suburbPlaceId: 'place_1' })).toBeNull();
-    expect(
-      suburbAssignmentRequest(77, { suburbPlaceId: 'place_1', suburbAssignedPlaceId: 'place_1' }),
-    ).toBeNull();
   });
 });
 

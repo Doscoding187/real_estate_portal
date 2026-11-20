@@ -116,10 +116,13 @@ export function LocationPhase() {
   // A suburb saved by an earlier version may be an informal settlement. It is not
   // accepted: clear it and ask for a real choice.
   const [staleCleared, setStaleCleared] = useState(false);
+  // Remounting the picker also clears the text the user sees for the dropped suburb.
+  const [pickerKey, setPickerKey] = useState(0);
   useEffect(() => {
     if (suburbId && isInformalSettlementName(suburbText)) {
       handleUpdate({ suburbPlaceId: null, suburbLabel: null });
       setStaleCleared(true);
+      setPickerKey(key => key + 1);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [suburbId, suburbText]);
@@ -183,6 +186,7 @@ export function LocationPhase() {
           <span className="font-normal text-red-700">(required)</span>
         </span>
         <CanonicalPlaceSelector
+          key={pickerKey}
           value={suburbValue}
           onChange={pickSuburb}
           label="Suburb"

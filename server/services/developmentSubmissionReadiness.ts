@@ -220,6 +220,7 @@ function hasValidPersistedImage(images: unknown): boolean {
 export function validatePersistedSubmissionReadiness(
   development: PersistedDevelopment,
   persistedUnitTypes: PersistedUnitType[],
+  suburbContext?: { suburbPlaceValid: boolean; hasAcceptedSiteAssignment: boolean },
 ): SubmissionValidationError[] {
   const errors: SubmissionValidationError[] = [];
   const name = String(development.name ?? '').trim();
@@ -250,8 +251,20 @@ export function validatePersistedSubmissionReadiness(
   }
   // The suburb is part of the address, chosen from our canonical geography; it is
   // carried in estateSpecs and recorded as the Place assignment on publication.
-  if (!String(estateSpecs?.suburbPlaceId ?? '').trim()) {
-    errors.push({ field: 'suburb', message: 'Choose the suburb from the list.' });
+  // Without a database context the suburb only has to be present; with one it must
+  // resolve to an active searchable suburb, or the development must already have an
+  // accepted site assignment (legacy developments and reviewer decisions).
+  const suburbChosen = String(estateSpecs?.suburbPlaceId ?? '').trim() !== '';
+  const suburbOk = suburbContext
+    ? (suburbChosen && suburbContext.suburbPlaceValid) || suburbContext.hasAcceptedSiteAssignment
+    : suburbChosen;
+  if (!suburbOk) {
+    errors.push({
+      field: 'suburb',
+      message: suburbChosen
+        ? 'The chosen suburb is not an active searchable suburb. Choose it again.'
+        : 'Choose the suburb from the list.',
+    });
   }
   if (!hasValidPin) {
     errors.push({

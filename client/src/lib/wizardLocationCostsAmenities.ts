@@ -8,8 +8,8 @@
  *                  stepData.location.suburbPlaceId / suburbLabel   the suburb, chosen from OUR
  *                  canonical geography (never from Google). Carried in estateSpecs
  *                  (suburbPlaceId / suburbLabel); for a curated listing it is recorded after the
- *                  development is saved through the existing adminReviewDevelopmentPlaceAssignment
- *                  mutation (accepted "site" assignment). See suburbAssignmentRequest().
+ *                  development is published, in the same transaction, by the server
+ *                  (recordCuratedSuburbInTransaction: the accepted "site" assignment).
  *   Monthly costs  stepData.governance_finances.rightsAndTaxes {min,max}  -> ratesFrom / ratesTo
  *                  stepData.governance_finances.levyRange {min,max}        -> monthlyLevyFrom / To
  *                  stepData.governance_finances.hasGoverningBody + governanceType
@@ -104,9 +104,6 @@ export function validateLocationStep(location: Record<string, any> | null | unde
   return errors;
 }
 
-export const SUBURB_EVIDENCE_REFERENCE =
-  'Suburb chosen from our canonical geography in the development wizard';
-
 /** Informal settlements are never offered as a suburb. */
 export const isInformalSettlementName = (value: string | null | undefined): boolean =>
   /informal[\s-]*settlement/i.test(String(value ?? ''));
@@ -139,33 +136,6 @@ export function pinDistanceWarning(
   const km = distanceKm(pin, centre);
   if (km <= PIN_FAR_FROM_SUBURB_KM) return null;
   return `This pin is ${Math.round(km)} km from ${suburbLabel || 'the chosen suburb'} — check the address or the pin.`;
-}
-
-export interface SuburbAssignmentRequest {
-  developmentId: number;
-  phaseId: null;
-  placeId: string;
-  evidenceReference: string;
-}
-
-/**
- * The call that records the chosen suburb as the development's accepted
- * "site" Place assignment (adminReviewDevelopmentPlaceAssignment). Null when no
- * suburb was picked in this wizard session, or the picked one is already recorded.
- */
-export function suburbAssignmentRequest(
-  developmentId: number,
-  location: Record<string, any> | null | undefined,
-): SuburbAssignmentRequest | null {
-  const placeId = String(location?.suburbPlaceId ?? '').trim();
-  if (!placeId || !Number.isSafeInteger(developmentId) || developmentId <= 0) return null;
-  if (String(location?.suburbAssignedPlaceId ?? '').trim() === placeId) return null;
-  return {
-    developmentId,
-    phaseId: null,
-    placeId,
-    evidenceReference: SUBURB_EVIDENCE_REFERENCE,
-  };
 }
 
 // -----------------------------------------------------------------------------
