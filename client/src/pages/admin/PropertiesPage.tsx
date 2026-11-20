@@ -22,8 +22,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Eye, Search, Filter, Trash2 } from 'lucide-react';
+import { Eye, Search, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useInvalidateAdminQueues } from './dashboard/useInvalidateAdminQueues';
 import {
   Dialog,
   DialogContent,
@@ -65,20 +66,21 @@ export default function PropertiesPage() {
   const [propertyToDelete, setPropertyToDelete] = useState<Property | null>(null);
   const isSuperAdmin = isSuperAdminRole(user?.role);
 
-  const { data, isLoading } = trpc.admin.listProperties.useQuery({
+  const { data, isLoading, isError, refetch } = trpc.admin.listProperties.useQuery({
     page,
     limit: 20,
     search: searchTerm || undefined,
     status: statusFilter !== 'all' ? statusFilter : undefined,
   });
+  const invalidateQueues = useInvalidateAdminQueues();
 
   const deleteMutation = trpc.listing.delete.useMutation({
     onSuccess: () => {
       toast.success('Property deleted successfully');
       setIsDeleteDialogOpen(false);
       setPropertyToDelete(null);
-      // Refetch to update the list
-      window.location.reload();
+      void refetch();
+      invalidateQueues();
     },
     onError: error => {
       toast.error(error.message || 'Failed to delete property');
@@ -120,14 +122,12 @@ export default function PropertiesPage() {
   };
 
   const handleDelete = (property: Property) => {
-    console.log('Opening delete dialog for:', property.title);
     setPropertyToDelete(property);
     setIsDeleteDialogOpen(true);
   };
 
   const confirmDelete = () => {
     if (!propertyToDelete) return;
-    console.log('Confirming delete for:', propertyToDelete.id);
     deleteMutation.mutate({ id: propertyToDelete.id });
   };
 
@@ -139,8 +139,8 @@ export default function PropertiesPage() {
           <div className="flex items-center gap-3">
             <Eye className="h-8 w-8 text-primary" />
             <div>
-              <h1 className="text-3xl font-bold text-slate-800">Listings</h1>
-              <p className="text-slate-500">
+              <h1 className="text-2xl font-bold text-slate-800">Listings</h1>
+              <p className="text-sm text-slate-600">
                 Manage listing inventory. Open Approvals to review pending submissions.
               </p>
             </div>
@@ -154,9 +154,13 @@ export default function PropertiesPage() {
               <div className="relative w-full md:w-96">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
                 <Input
-                  placeholder="Search by title, city..."
+                  aria-label="Search listings by title or address"
+                  placeholder="Search by title or address..."
                   value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
+                  onChange={e => {
+                    setSearchTerm(e.target.value);
+                    setPage(1);
+                  }}
                   className="pl-10 bg-white/50 border-slate-200 focus:bg-white transition-all"
                 />
               </div>
@@ -182,13 +186,6 @@ export default function PropertiesPage() {
                   <SelectItem value="archived">Archived</SelectItem>
                 </SelectContent>
               </Select>
-              <Button
-                variant="outline"
-                className="flex items-center gap-2 bg-white/50 hover:bg-white"
-              >
-                <Filter className="h-4 w-4" />
-                Advanced Filters
-              </Button>
             </div>
           </CardContent>
         </Card>
@@ -200,9 +197,25 @@ export default function PropertiesPage() {
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="py-12 text-center text-muted-foreground">Loading properties...</div>
+              <div className="space-y-3 py-4" data-testid="listings-loading">
+                {[0, 1, 2, 3].map(i => (
+                  <div key={i} className="h-10 animate-pulse rounded bg-slate-100" />
+                ))}
+              </div>
+            ) : isError ? (
+              <div
+                role="alert"
+                className="py-10 flex items-center justify-center gap-3 text-sm text-red-800"
+              >
+                <span>Could not load listings.</span>
+                <Button variant="outline" onClick={() => refetch()}>
+                  Retry
+                </Button>
+              </div>
             ) : !data?.properties?.length ? (
-              <div className="py-12 text-center text-muted-foreground">No properties found.</div>
+              <div className="py-12 text-center text-muted-foreground">
+                No listings match these filters.
+              </div>
             ) : (
               <>
                 <Table>
@@ -284,6 +297,7 @@ export default function PropertiesPage() {
                             <Button
                               size="sm"
                               variant="destructive"
+                              aria-label={`Delete listing ${property.title || property.id}`}
                               onClick={e => {
                                 e.stopPropagation();
                                 handleDelete(property);
@@ -310,7 +324,8 @@ export default function PropertiesPage() {
                     Previous
                   </Button>
                   <div className="text-sm text-muted-foreground">
-                    Page {page} of {data?.pagination?.totalPages || 1}
+                    Showing {data.properties.length} of {data.pagination?.total ?? data.properties.length}{' '}
+                    &middot; Page {page} of {data?.pagination?.totalPages || 1}
                   </div>
                   <Button
                     variant="outline"
@@ -330,10 +345,7 @@ export default function PropertiesPage() {
         {/* Delete Confirmation Dialog */}
         <Dialog
           open={isDeleteDialogOpen}
-          onOpenChange={open => {
-            console.log('Dialog onOpenChange:', open);
-            setIsDeleteDialogOpen(open);
-          }}
+          onOpenChange={setIsDeleteDialogOpen}
         >
           <DialogContent
             onEscapeKeyDown={e => e.preventDefault()}

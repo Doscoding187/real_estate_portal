@@ -249,9 +249,9 @@ export const SuperAdminPublisher: React.FC = () => {
                     </div>
                   </div>
                   <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
-                    <div className="text-xs text-slate-500 mb-1">Active Developments</div>
+                    <div className="text-xs text-slate-500 mb-1">Developments</div>
                     <div className="text-2xl font-bold text-slate-900">
-                      {globalMetrics?.totalDevelopments || 0}
+                      {globalMetrics ? globalMetrics.totalDevelopments || 0 : '...'}
                     </div>
                   </div>
                 </div>
