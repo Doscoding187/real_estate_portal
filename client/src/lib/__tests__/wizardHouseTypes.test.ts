@@ -11,6 +11,7 @@ import {
   houseTypeProblems,
   homeTypeOf,
   missingFactMessage,
+  missingFieldMessage,
   needsUnitOwnership,
   suggestUnitName,
   withReadyNow,
@@ -66,12 +67,15 @@ describe('house type facts start empty and are required', () => {
   const full = { unitSize: 91, bedrooms: 3, bathrooms: 2, parkingKind: 'garage', parkingBays: 2 };
 
   it('names the first missing fact', () => {
-    expect(missingFactMessage({})).toBe('Unit size is required');
-    expect(missingFactMessage({ unitSize: 91 })).toBe('Bedrooms are required');
-    expect(missingFactMessage({ unitSize: 91, bedrooms: 3 })).toBe('Bathrooms are required');
-    expect(missingFactMessage({ unitSize: 91, bedrooms: 3, bathrooms: 2 })).toBe('Parking type is required');
-    expect(missingFactMessage({ ...full, parkingBays: undefined })).toBe('Parking bays are required');
-    expect(missingFactMessage({ ...full, parkingBays: 0 })).toBe('Parking bays are required');
+    expect(missingFactMessage({})).toBe('Unit size is missing — Basic info');
+    expect(missingFactMessage({ unitSize: 91 })).toBe('Bedrooms is missing — Basic info');
+    expect(missingFactMessage({ unitSize: 91, bedrooms: 3 })).toBe('Bathrooms is missing — Basic info');
+    expect(missingFactMessage({ unitSize: 91, bedrooms: 3, bathrooms: 2 })).toBe(
+      'Parking type is missing — Basic info',
+    );
+    expect(missingFactMessage({ ...full, parkingBays: undefined })).toBe('Parking bays is missing — Basic info');
+    expect(missingFactMessage({ ...full, parkingBays: 0 })).toBe('Parking bays is missing — Basic info');
+    expect(missingFieldMessage('priceFrom')).toBe('Price from is missing — Pricing');
     expect(missingFactMessage(full)).toBeNull();
   });
 

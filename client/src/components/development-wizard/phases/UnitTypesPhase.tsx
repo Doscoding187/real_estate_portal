@@ -69,10 +69,14 @@ import {
   homeTypeOf,
   houseTypeCard,
   isReadyNow,
-  missingFactMessage,
+  FORM_FIELDS,
+  FORM_TAB_LABELS,
+  firstMissingFact,
+  missingFieldMessage,
   needsUnitOwnership,
   suggestUnitName,
   withReadyNow,
+  type FormField,
 } from '@/lib/wizardHouseTypes';
 
 // -- CONSTANTS --
@@ -314,6 +318,18 @@ export function UnitTypesPhase() {
 
   const [unitGallery, setUnitGallery] = useState<MediaItem[]>([]);
   const [floorPlanImages, setFloorPlanImages] = useState<MediaItem[]>([]);
+  // A failed save: the message to show and the field to focus once its tab is showing.
+  const [formError, setFormError] = useState<{ field: FormField; message: string } | null>(null);
+  const [pendingFocus, setPendingFocus] = useState<FormField | null>(null);
+  useEffect(() => {
+    if (!pendingFocus) return;
+    const timer = setTimeout(() => {
+      const el = document.querySelector<HTMLElement>(`[data-field="${pendingFocus}"]`);
+      el?.focus();
+      setPendingFocus(null);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [pendingFocus, activeTab]);
   // Rejected files stay visible under the section until the next good upload there.
   const [mediaErrors, setMediaErrors] = useState<{ gallery?: string[]; floorPlans?: string[] }>({});
 
@@ -561,6 +577,7 @@ export function UnitTypesPhase() {
       }
     }
     setMediaErrors({});
+    setFormError(null);
     setIsDialogOpen(true);
   };
 
@@ -632,56 +649,66 @@ export function UnitTypesPhase() {
   };
 
   const handleSave = (addAnother = false) => {
-    // Validation
+    // A failed save goes to the tab with the first invalid field, shows the message
+    // inline, focuses the field and says so in a toast.
+    const fail = (field: FormField, message?: string) => {
+      const meta = FORM_FIELDS[field];
+      const text = message
+        ? `${message} — ${FORM_TAB_LABELS[meta.tab]}`
+        : missingFieldMessage(field);
+      setActiveTab(meta.tab);
+      setFormError({ field, message: text });
+      setPendingFocus(field);
+      toast.error(text);
+    };
+    setFormError(null);
+
     // Facts first (the suggested name comes from them); nothing is pre-filled.
-    const missingFact = missingFactMessage(formData);
-    if (missingFact) return toast.error(missingFact);
-    if (!formData.name) return toast.error('House type name is required');
-    if (!formData.description) return toast.error('Description is required');
-    if (!formData.unitCategory) return toast.error('Home type is required');
-    if (!formData.unitSubType) return toast.error('Home type is required');
+    const missingFact = firstMissingFact(formData);
+    if (missingFact) return fail(missingFact);
+    if (!formData.name) return fail('name');
+    if (!formData.description) return fail('description');
+    if (!formData.unitCategory || !formData.unitSubType) return fail('homeType');
+    if (askUnitOwnership && !formData.ownershipType) return fail('ownershipType');
     if (formData.unitCategory === 'house' && (!formData.yardSize || formData.yardSize <= 0)) {
       toast.warning('Erf/Garden size is recommended for house unit types');
     }
     if (isAuction) {
-      if (!formData.startingBid || formData.startingBid <= 0)
-        return toast.error('Starting bid is required');
-      if (!formData.auctionStartDate) return toast.error('Auction start date is required');
-      if (!formData.auctionEndDate) return toast.error('Auction end date is required');
+      if (!formData.startingBid || formData.startingBid <= 0) return fail('startingBid');
+      if (!formData.auctionStartDate) return fail('auctionStartDate');
+      if (!formData.auctionEndDate) return fail('auctionEndDate');
 
       const start = new Date(formData.auctionStartDate);
       const end = new Date(formData.auctionEndDate);
       if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-        return toast.error('Auction dates must be valid');
+        return fail('auctionStartDate', 'Auction dates must be valid');
       }
       if (end <= start) {
-        return toast.error('Auction end date must be after start date');
+        return fail('auctionEndDate', 'Auction end date must be after start date');
       }
       if (start < new Date()) {
-        return toast.error('Auction start date cannot be in the past');
+        return fail('auctionStartDate', 'Auction start date cannot be in the past');
       }
       if (
         formData.reservePrice != null &&
         formData.reservePrice > 0 &&
         formData.reservePrice < formData.startingBid
       ) {
-        return toast.error('Reserve price cannot be lower than starting bid');
+        return fail('startingBid', 'Reserve price cannot be lower than starting bid');
       }
     } else if (isRental) {
-      if (!formData.monthlyRentFrom || formData.monthlyRentFrom <= 0)
-        return toast.error('Monthly Rent is required');
+      if (!formData.monthlyRentFrom || formData.monthlyRentFrom <= 0) {
+        return fail('monthlyRentFrom');
+      }
     } else {
-      if (!formData.priceFrom) return toast.error('Price from is required');
+      if (!formData.priceFrom) return fail('priceFrom');
       if (
         formData.priceToExplicit &&
         Number(formData.priceTo) > 0 &&
         Number(formData.priceTo) < Number(formData.priceFrom)
       ) {
-        return toast.error('Price to cannot be lower than price from');
+        return fail('priceTo', 'Price to cannot be lower than price from');
       }
-    }
-    if (askUnitOwnership && !formData.ownershipType) {
-      return toast.error('Choose the ownership for this house type');
     }
 
     const availabilityNotProvided =
@@ -937,6 +964,7 @@ export function UnitTypesPhase() {
                     className="pl-8 h-11 text-lg font-semibold text-slate-900"
                     type="number"
                     placeholder="0"
+                    data-field="priceFrom"
                     value={formData.priceFrom || ''}
                     onFocus={e => e.target.select()}
                     onChange={e => setFormData(p => ({ ...p, priceFrom: +e.target.value }))}
@@ -958,6 +986,7 @@ export function UnitTypesPhase() {
                   type="number"
                   placeholder="Only if the price varies"
                   aria-label="Price to"
+                  data-field="priceTo"
                   value={formData.priceToExplicit && formData.priceTo ? formData.priceTo : ''}
                   onFocus={e => e.target.select()}
                   onChange={e => {
@@ -1096,6 +1125,7 @@ export function UnitTypesPhase() {
                 className="pl-8"
                 type="number"
                 placeholder="0"
+                data-field="monthlyRentFrom"
                 value={formData.monthlyRentFrom || ''}
                 onFocus={e => e.target.select()}
                 onChange={e =>
@@ -1195,6 +1225,7 @@ export function UnitTypesPhase() {
             </Label>
             <Input
               type="datetime-local"
+              data-field="auctionStartDate"
               value={formData.auctionStartDate ?? ''}
               onChange={e => setFormData(p => ({ ...p, auctionStartDate: e.target.value }))}
             />
@@ -1207,6 +1238,7 @@ export function UnitTypesPhase() {
             </Label>
             <Input
               type="datetime-local"
+              data-field="auctionEndDate"
               value={formData.auctionEndDate ?? ''}
               onChange={e => setFormData(p => ({ ...p, auctionEndDate: e.target.value }))}
             />
@@ -1234,6 +1266,7 @@ export function UnitTypesPhase() {
                 className="pl-8"
                 type="number"
                 placeholder="0"
+                data-field="startingBid"
                 value={formData.startingBid ?? ''}
                 onFocus={e => e.target.select()}
                 onChange={e => {
@@ -1438,6 +1471,15 @@ export function UnitTypesPhase() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-6">
+              {formError ? (
+                <div
+                  role="alert"
+                  data-testid="house-form-error"
+                  className="mb-4 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800"
+                >
+                  {formError.message}
+                </div>
+              ) : null}
               <TabsContent value="basic" className="mt-0 space-y-6">
                 <div className="grid gap-4">
                   <div className="space-y-2">
@@ -1447,6 +1489,7 @@ export function UnitTypesPhase() {
                     <Input
                       value={formData.name}
                       aria-label="House type name"
+                      data-field="name"
                       onChange={e =>
                         setFormData(p => ({ ...p, name: e.target.value, nameAuto: false }))
                       }
@@ -1471,6 +1514,7 @@ export function UnitTypesPhase() {
                       Description <span className="text-red-500">*</span>
                     </Label>
                     <Textarea
+                      data-field="description"
                       value={formData.description}
                       onChange={e => setFormData(p => ({ ...p, description: e.target.value }))}
                       placeholder="Highlight unique features..."
@@ -1488,7 +1532,7 @@ export function UnitTypesPhase() {
                           setFormData(p => ({ ...p, ...classificationFor(v as any) }))
                         }
                       >
-                        <SelectTrigger aria-label="Home type">
+                        <SelectTrigger aria-label="Home type" data-field="homeType">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -1509,7 +1553,7 @@ export function UnitTypesPhase() {
                           value={(formData.ownershipType as string) || ''}
                           onValueChange={v => setFormData(p => ({ ...p, ownershipType: v as any }))}
                         >
-                          <SelectTrigger aria-label="Ownership">
+                          <SelectTrigger aria-label="Ownership" data-field="ownershipType">
                             <SelectValue placeholder="Choose ownership" />
                           </SelectTrigger>
                           <SelectContent>
@@ -1534,7 +1578,7 @@ export function UnitTypesPhase() {
                         value={formData.bedrooms?.toString() ?? ''}
                         onValueChange={v => setFormData(p => ({ ...p, bedrooms: parseFloat(v) }))}
                       >
-                        <SelectTrigger aria-label="Bedrooms">
+                        <SelectTrigger aria-label="Bedrooms" data-field="bedrooms">
                           <SelectValue placeholder="Select…" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1555,7 +1599,7 @@ export function UnitTypesPhase() {
                         value={formData.bathrooms?.toString() ?? ''}
                         onValueChange={v => setFormData(p => ({ ...p, bathrooms: parseFloat(v) }))}
                       >
-                        <SelectTrigger aria-label="Bathrooms">
+                        <SelectTrigger aria-label="Bathrooms" data-field="bathrooms">
                           <SelectValue placeholder="Select…" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1577,16 +1621,28 @@ export function UnitTypesPhase() {
                         value={formData.parkingKind || ''}
                         onValueChange={v => {
                           const kind = v as any;
-                          setFormData(p => ({
-                            ...p,
-                            parkingKind: kind,
-                            // No parking means 0 bays; otherwise the publisher types the number.
-                            parkingBays: kind === 'none' ? 0 : p.parkingBays || undefined,
-                            garageLayout: kind === 'garage' ? p.garageLayout : undefined,
-                          }));
+                          // Re-selecting the same type (or an empty value, as a remounted select
+                          // can report) changes nothing, so typed bays are never reset.
+                          if (!kind) return;
+                          setFormData(p =>
+                            p.parkingKind === kind
+                              ? p
+                              : {
+                                  ...p,
+                                  parkingKind: kind,
+                                  // Only "No Parking" resets bays (to 0, hidden); otherwise keep them.
+                                  parkingBays:
+                                    kind === 'none'
+                                      ? 0
+                                      : p.parkingKind === 'none'
+                                        ? undefined
+                                        : p.parkingBays,
+                                  garageLayout: kind === 'garage' ? p.garageLayout : undefined,
+                                },
+                          );
                         }}
                       >
-                        <SelectTrigger aria-label="Parking type">
+                        <SelectTrigger aria-label="Parking type" data-field="parkingKind">
                           <SelectValue placeholder="Select…" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1607,6 +1663,7 @@ export function UnitTypesPhase() {
                         <Input
                           type="number"
                           aria-label="Parking bays"
+                          data-field="parkingBays"
                           placeholder="How many?"
                           value={formData.parkingBays ?? ''}
                           disabled={!formData.parkingKind}
@@ -1654,6 +1711,7 @@ export function UnitTypesPhase() {
                       <Input
                         type="number"
                         placeholder="e.g. 70"
+                        data-field="unitSize"
                         value={formData.unitSize || ''}
                         onFocus={e => e.target.select()}
                         onChange={e =>
@@ -2153,7 +2211,7 @@ export function UnitTypesPhase() {
                           onClick={() => handleSave(false)}
                           className="bg-gradient-to-r from-blue-600 to-purple-600 text-white"
                         >
-                          {editingId ? 'Update Unit Type' : 'Save Unit Type'}
+                          {editingId ? 'Update house type' : 'Save house type'}
                         </Button>
                       </div>
                     )}

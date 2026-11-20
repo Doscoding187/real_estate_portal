@@ -10,6 +10,7 @@ const h = vi.hoisted(() => ({
   reserve: vi.fn(),
   confirm: vi.fn(),
   presign: vi.fn(),
+  toastError: vi.fn(),
 }));
 
 vi.mock('@/_core/hooks/useAuth', () => ({ useAuth: () => ({ user: h.user }) }));
@@ -45,7 +46,9 @@ vi.mock('@/hooks/useDevelopmentWizard', () => {
     selector ? selector(state()) : state();
   return { useDevelopmentWizard };
 });
-vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn(), info: vi.fn(), warning: vi.fn() } }));
+vi.mock('sonner', () => ({
+  toast: { error: h.toastError, success: vi.fn(), info: vi.fn(), warning: vi.fn() },
+}));
 
 import { UnitTypesPhase } from './UnitTypesPhase';
 
@@ -181,5 +184,53 @@ describe('House type cards', () => {
     );
     expect(h.reserve).not.toHaveBeenCalled();
     expect(h.presign).not.toHaveBeenCalled();
+  });
+
+  it('keeps Parking Bays when switching tabs and back', async () => {
+    h.unitTypes = [unit({ parkingType: 'carport', parkingBays: 1 })];
+    render(<UnitTypesPhase />);
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+    const bays = (await screen.findByLabelText('Parking bays')) as HTMLInputElement;
+    fireEvent.change(bays, { target: { value: '2' } });
+    expect(bays.value).toBe('2');
+    openTab('Pricing');
+    openTab('Stock');
+    openTab('Basic Info');
+    expect(((await screen.findByLabelText('Parking bays')) as HTMLInputElement).value).toBe('2');
+  });
+
+  it('keeps Parking Bays typed after choosing a parking type on a NEW house type', async () => {
+    Element.prototype.scrollIntoView = vi.fn();
+    (Element.prototype as any).hasPointerCapture = vi.fn();
+    (Element.prototype as any).releasePointerCapture = vi.fn();
+    render(<UnitTypesPhase />);
+    fireEvent.click(screen.getAllByRole('button', { name: /Add house type/ })[0]);
+    const trigger = await screen.findByLabelText('Parking type');
+    fireEvent.keyDown(trigger, { key: 'Enter' });
+    fireEvent.click(await screen.findByRole('option', { name: 'Carport' }));
+    const bays = (await screen.findByLabelText('Parking bays')) as HTMLInputElement;
+    fireEvent.change(bays, { target: { value: '2' } });
+    expect(bays.value).toBe('2');
+    openTab('Pricing');
+    openTab('Media');
+    openTab('Stock');
+    openTab('Basic Info');
+    expect(((await screen.findByLabelText('Parking bays')) as HTMLInputElement).value).toBe('2');
+  });
+
+  it('a failed save from Stock goes to Basic Info, shows the message, focuses the field and toasts', async () => {
+    h.unitTypes = [unit({ parkingType: 'carport', parkingBays: 1 })];
+    render(<UnitTypesPhase />);
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+    const bays = (await screen.findByLabelText('Parking bays')) as HTMLInputElement;
+    fireEvent.change(bays, { target: { value: '' } });
+    openTab('Stock');
+    expect(screen.queryByLabelText('Parking bays')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Update house type|Save house type/ }));
+    const field = (await screen.findByLabelText('Parking bays')) as HTMLInputElement;
+    expect(screen.getByTestId('house-form-error').textContent).toBe('Parking bays is missing — Basic info');
+    await waitFor(() => expect(document.activeElement).toBe(field));
+    expect(h.toastError).toHaveBeenCalledWith('Parking bays is missing — Basic info');
+    expect(h.saved).toHaveLength(0);
   });
 });

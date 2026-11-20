@@ -152,23 +152,81 @@ export function applyAutoNames<T extends Record<string, any>>(units: T[]): T[] {
  * pre-filled, so each one names itself when missing. Parking bays are only asked
  * when there is parking ("No Parking" means 0 bays, hidden).
  */
-export function missingFactMessage(form: {
+export type FactForm = {
   unitSize?: unknown;
   bedrooms?: unknown;
   bathrooms?: unknown;
   parkingKind?: unknown;
   parkingBays?: unknown;
-}): string | null {
+};
+
+/** Form fields that can fail a save, and the tab each lives on (so a failed save can go there). */
+export type FormField =
+  | 'unitSize'
+  | 'bedrooms'
+  | 'bathrooms'
+  | 'parkingKind'
+  | 'parkingBays'
+  | 'name'
+  | 'description'
+  | 'homeType'
+  | 'ownershipType'
+  | 'priceFrom'
+  | 'priceTo'
+  | 'monthlyRentFrom'
+  | 'startingBid'
+  | 'auctionStartDate'
+  | 'auctionEndDate';
+
+export type FormTab = 'basic' | 'pricing' | 'media' | 'features' | 'stock';
+
+export const FORM_TAB_LABELS: Record<FormTab, string> = {
+  basic: 'Basic info',
+  pricing: 'Pricing',
+  media: 'Media',
+  features: 'Features',
+  stock: 'Stock',
+};
+
+export const FORM_FIELDS: Record<FormField, { label: string; tab: FormTab }> = {
+  unitSize: { label: 'Unit size', tab: 'basic' },
+  bedrooms: { label: 'Bedrooms', tab: 'basic' },
+  bathrooms: { label: 'Bathrooms', tab: 'basic' },
+  parkingKind: { label: 'Parking type', tab: 'basic' },
+  parkingBays: { label: 'Parking bays', tab: 'basic' },
+  name: { label: 'House type name', tab: 'basic' },
+  description: { label: 'Description', tab: 'basic' },
+  homeType: { label: 'Home type', tab: 'basic' },
+  ownershipType: { label: 'Ownership', tab: 'basic' },
+  priceFrom: { label: 'Price from', tab: 'pricing' },
+  priceTo: { label: 'Price to', tab: 'pricing' },
+  monthlyRentFrom: { label: 'Monthly rent', tab: 'pricing' },
+  startingBid: { label: 'Starting bid', tab: 'pricing' },
+  auctionStartDate: { label: 'Auction start date', tab: 'pricing' },
+  auctionEndDate: { label: 'Auction end date', tab: 'pricing' },
+};
+
+/** "Parking bays is missing — Basic info" */
+export const missingFieldMessage = (field: FormField): string =>
+  `${FORM_FIELDS[field].label} is missing — ${FORM_TAB_LABELS[FORM_FIELDS[field].tab]}`;
+
+/** The first fact (in form order) that is not filled in, or null. */
+export function firstMissingFact(form: FactForm): FormField | null {
   const size = num(form.unitSize);
-  if (size == null || size <= 0) return 'Unit size is required';
-  if (num(form.bedrooms) == null) return 'Bedrooms are required';
-  if (num(form.bathrooms) == null) return 'Bathrooms are required';
-  if (!form.parkingKind) return 'Parking type is required';
+  if (size == null || size <= 0) return 'unitSize';
+  if (num(form.bedrooms) == null) return 'bedrooms';
+  if (num(form.bathrooms) == null) return 'bathrooms';
+  if (!form.parkingKind) return 'parkingKind';
   if (form.parkingKind !== 'none') {
     const bays = num(form.parkingBays);
-    if (bays == null || bays < 1) return 'Parking bays are required';
+    if (bays == null || bays < 1) return 'parkingBays';
   }
   return null;
+}
+
+export function missingFactMessage(form: FactForm): string | null {
+  const field = firstMissingFact(form);
+  return field ? missingFieldMessage(field) : null;
 }
 
 /** True when each house type needs its own ownership. */
