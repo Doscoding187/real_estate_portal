@@ -181,9 +181,9 @@ export default function DevelopersPage() {
                   size="sm"
                   className="bg-green-600 hover:bg-green-700"
                   onClick={() => handleApprove(developer.id)}
-                  disabled={approveMutation.isLoading}
+                  disabled={approveMutation.isPending}
                 >
-                  {approveMutation.isLoading ? (
+                  {approveMutation.isPending ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
                     'Approve'
@@ -206,7 +206,7 @@ export default function DevelopersPage() {
                   onCheckedChange={checked =>
                     setTrustedMutation.mutate({ developerId: developer.id, isTrusted: checked })
                   }
-                  disabled={setTrustedMutation.isLoading}
+                  disabled={setTrustedMutation.isPending}
                   className="scale-75 origin-right"
                 />
               </div>
@@ -322,9 +322,9 @@ export default function DevelopersPage() {
             <Button
               variant="destructive"
               onClick={handleReject}
-              disabled={rejectMutation.isLoading || !rejectionReason.trim()}
+              disabled={rejectMutation.isPending || !rejectionReason.trim()}
             >
-              {rejectMutation.isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              {rejectMutation.isPending ?<Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
               Reject Application
             </Button>
           </DialogFooter>

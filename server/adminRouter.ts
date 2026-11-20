@@ -571,7 +571,16 @@ export const adminRouter = router({
       z.object({
         page: z.number().default(1),
         limit: z.number().default(50),
-        role: z.enum(['visitor', 'agent', 'agency_admin', 'super_admin']).optional(),
+        role: z
+          .enum([
+            'visitor',
+            'agent',
+            'agency_admin',
+            'property_developer',
+            'service_provider',
+            'super_admin',
+          ])
+          .optional(),
         agencyId: z.number().optional(),
         search: z.string().optional(),
       }),
@@ -597,11 +606,9 @@ export const adminRouter = router({
 
         const offset = (input.page - 1) * input.limit;
 
-        // Build where conditions
-        // This is the generic Listing oversight surface. The deferred Land
-        // vertical has its own specialist authority and must not reappear as
-        // a generic moderation candidate through an older direct route.
-        const conditions: SQL[] = [excludeLandFromGenericListingWorkflow()];
+        // Build where conditions. (A listings-only Land filter used to sit here by mistake;
+        // it referenced the listings table inside a users query and could not be valid SQL.)
+        const conditions: SQL[] = [];
         if (input.role) conditions.push(eq(users.role, input.role));
         if (input.agencyId) conditions.push(eq(users.agencyId, input.agencyId));
         const search = input.search?.trim();

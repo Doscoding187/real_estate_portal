@@ -362,12 +362,12 @@ const EcosystemOverviewPage: React.FC = () => {
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
       <div>
-        <h1 className="text-3xl font-bold text-slate-800 flex items-center gap-3">
-          <Activity className="h-8 w-8 text-indigo-600" />
-          Ecosystem Health
+        <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
+          <Activity className="h-7 w-7 text-indigo-600" aria-hidden="true" />
+          Leads
         </h1>
-        <p className="text-slate-500 mt-2">
-          High-level overview of platform participants and growth metrics.
+        <p className="text-sm text-slate-600 mt-2">
+          Platform-held enquiries and their routing, plus platform participant counts.
         </p>
       </div>
 

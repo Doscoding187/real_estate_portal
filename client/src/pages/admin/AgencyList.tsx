@@ -27,7 +27,7 @@ export default function AgencyList() {
   const [searchTerm, setSearchTerm] = useState('');
   const isSuperAdmin = isSuperAdminRole(user?.role);
 
-  const { data, isLoading, refetch } = trpc.agency.list.useQuery({
+  const { data, isLoading, isError, refetch } = trpc.agency.list.useQuery({
     search: searchTerm || undefined,
     limit: 50,
     offset: 0,
@@ -77,8 +77,8 @@ export default function AgencyList() {
           <div className="flex items-center gap-3">
             <Building2 className="h-8 w-8 text-primary" />
             <div>
-              <h1 className="text-3xl font-bold">Agencies</h1>
-              <p className="text-muted-foreground">Manage real estate agencies on the platform</p>
+              <h1 className="text-2xl font-bold">Agencies</h1>
+              <p className="text-sm text-slate-600">Verify and manage agencies on the platform.</p>
             </div>
           </div>
           <Button onClick={() => setLocation('/admin/agencies/new')}>
@@ -93,6 +93,7 @@ export default function AgencyList() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
+                aria-label="Search agencies"
                 placeholder="Search agencies by name, email, or city..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
@@ -111,12 +112,21 @@ export default function AgencyList() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{data?.total || 0}</div>
+              <div className="text-2xl font-bold">
+                {isLoading ? '...' : isError ? 'Unavailable' : (data?.total ?? 0)}
+              </div>
+              {data && data.agencies.length < data.total ? (
+                <p className="text-xs text-slate-600 mt-1">
+                  Showing {data.agencies.length} of {data.total}. Search to find others.
+                </p>
+              ) : null}
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Verified</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Verified (shown)
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">
@@ -126,7 +136,9 @@ export default function AgencyList() {
           </Card>
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Premium</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Premium (shown)
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-blue-600">
@@ -136,7 +148,9 @@ export default function AgencyList() {
           </Card>
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Active</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Active (shown)
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-primary">
@@ -151,6 +165,18 @@ export default function AgencyList() {
           <Card>
             <CardContent className="py-12 text-center text-muted-foreground">
               Loading agencies...
+            </CardContent>
+          </Card>
+        ) : isError ? (
+          <Card>
+            <CardContent
+              role="alert"
+              className="py-10 flex items-center justify-center gap-3 text-sm text-red-800"
+            >
+              <span>Could not load agencies.</span>
+              <Button variant="outline" onClick={() => refetch()}>
+                Retry
+              </Button>
             </CardContent>
           </Card>
         ) : !data?.agencies.length ? (
