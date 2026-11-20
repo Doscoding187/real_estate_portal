@@ -76,7 +76,10 @@ export function validateLocationStep(location: Record<string, any> | null | unde
     });
   }
 
-  if (!String(loc.suburbPlaceId ?? '').trim()) {
+  if (
+    !String(loc.suburbPlaceId ?? '').trim() ||
+    isInformalSettlementName(String(loc.suburbLabel ?? ''))
+  ) {
     errors.push({ field: 'suburbPlaceId', message: 'Choose the suburb from the list' });
   }
 

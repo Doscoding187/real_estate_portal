@@ -8,7 +8,7 @@ import type {
   MarketingRole,
 } from '@/types/wizardTypes';
 import { AMENITY_REGISTRY } from '@/config/amenityRegistry';
-import { validateHighlightList } from '@/lib/wizardLocationCostsAmenities';
+import { isInformalSettlementName, validateHighlightList } from '@/lib/wizardLocationCostsAmenities';
 import { WorkflowId, WizardStepId, WizardData } from '@/lib/types/wizard-workflows';
 import { WORKFLOWS, getWorkflow, getVisibleSteps } from '@/lib/workflows';
 import { computeWizardProgress } from '@/lib/wizardProgress';
@@ -1301,7 +1301,12 @@ const createActions = (
       // Location (canonical)
       if (!wizardData.location?.address && wizardData.location?.noOfficialStreet !== true)
         errors.push('Location Address is required');
-      if (!wizardData.location?.suburbPlaceId) errors.push('Choose the suburb from the list');
+      if (
+        !wizardData.location?.suburbPlaceId ||
+        isInformalSettlementName(String(wizardData.location?.suburbLabel ?? ''))
+      ) {
+        errors.push('Choose the suburb from the list');
+      }
       {
         const lat = String(wizardData.location?.latitude ?? '').trim();
         const lng = String(wizardData.location?.longitude ?? '').trim();

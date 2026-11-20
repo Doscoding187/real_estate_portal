@@ -55,6 +55,9 @@ vi.mock('@/components/location/CanonicalPlaceSelector', () => {
   return {
     CanonicalPlaceSelector: ({ onChange, optionFilter }: { onChange: (v: any) => void; optionFilter?: (o: any) => boolean }) => (
       <div>
+        <button type="button" onClick={() => onChange(null)}>
+          Clear (mock)
+        </button>
         {options
           .filter(o => !optionFilter || optionFilter(o))
           .map(o => (
@@ -84,6 +87,7 @@ import { useDevelopmentWizard } from '@/hooks/useDevelopmentWizard';
 import { buildDevelopmentSubmitPayload } from '@/lib/developmentSubmitPayload';
 import { buildPreviewModel } from '@/components/wizard/previewModel';
 import { LocationPhase } from './LocationPhase';
+import { validateLocationStep } from '@/lib/wizardLocationCostsAmenities';
 import { EstateProfilePhase } from './EstateProfilePhase';
 import { AmenitiesPhase } from './AmenitiesPhase';
 
@@ -179,6 +183,43 @@ describe('LocationPhase', () => {
         /Buyers see the suburb in search; the street address shows on the development page for directions/,
       ),
     ).toBeInTheDocument();
+  });
+
+  it('clearing the suburb really clears it (null, not undefined) and it stays cleared', () => {
+    render(<LocationPhase />);
+    fireEvent.click(screen.getByText('Offer: North Riding'));
+    expect((store().getWizardData().location as any).suburbPlaceId).toBe('pl-north-riding');
+    fireEvent.click(screen.getByText('Clear (mock)'));
+    const location = store().getWizardData().location as any;
+    expect(location.suburbPlaceId ?? null).toBeNull();
+    expect(location.suburbLabel ?? null).toBeNull();
+    expect(validateLocationStep(location).map(e => e.field)).toContain('suburbPlaceId');
+    // Picking another replaces it.
+    fireEvent.click(screen.getByText('Offer: North Riding'));
+    expect((store().getWizardData().location as any).suburbPlaceId).toBe('pl-north-riding');
+  });
+
+  it('a suburb saved earlier that is an informal settlement is cleared on load, with a clear message', () => {
+    store().saveWorkflowStepData('location', {
+      suburbPlaceId: 'pl-kya-informal',
+      suburbLabel: 'Kya Sands Informal Settlement',
+    } as any);
+    render(<LocationPhase />);
+    const location = store().getWizardData().location as any;
+    expect(location.suburbPlaceId ?? null).toBeNull();
+    expect(screen.getByRole('alert')).toHaveTextContent('Choose the suburb from the list');
+  });
+
+  it('a chosen suburb survives a draft save and reload (hydrate)', () => {
+    render(<LocationPhase />);
+    fireEvent.click(screen.getByText('Offer: North Riding'));
+    const saved = JSON.parse(JSON.stringify(store().getDraftData()));
+    store().reset();
+    store().hydrateDevelopment({ draftData: saved } as any);
+    expect(store().getWizardData().location).toMatchObject({
+      suburbPlaceId: 'pl-north-riding',
+      suburbLabel: 'North Riding',
+    });
   });
 
   it('reopening a saved development keeps the no-street tick, the empty address and the suburb', () => {

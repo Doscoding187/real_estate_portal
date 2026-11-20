@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDevelopmentWizard } from '@/hooks/useDevelopmentWizard';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { usePublisherContext } from '@/hooks/usePublisherContext';
@@ -91,20 +91,38 @@ export function LocationPhase() {
 
   // The suburb is chosen from our canonical geography (suburb-level, published and
   // searchable places only, informal settlements excluded). Never from Google.
-  const suburbValue: CanonicalPlaceSelection | null = location.suburbPlaceId
-    ? {
-        canonicalPlaceId: String(location.suburbPlaceId),
-        label: String(location.suburbLabel ?? ''),
-        placeType: 'suburb',
-        scope: 'locality' as any,
-        administrativeContext: null,
-      }
-    : null;
+  const suburbId = location.suburbPlaceId ? String(location.suburbPlaceId) : '';
+  const suburbText = String(location.suburbLabel ?? '');
+  const suburbValue = useMemo<CanonicalPlaceSelection | null>(
+    () =>
+      suburbId
+        ? {
+            canonicalPlaceId: suburbId,
+            label: suburbText,
+            placeType: 'suburb',
+            scope: 'locality' as any,
+            administrativeContext: null,
+          }
+        : null,
+    [suburbId, suburbText],
+  );
+  // Clearing sends null: the store ignores undefined, so undefined would leave the old suburb.
   const pickSuburb = (selection: CanonicalPlaceSelection | null) =>
     handleUpdate({
-      suburbPlaceId: selection?.canonicalPlaceId ?? undefined,
-      suburbLabel: selection?.label ?? undefined,
+      suburbPlaceId: selection?.canonicalPlaceId ?? null,
+      suburbLabel: selection?.label ?? null,
     });
+
+  // A suburb saved by an earlier version may be an informal settlement. It is not
+  // accepted: clear it and ask for a real choice.
+  const [staleCleared, setStaleCleared] = useState(false);
+  useEffect(() => {
+    if (suburbId && isInformalSettlementName(suburbText)) {
+      handleUpdate({ suburbPlaceId: null, suburbLabel: null });
+      setStaleCleared(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [suburbId, suburbText]);
 
   // Safety net: warn (never block) when the pin is far from the chosen suburb's centre.
   const pinLat = Number(String(location.latitude ?? '').trim() || Number.NaN);
@@ -171,6 +189,7 @@ export function LocationPhase() {
           inputId="suburb-picker"
           placeholder="Start typing, e.g. North Riding"
           compact
+          clearable
           optionFilter={option =>
             option.searchScope === 'locality' &&
             !isInformalSettlementName(option.preferredPublicLabel) &&
@@ -178,7 +197,12 @@ export function LocationPhase() {
             !isInformalSettlementName(option.matchedName)
           }
         />
-        <FieldError message={errorFor('suburbPlaceId')} />
+        <FieldError
+          message={
+            errorFor('suburbPlaceId') ??
+            (staleCleared && !suburbId ? 'Choose the suburb from the list' : undefined)
+          }
+        />
         <p className={t.hint}>
           {isCurated
             ? 'Recorded for search when you publish.'

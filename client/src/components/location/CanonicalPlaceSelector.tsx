@@ -98,6 +98,7 @@ export function CanonicalPlaceSelectorView({
   hint,
   compact = false,
   optionFilter,
+  clearable = false,
 }: {
   value: CanonicalPlaceSelection | null;
   onChange: (value: CanonicalPlaceSelection | null) => void;
@@ -114,6 +115,8 @@ export function CanonicalPlaceSelectorView({
   compact?: boolean;
   /** Extra restriction on the options offered (for example suburbs only). */
   optionFilter?: (option: CanonicalPlaceOption) => boolean;
+  /** Show a "Change" button on a selected place that clears it. */
+  clearable?: boolean;
 }) {
   const generatedId = useId();
   const inputId = suppliedInputId ?? generatedId;
@@ -251,6 +254,19 @@ export function CanonicalPlaceSelectorView({
       >
         {status}
       </p>
+      {value && clearable && (
+        <button
+          type="button"
+          className="text-xs font-medium text-blue-700 underline"
+          onClick={() => {
+            onChange(null);
+            onQueryChange('');
+            setOpen(false);
+          }}
+        >
+          Change
+        </button>
+      )}
       {value && (
         <p className={compact ? 'sr-only' : 'text-sm'}>
           {displayTypeLabel(value.placeType)}
@@ -310,6 +326,7 @@ export function CanonicalPlaceSelector({
   compact,
   initialQuery,
   optionFilter,
+  clearable,
 }: {
   value: CanonicalPlaceSelection | null;
   onChange: (value: CanonicalPlaceSelection | null) => void;
@@ -321,6 +338,7 @@ export function CanonicalPlaceSelector({
   compact?: boolean;
   initialQuery?: string;
   optionFilter?: (option: CanonicalPlaceOption) => boolean;
+  clearable?: boolean;
 }) {
   const [query, setQuery] = useState(value?.label ?? initialQuery ?? '');
   const [debounced, setDebounced] = useState(query);
@@ -328,9 +346,13 @@ export function CanonicalPlaceSelector({
     const timer = setTimeout(() => setDebounced(query), 250);
     return () => clearTimeout(timer);
   }, [query]);
+  // Keyed on the selection's identity and label, not the object: a parent that
+  // rebuilds `value` every render must not reset what the user is typing.
+  const selectedId = value?.canonicalPlaceId;
+  const selectedLabel = value?.label;
   useEffect(() => {
-    if (value) setQuery(value.label);
-  }, [value]);
+    if (selectedId && selectedLabel !== undefined) setQuery(selectedLabel);
+  }, [selectedId, selectedLabel]);
   useEffect(() => {
     if (!value) setQuery(initialQuery ?? '');
   }, [initialQuery]);
@@ -352,6 +374,7 @@ export function CanonicalPlaceSelector({
       hint={hint}
       compact={compact}
       optionFilter={optionFilter}
+      clearable={clearable}
       query={query}
       onQueryChange={setQuery}
       discovery={lookup.data}
