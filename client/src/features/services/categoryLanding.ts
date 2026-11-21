@@ -20,9 +20,27 @@ import {
   Truck,
   Wrench,
   Zap,
+  createLucideIcon,
 } from 'lucide-react';
 import type { ServiceCategory } from './catalog';
 import { SERVICES_IMAGES } from './media';
+
+const DrainagePipeIcon = createLucideIcon('DrainagePipe', [
+  ['path', { d: 'M5 4v7a4 4 0 0 0 4 4h4a4 4 0 0 1 4 4v1', key: 'pipe' }],
+  ['path', { d: 'M3 4h4', key: 'inlet' }],
+  ['path', { d: 'M17 20h4', key: 'outlet' }],
+  ['path', { d: 'M13 8h4a3 3 0 0 1 3 3v1', key: 'trap' }],
+  ['path', { d: 'M16 8h4', key: 'drain' }],
+]);
+
+const GeyserIcon = createLucideIcon('Geyser', [
+  ['rect', { x: '7', y: '3', width: '10', height: '18', rx: '2', key: 'tank' }],
+  ['path', { d: 'M9 7h6', key: 'top' }],
+  ['path', { d: 'M9 11h6', key: 'middle' }],
+  ['path', { d: 'M12 15h.01', key: 'indicator' }],
+  ['path', { d: 'M10 21v1', key: 'left-pipe' }],
+  ['path', { d: 'M14 21v1', key: 'right-pipe' }],
+]);
 
 /**
  * Curated category-page content, not a provider catalogue or availability feed.
@@ -615,7 +633,7 @@ const PLUMBING_FOCUS: ServiceFocusLandingOverride = {
     },
     {
       key: 'bathroom-installation',
-      title: 'Bathroom installations',
+      title: 'Bathroom Installations',
       description: 'Fixture replacements, new fittings and bathroom plumbing work.',
       query: 'plumbing',
       planningKey: 'installation',
@@ -623,11 +641,11 @@ const PLUMBING_FOCUS: ServiceFocusLandingOverride = {
     },
     {
       key: 'drainage',
-      title: 'Drainage & blockages',
+      title: 'Drainage & Blockages',
       description: 'Drain, water-flow and blockage concerns to discuss with a provider.',
       query: 'plumbing',
       planningKey: 'prompt-attention',
-      icon: ScanSearch,
+      icon: DrainagePipeIcon,
     },
     {
       key: 'geyser',
@@ -635,11 +653,11 @@ const PLUMBING_FOCUS: ServiceFocusLandingOverride = {
       description: 'Geyser repair, replacement and installation conversations.',
       query: 'plumbing',
       planningKey: 'installation',
-      icon: Sun,
+      icon: GeyserIcon,
     },
     {
       key: 'maintenance',
-      title: 'Maintenance & servicing',
+      title: 'Maintenance & Servicing',
       description: 'Planned maintenance and recurring plumbing issues.',
       query: 'plumbing',
       planningKey: 'planned-work',

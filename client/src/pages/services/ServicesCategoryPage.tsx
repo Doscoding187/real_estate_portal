@@ -533,12 +533,12 @@ export default function ServicesCategoryPage() {
                       onClick={() => {
                         if (pathway.planningKey) setSelectedPlanningKey(pathway.planningKey);
                       }}
-                      className="group flex min-h-[64px] items-center gap-3 rounded-xl border border-[#E1EAF0] bg-white px-3 py-2.5 shadow-[0_7px_16px_-14px_rgba(2,17,30,0.45)] transition hover:-translate-y-0.5 hover:border-[#168363]/45 hover:shadow-[0_12px_22px_-16px_rgba(2,17,30,0.55)]"
+                      className="group flex min-h-[72px] items-center gap-3.5 rounded-xl border border-[#E1EAF0] bg-white px-3.5 py-3 shadow-[0_7px_16px_-14px_rgba(2,17,30,0.45)] transition hover:-translate-y-0.5 hover:border-[#168363]/45 hover:shadow-[0_12px_22px_-16px_rgba(2,17,30,0.55)]"
                     >
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#EEF6FF] text-[#0874C9]">
-                        <Icon className="h-5 w-5" aria-hidden="true" />
+                      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#EAF4FF] text-[#0874C9]">
+                        <Icon className="h-7 w-7" aria-hidden="true" />
                       </span>
-                      <span className="min-w-0 flex-1 text-[12px] font-bold leading-[1.15] text-[#0B1B2A]">
+                      <span className="min-w-0 flex-1 text-[13px] font-bold leading-[1.15] text-[#0B1B2A]">
                         {pathway.title}
                       </span>
                       <ArrowRight className="h-4 w-4 shrink-0 text-[#154969] transition group-hover:translate-x-0.5 group-hover:text-[#0874C9]" aria-hidden="true" />
@@ -555,23 +555,23 @@ export default function ServicesCategoryPage() {
             {[
               {
                 icon: ShieldCheck,
-                title: 'Reviewed publication',
-                body: 'public profiles are checked before publication',
+                title: 'Verified Professionals',
+                body: 'for your peace of mind',
               },
               {
                 icon: MapPin,
-                title: 'Listed coverage',
-                body: 'see the places a provider has published for',
+                title: 'Local Experts',
+                body: 'in your area',
               },
               {
                 icon: Star,
-                title: 'Reviews when eligible',
-                body: 'customer feedback appears where published',
+                title: 'Real Customer Reviews',
+                body: 'from homeowners',
               },
               {
                 icon: Headphones,
-                title: 'One private enquiry',
-                body: 'your request goes only to the provider selected',
+                title: 'Dedicated Support',
+                body: 'when you need help',
               },
             ].map((item, index) => {
               const Icon = item.icon;

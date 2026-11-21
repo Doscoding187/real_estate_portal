@@ -157,11 +157,17 @@ describe('ServicesCategoryPage', () => {
       'list',
     );
     expect(screen.getByText('What do you need?')).toBeInTheDocument();
-    expect(screen.getByText('Verified Professionals')).toBeInTheDocument();
+    expect(screen.getAllByText('Verified Professionals')).toHaveLength(2);
     expect(screen.getByText('Local Coverage')).toBeInTheDocument();
     expect(screen.getByText('Trusted Reviews')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /find professionals/i })).toBeInTheDocument();
     expect(screen.getByText(/leak repairs & plumbing/i)).toBeInTheDocument();
+    expect(screen.getByText(/drainage & blockages/i)).toBeInTheDocument();
+    expect(screen.getByText(/geyser repairs & replacement/i)).toBeInTheDocument();
+    expect(screen.getAllByText('Verified Professionals')).toHaveLength(2);
+    expect(screen.getByText('Local Experts')).toBeInTheDocument();
+    expect(screen.getByText('Real Customer Reviews')).toBeInTheDocument();
+    expect(screen.getByText('Dedicated Support')).toBeInTheDocument();
     expect(screen.getByText(/planning a fixture replacement/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /view all services/i })).toBeInTheDocument();
     const maintenancePlan = screen.getByRole('button', { name: /maintenance or repair/i });
