@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import type { ServiceCategory } from './catalog';
 import { SERVICES_IMAGES } from './media';
+import { getServiceGuidesForTopic } from './serviceGuides';
 
 const DrainagePipeIcon = createLucideIcon('DrainagePipe', [
   ['path', { d: 'M5 4v7a4 4 0 0 0 4 4h4a4 4 0 0 1 4 4v1', key: 'pipe' }],
@@ -67,9 +68,11 @@ export type CategoryPlanningOption = {
 };
 
 export type CategoryGuide = {
+  slug?: string;
   title: string;
   description: string;
   icon: LucideIcon;
+  image?: string;
 };
 
 export type ServiceCategoryLandingContent = {
@@ -82,6 +85,7 @@ export type ServiceCategoryLandingContent = {
   featureTitle: string;
   featureDescription: string;
   serviceIntro: string;
+  guideIntro: string;
   servicePathways: CategoryServicePathway[];
   planningOptions: CategoryPlanningOption[];
   requestDetails: string[];
@@ -100,12 +104,23 @@ export type ServiceFocusLandingOverride = Partial<
     | 'featureTitle'
     | 'featureDescription'
     | 'serviceIntro'
+    | 'guideIntro'
     | 'servicePathways'
     | 'planningOptions'
     | 'requestDetails'
     | 'guides'
   >
 >;
+
+function categoryGuides(topicKey: string): CategoryGuide[] {
+  return getServiceGuidesForTopic(topicKey).map(guide => ({
+    slug: guide.slug,
+    title: guide.cardTitle,
+    description: guide.summary,
+    icon: guide.icon,
+    image: guide.image,
+  }));
+}
 
 const GENERAL_PLANNING: CategoryPlanningOption[] = [
   {
@@ -151,7 +166,7 @@ export const SERVICE_CATEGORY_LANDING_CONTENT: Record<
       'Explore published providers for property repairs, maintenance, improvements and project work. Check each provider’s listed service and coverage before sending a request.',
     heroImage: SERVICES_IMAGES.categories.home_improvement,
     featureImage: '/images/services/trade-renovations.jpg',
-    providerImage: '/images/services/trade-electrical.jpg',
+    providerImage: SERVICES_IMAGES.providerNetworkCta,
     guideImages: [
       '/images/services/trade-plumbing.jpg',
       '/images/services/trade-renovations.jpg',
@@ -162,6 +177,8 @@ export const SERVICE_CATEGORY_LANDING_CONTENT: Record<
       'Start with the work you can see, then use a provider’s published services and coverage to decide who is appropriate to contact.',
     serviceIntro:
       'Choose the kind of work you are planning. The directory uses the selected wording to narrow published provider information; always review each provider’s listed services before you enquire.',
+    guideIntro:
+      'Practical advice and project checklists to help you plan home improvement work.',
     servicePathways: [
       {
         key: 'plumbing',
@@ -212,26 +229,7 @@ export const SERVICE_CATEGORY_LANDING_CONTENT: Record<
       'Any access, timing, budget, or product constraints that could affect the work.',
       'Photos, dimensions, or existing-product details where they will help a provider assess the request.',
     ],
-    guides: [
-      {
-        title: 'Describe the current condition',
-        description:
-          'A short description of the issue and the affected area gives a provider useful context before they respond.',
-        icon: ScanSearch,
-      },
-      {
-        title: 'Plan access and timing',
-        description:
-          'Mention site access, occupants, preferred timing and any work that needs coordination with another trade.',
-        icon: MapPinned,
-      },
-      {
-        title: 'Confirm scope before buying',
-        description:
-          'If you have a material or product in mind, ask the provider to confirm suitability before you commit to it.',
-        icon: FileCheck2,
-      },
-    ],
+    guides: categoryGuides('home_improvement'),
   },
   finance_legal: {
     title: 'Finance & legal services',
@@ -239,7 +237,7 @@ export const SERVICE_CATEGORY_LANDING_CONTENT: Record<
       'Explore published finance and legal professionals for property decisions, documentation and transaction support. Review each provider’s listed services before you enquire.',
     heroImage: SERVICES_IMAGES.categories.finance_legal,
     featureImage: SERVICES_IMAGES.categories.finance_legal,
-    providerImage: SERVICES_IMAGES.categories.inspection_compliance,
+    providerImage: SERVICES_IMAGES.providerNetworkCta,
     guideImages: [
       SERVICES_IMAGES.categories.finance_legal,
       SERVICES_IMAGES.categories.inspection_compliance,
@@ -250,6 +248,8 @@ export const SERVICE_CATEGORY_LANDING_CONTENT: Record<
       'Published service information helps you identify a suitable professional. The provider confirms the scope that applies to your circumstances.',
     serviceIntro:
       'Start with the property decision you need help with. A service focus narrows the directory; the provider confirms whether your circumstances are within their scope.',
+    guideIntro:
+      'Practical prompts to help you prepare for property finance and legal conversations.',
     servicePathways: [
       {
         key: 'bond',
@@ -286,26 +286,7 @@ export const SERVICE_CATEGORY_LANDING_CONTENT: Record<
       'The property or transaction stage, and any relevant dates or deadlines.',
       'The question you need answered, without sharing unnecessary sensitive financial or identity information in an initial enquiry.',
     ],
-    guides: [
-      {
-        title: 'Know your next property step',
-        description:
-          'State whether you are comparing options, preparing an application, or already in a transaction process.',
-        icon: ClipboardCheck,
-      },
-      {
-        title: 'Prepare questions, not assumptions',
-        description:
-          'Ask what documents, affordability information, or property details a provider needs before giving direction.',
-        icon: FileText,
-      },
-      {
-        title: 'Protect private information',
-        description:
-          'Use the first message to establish fit; only provide sensitive documents through an agreed, appropriate channel.',
-        icon: ShieldCheck,
-      },
-    ],
+    guides: categoryGuides('finance_legal'),
   },
   moving: {
     title: 'Moving & storage services',
@@ -313,7 +294,7 @@ export const SERVICE_CATEGORY_LANDING_CONTENT: Record<
       'Explore published providers for moving, packing, storage and relocation support. Compare listed coverage and service information before choosing who to contact.',
     heroImage: SERVICES_IMAGES.categories.moving,
     featureImage: SERVICES_IMAGES.categories.moving,
-    providerImage: SERVICES_IMAGES.categories.moving,
+    providerImage: SERVICES_IMAGES.providerNetworkCta,
     guideImages: [
       SERVICES_IMAGES.categories.moving,
       SERVICES_IMAGES.ecosystem,
@@ -324,6 +305,7 @@ export const SERVICE_CATEGORY_LANDING_CONTENT: Record<
       'A clear picture of the move, property access and timing helps you identify providers whose published services may fit the work.',
     serviceIntro:
       'A move is easier to describe when you start with its size, timing and access requirements. Use a pathway to focus the directory on the work you need.',
+    guideIntro: 'Planning tips to help you prepare for a household move.',
     servicePathways: [
       {
         key: 'moving',
@@ -360,26 +342,7 @@ export const SERVICE_CATEGORY_LANDING_CONTENT: Record<
       'What needs to move, including large, fragile, or unusual items.',
       'Whether packing, storage, disassembly, or other support is part of the request.',
     ],
-    guides: [
-      {
-        title: 'Make an inventory',
-        description:
-          'A simple list of rooms, larger items and special handling needs helps a provider understand the move.',
-        icon: ClipboardCheck,
-      },
-      {
-        title: 'Check property access',
-        description:
-          'Mention stairs, lifts, parking, security procedures, loading times and any estate or building requirements.',
-        icon: MapPinned,
-      },
-      {
-        title: 'Plan the handover',
-        description:
-          'Set out the date range and whether storage or staged collection is relevant before you ask for support.',
-        icon: PackageCheck,
-      },
-    ],
+    guides: categoryGuides('moving'),
   },
   inspection_compliance: {
     title: 'Inspection & compliance services',
@@ -387,7 +350,7 @@ export const SERVICE_CATEGORY_LANDING_CONTENT: Record<
       'Explore published inspection and compliance providers for property condition, certificates and project checks. Confirm the exact requirement with the provider you choose.',
     heroImage: SERVICES_IMAGES.categories.inspection_compliance,
     featureImage: SERVICES_IMAGES.categories.inspection_compliance,
-    providerImage: '/images/services/trade-electrical.jpg',
+    providerImage: SERVICES_IMAGES.providerNetworkCta,
     guideImages: [
       SERVICES_IMAGES.categories.inspection_compliance,
       SERVICES_IMAGES.ecosystem,
@@ -398,6 +361,8 @@ export const SERVICE_CATEGORY_LANDING_CONTENT: Record<
       'Use published provider information as a starting point, then confirm the exact inspection, certificate or project-check requirement directly with the professional.',
     serviceIntro:
       'Use a service pathway to explain the type of inspection or compliance work you are considering. The provider confirms their scope, timing and requirements.',
+    guideIntro:
+      'Practical guides to help you prepare for property checks and compliance conversations.',
     servicePathways: [
       {
         key: 'inspection',
@@ -434,26 +399,7 @@ export const SERVICE_CATEGORY_LANDING_CONTENT: Record<
       'The relevant transaction, handover, sale or project stage and any known deadline.',
       'Existing reports, photographs, plans or concerns that give useful context.',
     ],
-    guides: [
-      {
-        title: 'Be specific about the requirement',
-        description:
-          'Use the provider’s published services as a starting point, then ask whether they handle your exact inspection or compliance need.',
-        icon: ClipboardCheck,
-      },
-      {
-        title: 'Share useful property context',
-        description:
-          'Property type, project stage and known concerns can help a provider assess whether they are a good fit.',
-        icon: Home,
-      },
-      {
-        title: 'Confirm documentation needs',
-        description:
-          'Ask the provider which information, records or site access they need before the work can be planned.',
-        icon: FileText,
-      },
-    ],
+    guides: categoryGuides('inspection_compliance'),
   },
   insurance: {
     title: 'Property insurance services',
@@ -461,7 +407,7 @@ export const SERVICE_CATEGORY_LANDING_CONTENT: Record<
       'Explore published insurance providers for property-related cover discussions. Compare the provider’s listed services and confirm suitability for your circumstances before proceeding.',
     heroImage: SERVICES_IMAGES.categories.insurance,
     featureImage: SERVICES_IMAGES.categories.insurance,
-    providerImage: SERVICES_IMAGES.ecosystem,
+    providerImage: SERVICES_IMAGES.providerNetworkCta,
     guideImages: [
       SERVICES_IMAGES.categories.insurance,
       SERVICES_IMAGES.ecosystem,
@@ -472,6 +418,7 @@ export const SERVICE_CATEGORY_LANDING_CONTENT: Record<
       'A published provider profile can help you decide who to contact. It is not a recommendation, quote or confirmation of cover.',
     serviceIntro:
       'Start with the property and cover context you want to discuss. A directory focus helps you find published information; it is not an insurance recommendation or quote.',
+    guideIntro: 'Helpful prompts to prepare questions about property and contents cover.',
     servicePathways: [
       {
         key: 'insurance',
@@ -508,26 +455,7 @@ export const SERVICE_CATEGORY_LANDING_CONTENT: Record<
       'Whether you are comparing cover, reviewing a change, or preparing for an ownership milestone.',
       'Questions about scope and exclusions to discuss directly with an appropriately authorised provider.',
     ],
-    guides: [
-      {
-        title: 'Describe the property context',
-        description:
-          'Explain the property type and your relationship to it so the provider can establish whether they can help.',
-        icon: Home,
-      },
-      {
-        title: 'Ask clear cover questions',
-        description:
-          'Use the initial enquiry to clarify what a provider can discuss; do not assume a listed service is a policy offer.',
-        icon: ShieldCheck,
-      },
-      {
-        title: 'Keep account details private',
-        description:
-          'Avoid sharing policy numbers or sensitive identity details until you have established an appropriate channel with the provider.',
-        icon: FileCheck2,
-      },
-    ],
+    guides: categoryGuides('insurance'),
   },
   media_marketing: {
     title: 'Property media & marketing services',
@@ -535,7 +463,7 @@ export const SERVICE_CATEGORY_LANDING_CONTENT: Record<
       'Explore published providers for photography, video, virtual tours, staging and property marketing support. Review each provider’s listed services before you enquire.',
     heroImage: SERVICES_IMAGES.categories.media_marketing,
     featureImage: SERVICES_IMAGES.categories.media_marketing,
-    providerImage: SERVICES_IMAGES.categories.home_improvement,
+    providerImage: SERVICES_IMAGES.providerNetworkCta,
     guideImages: [
       SERVICES_IMAGES.categories.media_marketing,
       SERVICES_IMAGES.categories.home_improvement,
@@ -546,6 +474,8 @@ export const SERVICE_CATEGORY_LANDING_CONTENT: Record<
       'Use the intended property outcome, audience and timing to find providers whose published media or marketing services are relevant.',
     serviceIntro:
       'Choose the presentation or marketing work you are planning. Include the property purpose and deadline so a provider can decide whether the request is a fit.',
+    guideIntro:
+      'Planning guides for property photography, video and marketing work.',
     servicePathways: [
       {
         key: 'photography',
@@ -582,26 +512,7 @@ export const SERVICE_CATEGORY_LANDING_CONTENT: Record<
       'The property type, location, intended channels and any publication deadline.',
       'The content you need and any access, styling or preparation constraints that affect the work.',
     ],
-    guides: [
-      {
-        title: 'Define the property goal',
-        description:
-          'Explain whether the content is for a sale, rental, development, campaign or ongoing business use.',
-        icon: Landmark,
-      },
-      {
-        title: 'Prepare access and presentation',
-        description:
-          'Mention keys, occupants, on-site contacts and any preparation still needed before a visit.',
-        icon: MapPinned,
-      },
-      {
-        title: 'Share the delivery context',
-        description:
-          'State where you expect to use the content and any timing constraints, then confirm deliverables directly with the provider.',
-        icon: Camera,
-      },
-    ],
+    guides: categoryGuides('media_marketing'),
   },
 };
 
@@ -610,18 +521,19 @@ const PLUMBING_FOCUS: ServiceFocusLandingOverride = {
   description:
     'From emergency repairs to installations, find trusted plumbing professionals in your area.',
   heroImage: SERVICES_IMAGES.plumbingHero,
-  featureImage: '/images/services/trade-plumbing.jpg',
-  providerImage: SERVICES_IMAGES.plumbingProfessional,
+  featureImage: '/images/services/plumbing-faucet-feature.jpeg',
+  providerImage: SERVICES_IMAGES.providerNetworkCta,
   guideImages: [
     '/images/services/trade-plumbing.jpg',
     SERVICES_IMAGES.plumbingProfessional,
     '/images/services/trade-renovations.jpg',
   ],
-  featureTitle: 'Reliable plumbing starts with the right conversation',
+  featureTitle: 'Reliable Plumbing Services, When You Need Them',
   featureDescription:
-    'From a visible leak to a planned bathroom project, review published provider information and describe the work clearly before you enquire.',
+    'Connect with experienced plumbing professionals who provide quality workmanship, transparent pricing and professional service across South Africa.',
   serviceIntro:
     'Start with the plumbing work you have in mind. These pathways help you describe the request; they do not confirm emergency, same-day, material, or project availability.',
+  guideIntro: 'Expert advice, tips and guides to help you with your plumbing needs.',
   servicePathways: [
     {
       key: 'leak-repair',
@@ -706,30 +618,11 @@ const PLUMBING_FOCUS: ServiceFocusLandingOverride = {
     },
   ],
   requestDetails: [
-    'Where the issue or planned work is located, and what you can see or hear.',
-    'The existing fixture or installation, plus photos or measurements where they are useful.',
-    'Any fixture, finish, or material preference — then ask the provider to confirm compatibility before buying.',
+    'Find local, approved professionals',
+    'Compare services and read reviews',
+    'Send one private enquiry',
   ],
-  guides: [
-    {
-      title: 'Before a plumbing repair',
-      description:
-        'Describe the visible issue, when it started and whether access or water isolation affects the assessment.',
-      icon: Wrench,
-    },
-    {
-      title: 'Planning a fixture replacement',
-      description:
-        'Share the existing setup and measurements where known, then confirm product compatibility with the provider.',
-      icon: FileCheck2,
-    },
-    {
-      title: 'Preparing a larger project',
-      description:
-        'For a kitchen or bathroom project, outline the scope, plans, access and timeline before you contact a provider.',
-      icon: Hammer,
-    },
-  ],
+  guides: categoryGuides('plumbing'),
 };
 
 const SERVICE_FOCUS_OVERRIDES: Record<string, ServiceFocusLandingOverride> = {

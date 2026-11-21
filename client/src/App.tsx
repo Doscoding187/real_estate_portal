@@ -76,6 +76,8 @@ const ActivationComplete = lazy(() => import('./pages/ActivationComplete'));
 const SavedSearchManagePage = lazy(() => import('./pages/SavedSearchManagePage'));
 const ServicesHomePage = lazy(() => import('./pages/services/ServicesHomePage'));
 const ServicesCategoryPage = lazy(() => import('./pages/services/ServicesCategoryPage'));
+const ServicesGuidesPage = lazy(() => import('./pages/services/ServicesGuidesPage'));
+const ServiceGuidePage = lazy(() => import('./pages/services/ServiceGuidePage'));
 const ServicesRequestPage = lazy(() => import('./pages/services/ServicesRequestPage'));
 const ServicesResultsPage = lazy(() => import('./pages/services/ServicesResultsPage'));
 const ServiceProviderProfilePage = lazy(
@@ -568,6 +570,16 @@ function Router() {
           <Route path="/services/reviews/:providerId">
             <HeldJourneyGate journey="services">
               <ServiceProviderReviewsPage />
+            </HeldJourneyGate>
+          </Route>
+          <Route path="/services/guides/:slug">
+            <HeldJourneyGate journey="services">
+              <ServiceGuidePage />
+            </HeldJourneyGate>
+          </Route>
+          <Route path="/services/guides">
+            <HeldJourneyGate journey="services">
+              <ServicesGuidesPage />
             </HeldJourneyGate>
           </Route>
           <Route path="/services/:category">

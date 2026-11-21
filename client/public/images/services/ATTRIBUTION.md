@@ -25,3 +25,9 @@ provenance and review.
 | `trade-other.jpg` | https://unsplash.com/photos/1486406146926-c627a92ad1ab |
 | `plumbing-professional.jpg` | https://unsplash.com/photos/a-plumber-repairs-plumbing-in-a-bathroom-jaP5ClBdIyU (bhagya laxmi) |
 | `plumbing-hero-kitchen-sink.png` | User-supplied project asset: `/home/edwardspc/Downloads/Professional Plumber Repairing Kitchen Sink.png` |
+| `plumbing-faucet-feature.jpeg` | User-supplied project asset provided for the plumbing category feature section. |
+| `plumbing-guide-common-problems.jpg` | User-supplied project asset: `womanwithplumbingproblem.jpg`. |
+| `plumbing-guide-geyser-maintenance.jpg` | User-supplied geyser maintenance project image, 2026-11-21. |
+| `plumbing-guide-blocked-drains.jpg` | User-supplied blocked-drain project image, 2026-11-21. |
+| `plumbing-guide-bathroom-renovation.jpg` | User-supplied bathroom renovation project image, 2026-11-21. |
+| `provider-network-cta.jpg` | User-supplied service-provider call-to-action image: `steptodown.com739427.jpg`. |

@@ -34,6 +34,7 @@ export const SERVICES_IMAGES = {
   ecosystem: '/images/services/ecosystem-property.jpg',
   plumbingHero: '/images/services/plumbing-hero-kitchen-sink.png',
   plumbingProfessional: '/images/services/plumbing-professional.jpg',
+  providerNetworkCta: '/images/services/provider-network-cta.jpg',
   categories: {
     home_improvement: '/images/services/category-home-improvement.jpg',
     finance_legal: '/images/services/category-finance-legal.jpg',
