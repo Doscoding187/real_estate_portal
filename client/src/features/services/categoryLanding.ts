@@ -625,7 +625,7 @@ const PLUMBING_FOCUS: ServiceFocusLandingOverride = {
   servicePathways: [
     {
       key: 'leak-repair',
-      title: 'Leak Repairs & Plumbing',
+      title: 'Leak Repairs\n& Plumbing',
       description: 'Leaks, fixtures, pipes and visible water-related concerns.',
       query: 'plumbing',
       planningKey: 'prompt-attention',
@@ -633,7 +633,7 @@ const PLUMBING_FOCUS: ServiceFocusLandingOverride = {
     },
     {
       key: 'bathroom-installation',
-      title: 'Bathroom Installations',
+      title: 'Bathroom\nInstallations',
       description: 'Fixture replacements, new fittings and bathroom plumbing work.',
       query: 'plumbing',
       planningKey: 'installation',
@@ -641,7 +641,7 @@ const PLUMBING_FOCUS: ServiceFocusLandingOverride = {
     },
     {
       key: 'drainage',
-      title: 'Drainage & Blockages',
+      title: 'Drainage &\nBlockages',
       description: 'Drain, water-flow and blockage concerns to discuss with a provider.',
       query: 'plumbing',
       planningKey: 'prompt-attention',
@@ -649,7 +649,7 @@ const PLUMBING_FOCUS: ServiceFocusLandingOverride = {
     },
     {
       key: 'geyser',
-      title: 'Geyser Repairs & Replacement',
+      title: 'Geyser Repairs\n& Replacement',
       description: 'Geyser repair, replacement and installation conversations.',
       query: 'plumbing',
       planningKey: 'installation',
@@ -657,7 +657,7 @@ const PLUMBING_FOCUS: ServiceFocusLandingOverride = {
     },
     {
       key: 'maintenance',
-      title: 'Maintenance & Servicing',
+      title: 'Maintenance\n& Servicing',
       description: 'Planned maintenance and recurring plumbing issues.',
       query: 'plumbing',
       planningKey: 'planned-work',
@@ -665,7 +665,7 @@ const PLUMBING_FOCUS: ServiceFocusLandingOverride = {
     },
     {
       key: 'project',
-      title: 'Emergency Plumbing',
+      title: 'Emergency\nPlumbing',
       description: 'Urgent plumbing concerns to discuss when a provider is available.',
       query: 'plumbing',
       planningKey: 'prompt-attention',

@@ -533,12 +533,12 @@ export default function ServicesCategoryPage() {
                       onClick={() => {
                         if (pathway.planningKey) setSelectedPlanningKey(pathway.planningKey);
                       }}
-                      className="group flex min-h-[72px] items-center gap-3.5 rounded-xl border border-[#E1EAF0] bg-white px-3.5 py-3 shadow-[0_7px_16px_-14px_rgba(2,17,30,0.45)] transition hover:-translate-y-0.5 hover:border-[#168363]/45 hover:shadow-[0_12px_22px_-16px_rgba(2,17,30,0.55)]"
+                      className="group flex min-h-[84px] items-center gap-3.5 rounded-xl border border-[#E1EAF0] bg-white px-3.5 py-3 shadow-[0_7px_16px_-14px_rgba(2,17,30,0.45)] transition hover:-translate-y-0.5 hover:border-[#168363]/45 hover:shadow-[0_12px_22px_-16px_rgba(2,17,30,0.55)]"
                     >
-                      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#EAF4FF] text-[#0874C9]">
-                        <Icon className="h-7 w-7" aria-hidden="true" />
+                      <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#EAF4FF] text-[#0874C9]">
+                        <Icon className="h-8 w-8" aria-hidden="true" />
                       </span>
-                      <span className="min-w-0 flex-1 text-[13px] font-bold leading-[1.15] text-[#0B1B2A]">
+                      <span className="min-w-0 flex-1 whitespace-pre-line text-[13px] font-bold leading-[1.12] text-[#0B1B2A]">
                         {pathway.title}
                       </span>
                       <ArrowRight className="h-4 w-4 shrink-0 text-[#154969] transition group-hover:translate-x-0.5 group-hover:text-[#0874C9]" aria-hidden="true" />
