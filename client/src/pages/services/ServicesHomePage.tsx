@@ -177,7 +177,7 @@ export default function ServicesHomePage() {
     () => canonicalPlaceSelectionFromResolved(resolvedPlaceQuery.data),
     [resolvedPlaceQuery.data],
   );
-  const [selectedServiceKey, setSelectedServiceKey] = useState('plumbing');
+  const [selectedServiceKey, setSelectedServiceKey] = useState('');
   const [selectedPlace, setSelectedPlace] = useState<CanonicalPlaceSelection | null | undefined>(
     undefined,
   );
@@ -191,7 +191,7 @@ export default function ServicesHomePage() {
     { enabled: !isUnavailable },
   );
   const providers = useMemo(
-    () => (isUnavailable ? [] : (directoryQuery.data || [])) as ProviderDirectoryItem[],
+    () => (isUnavailable ? [] : directoryQuery.data || []) as ProviderDirectoryItem[],
     [directoryQuery.data, isUnavailable],
   );
   const isLoading = !isUnavailable && directoryQuery.isLoading;
@@ -202,7 +202,7 @@ export default function ServicesHomePage() {
   const railServices = rankedServices.slice(0, RAIL_SIZE);
   const moreServices = rankedServices.slice(RAIL_SIZE);
   const selectedService =
-    rankedServices.find(service => service.key === selectedServiceKey) || rankedServices[0] || null;
+    rankedServices.find(service => service.key === selectedServiceKey) || null;
 
   const featuredProviders = useMemo(() => {
     return [...providers]
@@ -291,6 +291,9 @@ export default function ServicesHomePage() {
                     onChange={event => setSelectedServiceKey(event.target.value)}
                     className="mt-2 h-12 w-full rounded-xl border border-[#E3EBF0] bg-[#FDFDFD] px-4 text-sm text-[#0B1B2A] outline-none transition focus:border-[#168363]"
                   >
+                    <option value="" disabled>
+                      Choose a service
+                    </option>
                     {rankedServices.map(service => (
                       <option key={service.key} value={service.key}>
                         {service.label}
@@ -313,7 +316,8 @@ export default function ServicesHomePage() {
                 <button
                   type="button"
                   onClick={submitSearch}
-                  className={`${servicesUi.action} h-12 md:mt-6`}
+                  disabled={!selectedService}
+                  className={`${servicesUi.action} h-12 md:mt-6 disabled:cursor-not-allowed disabled:opacity-50`}
                 >
                   <Search className="h-4 w-4" aria-hidden="true" />
                   Search
@@ -534,7 +538,9 @@ export default function ServicesHomePage() {
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
                 <p className={servicesUi.eyebrow}>Provider directory</p>
-                <h2 className={`mt-2 ${servicesUi.heading}`}>Published providers, when available</h2>
+                <h2 className={`mt-2 ${servicesUi.heading}`}>
+                  Published providers, when available
+                </h2>
               </div>
               <button
                 type="button"

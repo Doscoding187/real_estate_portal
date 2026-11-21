@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 const routeState = { category: 'moving' };
 const mockDirectorySearch = vi.fn();
@@ -75,7 +75,9 @@ describe('ServicesCategoryPage', () => {
 
     render(<ServicesCategoryPage />);
 
-    expect(screen.getByRole('heading', { name: /services providers/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /find providers for home improvement/i }),
+    ).toBeInTheDocument();
     await waitFor(() =>
       expect(mockSetLocation).toHaveBeenCalledWith(
         '/services/home-improvement?category=home_improvement&city=Pretoria',
@@ -89,7 +91,9 @@ describe('ServicesCategoryPage', () => {
 
     render(<ServicesCategoryPage />);
 
-    expect(screen.getByRole('heading', { name: /services providers/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /find providers for moving services/i }),
+    ).toBeInTheDocument();
     expect(mockSetLocation).not.toHaveBeenCalled();
   });
 
@@ -100,7 +104,9 @@ describe('ServicesCategoryPage', () => {
     render(<ServicesCategoryPage />);
 
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: /browse providers to request/i })).toBeInTheDocument(),
+      expect(
+        screen.getByRole('button', { name: /browse providers to request/i }),
+      ).toBeInTheDocument(),
     );
     expect(mockSetLocation).not.toHaveBeenCalled();
   });
@@ -129,5 +135,40 @@ describe('ServicesCategoryPage', () => {
       },
       { '@type': 'ListItem', position: 3, name: 'Moving Services' },
     ]);
+  });
+
+  it('keeps a selected plumbing focus visible, useful, and attached to directory filtering', () => {
+    routeState.category = 'home-improvement';
+    window.history.pushState({}, '', '/services/home-improvement?query=plumbing');
+
+    render(<ServicesCategoryPage />);
+
+    expect(
+      screen.getByRole('heading', { name: /find help with plumbing & maintenance/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/current service focus/i)).toBeInTheDocument();
+    expect(screen.getAllByText('Plumbing & Maintenance')).toHaveLength(2);
+    const maintenancePlan = screen.getByRole('button', { name: /maintenance or repair/i });
+    expect(maintenancePlan).toBeInTheDocument();
+    expect(screen.getByText(/material preference/i)).toBeInTheDocument();
+    expect(screen.queryByText(/emergency service available/i)).not.toBeInTheDocument();
+    expect(mockDirectorySearch).toHaveBeenCalledWith(
+      expect.objectContaining({ category: 'home_improvement', query: 'plumbing' }),
+    );
+
+    fireEvent.click(maintenancePlan);
+
+    expect(maintenancePlan).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText(/when you contact a provider/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /apply filters/i }));
+
+    expect(mockSetLocation).toHaveBeenCalledWith(
+      '/services/home-improvement?category=home_improvement&query=plumbing',
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /clear focus/i }));
+
+    expect(mockSetLocation).toHaveBeenLastCalledWith('/services/home-improvement');
   });
 });

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 
 const mockProviders = [
   {
@@ -94,6 +94,21 @@ describe('ServicesHomePage', () => {
     expect(screen.getByPlaceholderText(/Choose an approved Place/i)).toBeInTheDocument();
   });
 
+  it('requires a deliberate service choice before the hero search can run', () => {
+    render(<ServicesHomePage />);
+
+    const serviceSelect = screen.getByRole('combobox', { name: /service category/i });
+    const searchButton = screen.getByRole('button', { name: /^search$/i });
+
+    expect(serviceSelect).toHaveValue('');
+    expect(searchButton).toBeDisabled();
+
+    fireEvent.change(serviceSelect, { target: { value: 'plumbing' } });
+
+    expect(serviceSelect).toHaveValue('plumbing');
+    expect(searchButton).toBeEnabled();
+  });
+
   it('renders real provider records and the platform verification signal', () => {
     render(<ServicesHomePage />);
 
@@ -114,7 +129,9 @@ describe('ServicesHomePage', () => {
     render(<ServicesHomePage />);
 
     expect(screen.getByRole('heading', { name: /explore more services/i })).toBeInTheDocument();
-    expect(screen.getAllByRole('link', { name: /plumbing & maintenance/i })).toHaveLength(1);
+    const plumbingLinks = screen.getAllByRole('link', { name: /plumbing & maintenance/i });
+    expect(plumbingLinks).toHaveLength(1);
+    expect(plumbingLinks[0]).toHaveAttribute('href', expect.stringContaining('query=plumbing'));
     expect(screen.getAllByRole('link', { name: /inspections & compliance/i })).toHaveLength(1);
     expect(screen.queryByText('Start with what you need done')).not.toBeInTheDocument();
   });
