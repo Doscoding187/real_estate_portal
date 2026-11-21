@@ -113,9 +113,13 @@ accepted or represented as saved. The branch also adds the balanced nine-card
 homepage category presentation and deeper truthful discovery content. Its active
 Readiness-1 refinement removes the forced Plumbing hero default, keeps a selected
 popular-service query visible through the category directory and normal filters,
-and adds grounded request-planning guidance without claiming emergency, same-day,
-material, scope or project availability. This is unmerged review work, not
-advertising, provider publication, deployment or production-readiness evidence.
+and turns every supported category into a reusable destination: a category hero,
+service pathways, request-planning/detail prompts, practical enquiry guidance,
+truthful no-match alternatives and a controlled provider-application route. The
+configuration never creates provider supply, reviews, trends, emergency,
+same-day, material, scope or project-availability claims. This is unmerged
+review work, not advertising, provider publication, deployment or
+production-readiness evidence.
 
 **Verification update (2026-11-21):** the current branch passed its relevant
 Database-Authority test set (11 files / 66 tests): the static sitemap now
@@ -124,26 +128,30 @@ refuses writable applications/requests, and homepage/category/request/profile/
 service-detail contracts remain intact. `pnpm check` passed and
 `pnpm run lint:check` exited 0 with zero errors (13,943 repository-wide
 warnings). The required final `pnpm test:authority` run reached the exact
-disposable target and exited 1 with 872 files passed, 4 failed, 12 skipped
-(6,418 tests passed, 21 failed, 100 skipped). No Services test failed. The
+disposable target and exited 1 with 872 files passed, 5 failed, 12 skipped
+(6,420 tests passed, 24 failed, 100 skipped). No Services test failed. The
 remaining failures are separate shared legal-fixture / commercial S4 setup,
-founder-super-admin fixture and B07 role-fixture issues; they are not a
-database-startup failure or authority for more Services scope.
+founder-super-admin fixture, B07 role-fixture and hosted-readiness-monitor
+timing issues; they are not a database-startup failure or authority for more
+Services scope.
 
 **Readiness-1 verification update (2026-11-21):** the neutral hero choice,
-popular-service focus, category request-planning content and focus-preservation
-tests pass (`ServicesHomePage.integration.test.tsx` and
-`ServicesCategoryPage.test.tsx`: 13 tests). `pnpm check` and
-`pnpm run lint:check` passed. A local desktop browser journey verified neutral
-hero → Plumbing selection → `/services/home-improvement?query=plumbing` →
-planning prompt; the mobile Plumbing page has no horizontal overflow. The new
-`pnpm test:authority` run used the exact owned disposable worktree target and
-finished with 871 files passed, 5 failed, 12 skipped (6,418 tests passed,
-23 failed, 100 skipped). All Services tests passed. The five failing files are
-outside Services: commercial S4/legal fixture setup (20 test failures, including
-the absent test-only JWT secret), agency listing fixture cleanup, founder Google
-identity fixture, B07 super-admin isolation (2 tests), and one Development
-approval-queue deadlock. This branch does not alter those engines.
+popular-service focus, reusable category-destination content and
+focus-preservation tests pass (`categoryLanding.test.ts`,
+`ServicesHomePage.integration.test.tsx` and `ServicesCategoryPage.test.tsx`:
+16 tests). `pnpm check` and `pnpm run lint:check` passed. A local browser smoke
+verified the broad Home Improvement route → Plumbing
+`/services/home-improvement?query=plumbing` destination, category pathways,
+provider-results anchor, controlled provider-application CTA and truthful
+no-match alternative. Desktop and 390px mobile Plumbing routes had no horizontal
+overflow or console errors. The full `pnpm test:authority` category-destination
+candidate completed with 872 files passed, 5 failed and 12 skipped (6,420
+passed, 24 failed, 100 skipped); none of its failures were in Services. A
+subsequent client-only anchor-scroll correction passed focused tests, typecheck,
+lint and a live local browser click-through. The failing suites are separate
+Commercial/Legal fixture, founder-super-admin, B07 role-fixture and
+hosted-readiness-monitor timing issues. This branch does not alter those
+engines.
 
 ## §2 Supersession ledger
 
@@ -176,7 +184,7 @@ Statuses: `Proposed` (awaiting founder/V3 approval) · `Approved, not started` �
 | DELTA-11 Commercial model (tiers/placement/lead fees) | Founder decision | Proposed | V2 §3.1 gate: research then approval |
 | DELTA-12 Provider acquisition and registration | Code + operations | **Done on `origin/main` #768; release email/legal verification pending** | Services acquisition route enters existing `service_provider` registration; real registration and verification HTTP routes established the provider role/session; onboarding completed against existing profile/service/Place authorities; pending provider remained private until super-admin publication. Evidence: `integration.services-provider-acquisition.test.ts`, role/auth/session/onboarding tests. Verification mail was captured in memory; current legal bundle and external delivery not verified. No schema, pricing, provider promotion or deployment. |
 | DELTA-13 Provider-editable service descriptions | Code | **Done on `origin/main` #766; release validation pending** | Existing provider editor and `service_provider_services.description` authority are reused. Real DB integration proves save/reload, optional blank clear, 2,000-character limit, foreign-service rejection, public profile/service projection, and unpublished privacy. No schema or migration. Published edits remain immediate under V1; no edit-review state is implemented or claimed. |
-| Readiness-1 Public discovery focus and request planning | Code | **In flight (`feat/services-public-marketplace-readiness-20261120`)** | The hero now requires a deliberate service choice. Existing popular-service links keep their server-backed `query` focus (for example, Plumbing) in the category directory, which visibly identifies the focus and preserves it during normal directory refinement. Category guidance distinguishes prompt attention, planned maintenance, installation and larger-project intent without treating those prompts as provider availability filters or claiming emergency/same-day availability. No server, schema, migration, data, publication or authorization change. |
+| Readiness-1 Category destinations, public discovery focus and request planning | Code | **Implemented on `feat/services-public-marketplace-readiness-20261120`; conditionally review-ready with unrelated full-suite failures recorded** | The homepage still requires a deliberate service choice. Each canonical category now reads from one reusable content authority for its hero, pathways, request planning, practical guidance and truthful no-match/provider-acquisition states. Existing popular-service links preserve their server-backed `query` focus (for example, Plumbing) through normal directory refinement; pathways link into that same query authority. Guidance distinguishes prompt attention, planned maintenance, installation and larger-project intent without treating prompts as provider availability filters or claiming emergency/same-day availability. The authority suite reports no Services failure; the subsequent client-only results-anchor correction has focused tests, typecheck, lint and browser-smoke evidence. No server, schema, migration, data, publication or authorization change. |
 
 **Current direction:** V3 is approved. DELTA-1/3/4/7 and the DELTA-10 canonical
 Place foundation, DELTA-12 and DELTA-13 are shipped on the refreshed baseline.

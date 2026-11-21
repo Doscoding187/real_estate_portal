@@ -75,9 +75,7 @@ describe('ServicesCategoryPage', () => {
 
     render(<ServicesCategoryPage />);
 
-    expect(
-      screen.getByRole('heading', { name: /find providers for home improvement/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /home improvement services/i })).toBeInTheDocument();
     await waitFor(() =>
       expect(mockSetLocation).toHaveBeenCalledWith(
         '/services/home-improvement?category=home_improvement&city=Pretoria',
@@ -91,9 +89,7 @@ describe('ServicesCategoryPage', () => {
 
     render(<ServicesCategoryPage />);
 
-    expect(
-      screen.getByRole('heading', { name: /find providers for moving services/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /moving & storage services/i })).toBeInTheDocument();
     expect(mockSetLocation).not.toHaveBeenCalled();
   });
 
@@ -137,17 +133,18 @@ describe('ServicesCategoryPage', () => {
     ]);
   });
 
-  it('keeps a selected plumbing focus visible, useful, and attached to directory filtering', () => {
+  it('turns a selected plumbing focus into a full category destination and preserves server filtering', () => {
     routeState.category = 'home-improvement';
     window.history.pushState({}, '', '/services/home-improvement?query=plumbing');
 
     render(<ServicesCategoryPage />);
 
+    expect(screen.getByRole('heading', { name: /plumbing & maintenance/i })).toBeInTheDocument();
+    expect(screen.getByText(/leaks & plumbing repairs/i)).toBeInTheDocument();
+    expect(screen.getByText(/planning a fixture replacement/i)).toBeInTheDocument();
     expect(
-      screen.getByRole('heading', { name: /find help with plumbing & maintenance/i }),
+      screen.getByRole('button', { name: /clear plumbing & maintenance focus/i }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/current service focus/i)).toBeInTheDocument();
-    expect(screen.getAllByText('Plumbing & Maintenance')).toHaveLength(2);
     const maintenancePlan = screen.getByRole('button', { name: /maintenance or repair/i });
     expect(maintenancePlan).toBeInTheDocument();
     expect(screen.getByText(/material preference/i)).toBeInTheDocument();
@@ -167,8 +164,33 @@ describe('ServicesCategoryPage', () => {
       '/services/home-improvement?category=home_improvement&query=plumbing',
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /clear focus/i }));
+    fireEvent.click(screen.getByRole('button', { name: /clear plumbing & maintenance focus/i }));
 
     expect(mockSetLocation).toHaveBeenLastCalledWith('/services/home-improvement');
+  });
+
+  it('gives a broad category its own pathways and sends a service choice into the matching directory filter', () => {
+    routeState.category = 'home-improvement';
+    window.history.pushState({}, '', '/services/home-improvement');
+
+    render(<ServicesCategoryPage />);
+
+    expect(screen.getByRole('heading', { name: /home improvement services/i })).toBeInTheDocument();
+    const plumbingPathway = screen.getByRole('link', { name: /plumbing & maintenance/i });
+    expect(plumbingPathway).toHaveAttribute('href', '/services/home-improvement?query=plumbing');
+    expect(screen.getByText(/no published providers match this search yet/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /join as a provider/i })).toHaveAttribute(
+      'href',
+      '/advertise/services',
+    );
+    expect(document.getElementById('provider-results')).toHaveAttribute(
+      'aria-label',
+      'Published providers',
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /browse wider category/i }));
+    expect(mockSetLocation).toHaveBeenLastCalledWith(
+      '/services/home-improvement?category=home_improvement',
+    );
   });
 });
