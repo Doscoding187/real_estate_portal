@@ -49,6 +49,8 @@ export type PrerenderPage = {
   /** Path (not URL) of the canonical page. */
   canonicalPath: string;
   robots: string;
+  /** Optional route-specific social preview image; otherwise the shared Property Listify card is used. */
+  shareImage?: string;
   structuredData: Record<string, unknown>[];
   /** Trusted, already-escaped HTML placed inside #root. Empty leaves #root untouched. */
   bodyHtml: string;
@@ -387,6 +389,76 @@ function advertisePages(): PrerenderPage[] {
   ];
 }
 
+/**
+ * Service-provider recruitment remains an active, free controlled pilot path regardless of
+ * Property Listify's separate Agent Launch Access activation state.
+ */
+function servicesProviderAcquisitionPage(): PrerenderPage {
+  const title = 'Grow Your Service Business | Property Listify Services';
+  const description =
+    'Give your property-service business a professional online presence. Showcase your services and coverage, and apply for Property Listify’s free founding-provider pilot.';
+  const image = '/images/services/provider-network-cta.jpg';
+  const url = absolute('/advertise/services');
+  return {
+    path: '/advertise/services',
+    family: 'advertise',
+    title,
+    description,
+    canonicalPath: '/advertise/services',
+    robots: 'index, follow',
+    shareImage: image,
+    structuredData: [
+      {
+        '@context': 'https://schema.org',
+        '@type': 'WebPage',
+        name: title,
+        description,
+        url,
+        primaryImageOfPage: {
+          '@type': 'ImageObject',
+          url: absolute(image),
+        },
+        about: {
+          '@type': 'Service',
+          name: 'Property Listify Services provider presence and customer enquiries',
+          provider: {
+            '@type': 'Organization',
+            name: SITE_NAME,
+            url: absolute('/'),
+          },
+        },
+      },
+    ],
+    bodyHtml: bodyBlock({
+      h1: 'More than a listing. A digital home for your service business.',
+      paragraphs: [
+        'Showcase your property services, explain where you work and give customers a clear way to enquire through Property Listify.',
+        'Apply, verify your email and complete your profile. Publication is reviewed, and approval does not guarantee customer enquiries.',
+        'The current controlled founding-provider pilot is free while Property Listify validates the product and commercial model. There is no active provider subscription, paid placement or per-enquiry fee in this pilot.',
+      ],
+      links: [
+        {
+          href: '/login?mode=register&role=service_provider',
+          label: 'Apply as a service provider',
+        },
+        { href: '/services', label: 'Explore Services' },
+      ],
+      sections: [
+        {
+          heading: 'A business presence built around your services',
+          paragraph:
+            'Create a shareable company profile, present service pages and listed coverage, and manage attributable customer requests in your provider workspace.',
+        },
+        {
+          heading: 'Applications are reviewed before publication',
+          paragraph:
+            'Your profile stays private during onboarding and review. Only an authorised reviewer can approve publication.',
+        },
+      ],
+    }),
+  };
+}
+
 export const STATIC_LANDING_PATHS = ['/about', '/company/about', '/faq', '/support/faq'];
 
 export type PrerenderOptions = {
@@ -404,6 +476,7 @@ export function listPrerenderPages(
   pages.push(...PRIVACY_PATHS.map(path => legalPage(path, 'privacy')));
   pages.push(contactPage());
   pages.push(...advertisePages());
+  pages.push(servicesProviderAcquisitionPage());
 
   const reserved = new Set(pages.map(page => page.path));
   // Build time has no listing data, so only hand-approved places get raw 'index' HTML. Every
@@ -455,7 +528,7 @@ function metaByProperty(property: string, content: string): [RegExp, string] {
  */
 export function renderPrerenderedHtml(template: string, page: PrerenderPage): string {
   const canonicalUrl = absolute(page.canonicalPath);
-  const image = absolute(PRERENDER_SHARE_IMAGE);
+  const image = absolute(page.shareImage ?? PRERENDER_SHARE_IMAGE);
   // Comments in the shell can hold commented-out tags that would otherwise match below.
   let html = template.replace(/<!--[\s\S]*?-->/g, '');
 

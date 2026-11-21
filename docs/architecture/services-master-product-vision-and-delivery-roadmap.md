@@ -436,6 +436,9 @@ The repository baseline is `origin/main` #791; branch-only changes are identifie
 | Booking, scheduling and consumer payments                | Convert              | Future research | **Not implemented and not MVP**                                                                           | No current service transaction authority.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | Separate product, legal, payment and operational design.                                                                                                                                                    | P3 unless strategy changes; not required for pilot.                         |
 | AI-assisted provider business tools                      | Grow                 | Phase 6         | **Exploratory**                                                                                           | No approved Services AI capability in current product authority.                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | Establish user value, privacy, provenance, human control and non-fabrication.                                                                                                                               | P3; separate founder decision.                                              |
 
+| Provider recruitment landing and channel destination   | Establish / Discover | MVP             | **Implemented in the current readiness worktree; local desktop/mobile preview, typecheck and focused lint verified; external social-crawler preview remains unverified** | `/advertise/services` now presents the provider value proposition, free controlled pilot terms, the existing application-to-review journey, all six current catalogue categories and expectation-setting FAQs. It reuses the existing service-provider registration link and provider-network image. Route-specific title, description, canonical, Open Graph/Twitter image and WebPage JSON-LD are emitted in the React route and in build-time prerendered HTML so social/search crawlers can read initial metadata without executing React. No auth, API, schema, analytics, campaign attribution or commercial entitlement changed. | Validate the deployed share card with target social platforms and recruit a pilot cohort; separately define channel measurement before claiming campaign performance. Existing email verification and reviewer publication remain required. | P1 provider acquisition; V2/V3 and pilot commercial decision. |
+| Provider acquisition channel attribution and application measurement | Establish / Grow | Phase 0–1 | **Not implemented; instrumentation gap verified 2026-11-21** | `client/src/lib/analytics/advertiseTracking.ts` can send event metadata, but `server/routes/analytics.ts` accepts only an event-type allow-list and logs only the type; it does not persist campaign dimensions. The `/advertise/services` CTA and `Login.tsx` registration payload do not carry UTM values through to a durable application record. No configured gtag loader or analytics ID was found in this worktree. Page visits, campaign source and completed provider applications therefore cannot currently be joined or reliably reported by channel. | For the unpaid pilot, use platform-native aggregate metrics. Record applicant-reported source against provider identity only after an access-controlled operational location and retention owner are approved; treat it as directional, self-reported evidence. Before automated or paid measurement, approve event fields, privacy disclosure, retention and reporting authority. Reuse an existing event authority only if it supports this purpose; do not add schema or a third-party pixel as a shortcut. | P1; founder and privacy authority before durable attribution. |
+
 ### Definition of verification status
 
 - **Source evidence:** route/component/service/schema or merged change exists.
@@ -482,10 +485,11 @@ Items marked “proposed” are not approved merely by appearing here.
 | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | Product identity and four pillars                          | Set by the 2026-11-12 directive.                                                                                                                                        | Preserve Discover / Establish / Convert / Grow in future work.                                                                           |
 | Provider signup then review                                | Directive and current clarification support applications followed by approval.                                                                                          | Open application; publication remains manual and private by default.                                                                     |
-| Free founding-provider offer duration and terms            | V2 approves a free controlled cohort; exact term/benefits/expiry are unspecified.                                                                                       | Set review date and terms before provider recruitment claims; do not imply “free forever.”                                               |
-| Initial launch categories and Places                       | Not established by code.                                                                                                                                                | Choose based on recruitable, real provider supply and demand evidence.                                                                   |
-| Supply threshold                                           | Earlier launch plan proposes at least two independent providers per advertised cell with a limited single-provider exception; this is not an approved universal policy. | Edward chooses/approves any threshold and exception rule.                                                                                |
-| Provider response expectation and human operational owners | Code does not name live operators.                                                                                                                                      | Name admission, review, inbox, moderation, support and incident owners; define measurable pilot expectations.                            |
+| Provider acquisition measurement and channel data         | No durable Services channel-to-application measurement exists. For the unpaid pilot, use native platform metrics and directional, provider-reported source information only; recording linked applicant-source data remains gated on an approved restricted location and retention owner. | Keep campaign spend at zero. Use the draft recruitment kit in §17. Before durable or paid attribution, approve source fields, privacy disclosure, retention, access and reporting authority. |
+| Free founding-provider offer duration and terms            | V2 and the 2026-11-13 pilot decision approve a free, controlled founding-provider pilot; exact duration, benefits and expiry are unspecified.                             | State only that the current controlled pilot is free. Do not imply “free forever,” a fixed term, guaranteed leads or a future price.     |
+| Initial provider-recruitment categories and Places          | The 2026-11-13 pilot decision sets conveyancing, inspection/compliance certificates and moving in the City of Johannesburg and City of Tshwane as recruitment targets. Active/selectable coverage and current supply are not verified by that decision. | Recruit providers in these target markets; confirm canonical Place eligibility during the governed local rehearsal. Do not advertise consumer availability until supply and release gates pass. |
+| Pilot consumer-advertising supply threshold                | The 2026-11-13 pilot decision requires at least two independent, approved, contactable providers with an active service and valid coverage in every advertised category × Place cell. Single-provider cells are not advertised in the pilot. | Apply this pilot rule before consumer advertising. Any later exception or change requires a new recorded decision.                       |
+| Provider response expectation and human operational owners | The 2026-11-13 pilot decision names Edward for admission, publication review, new-request monitoring, review/report triage and customer support, with one daily check. Providers are privately told to respond within one business day; no automated provider alerts are planned for the pilot. | Use the existing daily manual process. Contact a provider when a request is unanswered after one business day; revisit DELTA-8 if any request reaches two business days unanswered. Do not expose the expectation as a consumer performance claim. |
 | Business-presence experience                               | User directive makes it central; current canonical routes exist.                                                                                                        | Improve current structured profile rather than build a full site builder. Approve larger content or branding scope after pilot evidence. |
 | Commercial model/price                                     | V2/V3/AEE leave it open behind DELTA-11.                                                                                                                                | Research subscription, productivity, qualified-request and hybrid models; do not inherit Agent Launch Access price.                      |
 | Paid ranking/territory exclusivity                         | Not approved.                                                                                                                                                           | Keep prohibited unless separate trust, commercial and legal review changes policy.                                                       |
@@ -499,6 +503,114 @@ Items marked “proposed” are not approved merely by appearing here.
 **Approved proposition direction:** establish a professional digital presence, showcase services and coverage, receive attributable requests, and progressively gain business tools. The founding-provider funnel should say that providers apply, create a private profile and are reviewed before publication. It must not promise guaranteed placement, traffic, leads, bookings, revenue or a future price.
 
 Recommended early channels are founder-led direct outreach and provider referrals to recruit the initial cohort, followed by focused social/industry outreach only for categories with a real onboarding and review capacity. This is a proposal to test, not a proven channel mix.
+
+#### Channel measurement readiness
+
+The recruitment page is a shareable campaign destination, but Services does not
+yet have reliable channel-to-application reporting. The existing generic
+Advertise client tracker sends broader event metadata while its current server
+route records only the allow-listed event type in application logs. The provider
+registration request does not carry campaign source through to a durable
+application record. Optional `gtag` calls are present in older Advertise code,
+but no configured loader or analytics ID was found in the current worktree.
+These attempts are not evidence of captured or reportable analytics.
+
+For a small, unpaid founding-provider pilot, use social-platform link metrics,
+search-platform reporting and founder/referral outreach records. The admission
+owner can record a provider's source against the provider record and current
+review stage in a controlled operational register. Treat this as directional
+and partly self-reported; it cannot provide reliable unique page visits or a
+click-to-application conversion rate. Do not use the result to claim customer
+acquisition cost or channel performance.
+
+Keep any manual register limited to provider record ID, applicant-reported
+source category, campaign label, application stage and date, responsible
+reviewer and next action. Do not collect a referrer's name or duplicate
+provider contact details already held in the Services workspace. A register
+linked to a provider must live only in an
+access-controlled, approved operational location with a defined retention
+owner; do not put applicant-level records in this repository or an unapproved
+spreadsheet. The Services documents reviewed here do not identify such a
+location or retention rule, so the template below is ready but a live register
+must wait until the owner confirms them. Until then, use platform-native
+aggregate counts and treat any applicant-reported source as unrecorded
+operational context, not persistent attribution. Tagged URLs may label a
+platform post, but their query parameters are not captured attribution until a
+reporting sink actually receives and retains them.
+
+Before automating attribution or buying traffic, approve a first-party event
+contract for at least landing visit, application submission, email verification,
+profile submission and publication. Define allowed source/medium/campaign
+values, data minimization, privacy disclosure, retention, access and report
+ownership. Do not send names, email addresses, phone numbers, full URLs or
+referrers as campaign dimensions. Reuse the canonical analytics authority only
+after its ownership and reporting fit are reviewed; a new schema, external
+analytics provider or advertising pixel requires its own decision.
+
+#### Founding-provider pilot recruitment kit — draft, not yet published
+
+The 2026-11-13 Services pilot decision sets the provider-recruitment focus as
+conveyancing, inspection/compliance certificates and moving in the City of
+Johannesburg and City of Tshwane. These are recruitment targets, not a claim
+that every canonical Place is selectable, that providers are already present,
+or that consumer demand advertising is ready. Use the existing provider
+destination, [`/advertise/services`](https://www.propertylistifysa.co.za/advertise/services),
+as the one campaign landing route after its release gates pass. The registration
+CTA continues to the existing email-verification and private profile-review
+journey.
+
+**Organic social post**
+
+> Do you run a conveyancing, property inspection/compliance or moving business
+> in Johannesburg or Tshwane? Property Listify Services is inviting providers
+> to apply to its free, controlled founding-provider pilot. Approved providers
+> can create a shareable business presence, describe their services and
+> coverage, and manage customer enquiries in a provider workspace. Applications
+> require email verification and review; applying does not publish your
+> business. The pilot does not guarantee enquiries, bookings, work or revenue.
+> Learn more and apply: [Property Listify Services for providers](https://www.propertylistifysa.co.za/advertise/services)
+
+**Direct WhatsApp, email or LinkedIn outreach**
+
+> Hi [business name], I’m helping recruit property-related service businesses
+> for Property Listify’s founding-provider pilot in [Johannesburg/Tshwane]. We
+> are currently speaking with conveyancing, property inspection/compliance and
+> moving providers. The pilot is free and controlled. If approved, your company
+> can create a shareable Property Listify business presence, describe its
+> services and operating coverage, and manage enquiries in the provider
+> workspace. You would apply, verify your email and submit your profile for
+> review; the profile stays private until an authorised reviewer approves it.
+> There is no promise of customer enquiries or work. Details and application:
+> [Property Listify Services for providers](https://www.propertylistifysa.co.za/advertise/services)
+
+**Referral request**
+
+> Do you know a reputable conveyancing, inspection/compliance or moving
+> business serving Johannesburg or Tshwane? Please share our provider
+> application page with them. Property Listify is recruiting for a free,
+> controlled pilot; applications are reviewed and publication is not automatic:
+> https://www.propertylistifysa.co.za/advertise/services
+
+**Channel order and evidence**
+
+| Channel | Pilot action | Evidence to retain | Guardrail |
+|---|---|---|---|
+| Founder-led direct outreach and referrals | Start here; contact relevant providers in the approved target categories/markets. | Outreach count, replies and applicant-reported source as operational evidence once an approved restricted register location exists. | No mass messaging, invented endorsement, or promise of demand. |
+| Organic LinkedIn, Facebook, Instagram and relevant business communities | Share the organic post and link to the provider destination after release. | Platform-reported post reach/clicks where available, captured as aggregate figures with the observation date. | Do not imply the platform provides verified leads or durable application attribution. |
+| Search/SEO | Use the existing Services provider page as the provider-acquisition destination; keep current search metadata accurate. | Search Console/platform aggregate query and landing-page data only if the account is configured and access is authorized. | No new analytics tags, pixels, category/city pages or unverified supply claims in this workstream. |
+| Paid social/search | Not part of this pilot execution. | None. | Do not spend until founder approval, supply readiness, privacy/measurement authority and a capped plan exist. |
+
+**Blank operational register fields, for use only after a restricted location
+and retention owner are confirmed:** provider record ID; applicant-reported
+source category (direct outreach, referral, LinkedIn, Facebook, Instagram,
+search, other/unknown); campaign label; observed application stage and date;
+responsible reviewer; next action. Keep contact details, category and coverage
+in the existing Services authority. Suggested operational stages are applied,
+email verified, profile in progress, submitted for review, decision recorded
+(approved/held/rejected) and published; they do not alter or duplicate
+application-state authority. This template does not create a new product data
+field, authorize a new data store, or mean any live campaign or provider
+recruitment has occurred.
 
 ### Consumer acquisition
 
@@ -542,6 +654,10 @@ Every Services workstream should:
 - `docs/architecture/commercial-value-proposition-acquisition-engine/11-aae-s1a-capability-evidence-register.md`
 - Source listed throughout the capability register, including `client/src/App.tsx`, consumer/provider Services pages, `client/src/features/services/onboarding/**`, `client/src/pages/pro/ProProfilePage.tsx`, `client/src/pages/pro/ProDashboardPage.tsx`, `client/src/pages/admin/ServicesReviewWorkspace.tsx`, `server/_core/authRoutes.ts`, `server/servicesEngineRouter.ts`, `server/services/servicesEngineService.ts`, `drizzle/schema/servicesEngine.ts`, and relevant tests.
 - `services-launch-readiness-plan-2026-11-12.md` and `services-current-state-commercial-audit-2026-11-12.md`, supplied as session artifacts. Their dated findings were refreshed through `origin/main` #791.
+- `docs/architecture/services-pilot-decisions-2026-11-13.md`, including the
+  recorded pilot recruitment categories/Places, supply bar, human operational
+  ownership and response cadence. Place selectability and live supply remain
+  separate verification gates.
 
 ### Constraints and unverified evidence
 
