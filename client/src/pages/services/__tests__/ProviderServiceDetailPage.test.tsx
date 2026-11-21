@@ -7,6 +7,7 @@ const routeContext = {
   service: 'plumbing',
 };
 const mockProfileData = vi.fn();
+const mockProfileError = vi.fn();
 const mockSetLocation = vi.fn();
 const applySeoMock = vi.fn();
 
@@ -14,7 +15,11 @@ vi.mock('@/lib/trpc', () => ({
   trpc: {
     servicesEngine: {
       getProviderPublicProfile: {
-        useQuery: () => ({ data: mockProfileData(), isLoading: false, error: null }),
+        useQuery: () => ({
+          data: mockProfileData(),
+          isLoading: false,
+          error: mockProfileError(),
+        }),
       },
     },
   },
@@ -98,7 +103,9 @@ describe('ProviderServiceDetailPage contract', () => {
   beforeEach(() => {
     applySeoMock.mockReset();
     mockProfileData.mockReset();
+    mockProfileError.mockReset();
     mockProfileData.mockReturnValue(makeProfile());
+    mockProfileError.mockReturnValue(null);
     routeContext.slug = 'test-provider--123';
     routeContext.service = 'plumbing';
     window.history.pushState({}, '', '/services/provider/test-provider--123/service/plumbing');
@@ -244,6 +251,20 @@ describe('ProviderServiceDetailPage contract', () => {
       'href',
       '/services',
     );
+  });
+
+  it('does not mistake a temporary query failure for an unpublished service', () => {
+    mockProfileData.mockReturnValue(undefined);
+    mockProfileError.mockReturnValue(new Error('temporary upstream failure'));
+
+    render(<ProviderServiceDetailPage />);
+
+    expect(
+      screen.getByRole('heading', { name: /service page temporarily unavailable/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/does not confirm whether the provider or service is published/i),
+    ).toBeInTheDocument();
   });
 
   it('fails closed on a malformed provider slug', () => {

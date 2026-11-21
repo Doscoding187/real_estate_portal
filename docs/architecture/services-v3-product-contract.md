@@ -1,13 +1,14 @@
 # Property Listify Services V3 Growth Contract
 
-**Status:** `SERVICES V3 — APPROVED; DELTA-1/3/4/7 SHIPPED ON origin/main #761`
+**Status:** `SERVICES V3 — APPROVED; DELTA-1/3/4/7/12/13 SHIPPED ON origin/main #791`
 
-**Current implementation reconciliation (2026-11-12):** Refresh against
-`origin/main` #761 confirms DELTA-1 (#704), DELTA-3 (#701), DELTA-4 (#700),
-and DELTA-7 (#702) are merged. DELTA-10's canonical Place coverage foundation
-is also implemented through #693; service-by-Place landing pages remain
-future work. DELTA-2, DELTA-5, DELTA-6, DELTA-8, DELTA-9 and DELTA-11 retain
-their separate contracts and gates. The current capability register is in
+**Current implementation reconciliation (refreshed 2026-11-21):**
+`origin/main` #791 confirms DELTA-1 (#704), DELTA-3 (#701), DELTA-4 (#700),
+DELTA-7 (#702), DELTA-12 (#768), and DELTA-13 (#766) are merged. DELTA-10's
+canonical Place coverage foundation is also implemented through #693;
+service-by-Place landing pages remain future work. DELTA-2, DELTA-5, DELTA-6,
+DELTA-8, DELTA-9 and DELTA-11 retain their separate contracts and gates. The
+current capability register is in
 [`services-master-product-vision-and-delivery-roadmap.md`](services-master-product-vision-and-delivery-roadmap.md).
 
 Approved by Edward on 2026-10-28 with five clarifications recorded here as
@@ -210,22 +211,21 @@ The register `services-engine-state-register.md` is the authoritative shipped
 state, including: the directory surfaces and publication chain (V1), the V2
 MVP surfaces, verified-request reviews, sitemap/JSON-LD/category-slug
 infrastructure (DELTA-4), DELTA-1 per-service presence, DELTA-3 response
-measurement, DELTA-7 workspace upgrades, and canonical Place coverage. Public
-provider applications were held on the #761 baseline. DELTA-12 acquisition and
-DELTA-13 service-description editing are implemented on the 2026-11-12 task
-branch. A task-local MySQL integration journey verified real registration and
-email-token verification routes, private onboarding, reviewer-controlled
-publication, provider-owned service-description edits, public projection and
-unpublication. Email was captured in memory and a synthetic legal fixture was
-used; external delivery and current legal release content remain unverified.
-The full authority suite exited 1 (812 files passed, 4 failed, 12 skipped;
-5,914 tests passed, 22 failed, 99 skipped). Nineteen failures were in
-unrelated S4 tests (one missing test-only JWT secret and 18 stale legal-release
-reads), and three readiness-monitor tests timed out under suite load. Other
-failed files reported legal-fixture setup/teardown conflicts. A focused
-concurrent reproduction confirmed shared `legal_active_release` fixture races;
-the affected paths passed serially. This is not DB startup or Services
-behavior. This contract adds no authority that contradicts the state register.
+measurement, DELTA-7 workspace upgrades, and canonical Place coverage. Provider
+applications and provider-editable service descriptions shipped through #768
+and #766 after the #761 baseline. A task-local MySQL integration journey
+verified real registration and email-token verification routes, private
+onboarding, reviewer-controlled publication, provider-owned service-description
+edits, public projection and unpublication. Email was captured in memory and a
+synthetic legal fixture was used; external delivery and current legal release
+content remain unverified.
+The following full-suite result is historical 2026-11-13 evidence: it exited 1
+(812 files passed, 4 failed, 12 skipped; 5,914 tests passed, 22 failed, 99
+skipped), due to unrelated S4/legal-fixture and readiness-monitor failures.
+The current 2026-11-21 public-readiness evidence, including the final authority
+run and its 11-file / 66-test Services set, is governed by the master roadmap
+and state register. No Services test failed in that current validation. This
+contract adds no authority that contradicts the state register.
 
 ### 4.2 DELTA-1 delivery requirements and acceptance (shipped in #704)
 

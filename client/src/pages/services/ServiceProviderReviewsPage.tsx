@@ -50,7 +50,7 @@ export default function ServiceProviderReviewsPage() {
   );
   const utils = trpc.useUtils();
   const submitReview = trpc.servicesEngine.submitProviderReview.useMutation({
-    onSuccess: async result => {
+    onSuccess: async () => {
       setSubmitMessage(
         'Thank you. Your review was submitted for moderation. It will appear here once a reviewer approves it.',
       );
@@ -145,7 +145,29 @@ export default function ServiceProviderReviewsPage() {
     );
   }
 
-  if (profileQuery.error || reviewsQuery.error || !profile) {
+  if (profileQuery.error || reviewsQuery.error) {
+    return (
+      <>
+        <EnhancedNavbar />
+        <main className="min-h-screen bg-[#FDFDFD] px-4 py-12 md:px-6">
+          <div className={`${servicesUi.surface} mx-auto max-w-3xl p-8`} role="status">
+            <h1 className="font-['Sora'] text-2xl font-bold tracking-[-0.03em] text-[#0B1B2A]">
+              Provider reviews temporarily unavailable
+            </h1>
+            <p className="mt-3 text-sm leading-6 text-[#4B5C6B]">
+              We could not load this provider or its reviews right now. This does not confirm
+              whether the provider is published. Please try again shortly.
+            </p>
+            <Link href="/services" className={`${servicesUi.action} mt-6`}>
+              Browse services
+            </Link>
+          </div>
+        </main>
+      </>
+    );
+  }
+
+  if (!profile) {
     return (
       <>
         <EnhancedNavbar />

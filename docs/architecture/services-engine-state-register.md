@@ -43,7 +43,7 @@ task-owned worktree with evidence recorded in the register line itself.
 
 ## §1 Engine stage statement
 
-**As of `origin/main` @ `93723fdb` (#761, refreshed 2026-11-12):** the Services
+**As of `origin/main` @ `d5504b5a` (#791, refreshed 2026-11-21):** the Services
 engine is a contract-governed pilot marketplace and provider workspace —
 the six-category directory (`/services` and `/services/:category`), provider
 profiles, and five topic pages are indexable with canonicals; the localized
@@ -56,15 +56,16 @@ a super-admin review workspace, and a gated provider workspace. DELTA-1 per-
 service pages (#704), DELTA-3 response measurement (#701), DELTA-4 SEO (#700),
 and DELTA-7 workspace upgrades (#702) are merged. Canonical Place coverage is
 implemented through #693; broader service-by-Place landing pages remain future
-work. Public provider applications remain held, and service-description editing
-is incomplete in the visible provider editor. Campaign landing/capture,
-provider media, export/handover, automated notifications, and monetization are
-not implemented or approved for launch.
+work. Provider applications are open through the existing email-verification
+and private-onboarding flow (#768), and the provider editor can maintain its
+canonical service descriptions (#766). Campaign landing/capture, provider
+media, export/handover, automated notifications, and monetization are not
+implemented or approved for launch.
 
-**Task branch update (2026-11-13):** DELTA-12 provider acquisition and the
-approved provider service-description editor improvement are implemented in
-`feat/services-master-product-vision-and-provider-acquisition-20261112` and
-verified against the exact task-owned disposable MySQL database. The new
+**Historical verification update (2026-11-13):** DELTA-12 provider acquisition
+and the approved provider service-description editor improvement were verified
+against the exact task-owned disposable MySQL database before shipping through
+#768 and #766. The new
 `server/__tests__/integration.services-provider-acquisition.test.ts` uses real
 registration and verification HTTP routes, real authenticated provider
 mutations and reads, persistent service-description writes, ownership checks,
@@ -101,6 +102,31 @@ and no shared/production database, schema, migration, deployment or provider
 promotion was touched. The master vision remains the strategic product
 authority; this register tracks implementation state only.
 
+**Task branch update (2026-11-21):**
+`feat/services-public-marketplace-readiness-20261120` removes only `services`
+from `LAUNCH_HELD_JOURNEYS`. It leaves the server-side eligibility conjunction,
+private-by-default onboarding and super-admin publication authority intact. The
+public marketplace and provider-acquisition information remain accessible
+during a confirmed API outage, but dynamic provider/profile/review/request
+content reports temporary unavailability and applications or requests are not
+accepted or represented as saved. The branch also adds the balanced nine-card
+homepage category presentation and deeper truthful discovery content. This is
+unmerged review work, not advertising, provider publication, deployment or
+production-readiness evidence.
+
+**Verification update (2026-11-21):** the current branch passed its relevant
+Database-Authority test set (11 files / 66 tests): the static sitemap now
+includes `/services`, public entry points are released, the outage boundary
+refuses writable applications/requests, and homepage/category/request/profile/
+service-detail contracts remain intact. `pnpm check` passed and
+`pnpm run lint:check` exited 0 with zero errors (13,943 repository-wide
+warnings). The required final `pnpm test:authority` run reached the exact
+disposable target and exited 1 with 872 files passed, 4 failed, 12 skipped
+(6,418 tests passed, 21 failed, 100 skipped). No Services test failed. The
+remaining failures are separate shared legal-fixture / commercial S4 setup,
+founder-super-admin fixture and B07 role-fixture issues; they are not a
+database-startup failure or authority for more Services scope.
+
 ## §2 Supersession ledger
 
 | # | Artifact | Status | Disposition |
@@ -130,18 +156,16 @@ Statuses: `Proposed` (awaiting founder/V3 approval) · `Approved, not started` �
 | DELTA-9 Export/handover with POPIA consent semantics | Contract (+ legal review) | Proposed | Platform stays attribution system of record |
 | DELTA-10 Canonical Place coverage and geography | Place Authority consumer slice | **Foundation shipped through #693** (commit `cbff3e7b3`); service-by-Place pages remain future | Provider coverage/search uses canonical Place IDs; this does not implement radius search or service-by-Place SEO routes |
 | DELTA-11 Commercial model (tiers/placement/lead fees) | Founder decision | Proposed | V2 §3.1 gate: research then approval |
-| DELTA-12 Provider acquisition and registration | Code + operations | **Implemented and task-local DB-backed verified; release email/legal verification pending** | Services acquisition route enters existing `service_provider` registration; real registration and verification HTTP routes established the provider role/session; onboarding completed against existing profile/service/Place authorities; pending provider remained private until super-admin publication. Evidence: `integration.services-provider-acquisition.test.ts`, role/auth/session/onboarding tests. Verification mail was captured in memory; current legal bundle and external delivery not verified. No schema, pricing, provider promotion or deployment. |
-| DELTA-13 Provider-editable service descriptions | Code | **Implemented and task-local DB-backed verified; release validation pending** | Existing provider editor and `service_provider_services.description` authority are reused. Real DB integration proves save/reload, optional blank clear, 2,000-character limit, foreign-service rejection, public profile/service projection, and unpublished privacy. No schema or migration. Published edits remain immediate under V1; no edit-review state is implemented or claimed. |
+| DELTA-12 Provider acquisition and registration | Code + operations | **Done on `origin/main` #768; release email/legal verification pending** | Services acquisition route enters existing `service_provider` registration; real registration and verification HTTP routes established the provider role/session; onboarding completed against existing profile/service/Place authorities; pending provider remained private until super-admin publication. Evidence: `integration.services-provider-acquisition.test.ts`, role/auth/session/onboarding tests. Verification mail was captured in memory; current legal bundle and external delivery not verified. No schema, pricing, provider promotion or deployment. |
+| DELTA-13 Provider-editable service descriptions | Code | **Done on `origin/main` #766; release validation pending** | Existing provider editor and `service_provider_services.description` authority are reused. Real DB integration proves save/reload, optional blank clear, 2,000-character limit, foreign-service rejection, public profile/service projection, and unpublished privacy. No schema or migration. Published edits remain immediate under V1; no edit-review state is implemented or claimed. |
 
 **Current direction:** V3 is approved. DELTA-1/3/4/7 and the DELTA-10 canonical
-Place foundation are shipped on the refreshed baseline. DELTA-12 and DELTA-13
-have task-local DB-backed journey evidence and focused tests, but remain branch-
-only until normal review/merge/release. The full authority suite is not green:
-the remaining failure is shared legal-fixture concurrency and a missing
-test-only JWT secret in unrelated suites, not database initialization or a
-Services failure. Actual email/legal-release verification, launch supply, and
-operational/release readiness remain outstanding. Later deltas retain their
-stated evidence, founder, legal, and Database Authority gates.
+Place foundation, DELTA-12 and DELTA-13 are shipped on the refreshed baseline.
+The public-marketplace readiness branch remains review-only until normal
+review/merge/release. Actual email/legal-release verification, launch supply,
+exact production artifacts, Azure/API availability and operational/release
+readiness remain outstanding. Later deltas retain their stated evidence,
+founder, legal, and Database Authority gates.
 
 ## §4 Asset reconciliation
 
@@ -270,7 +294,7 @@ Resolved hygiene history:
 
 ## §5 Maintenance
 
-- **Evidence age:** refreshed source baseline `origin/main` @ `93723fdb` (#761), 2026-11-12.
+- **Evidence age:** refreshed source baseline `origin/main` @ `d5504b5a` (#791), 2026-11-21.
   Any register line
   older than one merge involving its area must be re-verified before acting on it.
 - Queue and asset lines are updated **in the PR** that changes them — never in a
@@ -283,5 +307,7 @@ Resolved hygiene history:
 
 *Historical asset and branch-lineage checks: reference sweeps (`rg -l`),
 `git rev-list --left-right --count`, `git log`, and registered-path status at
-`main` @ `026586690`. Current product-state reconciliation: `origin/main` @
-`93723fdb` (#761), 2026-11-12, with the evidence in §1 and DELTA rows above.*
+`main` @ `026586690`. Historical product-state reconciliation was
+`origin/main` @ `93723fdb` (#761), 2026-11-12; the current reconciliation is
+`origin/main` @ `d5504b5a` (#791), 2026-11-21, with the evidence in §1 and
+DELTA rows above.*

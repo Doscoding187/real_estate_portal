@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 const mockSetLocation = vi.fn();
 const mockMutate = vi.fn();
@@ -15,7 +15,13 @@ const selectedPlace = {
 };
 
 vi.mock('@/components/location/CanonicalPlaceSelector', () => ({
-  CanonicalPlaceSelector: ({ onChange, label }: { onChange: (value: typeof selectedPlace) => void; label: string }) => (
+  CanonicalPlaceSelector: ({
+    onChange,
+    label,
+  }: {
+    onChange: (value: typeof selectedPlace) => void;
+    label: string;
+  }) => (
     <div>
       <span>{label}</span>
       <button type="button" onClick={() => onChange(selectedPlace)}>
@@ -72,6 +78,7 @@ vi.mock('@/_core/hooks/useAuth', () => ({
 vi.mock('@/lib/seo', () => ({ applySeo: vi.fn() }));
 
 import ServicesRequestPage from '../ServicesRequestPage';
+import { ApiAvailabilityBoundary } from '@/components/ApiAvailabilityBoundary';
 
 function moveToDescription() {
   fireEvent.click(screen.getByRole('button', { name: /continue/i }));
@@ -87,6 +94,11 @@ function submitRequest(notes = 'Need a plumbing inspection.') {
 }
 
 describe('ServicesRequestPage canonical Place handoff', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
   beforeEach(() => {
     mockSetLocation.mockReset();
     mockMutate.mockReset();
@@ -190,7 +202,9 @@ describe('ServicesRequestPage canonical Place handoff', () => {
     );
     render(<ServicesRequestPage />);
 
-    expect(screen.getByRole('heading', { name: /journey context unavailable/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /journey context unavailable/i }),
+    ).toBeInTheDocument();
     expect(mockMutate).not.toHaveBeenCalled();
   });
 
@@ -198,7 +212,30 @@ describe('ServicesRequestPage canonical Place handoff', () => {
     window.history.pushState({}, '', '/services/request/home_improvement');
     render(<ServicesRequestPage />);
 
-    expect(screen.getByRole('heading', { name: /choose a provider and service/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /choose a provider and service/i }),
+    ).toBeInTheDocument();
+    expect(mockMutate).not.toHaveBeenCalled();
+  });
+
+  it('does not offer a writable request flow after confirmed API unavailability', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 503 })));
+
+    render(
+      <ApiAvailabilityBoundary enabled apiBaseUrl="https://api.example.test">
+        <ServicesRequestPage />
+      </ApiAvailabilityBoundary>,
+    );
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5600);
+    });
+
+    expect(
+      screen.getByRole('heading', { name: /service requests temporarily unavailable/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/no request has been sent or saved/i)).toBeInTheDocument();
     expect(mockMutate).not.toHaveBeenCalled();
   });
 });

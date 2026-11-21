@@ -50,17 +50,17 @@ async function requestStaticSitemap(): Promise<SendCapture> {
 }
 
 describe('static sitemap held-journey omission', () => {
-  it('holds the expected journeys', () => {
+  it('holds only the journeys that remain intentionally unavailable', () => {
     expect([...LAUNCH_HELD_JOURNEYS].sort()).toEqual(
-      ['commercial', 'plot_land', 'services', 'shared_living'].sort(),
+      ['commercial', 'plot_land', 'shared_living'].sort(),
     );
   });
 
-  it('omits every held journey path but keeps public pages', async () => {
+  it('omits every held journey path and includes the public Services discovery route', async () => {
     const body = String((await requestStaticSitemap()).body);
     const locs = [...body.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => new URL(m[1]).pathname);
 
-    expect(locs.some(path => path === '/services' || path.startsWith('/services/'))).toBe(false);
+    expect(locs).toContain('/services');
     expect(locs.some(path => path.startsWith('/shared-living'))).toBe(false);
     expect(locs.some(path => path.startsWith('/commercial'))).toBe(false);
     expect(locs.some(path => path.startsWith('/plots-and-land') || path.startsWith('/land'))).toBe(

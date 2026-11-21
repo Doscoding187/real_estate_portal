@@ -6,11 +6,12 @@
 
 **Disposition:** `SERVICES V1 — PILOT CANDIDATE`
 
-**Current-state reconciliation (2026-11-12, `origin/main` #761):** This
+**Current-state reconciliation (refreshed 2026-11-21, `origin/main` #791):** This
 contract remains the reference for shipped request, privacy, publication and
 custody behavior. Later approved V2/V3 work has added moderated reviews,
 measured response performance, per-service public pages, SEO infrastructure,
-workspace improvements and canonical Place coverage. The current master
+workspace improvements, canonical Place coverage, provider applications (#768)
+and provider-editable service descriptions (#766). The current master
 vision and [Services engine state register](services-engine-state-register.md)
 record that evidence. Historical V1-only limitations below are superseded
 where this note names a later approved and shipped capability.
@@ -129,13 +130,12 @@ The server resolves the provider from the authenticated `service_provider`
 account and rejects service IDs not owned by that provider. There is no separate
 pending-edit moderation state: unpublished providers remain private, while edits
 to a published, active service appear on its public profile/detail page after
-save. Publication and eligibility rules remain unchanged. The editor is
-implemented on the 2026-11-12 task branch and its provider-owned save, reload,
-publication, and privacy behavior passed a real task-local MySQL integration
-journey on 2026-11-13. The test captured verification email in memory and used a
-synthetic legal fixture; it does not verify external delivery or current legal
-release content. The branch remains unmerged and the production artifact is
-not release-verified.
+save. Publication and eligibility rules remain unchanged. This editor shipped in
+#766 and its provider-owned save, reload, publication, and privacy behavior
+passed a real task-local MySQL integration journey on 2026-11-13. The test
+captured verification email in memory and used a synthetic legal fixture; it
+does not verify external delivery, current legal-release content, or the
+production artifact.
 
 ## Enquiry privacy and response custody
 

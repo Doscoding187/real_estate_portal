@@ -171,7 +171,33 @@ export default function ServiceProviderProfilePage() {
     );
   }
 
-  if (profileQuery.error || !profile) {
+  if (profileQuery.error) {
+    return (
+      <>
+        <EnhancedNavbar />
+        <main className="min-h-screen bg-[#FDFDFD] px-4 py-8 md:px-6">
+          <div className={`${servicesUi.surface} mx-auto max-w-3xl p-8`} role="status">
+            <h1 className="font-['Sora'] text-2xl font-bold tracking-[-0.03em] text-[#0B1B2A]">
+              Provider profile temporarily unavailable
+            </h1>
+            <p className="mt-3 text-sm leading-6 text-[#4B5C6B]">
+              We could not load this provider profile right now. This does not confirm whether the
+              provider is published. Please try again shortly.
+            </p>
+            <button
+              type="button"
+              onClick={() => setLocation('/services')}
+              className={`${servicesUi.action} mt-6`}
+            >
+              Browse services
+            </button>
+          </div>
+        </main>
+      </>
+    );
+  }
+
+  if (!profile) {
     return (
       <>
         <EnhancedNavbar />
