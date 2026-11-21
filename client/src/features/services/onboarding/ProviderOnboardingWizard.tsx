@@ -26,12 +26,14 @@ const ProProfilePageForm = lazy(() =>
 
 const TOTAL_STEPS = 5;
 
+const STEP_LABELS = ['Business', 'Profile', 'Services', 'Areas', 'Review'];
+
 const ENCOURAGING_COPY: Record<number, string> = {
-  1: "Let's get your business profile ready - this takes about 2 minutes.",
-  2: 'A clear profile helps consumers understand your business.',
-  3: 'Detailed services help consumers assess fit.',
-  4: 'Coverage areas show where you can operate.',
-  5: 'Almost there - review your details before directory review.',
+  1: 'Start with the business name customers already know.',
+  2: 'Introduce your business and the experience you bring.',
+  3: 'Describe the services customers can ask you about.',
+  4: 'Choose the approved Places where you operate.',
+  5: 'Check your details. Your profile stays private until reviewed.',
 };
 
 type ProviderProfileData = {
@@ -225,12 +227,12 @@ export function ProviderOnboardingWizard() {
 
               <div className="max-w-3xl space-y-4">
                 <h1 className="font-serif text-4xl leading-tight text-slate-950 md:text-6xl">
-                  Build a provider profile for the Property Listify directory.
+                  Build your business presence on Property Listify.
                 </h1>
                 <p className="max-w-2xl text-base leading-7 text-slate-700 md:text-lg">
-                  Property Listify Services is where you define your business identity, public
-                  profile, services, and coverage areas. The profile is reviewed before directory
-                  publication.
+                  Create a shareable home for your business, explain the services you offer and show
+                  the areas you cover. Your profile is saved privately and reviewed before it can
+                  appear publicly.
                 </p>
               </div>
 
@@ -254,7 +256,7 @@ export function ProviderOnboardingWizard() {
                     Focus
                   </p>
                   <p className="mt-2 text-base font-semibold text-slate-950">
-                    Coverage, clarity, and response readiness
+                    Services, coverage, and clear expectations
                   </p>
                 </div>
               </div>
@@ -268,15 +270,15 @@ export function ProviderOnboardingWizard() {
                 {[
                   {
                     icon: BriefcaseBusiness,
-                    text: 'A public business profile for consumers comparing providers.',
+                    text: 'A shareable company profile with dedicated pages for your services.',
                   },
                   {
                     icon: MapPinned,
-                    text: 'Coverage areas that help consumers assess whether you can serve their property need.',
+                    text: 'Accurate coverage so customers can assess whether you serve their area.',
                   },
                   {
                     icon: BadgeCheck,
-                    text: 'A private workspace for requests after directory review.',
+                    text: 'A provider workspace for requests when your profile is approved or a request is assigned.',
                   },
                 ].map(item => (
                   <div
@@ -297,6 +299,7 @@ export function ProviderOnboardingWizard() {
                 <WizardProgressIndicator
                   currentStep={currentStep}
                   totalSteps={TOTAL_STEPS}
+                  stepLabel={STEP_LABELS[currentStep - 1]}
                   encouragingCopy={ENCOURAGING_COPY[currentStep]}
                 />
               </div>

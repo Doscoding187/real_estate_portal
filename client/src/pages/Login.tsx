@@ -270,6 +270,7 @@ export default function Login() {
   const [showRegisterPassword, setShowRegisterPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
+  const [registeredRole, setRegisteredRole] = useState<RoleKey | null>(null);
   const [verificationEmailSent, setVerificationEmailSent] = useState(true);
 
   const loginForm = useForm<LoginFormData>({
@@ -440,6 +441,7 @@ export default function Login() {
       );
       setVerificationEmailSent(result?.verificationEmailSent !== false);
       setRegisteredEmail(data.email);
+      setRegisteredRole(data.role);
       registerForm.reset(registerDefaults);
       closeRegister();
       setSignInOpen(false);
@@ -823,13 +825,34 @@ export default function Login() {
 
       <Dialog
         open={registeredEmail !== null}
-        onOpenChange={open => (!open ? setRegisteredEmail(null) : undefined)}
+        onOpenChange={open => {
+          if (!open) {
+            setRegisteredEmail(null);
+            setRegisteredRole(null);
+          }
+        }}
       >
         <DialogContent className="border-slate-200/80 bg-white/95 text-slate-950 dark:border-white/10 dark:bg-[#141d2e]/95 dark:text-slate-50 sm:max-w-[460px]">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold">Check your email</DialogTitle>
             <DialogDescription className="text-sm leading-6 text-slate-700 dark:text-slate-300">
-              {verificationEmailSent ? (
+              {registeredRole === 'service_provider' ? (
+                verificationEmailSent ? (
+                  <>
+                    Your provider account has been created. We sent a verification link to{' '}
+                    <strong>{registeredEmail}</strong>. Open it to verify your email and continue to
+                    your private Services profile setup. Your business will stay private until an
+                    authorised reviewer approves publication.
+                  </>
+                ) : (
+                  <>
+                    Your provider account has been created, but we could not send the verification
+                    link to <strong>{registeredEmail}</strong>. Use Resend below, then open the link
+                    to continue to your private Services profile setup. Your business will stay
+                    private until an authorised reviewer approves publication.
+                  </>
+                )
+              ) : verificationEmailSent ? (
                 <>
                   Your account has been created. We sent a verification email to{' '}
                   <strong>{registeredEmail}</strong>. Verify your address, then log in.
@@ -853,6 +876,7 @@ export default function Login() {
               type="button"
               onClick={() => {
                 setRegisteredEmail(null);
+                setRegisteredRole(null);
                 setSignInOpen(true);
               }}
               className="text-sm font-semibold text-indigo-700 underline hover:text-indigo-600 dark:text-indigo-300 dark:hover:text-indigo-200"
