@@ -402,14 +402,10 @@ export default function ServicesCategoryPage() {
             </nav>
 
             <div className="mt-5 max-w-[610px]">
-              <div className="relative inline-flex pt-2">
-                <span className="absolute left-3 top-0 flex h-5 w-5 items-center justify-center rounded-full border border-[#BCE0D3] bg-white text-[#168363] shadow-sm">
-                  <BadgeCheck className="h-3.5 w-3.5" aria-hidden="true" />
-                </span>
-                <span className="inline-flex rounded-full bg-[#BDF2D9] px-3 pb-1 pt-2 text-[11px] font-semibold text-[#116E54]">
-                  Property Listify Services
-                </span>
-              </div>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#BDF2D9] px-3 py-1 text-[11px] font-semibold text-[#116E54]">
+                <BadgeCheck className="h-3.5 w-3.5" aria-hidden="true" />
+                Property Listify Services
+              </span>
               <h1 className="mt-3 font-sans text-[38px] font-bold leading-[0.98] tracking-[-0.055em] text-[#0B1B2A] md:text-[50px]">
                 {heroTitle}
               </h1>
