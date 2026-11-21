@@ -75,7 +75,9 @@ describe('ServicesCategoryPage', () => {
 
     render(<ServicesCategoryPage />);
 
-    expect(screen.getByRole('heading', { name: /home improvement services/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /home improvement services/i, level: 1 }),
+    ).toBeInTheDocument();
     await waitFor(() =>
       expect(mockSetLocation).toHaveBeenCalledWith(
         '/services/home-improvement?category=home_improvement&city=Pretoria',
@@ -159,11 +161,9 @@ describe('ServicesCategoryPage', () => {
     expect(screen.getByText('Local Coverage')).toBeInTheDocument();
     expect(screen.getByText('Trusted Reviews')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /find professionals/i })).toBeInTheDocument();
-    expect(screen.getByText(/leaks & plumbing repairs/i)).toBeInTheDocument();
+    expect(screen.getByText(/leak repairs & plumbing/i)).toBeInTheDocument();
     expect(screen.getByText(/planning a fixture replacement/i)).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: /clear plumbing & maintenance focus/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /view all services/i })).toBeInTheDocument();
     const maintenancePlan = screen.getByRole('button', { name: /maintenance or repair/i });
     expect(maintenancePlan).toBeInTheDocument();
     expect(screen.getByText(/material preference/i)).toBeInTheDocument();
@@ -192,7 +192,7 @@ describe('ServicesCategoryPage', () => {
       '/services/home-improvement?category=home_improvement&query=plumbing',
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /clear plumbing & maintenance focus/i }));
+    fireEvent.click(screen.getByRole('button', { name: /view all services/i }));
 
     expect(mockSetLocation).toHaveBeenLastCalledWith('/services/home-improvement');
   });
@@ -203,7 +203,9 @@ describe('ServicesCategoryPage', () => {
 
     render(<ServicesCategoryPage />);
 
-    expect(screen.getByRole('heading', { name: /home improvement services/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /home improvement services/i, level: 1 }),
+    ).toBeInTheDocument();
     const plumbingPathway = screen.getByRole('link', { name: /plumbing & maintenance/i });
     expect(plumbingPathway).toHaveAttribute('href', '/services/home-improvement?query=plumbing');
     expect(screen.getByText(/no published providers match this search yet/i)).toBeInTheDocument();

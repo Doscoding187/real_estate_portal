@@ -5,9 +5,10 @@ import {
   BadgeCheck,
   ChevronDown,
   ChevronRight,
+  Headphones,
   MapPin,
-  MessageSquareText,
   Search,
+  Star,
   ShieldCheck,
   Wrench,
 } from 'lucide-react';
@@ -155,8 +156,21 @@ export default function ServicesCategoryPage() {
   const selectedPlanningOption = requestPlanning.find(option => option.key === selectedPlanningKey);
   const focusedSearchLabel = focusedService?.label || initialQuery.query?.trim() || null;
   const selectedServiceLabel = focusedService?.label || formatCategoryLabel(category);
+  const isPlumbingFocus = focusedService?.key === 'plumbing';
+  const servicePathwayTitle = isPlumbingFocus ? (
+    <>
+      <span className="block">Explore</span>
+      <span className="block">our plumbing</span>
+      <span className="block">services</span>
+    </>
+  ) : (
+    <>Explore our {formatCategoryLabel(category).toLowerCase()} services</>
+  );
+  const servicePathwayDescription = isPlumbingFocus
+    ? 'Whatever your plumbing need, find the right professional.'
+    : landingContent.serviceIntro;
   const heroTitle =
-    focusedService?.key === 'plumbing' ? (
+    isPlumbingFocus ? (
       <>
         <span className="block">Plumbing &amp;</span>{' '}
         <span className="block">Maintenance</span>
@@ -483,33 +497,33 @@ export default function ServicesCategoryPage() {
 
         <section
           aria-labelledby="service-pathways-heading"
-          className="bg-white px-4 py-14 md:px-6 md:py-16"
+          className="bg-white px-4 py-12 md:px-6 md:py-14"
         >
           <div className="mx-auto w-full max-w-7xl">
-            <div className="grid gap-6 lg:grid-cols-[minmax(220px,0.36fr)_minmax(0,1fr)] lg:items-start">
+            <div className="grid gap-7 lg:grid-cols-[minmax(160px,0.24fr)_minmax(0,1fr)] lg:items-start">
               <div>
-                <p className={servicesUi.eyebrow}>Explore services</p>
                 <h2
                   id="service-pathways-heading"
-                  className="mt-2 font-sans text-3xl font-bold tracking-[-0.035em] text-[#0B1B2A] md:text-[38px] md:leading-[1.08]"
+                  className="font-sans text-[25px] font-bold leading-[0.98] tracking-[-0.045em] text-[#0B1B2A] md:text-[29px]"
                 >
-                  Start with the work you need
+                  {servicePathwayTitle}
                 </h2>
-                <p className="mt-3 max-w-sm text-sm leading-6 text-[#4B5C6B]">
-                  {landingContent.serviceIntro}
+                <p className="mt-3 max-w-[180px] text-[12px] font-medium leading-[1.45] text-[#24435A]">
+                  {servicePathwayDescription}
                 </p>
                 {focusedSearchLabel && (
                   <button
                     type="button"
                     onClick={clearServiceFocus}
-                    className="mt-5 text-sm font-semibold text-[#168363] transition hover:text-[#116E54]"
+                    className="mt-3 inline-flex items-center gap-1 text-[12px] font-semibold text-[#168363] transition hover:text-[#116E54]"
                   >
-                    Clear {focusedSearchLabel} focus
+                    View all services
+                    <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
                   </button>
                 )}
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
                 {landingContent.servicePathways.map(pathway => {
                   const Icon = pathway.icon;
                   return (
@@ -519,20 +533,15 @@ export default function ServicesCategoryPage() {
                       onClick={() => {
                         if (pathway.planningKey) setSelectedPlanningKey(pathway.planningKey);
                       }}
-                      className="group flex min-h-[132px] flex-col rounded-2xl border border-[#E3EBF0] bg-white p-4 transition hover:-translate-y-0.5 hover:border-[#168363]/50 hover:shadow-[0_16px_32px_-24px_rgba(2,17,30,0.42)]"
+                      className="group flex min-h-[64px] items-center gap-3 rounded-xl border border-[#E1EAF0] bg-white px-3 py-2.5 shadow-[0_7px_16px_-14px_rgba(2,17,30,0.45)] transition hover:-translate-y-0.5 hover:border-[#168363]/45 hover:shadow-[0_12px_22px_-16px_rgba(2,17,30,0.55)]"
                     >
-                      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#EDF8F6] text-[#168363]">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#EEF6FF] text-[#0874C9]">
                         <Icon className="h-5 w-5" aria-hidden="true" />
                       </span>
-                      <span className="mt-4 text-[14px] font-bold leading-snug text-[#0B1B2A]">
+                      <span className="min-w-0 flex-1 text-[12px] font-bold leading-[1.15] text-[#0B1B2A]">
                         {pathway.title}
                       </span>
-                      <span className="mt-1 text-[12px] leading-5 text-[#4B5C6B]">
-                        {pathway.description}
-                      </span>
-                      <span className="mt-auto pt-3 text-[12px] font-semibold text-[#168363]">
-                        Explore this service
-                      </span>
+                      <ArrowRight className="h-4 w-4 shrink-0 text-[#154969] transition group-hover:translate-x-0.5 group-hover:text-[#0874C9]" aria-hidden="true" />
                     </Link>
                   );
                 })}
@@ -541,39 +550,44 @@ export default function ServicesCategoryPage() {
           </div>
         </section>
 
-        <section className="border-y border-[#D7E7E1] bg-[#F1FBF7] px-4 py-5 md:px-6">
-          <div className="mx-auto grid w-full max-w-7xl gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <section className="bg-white px-4 pb-12 md:px-6 md:pb-14">
+          <div className="mx-auto grid w-full max-w-7xl overflow-hidden rounded-xl bg-[#EAFBF4] sm:grid-cols-2 lg:grid-cols-4">
             {[
               {
-                icon: BadgeCheck,
+                icon: ShieldCheck,
                 title: 'Reviewed publication',
-                body: 'Only providers that meet current public eligibility are shown.',
+                body: 'public profiles are checked before publication',
               },
               {
                 icon: MapPin,
                 title: 'Listed coverage',
-                body: 'Check the places a provider has published for its services.',
+                body: 'see the places a provider has published for',
               },
               {
-                icon: ShieldCheck,
+                icon: Star,
                 title: 'Reviews when eligible',
-                body: 'Published customer feedback appears only where it is available.',
+                body: 'customer feedback appears where published',
               },
               {
-                icon: MessageSquareText,
+                icon: Headphones,
                 title: 'One private enquiry',
-                body: 'A request goes only to the provider you select.',
+                body: 'your request goes only to the provider selected',
               },
-            ].map(item => {
+            ].map((item, index) => {
               const Icon = item.icon;
               return (
-                <div key={item.title} className="flex items-start gap-3 px-1 py-2 lg:px-4">
-                  <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[#168363] shadow-sm">
-                    <Icon className="h-4 w-4" aria-hidden="true" />
+                <div
+                  key={item.title}
+                  className={`flex items-center gap-3 px-5 py-4 ${
+                    index > 0 ? 'lg:border-l lg:border-[#BCE5D7]' : ''
+                  }`}
+                >
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center text-[#078664]">
+                    <Icon className="h-6 w-6" aria-hidden="true" />
                   </span>
                   <div>
-                    <p className="text-[13px] font-bold text-[#0B1B2A]">{item.title}</p>
-                    <p className="mt-0.5 text-[12px] leading-5 text-[#4B5C6B]">{item.body}</p>
+                    <p className="text-[12px] font-bold leading-4 text-[#0B1B2A]">{item.title}</p>
+                    <p className="text-[11px] leading-4 text-[#315663]">{item.body}</p>
                   </div>
                 </div>
               );

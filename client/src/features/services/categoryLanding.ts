@@ -3,6 +3,7 @@ import {
   Banknote,
   Camera,
   ClipboardCheck,
+  Droplets,
   FileCheck2,
   FileText,
   Hammer,
@@ -606,11 +607,11 @@ const PLUMBING_FOCUS: ServiceFocusLandingOverride = {
   servicePathways: [
     {
       key: 'leak-repair',
-      title: 'Leaks & plumbing repairs',
+      title: 'Leak Repairs & Plumbing',
       description: 'Leaks, fixtures, pipes and visible water-related concerns.',
       query: 'plumbing',
       planningKey: 'prompt-attention',
-      icon: Wrench,
+      icon: Droplets,
     },
     {
       key: 'bathroom-installation',
@@ -630,7 +631,7 @@ const PLUMBING_FOCUS: ServiceFocusLandingOverride = {
     },
     {
       key: 'geyser',
-      title: 'Geyser work',
+      title: 'Geyser Repairs & Replacement',
       description: 'Geyser repair, replacement and installation conversations.',
       query: 'plumbing',
       planningKey: 'installation',
@@ -646,11 +647,11 @@ const PLUMBING_FOCUS: ServiceFocusLandingOverride = {
     },
     {
       key: 'project',
-      title: 'Renovation plumbing',
-      description: 'Plumbing within a bathroom, kitchen or larger improvement project.',
+      title: 'Emergency Plumbing',
+      description: 'Urgent plumbing concerns to discuss when a provider is available.',
       query: 'plumbing',
-      planningKey: 'project',
-      icon: Hammer,
+      planningKey: 'prompt-attention',
+      icon: Home,
     },
   ],
   planningOptions: [
