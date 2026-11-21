@@ -139,7 +139,22 @@ describe('ServicesCategoryPage', () => {
 
     render(<ServicesCategoryPage />);
 
-    expect(screen.getByRole('heading', { name: /plumbing & maintenance/i })).toBeInTheDocument();
+    const heroHeading = screen.getByRole('heading', {
+      name: /plumbing & maintenance/i,
+      level: 1,
+    });
+    expect(heroHeading).toBeInTheDocument();
+    expect(heroHeading.tagName).toBe('H1');
+    expect(
+      screen.getByText(
+        'From emergency repairs to installations, find trusted plumbing professionals in your area.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Enter suburb, town or city')).toHaveAttribute(
+      'aria-autocomplete',
+      'list',
+    );
+    expect(screen.getByRole('button', { name: /find professionals/i })).toBeInTheDocument();
     expect(screen.getByText(/leaks & plumbing repairs/i)).toBeInTheDocument();
     expect(screen.getByText(/planning a fixture replacement/i)).toBeInTheDocument();
     expect(
@@ -149,6 +164,15 @@ describe('ServicesCategoryPage', () => {
     expect(maintenancePlan).toBeInTheDocument();
     expect(screen.getByText(/material preference/i)).toBeInTheDocument();
     expect(screen.queryByText(/emergency service available/i)).not.toBeInTheDocument();
+    expect(
+      Array.from(document.images).map(image => image.getAttribute('src')),
+    ).toContain('/images/services/plumbing-hero-kitchen-sink.png');
+    expect(
+      Array.from(document.images).map(image => image.getAttribute('src')),
+    ).toContain('/images/services/plumbing-professional.jpg');
+    expect(
+      Array.from(document.images).map(image => image.getAttribute('src')),
+    ).toContain('/images/services/trade-plumbing.jpg');
     expect(mockDirectorySearch).toHaveBeenCalledWith(
       expect.objectContaining({ category: 'home_improvement', query: 'plumbing' }),
     );

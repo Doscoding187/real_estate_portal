@@ -3,9 +3,11 @@ import { Link, useRoute } from 'wouter';
 import {
   ArrowRight,
   BadgeCheck,
+  ChevronDown,
   ChevronRight,
   MapPin,
   MessageSquareText,
+  Search,
   ShieldCheck,
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
@@ -151,6 +153,15 @@ export default function ServicesCategoryPage() {
   const [selectedPlanningKey, setSelectedPlanningKey] = useState<string | null>(null);
   const selectedPlanningOption = requestPlanning.find(option => option.key === selectedPlanningKey);
   const focusedSearchLabel = focusedService?.label || initialQuery.query?.trim() || null;
+  const heroTitle =
+    focusedService?.key === 'plumbing' ? (
+      <>
+        <span className="block">Plumbing &amp;</span>{' '}
+        <span className="block">Maintenance</span>
+      </>
+    ) : (
+      landingContent.title
+    );
 
   const [filters, setFilters] = useState<ServicesResultFilters>({
     category,
@@ -251,7 +262,7 @@ export default function ServicesCategoryPage() {
         <EnhancedNavbar />
         <main className="min-h-screen bg-[#FDFDFD] px-4 py-12 md:px-6">
           <div className={`${servicesUi.surface} mx-auto max-w-3xl p-8`}>
-            <h1 className="font-['Sora'] text-2xl font-bold tracking-[-0.03em] text-[#0B1B2A]">
+            <h1 className="font-sans text-2xl font-bold tracking-[-0.03em] text-[#0B1B2A]">
               Service category unavailable
             </h1>
             <p className="mt-3 text-sm leading-6 text-[#4B5C6B]">
@@ -355,82 +366,95 @@ export default function ServicesCategoryPage() {
     <>
       <EnhancedNavbar />
       <main className="bg-[#FDFDFD] text-[#0B1B2A]">
-        <section className="relative isolate overflow-hidden bg-[#02111E]">
+        <section className="relative isolate overflow-hidden bg-[#EAF5FB]">
           <img
             src={landingContent.heroImage}
             alt=""
-            className="absolute inset-0 h-full w-full object-cover object-center"
+            className="absolute inset-0 h-full w-full object-cover object-[70%_15%]"
             fetchPriority="high"
           />
           <div
-            className="absolute inset-0 bg-[linear-gradient(90deg,rgba(2,17,30,0.96)_0%,rgba(2,17,30,0.89)_42%,rgba(2,17,30,0.52)_68%,rgba(2,17,30,0.34)_100%)]"
+            className="absolute inset-0 bg-[linear-gradient(90deg,#F7FCFF_0%,rgba(247,252,255,0.99)_36%,rgba(247,252,255,0.70)_52%,rgba(247,252,255,0.18)_72%,rgba(247,252,255,0.02)_100%)]"
             aria-hidden="true"
           />
-          <div className="relative mx-auto w-full max-w-7xl px-4 pb-10 pt-7 md:px-6 md:pb-14 md:pt-9">
+          <div
+            className="absolute -bottom-[54%] -left-[17%] h-[140%] w-[58%] rounded-full bg-white/35"
+            aria-hidden="true"
+          />
+          <div className="relative mx-auto w-full max-w-7xl px-4 pb-7 pt-3 md:px-6 md:pb-8 md:pt-3">
             <nav
               aria-label="Breadcrumb"
-              className="flex items-center gap-1.5 text-[12px] text-slate-300"
+              className="flex items-center gap-1.5 text-[12px] text-[#587082]"
             >
-              <Link href="/" className="transition hover:text-white">
+              <Link href="/" className="transition hover:text-[#0B1B2A]">
                 Home
               </Link>
               <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
-              <Link href="/services" className="transition hover:text-white">
+              <Link href="/services" className="transition hover:text-[#0B1B2A]">
                 Services
               </Link>
               <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
-              <span className="font-medium text-white">
+              <span className="font-medium text-[#0B1B2A]">
                 {focusedSearchLabel || categoryMeta.label}
               </span>
             </nav>
 
-            <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(380px,0.6fr)] lg:items-end">
-              <div className="max-w-3xl">
-                <span className="inline-flex rounded-full bg-[#BDF2D9] px-3 py-1 text-[11px] font-semibold text-[#116E54]">
-                  Property Listify Services
-                </span>
-                <h1 className="mt-4 font-['Sora'] text-[38px] font-bold leading-[1.04] tracking-[-0.045em] text-white md:text-[56px]">
-                  {landingContent.title}
-                </h1>
-                <p className="mt-5 max-w-2xl text-[15px] leading-7 text-slate-100 md:text-lg">
-                  {landingContent.description}
-                </p>
+            <div className="mt-5 max-w-[610px]">
+              <span className="inline-flex rounded-full bg-[#BDF2D9] px-3 py-1 text-[11px] font-semibold text-[#116E54]">
+                Property Listify Services
+              </span>
+              <h1 className="mt-3 font-sans text-[38px] font-bold leading-[0.98] tracking-[-0.055em] text-[#0B1B2A] md:text-[50px]">
+                {heroTitle}
+              </h1>
+              <p className="mt-3 max-w-[530px] text-[15px] font-semibold leading-6 text-[#183955] md:text-[17px]">
+                {landingContent.description}
+              </p>
 
-                <div className="mt-8 rounded-2xl border border-white/20 bg-white p-3 shadow-[0_24px_60px_-34px_rgba(0,0,0,0.9)] md:flex md:items-end md:gap-3 md:p-4">
-                  <div className="min-w-0 flex-1">
+              <div className="mt-4 flex max-w-[550px] items-center gap-1 rounded-[20px] border border-white/80 bg-white p-0.5 shadow-[0_16px_34px_-22px_rgba(2,17,30,0.55)]">
+                <div className="flex h-11 min-w-0 flex-1 items-center rounded-[16px] bg-[#F8FBFC]">
+                  <MapPin
+                    className="ml-3 h-4 w-4 shrink-0 text-[#0E78BE]"
+                    aria-hidden="true"
+                  />
+                  <div className="relative min-w-0 flex-1">
                     <CanonicalPlaceSelector
                       value={placeSelection}
                       onChange={updateHeroPlace}
-                      label="Where do you need help?"
+                      compact
+                      label="Location"
                       purpose="search"
-                      placeholder="Choose an approved Place"
-                      labelClassName="block text-[11px] font-semibold uppercase tracking-[0.14em] text-[#4B5C6B]"
-                      inputClassName="mt-2 h-12 rounded-xl border-[#E3EBF0] bg-[#FDFDFD] px-4 text-[#0B1B2A]"
-                      statusClassName="text-xs leading-5 text-[#6B7B88]"
+                      placeholder="Enter suburb, town or city"
+                      labelClassName="sr-only"
+                      inputClassName="h-11 border-0 bg-transparent px-3 pr-8 text-[13px] text-[#315663] shadow-none outline-none focus-visible:ring-0"
+                      statusClassName="sr-only"
+                    />
+                    <ChevronDown
+                      className="pointer-events-none absolute right-1 top-1/2 h-4 w-4 -translate-y-1/2 text-[#547083]"
+                      aria-hidden="true"
                     />
                   </div>
-                  <button
-                    type="button"
-                    onClick={browseProviderResults}
-                    className={`${servicesUi.action} mt-3 h-12 w-full shrink-0 md:mt-0 md:w-auto`}
-                  >
-                    Browse providers
-                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                  </button>
                 </div>
-                <p className="mt-3 text-[12px] leading-5 text-slate-200">
-                  Choose an approved Place to focus listed coverage, or browse all published
-                  providers in this category.
-                </p>
-              </div>
-              <div className="hidden justify-end lg:flex">
-                <Link
-                  href="/services"
-                  className="inline-flex items-center gap-2 text-sm font-semibold text-[#BDF2D9] transition hover:text-white"
+                <button
+                  type="button"
+                  onClick={browseProviderResults}
+                  className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-[16px] bg-[#168363] px-4 text-[13px] font-semibold text-white transition hover:bg-[#116E54] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#168363]"
                 >
-                  All service categories
-                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                </Link>
+                  <Search className="h-4 w-4" aria-hidden="true" />
+                  Find Professionals
+                </button>
+              </div>
+
+              <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-[11px] font-medium text-[#315663]">
+                {[
+                  'Reviewed publication',
+                  'Published coverage',
+                  'Private provider enquiries',
+                ].map(item => (
+                  <span key={item} className="inline-flex items-center gap-1.5">
+                    <BadgeCheck className="h-3.5 w-3.5 text-[#21A66C]" aria-hidden="true" />
+                    {item}
+                  </span>
+                ))}
               </div>
             </div>
           </div>
@@ -444,7 +468,10 @@ export default function ServicesCategoryPage() {
             <div className="grid gap-6 lg:grid-cols-[minmax(220px,0.36fr)_minmax(0,1fr)] lg:items-start">
               <div>
                 <p className={servicesUi.eyebrow}>Explore services</p>
-                <h2 id="service-pathways-heading" className={`mt-2 ${servicesUi.heading}`}>
+                <h2
+                  id="service-pathways-heading"
+                  className="mt-2 font-sans text-3xl font-bold tracking-[-0.035em] text-[#0B1B2A] md:text-[38px] md:leading-[1.08]"
+                >
                   Start with the work you need
                 </h2>
                 <p className="mt-3 max-w-sm text-sm leading-6 text-[#4B5C6B]">
@@ -534,87 +561,98 @@ export default function ServicesCategoryPage() {
         </section>
 
         <section
-          aria-labelledby="service-planning-heading"
-          className="bg-[#F7FAFB] px-4 py-14 md:px-6 md:py-16"
+          aria-labelledby="category-introduction-heading"
+          className="bg-[#F8FBFA] px-4 py-12 md:px-6 md:py-16"
         >
-          <div className="mx-auto grid w-full max-w-7xl gap-8 lg:grid-cols-[minmax(0,1.12fr)_minmax(300px,0.72fr)]">
-            <div className="rounded-3xl border border-[#D7E7E1] bg-[#F4FAF8] p-6 md:p-8">
-              <p className={servicesUi.eyebrow}>Plan your request</p>
-              <h2
-                id="service-planning-heading"
-                className="mt-2 font-['Sora'] text-2xl font-bold tracking-[-0.03em] text-[#0B1B2A] md:text-3xl"
-              >
-                Help a provider understand the work
-              </h2>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-[#4B5C6B]">
-                A clearer request helps a provider assess whether they can help. These prompts do
-                not confirm emergency, same-day, pricing, material, or project availability.
-              </p>
-
-              <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                {requestPlanning.map((option, index) => {
-                  const isSelected = option.key === selectedPlanningKey;
-                  return (
-                    <button
-                      key={option.key}
-                      type="button"
-                      aria-pressed={isSelected}
-                      onClick={() =>
-                        setSelectedPlanningKey(current =>
-                          current === option.key ? null : option.key,
-                        )
-                      }
-                      className={`rounded-2xl border p-4 text-left transition ${
-                        isSelected
-                          ? 'border-[#168363] bg-white shadow-[0_12px_24px_-20px_rgba(2,17,30,0.7)]'
-                          : 'border-[#D7E7E1] bg-white/70 hover:border-[#168363]/60 hover:bg-white'
-                      }`}
-                    >
-                      <span className="text-[11px] font-semibold tracking-[0.14em] text-[#168363]">
-                        {String(index + 1).padStart(2, '0')}
-                      </span>
-                      <span className="mt-2 block text-sm font-bold text-[#0B1B2A]">
-                        {option.title}
-                      </span>
-                      <span className="mt-1.5 block text-[13px] leading-5 text-[#4B5C6B]">
-                        {option.description}
-                      </span>
-                    </button>
-                  );
-                })}
+          <div className="mx-auto w-full max-w-7xl">
+            <div className="grid gap-5 lg:grid-cols-[minmax(220px,0.82fr)_minmax(260px,0.96fr)_minmax(230px,0.68fr)] lg:items-stretch">
+              <div className="relative min-h-[270px] overflow-hidden rounded-3xl bg-[#DDEFE9] sm:min-h-[340px]">
+                <img
+                  src={landingContent.featureImage}
+                  alt=""
+                  className="absolute inset-0 h-full w-full object-cover"
+                  loading="lazy"
+                />
+                <div
+                  className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#02111E]/55 to-transparent"
+                  aria-hidden="true"
+                />
+                <p className="absolute bottom-5 left-5 rounded-full bg-white/90 px-3 py-1 text-[11px] font-semibold text-[#116E54] shadow-sm">
+                  Property Listify Services
+                </p>
               </div>
 
-              {selectedPlanningOption && (
-                <div className="mt-4 rounded-2xl border border-[#BCE0D3] bg-white px-4 py-3 text-sm leading-6 text-[#315663]">
-                  <span className="font-semibold text-[#0B1B2A]">
-                    When you contact a provider:{' '}
-                  </span>
-                  {selectedPlanningOption.nextStep}
-                </div>
-              )}
-            </div>
+              <div className="flex flex-col justify-center py-2 lg:px-2">
+                <p className={servicesUi.eyebrow}>Find the right fit</p>
+                <h2
+                  id="category-introduction-heading"
+                  className="mt-2 font-sans text-3xl font-bold leading-tight tracking-[-0.04em] text-[#0B1B2A] md:text-[38px]"
+                >
+                  {landingContent.featureTitle}
+                </h2>
+                <p className="mt-4 max-w-xl text-sm leading-6 text-[#4B5C6B] md:text-[15px]">
+                  {landingContent.featureDescription}
+                </p>
+                <ul className="mt-5 space-y-2.5 text-sm leading-5 text-[#315663]">
+                  {requestDetails.map(detail => (
+                    <li key={detail} className="flex gap-2.5">
+                      <BadgeCheck
+                        className="mt-0.5 h-4 w-4 shrink-0 text-[#168363]"
+                        aria-hidden="true"
+                      />
+                      <span>{detail}</span>
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  type="button"
+                  onClick={browseProviderResults}
+                  className={`${servicesUi.action} mt-6 w-fit`}
+                >
+                  Browse published providers
+                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </button>
+              </div>
 
-            <aside className="rounded-3xl border border-[#D7E7E1] bg-white p-6 md:p-7">
-              <h3 className="text-xl font-bold tracking-[-0.02em] text-[#0B1B2A]">
-                Helpful details to share
-              </h3>
-              <ul className="mt-5 space-y-4 text-sm leading-6 text-[#4B5C6B]">
-                {requestDetails.map(detail => (
-                  <li key={detail} className="flex gap-3">
-                    <span
-                      className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#168363]"
-                      aria-hidden="true"
-                    />
-                    <span>{detail}</span>
-                  </li>
-                ))}
-              </ul>
-              <p className="mt-6 rounded-2xl bg-[#F7FAFB] p-4 text-[12px] leading-5 text-[#6B7B88]">
-                Provider profiles show the services and coverage they have published. Availability,
-                scope, materials, timing, and any compliance needs must be confirmed with the
-                provider.
-              </p>
-            </aside>
+              <aside className="flex flex-col rounded-3xl border border-[#BCE0D3] bg-[linear-gradient(145deg,#F1FBF7_0%,#FFFFFF_58%,#E0F5ED_100%)] p-6 shadow-[0_20px_46px_-38px_rgba(2,17,30,0.55)]">
+                <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-[#168363] shadow-sm">
+                  <MapPin className="h-5 w-5" aria-hidden="true" />
+                </span>
+                <p className="mt-5 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#168363]">
+                  Marketplace availability
+                </p>
+                <h3 className="mt-2 text-xl font-bold tracking-[-0.025em] text-[#0B1B2A]">
+                  {isUnavailable
+                    ? 'Provider availability is temporarily unavailable'
+                    : hasNoPublishedMatches
+                      ? 'No published providers match this search yet'
+                      : `Explore published ${resultFocusLabel} providers`}
+                </h3>
+                <p className="mt-3 text-sm leading-6 text-[#4B5C6B]">
+                  {isUnavailable
+                    ? 'You can keep exploring this category while live provider and coverage information reconnects.'
+                    : hasNoPublishedMatches
+                      ? 'We have not widened your search or sent a request to an unrelated provider. Try another approved Place or return as supply grows.'
+                      : 'Review each provider’s listed services and coverage before selecting who to contact.'}
+                </p>
+                <div className="mt-auto space-y-3 pt-6">
+                  <button
+                    type="button"
+                    onClick={hasNoPublishedMatches ? resetFilters : browseProviderResults}
+                    className={`${servicesUi.action} h-11 w-full justify-center`}
+                  >
+                    {hasNoPublishedMatches ? 'Browse wider category' : 'Browse providers'}
+                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                  <Link
+                    href="/advertise/services"
+                    className="inline-flex h-11 w-full items-center justify-center rounded-xl border border-[#168363] px-4 text-sm font-semibold text-[#116E54] transition hover:bg-white"
+                  >
+                    Join as a provider
+                  </Link>
+                </div>
+              </aside>
+            </div>
           </div>
         </section>
 
@@ -626,7 +664,10 @@ export default function ServicesCategoryPage() {
             <div className="grid gap-6 lg:grid-cols-[minmax(220px,0.36fr)_minmax(0,1fr)] lg:items-start">
               <div>
                 <p className={servicesUi.eyebrow}>Helpful guides</p>
-                <h2 id="category-guides-heading" className={`mt-2 ${servicesUi.heading}`}>
+                <h2
+                  id="category-guides-heading"
+                  className="mt-2 font-sans text-3xl font-bold tracking-[-0.035em] text-[#0B1B2A] md:text-[38px] md:leading-[1.08]"
+                >
                   Get ready before you enquire
                 </h2>
                 <p className="mt-3 max-w-sm text-sm leading-6 text-[#4B5C6B]">
@@ -634,25 +675,98 @@ export default function ServicesCategoryPage() {
                 </p>
               </div>
               <div className="grid gap-4 md:grid-cols-3">
-                {landingContent.guides.map(guide => {
+                {landingContent.guides.map((guide, index) => {
                   const Icon = guide.icon;
                   return (
                     <article
                       key={guide.title}
-                      className="rounded-2xl border border-[#E3EBF0] bg-white p-5"
+                      className="group overflow-hidden rounded-2xl border border-[#E3EBF0] bg-white transition hover:-translate-y-0.5 hover:border-[#168363]/40 hover:shadow-[0_18px_36px_-28px_rgba(2,17,30,0.55)]"
                     >
-                      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#EDF8F6] text-[#168363]">
-                        <Icon className="h-5 w-5" aria-hidden="true" />
-                      </span>
-                      <h3 className="mt-4 text-[15px] font-bold text-[#0B1B2A]">{guide.title}</h3>
-                      <p className="mt-2 text-[13px] leading-5 text-[#4B5C6B]">
-                        {guide.description}
-                      </p>
+                      <div className="relative aspect-[16/8] overflow-hidden bg-[#EDF8F6]">
+                        <img
+                          src={landingContent.guideImages[index] || landingContent.featureImage}
+                          alt=""
+                          className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
+                          loading="lazy"
+                        />
+                        <span className="absolute bottom-3 left-3 flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[#168363] shadow-sm">
+                          <Icon className="h-4 w-4" aria-hidden="true" />
+                        </span>
+                      </div>
+                      <div className="p-5">
+                        <h3 className="text-[15px] font-bold text-[#0B1B2A]">{guide.title}</h3>
+                        <p className="mt-2 text-[13px] leading-5 text-[#4B5C6B]">
+                          {guide.description}
+                        </p>
+                      </div>
                     </article>
                   );
                 })}
               </div>
             </div>
+          </div>
+        </section>
+
+        <section
+          aria-labelledby="service-planning-heading"
+          className="bg-[#F7FAFB] px-4 py-12 md:px-6 md:py-14"
+        >
+          <div className="mx-auto w-full max-w-7xl">
+            <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
+              <div className="max-w-2xl">
+                <p className={servicesUi.eyebrow}>Plan your request</p>
+                <h2
+                  id="service-planning-heading"
+                  className="mt-2 font-sans text-2xl font-bold tracking-[-0.03em] text-[#0B1B2A] md:text-3xl"
+                >
+                  Tell a provider what kind of work you are planning
+                </h2>
+              </div>
+              <p className="max-w-xl text-sm leading-6 text-[#4B5C6B]">
+                These prompts help you frame the request. They do not promise emergency,
+                same-day, material, price, or project availability.
+              </p>
+            </div>
+
+            <div className="mt-7 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {requestPlanning.map((option, index) => {
+                const isSelected = option.key === selectedPlanningKey;
+                return (
+                  <button
+                    key={option.key}
+                    type="button"
+                    aria-pressed={isSelected}
+                    onClick={() =>
+                      setSelectedPlanningKey(current =>
+                        current === option.key ? null : option.key,
+                      )
+                    }
+                    className={`rounded-2xl border p-4 text-left transition ${
+                      isSelected
+                        ? 'border-[#168363] bg-white shadow-[0_12px_24px_-20px_rgba(2,17,30,0.7)]'
+                        : 'border-[#D7E7E1] bg-white/70 hover:border-[#168363]/60 hover:bg-white'
+                    }`}
+                  >
+                    <span className="text-[11px] font-semibold tracking-[0.14em] text-[#168363]">
+                      {String(index + 1).padStart(2, '0')}
+                    </span>
+                    <span className="mt-2 block text-sm font-bold text-[#0B1B2A]">
+                      {option.title}
+                    </span>
+                    <span className="mt-1.5 block text-[13px] leading-5 text-[#4B5C6B]">
+                      {option.description}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {selectedPlanningOption && (
+              <div className="mt-4 rounded-2xl border border-[#BCE0D3] bg-white px-4 py-3 text-sm leading-6 text-[#315663]">
+                <span className="font-semibold text-[#0B1B2A]">When you contact a provider: </span>
+                {selectedPlanningOption.nextStep}
+              </div>
+            )}
           </div>
         </section>
 
@@ -689,46 +803,6 @@ export default function ServicesCategoryPage() {
           </div>
         )}
 
-        {hasNoPublishedMatches && (
-          <section
-            aria-labelledby="no-provider-match-heading"
-            className="mx-auto w-full max-w-7xl px-4 pb-2 pt-8 md:px-6 md:pt-10"
-          >
-            <div className="grid gap-6 overflow-hidden rounded-3xl border border-[#BCE0D3] bg-[linear-gradient(112deg,#F1FBF7_0%,#FFFFFF_62%,#E8F7F1_100%)] p-6 md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:p-8">
-              <div className="max-w-2xl">
-                <p className={servicesUi.eyebrow}>Availability update</p>
-                <h2
-                  id="no-provider-match-heading"
-                  className="mt-2 font-['Sora'] text-2xl font-bold tracking-[-0.03em] text-[#0B1B2A]"
-                >
-                  No published providers match this search yet
-                </h2>
-                <p className="mt-3 text-sm leading-6 text-[#4B5C6B]">
-                  We have not widened your search or sent a request to an unrelated provider. You
-                  can choose another approved Place, browse the wider category, or return as
-                  provider supply grows.
-                </p>
-              </div>
-              <div className="flex flex-col gap-3 sm:flex-row md:flex-col">
-                <button
-                  type="button"
-                  onClick={resetFilters}
-                  className={`${servicesUi.action} h-11 justify-center whitespace-nowrap`}
-                >
-                  Browse wider category
-                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                </button>
-                <Link
-                  href="/advertise/services"
-                  className="inline-flex h-11 items-center justify-center rounded-xl border border-[#168363] px-4 text-sm font-semibold text-[#116E54] transition hover:bg-white"
-                >
-                  Join as a provider
-                </Link>
-              </div>
-            </div>
-          </section>
-        )}
-
         <section
           id="provider-results"
           aria-label="Published providers"
@@ -757,25 +831,58 @@ export default function ServicesCategoryPage() {
         </section>
 
         <section className="bg-[#F2F8F7] px-4 py-14 md:px-6 md:py-16">
-          <div className="mx-auto grid w-full max-w-7xl gap-8 rounded-3xl border border-[#D7E7E1] bg-white p-6 shadow-[0_20px_50px_-42px_rgba(2,17,30,0.5)] md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:p-9">
-            <div className="max-w-3xl">
+          <div className="mx-auto grid w-full max-w-7xl overflow-hidden rounded-3xl border border-[#D7E7E1] bg-white shadow-[0_20px_50px_-42px_rgba(2,17,30,0.5)] lg:grid-cols-[minmax(220px,0.62fr)_minmax(0,1fr)_minmax(240px,0.62fr)]">
+            <div className="relative min-h-[230px] bg-[#DDEFE9] lg:min-h-full">
+              <img
+                src={landingContent.providerImage}
+                alt=""
+                className="absolute inset-0 h-full w-full object-cover"
+                loading="lazy"
+              />
+              <div
+                className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#02111E]/45 to-transparent"
+                aria-hidden="true"
+              />
+            </div>
+            <div className="p-6 md:p-8 lg:py-9">
               <p className={servicesUi.eyebrow}>For service businesses</p>
-              <h2 className="mt-2 font-['Sora'] text-2xl font-bold tracking-[-0.035em] text-[#0B1B2A] md:text-3xl">
-                Establish your {categoryMeta.label.toLowerCase()} business presence
+              <h2 className="mt-2 font-sans text-2xl font-bold tracking-[-0.035em] text-[#0B1B2A] md:text-3xl">
+                Grow your {resultFocusLabel.toLowerCase()} business presence
               </h2>
               <p className="mt-3 text-sm leading-6 text-[#4B5C6B]">
-                Apply to create a reviewable business profile, describe the services and Places you
-                cover, and complete your private onboarding. Profiles remain private until an
+                Apply to create a reviewable business profile, show the services and Places you
+                cover, and complete your private onboarding. Profiles stay private until an
                 authorised reviewer approves publication.
               </p>
+              <Link
+                href="/advertise/services"
+                className={`${servicesUi.action} mt-6 h-11 justify-center`}
+              >
+                Apply as a provider
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
             </div>
-            <Link
-              href="/advertise/services"
-              className={`${servicesUi.action} h-11 justify-center whitespace-nowrap`}
-            >
-              Apply as a provider
-              <ArrowRight className="h-4 w-4" aria-hidden="true" />
-            </Link>
+            <div className="border-t border-[#D7E7E1] bg-[#F7FCFA] p-6 lg:border-l lg:border-t-0 lg:p-8">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#168363]">
+                Your business presence
+              </p>
+              <ul className="mt-5 space-y-3 text-sm leading-5 text-[#315663]">
+                {[
+                  'Create a professional business profile.',
+                  'Present your published services and coverage.',
+                  'Maintain service descriptions in your workspace.',
+                  'Complete private onboarding before review.',
+                ].map(item => (
+                  <li key={item} className="flex gap-2.5">
+                    <BadgeCheck
+                      className="mt-0.5 h-4 w-4 shrink-0 text-[#168363]"
+                      aria-hidden="true"
+                    />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </section>
 

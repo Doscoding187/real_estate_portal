@@ -23,3 +23,5 @@ provenance and review.
 | `trade-garden.jpg` | https://unsplash.com/photos/1416879595882-3373a0480b5b |
 | `trade-cleaning.jpg` | https://unsplash.com/photos/1581578731548-c64695cc6952 |
 | `trade-other.jpg` | https://unsplash.com/photos/1486406146926-c627a92ad1ab |
+| `plumbing-professional.jpg` | https://unsplash.com/photos/a-plumber-repairs-plumbing-in-a-bathroom-jaP5ClBdIyU (bhagya laxmi) |
+| `plumbing-hero-kitchen-sink.png` | User-supplied project asset: `/home/edwardspc/Downloads/Professional Plumber Repairing Kitchen Sink.png` |

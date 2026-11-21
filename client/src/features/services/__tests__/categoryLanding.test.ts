@@ -15,6 +15,11 @@ describe('service category landing content', () => {
       const content = SERVICE_CATEGORY_LANDING_CONTENT[category.value];
       expect(content.title).toBeTruthy();
       expect(content.heroImage).toMatch(/^\/images\/services\//);
+      expect(content.featureImage).toMatch(/^\/images\/services\//);
+      expect(content.providerImage).toMatch(/^\/images\/services\//);
+      expect(content.guideImages).toHaveLength(3);
+      expect(content.featureTitle).toBeTruthy();
+      expect(content.featureDescription).toBeTruthy();
       expect(content.servicePathways.length).toBeGreaterThanOrEqual(4);
       expect(content.planningOptions.length).toBeGreaterThanOrEqual(3);
       expect(content.guides).toHaveLength(3);
@@ -27,7 +32,11 @@ describe('service category landing content', () => {
 
     expect(plumbing?.title).toBe('Plumbing & maintenance');
     expect(plumbing?.servicePathways).toHaveLength(6);
-    expect(plumbing?.description).toMatch(/published provider information/i);
+    expect(plumbing?.description).toBe(
+      'From emergency repairs to installations, find trusted plumbing professionals in your area.',
+    );
     expect(plumbing?.description).not.toMatch(/emergency service available/i);
+    expect(plumbing?.heroImage).toBe('/images/services/plumbing-hero-kitchen-sink.png');
+    expect(plumbing?.guideImages).toHaveLength(3);
   });
 });
