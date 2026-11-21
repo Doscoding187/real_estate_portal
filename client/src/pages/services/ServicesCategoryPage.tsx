@@ -550,45 +550,49 @@ export default function ServicesCategoryPage() {
           </div>
         </section>
 
-        <section className="bg-white px-4 pb-12 md:px-6 md:pb-14">
-          <div className="mx-auto grid w-full max-w-7xl overflow-hidden rounded-xl bg-[#EAFBF4] sm:grid-cols-2 lg:grid-cols-4">
+        <section
+          aria-labelledby="why-choose-services-heading"
+          className="bg-white px-4 pb-12 md:px-6 md:pb-14"
+        >
+          <div className="mx-auto grid w-full max-w-7xl overflow-hidden rounded-xl bg-[linear-gradient(100deg,#E5FAF1_0%,#ECFBF6_100%)] sm:grid-cols-2 lg:grid-cols-[1.04fr_1.18fr_1.05fr_1.08fr_1.12fr]">
+            <div className="flex items-center px-5 py-4 sm:px-6 lg:py-0">
+              <h2
+                id="why-choose-services-heading"
+                className="whitespace-pre-line font-sans text-[18px] font-bold leading-[1.02] tracking-[-0.035em] text-[#0B344F]"
+              >
+                {'Why Choose\nProperty Listify?'}
+              </h2>
+            </div>
             {[
               {
                 icon: ShieldCheck,
-                title: 'Verified Professionals',
-                body: 'for your peace of mind',
+                title: 'Verified & Reviewed\nProfessionals',
               },
               {
                 icon: MapPin,
-                title: 'Local Experts',
-                body: 'in your area',
+                title: 'Local Experts\nIn Your Area',
               },
               {
                 icon: Star,
-                title: 'Real Customer Reviews',
-                body: 'from homeowners',
+                title: 'Real Customer\nReviews',
               },
               {
                 icon: Headphones,
-                title: 'Dedicated Support',
-                body: 'when you need help',
+                title: 'Dedicated Support\nWhen You Need Help',
               },
-            ].map((item, index) => {
+            ].map(item => {
               const Icon = item.icon;
               return (
                 <div
                   key={item.title}
-                  className={`flex items-center gap-3 px-5 py-4 ${
-                    index > 0 ? 'lg:border-l lg:border-[#BCE5D7]' : ''
-                  }`}
+                  className="flex min-h-[70px] items-center gap-3 border-t border-[#BCE5D7] px-5 py-3 sm:px-6 lg:border-l lg:border-t-0 lg:px-5"
                 >
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center text-[#078664]">
-                    <Icon className="h-6 w-6" aria-hidden="true" />
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center text-[#078664]">
+                    <Icon className="h-7 w-7" strokeWidth={2.25} aria-hidden="true" />
                   </span>
-                  <div>
-                    <p className="text-[12px] font-bold leading-4 text-[#0B1B2A]">{item.title}</p>
-                    <p className="text-[11px] leading-4 text-[#315663]">{item.body}</p>
-                  </div>
+                  <p className="whitespace-pre-line text-[12px] font-bold leading-[1.14] text-[#0B344F]">
+                    {item.title}
+                  </p>
                 </div>
               );
             })}
