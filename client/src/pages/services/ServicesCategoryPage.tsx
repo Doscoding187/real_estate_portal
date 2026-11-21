@@ -9,6 +9,7 @@ import {
   MessageSquareText,
   Search,
   ShieldCheck,
+  Wrench,
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import {
@@ -153,6 +154,7 @@ export default function ServicesCategoryPage() {
   const [selectedPlanningKey, setSelectedPlanningKey] = useState<string | null>(null);
   const selectedPlanningOption = requestPlanning.find(option => option.key === selectedPlanningKey);
   const focusedSearchLabel = focusedService?.label || initialQuery.query?.trim() || null;
+  const selectedServiceLabel = focusedService?.label || formatCategoryLabel(category);
   const heroTitle =
     focusedService?.key === 'plumbing' ? (
       <>
@@ -374,7 +376,7 @@ export default function ServicesCategoryPage() {
             fetchPriority="high"
           />
           <div
-            className="absolute inset-0 bg-[linear-gradient(90deg,#F7FCFF_0%,rgba(247,252,255,0.99)_36%,rgba(247,252,255,0.70)_52%,rgba(247,252,255,0.18)_72%,rgba(247,252,255,0.02)_100%)]"
+            className="absolute inset-y-0 left-0 w-full bg-[linear-gradient(90deg,#F7FCFF_0%,rgba(247,252,255,0.98)_40%,rgba(247,252,255,0)_78%)] md:w-[66%] md:bg-[linear-gradient(90deg,#F7FCFF_0%,rgba(247,252,255,0.98)_48%,rgba(247,252,255,0)_100%)]"
             aria-hidden="true"
           />
           <div
@@ -400,9 +402,14 @@ export default function ServicesCategoryPage() {
             </nav>
 
             <div className="mt-5 max-w-[610px]">
-              <span className="inline-flex rounded-full bg-[#BDF2D9] px-3 py-1 text-[11px] font-semibold text-[#116E54]">
-                Property Listify Services
-              </span>
+              <div className="relative inline-flex pt-2">
+                <span className="absolute left-3 top-0 flex h-5 w-5 items-center justify-center rounded-full border border-[#BCE0D3] bg-white text-[#168363] shadow-sm">
+                  <BadgeCheck className="h-3.5 w-3.5" aria-hidden="true" />
+                </span>
+                <span className="inline-flex rounded-full bg-[#BDF2D9] px-3 pb-1 pt-2 text-[11px] font-semibold text-[#116E54]">
+                  Property Listify Services
+                </span>
+              </div>
               <h1 className="mt-3 font-sans text-[38px] font-bold leading-[0.98] tracking-[-0.055em] text-[#0B1B2A] md:text-[50px]">
                 {heroTitle}
               </h1>
@@ -410,34 +417,52 @@ export default function ServicesCategoryPage() {
                 {landingContent.description}
               </p>
 
-              <div className="mt-4 flex max-w-[550px] items-center gap-1 rounded-[20px] border border-white/80 bg-white p-0.5 shadow-[0_16px_34px_-22px_rgba(2,17,30,0.55)]">
-                <div className="flex h-11 min-w-0 flex-1 items-center rounded-[16px] bg-[#F8FBFC]">
-                  <MapPin
-                    className="ml-3 h-4 w-4 shrink-0 text-[#0E78BE]"
-                    aria-hidden="true"
-                  />
-                  <div className="relative min-w-0 flex-1">
-                    <CanonicalPlaceSelector
-                      value={placeSelection}
-                      onChange={updateHeroPlace}
-                      compact
-                      label="Location"
-                      purpose="search"
-                      placeholder="Enter suburb, town or city"
-                      labelClassName="sr-only"
-                      inputClassName="h-11 border-0 bg-transparent px-3 pr-8 text-[13px] text-[#315663] shadow-none outline-none focus-visible:ring-0"
-                      statusClassName="sr-only"
-                    />
-                    <ChevronDown
-                      className="pointer-events-none absolute right-1 top-1/2 h-4 w-4 -translate-y-1/2 text-[#547083]"
-                      aria-hidden="true"
-                    />
+              <div className="mt-4 max-w-[690px] rounded-[24px] border border-white/90 bg-white p-1.5 shadow-[0_16px_34px_-22px_rgba(2,17,30,0.55)] sm:flex sm:items-center sm:gap-0 sm:rounded-full sm:p-1">
+                <div className="flex h-[52px] items-center gap-2 rounded-[18px] px-3 sm:min-w-[220px] sm:border-r sm:border-[#E3EBF0] sm:rounded-none">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#EAF5FF] text-[#0E78BE]">
+                    <Wrench className="h-4 w-4" aria-hidden="true" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[10px] font-medium leading-3 text-[#6B7B88]">
+                      What do you need?
+                    </span>
+                    <span className="block truncate text-[13px] font-semibold leading-5 text-[#183955]">
+                      {selectedServiceLabel}
+                    </span>
+                  </span>
+                  <ChevronDown className="h-4 w-4 shrink-0 text-[#547083]" aria-hidden="true" />
+                </div>
+
+                <div className="flex h-[52px] min-w-0 flex-1 items-center gap-2 rounded-[18px] bg-[#F8FBFC] px-3 sm:rounded-none sm:bg-transparent">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#EAF5FF] text-[#0E78BE]">
+                    <MapPin className="h-4 w-4" aria-hidden="true" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-medium leading-3 text-[#6B7B88]">Your area</p>
+                    <div className="relative min-w-0">
+                      <CanonicalPlaceSelector
+                        value={placeSelection}
+                        onChange={updateHeroPlace}
+                        compact
+                        label="Location"
+                        purpose="search"
+                        placeholder="Choose your area"
+                        labelClassName="sr-only"
+                        inputClassName="h-5 border-0 bg-transparent p-0 pr-7 text-[13px] font-semibold text-[#183955] shadow-none outline-none focus-visible:ring-0"
+                        statusClassName="sr-only"
+                      />
+                      <ChevronDown
+                        className="pointer-events-none absolute right-1 top-1/2 h-4 w-4 -translate-y-1/2 text-[#547083]"
+                        aria-hidden="true"
+                      />
+                    </div>
                   </div>
                 </div>
+
                 <button
                   type="button"
                   onClick={browseProviderResults}
-                  className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-[16px] bg-[#168363] px-4 text-[13px] font-semibold text-white transition hover:bg-[#116E54] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#168363]"
+                  className="mt-1 inline-flex h-[52px] w-full items-center justify-center gap-2 rounded-[18px] bg-[#168363] px-5 text-[13px] font-semibold text-white transition hover:bg-[#116E54] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#168363] sm:mt-0 sm:w-auto sm:shrink-0"
                 >
                   <Search className="h-4 w-4" aria-hidden="true" />
                   Find Professionals
@@ -446,9 +471,9 @@ export default function ServicesCategoryPage() {
 
               <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-[11px] font-medium text-[#315663]">
                 {[
-                  'Reviewed publication',
-                  'Published coverage',
-                  'Private provider enquiries',
+                  'Verified Professionals',
+                  'Local Coverage',
+                  'Trusted Reviews',
                 ].map(item => (
                   <span key={item} className="inline-flex items-center gap-1.5">
                     <BadgeCheck className="h-3.5 w-3.5 text-[#21A66C]" aria-hidden="true" />

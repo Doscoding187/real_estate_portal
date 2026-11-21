@@ -150,10 +150,14 @@ describe('ServicesCategoryPage', () => {
         'From emergency repairs to installations, find trusted plumbing professionals in your area.',
       ),
     ).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Enter suburb, town or city')).toHaveAttribute(
+    expect(screen.getByPlaceholderText('Choose your area')).toHaveAttribute(
       'aria-autocomplete',
       'list',
     );
+    expect(screen.getByText('What do you need?')).toBeInTheDocument();
+    expect(screen.getByText('Verified Professionals')).toBeInTheDocument();
+    expect(screen.getByText('Local Coverage')).toBeInTheDocument();
+    expect(screen.getByText('Trusted Reviews')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /find professionals/i })).toBeInTheDocument();
     expect(screen.getByText(/leaks & plumbing repairs/i)).toBeInTheDocument();
     expect(screen.getByText(/planning a fixture replacement/i)).toBeInTheDocument();
