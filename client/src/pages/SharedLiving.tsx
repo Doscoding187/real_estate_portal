@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useRoute } from 'wouter';
-import { Bath, BedDouble, MapPin, Search, Users, Wifi, Zap } from 'lucide-react';
+import { ArrowRight, Bath, BedDouble, Building2, GraduationCap, MapPin, Search, ShieldCheck, Users, Wifi, Zap } from 'lucide-react';
 import { CanonicalPlaceSelector, type CanonicalPlaceSelection } from '@/components/location/CanonicalPlaceSelector';
 import { trpc } from '@/lib/trpc';
+import { HomeLayout } from '@/layouts/HomeLayout';
+import { isSharedLivingPreviewEnabled, SHARED_LIVING_PREVIEW_FIXTURES } from '@/lib/sharedLivingPreviewFixtures';
 
 const accommodationLabels: Record<string, string> = {
   private_room: 'Private room', shared_room: 'Shared room', en_suite_room: 'En-suite room',
@@ -28,6 +30,10 @@ export default function SharedLiving({ studentMode = false }: { studentMode?: bo
   const [bathroom, setBathroom] = useState<'any' | 'own' | 'shared'>('any');
   const [availableBy, setAvailableBy] = useState('');
   const [page, setPage] = useState(0);
+  useEffect(() => {
+    setMarketTag(student ? 'student' : 'all');
+    setPage(0);
+  }, [student]);
   const search = trpc.sharedLiving.search.useQuery({
     ...(marketTag === 'all' ? {} : { marketTag }),
     ...(place ? { canonicalPlaceId: place.canonicalPlaceId } : {}),
@@ -37,10 +43,13 @@ export default function SharedLiving({ studentMode = false }: { studentMode?: bo
     ...(bathroom === 'any' ? {} : { bathroom }),
     ...(availableBy ? { availableFrom: availableBy } : {}),
     page,
-  });
+  }, { retry: false });
+
+  const previewItems = SHARED_LIVING_PREVIEW_FIXTURES.filter(({ card }) => !student || card.marketTag === 'student');
 
   return (
-    <main className="min-h-screen bg-[#f5f8fb] text-slate-900">
+    <HomeLayout>
+    <main id="main-content" className="min-h-screen bg-[#f5f8fb] text-slate-900">
       <section className="bg-gradient-to-br from-[#062846] via-[#0c4568] to-[#0c765e] text-white">
         <div className="mx-auto max-w-7xl px-4 py-12 md:px-8 md:py-16">
           <p className="text-sm font-semibold uppercase tracking-[.18em] text-emerald-200">Property Listify · Shared Living</p>
@@ -61,7 +70,20 @@ export default function SharedLiving({ studentMode = false }: { studentMode?: bo
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-8 md:px-8">
+      <section aria-label="Choose your accommodation journey" className="mx-auto -mt-5 grid max-w-7xl gap-4 px-4 md:grid-cols-2 md:px-8">
+        <Link href="#space-search" className="group flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700">
+          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-800"><Building2 className="h-7 w-7" aria-hidden="true" /></span>
+          <span className="min-w-0 flex-1"><span className="block text-lg font-bold">Find Shared Living accommodation</span><span className="mt-1 block text-sm leading-5 text-slate-600">Browse rooms, cottages and spaces in a shared home.</span></span>
+          <ArrowRight className="h-5 w-5 text-emerald-800 transition group-hover:translate-x-1" aria-hidden="true" />
+        </Link>
+        <Link href="/student-accommodation" className="group flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700">
+          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-800"><GraduationCap className="h-7 w-7" aria-hidden="true" /></span>
+          <span className="min-w-0 flex-1"><span className="block text-lg font-bold">Student Accommodation</span><span className="mt-1 block text-sm leading-5 text-slate-600">Explore student rooms from the same reviewed marketplace.</span></span>
+          <ArrowRight className="h-5 w-5 text-blue-800 transition group-hover:translate-x-1" aria-hidden="true" />
+        </Link>
+      </section>
+
+      <section id="space-search" className="mx-auto max-w-7xl scroll-mt-24 px-4 py-8 md:px-8">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h2 className="text-2xl font-bold">{student ? 'Student spaces' : 'Explore available spaces'}</h2>
@@ -83,7 +105,7 @@ export default function SharedLiving({ studentMode = false }: { studentMode?: bo
         </div>
 
         {search.isLoading && <div className="mt-7 grid gap-5 sm:grid-cols-2 lg:grid-cols-3"><div className="h-72 animate-pulse rounded-2xl bg-slate-200" /><div className="h-72 animate-pulse rounded-2xl bg-slate-200" /><div className="h-72 animate-pulse rounded-2xl bg-slate-200" /></div>}
-        {search.error && <div role="alert" className="mt-7 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-950"><h3 className="font-semibold">Accommodation search is temporarily unavailable.</h3><p className="mt-1 text-sm">Please try again shortly. Your search filters have not been saved or submitted.</p></div>}
+        {search.error && <div role="alert" className="mt-7 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-950"><h3 className="font-semibold">Accommodation search is temporarily unavailable.</h3><p className="mt-1 text-sm">Please try again shortly. Your search filters have not been saved or submitted.</p><button type="button" onClick={() => void search.refetch()} className="mt-3 rounded-lg border border-amber-400 bg-white px-3 py-2 text-sm font-semibold">Try again</button></div>}
         {!search.isLoading && !search.error && search.data?.items.length === 0 && <div className="mt-7 rounded-3xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center"><div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-800"><MapPin className="h-6 w-6" aria-hidden="true" /></div><h3 className="mt-4 text-xl font-bold">{place ? `No approved spaces in ${place.label} yet` : 'No accommodation is available just yet'}</h3><p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-600">We only show residences and spaces that have passed review and have a current advertising mandate. Try another area or check back as the network grows.</p><div className="mt-5 flex flex-wrap justify-center gap-3"><button type="button" onClick={() => { setPage(0); setPlace(null); setMarketTag(student ? 'student' : 'all'); setMinPrice(''); setMaxPrice(''); setFurnished('any'); setBathroom('any'); setAvailableBy(''); }} className="rounded-xl border px-4 py-2 text-sm font-semibold">Clear search</button><Link href="/shared-living/list" className="rounded-xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-white">Advertise accommodation</Link></div></div>}
 
         {!!search.data?.items.length && <div className="mt-7 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -96,7 +118,28 @@ export default function SharedLiving({ studentMode = false }: { studentMode?: bo
           })}
         </div>}
         {(search.data?.hasMore || page > 0) && <div className="mt-7 flex justify-center gap-3">{page > 0 && <button type="button" onClick={() => setPage(current => Math.max(0, current - 1))} className="rounded-xl border border-slate-300 bg-white px-5 py-3 font-semibold">Previous</button>}{search.data?.hasMore && <button type="button" disabled={search.isFetching} onClick={() => setPage(current => current + 1)} className="rounded-xl border border-slate-300 bg-white px-5 py-3 font-semibold disabled:opacity-50">{search.isFetching ? 'Loading…' : 'Next results'}</button>}</div>}
+
+        {isSharedLivingPreviewEnabled && <section aria-labelledby="shared-living-examples" className="mt-12 border-t border-slate-200 pt-8">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div><p className="text-xs font-bold uppercase tracking-[.16em] text-emerald-800">Preview examples · not live inventory</p><h2 id="shared-living-examples" className="mt-2 text-2xl font-bold">See how accommodation details appear</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">These fictional examples use locally bundled photos to demonstrate the marketplace. They are not available homes, do not accept enquiries and are never saved to the inventory.</p></div>
+            {student && <Link href="/shared-living" className="text-sm font-semibold text-emerald-800 underline underline-offset-4">See all example types</Link>}
+          </div>
+          <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {previewItems.map(({ card }) => <Link key={card.slug} href={`/shared-living/preview/${card.slug}`} className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700">
+              <div className="relative h-56 bg-slate-200"><img src={card.images[0]?.url} alt={card.images[0]?.caption || card.label} loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.02]" /><span className="absolute left-3 top-3 rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-950">Illustrative preview</span></div>
+              <div className="p-5"><p className="text-lg font-bold text-emerald-800">{rentLabel(card)}</p><h3 className="mt-2 text-xl font-bold">{card.label}</h3><p className="mt-1 text-sm text-slate-500">{card.residenceName}</p><p className="mt-3 flex items-center gap-1.5 text-sm text-slate-600"><MapPin className="h-4 w-4 text-emerald-700" aria-hidden="true" />{card.locationLabel}</p><p className="mt-3 line-clamp-2 text-sm leading-6 text-slate-600">{card.description}</p><div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-4 text-xs text-slate-600"><span className="inline-flex items-center gap-1"><Users className="h-4 w-4" aria-hidden="true" />Up to {card.occupancyCount}</span><span className="font-semibold text-emerald-800">View preview <ArrowRight className="inline h-4 w-4" aria-hidden="true" /></span></div></div>
+            </Link>)}
+          </div>
+        </section>}
+
+        <section aria-labelledby="list-accommodation" className="mt-12 overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#062846] via-[#0b405c] to-[#0a765d] text-white shadow-xl">
+          <div className="grid gap-8 px-6 py-8 md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:px-10 md:py-10">
+            <div><p className="text-xs font-bold uppercase tracking-[.18em] text-emerald-200">For property professionals and accommodation providers</p><h2 id="list-accommodation" className="mt-3 max-w-3xl text-3xl font-bold tracking-tight md:text-4xl">Have a room, cottage or residence to advertise?</h2><p className="mt-3 max-w-2xl text-sm leading-6 text-slate-100 md:text-base">Homeowners, landlords and residence operators can bring their accommodation through a Property Listify agent. Agents can manage one space or a full residence, with current authority reviewed before publication.</p><div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold text-emerald-50"><span className="rounded-full bg-white/10 px-3 py-1.5">One space or many</span><span className="rounded-full bg-white/10 px-3 py-1.5">Private addresses protected</span><span className="rounded-full bg-white/10 px-3 py-1.5">Listings reviewed before publication</span></div></div>
+            <div className="flex flex-col gap-3 md:min-w-56"><Link href="/shared-living/list" className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 font-bold text-[#073955] transition hover:bg-emerald-50">List your accommodation <ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>{isSharedLivingPreviewEnabled && <Link href="/shared-living/listing-preview" className="inline-flex items-center justify-center rounded-xl border border-white/50 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10">Preview the agent journey</Link>}<p className="text-center text-xs text-sky-100">Real listings require an agent account and residence-specific authority.</p></div>
+          </div>
+        </section>
       </section>
     </main>
+    </HomeLayout>
   );
 }

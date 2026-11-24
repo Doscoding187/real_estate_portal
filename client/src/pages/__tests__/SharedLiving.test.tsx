@@ -8,6 +8,9 @@ vi.mock('@/lib/trpc', () => ({
     placeAuthority: { discover: { useQuery: () => ({ data: undefined, isFetching: false, isError: false }) } },
   },
 }));
+vi.mock('@/layouts/HomeLayout', () => ({
+  HomeLayout: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+}));
 vi.mock('wouter', () => ({
   Link: ({ children, href, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => <a href={href} {...props}>{children}</a>,
   useRoute: () => [false, undefined],
@@ -23,7 +26,11 @@ describe('Shared Living public marketplace', () => {
     expect(screen.getByRole('heading', { name: 'Find a place to live, your way.' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'No accommodation is available just yet' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Explore student accommodation' })).toHaveAttribute('href', '/student-accommodation');
-    expect(searchQuery).toHaveBeenCalledWith(expect.objectContaining({ page: 0 }));
+    expect(screen.getByRole('link', { name: /Find Shared Living accommodation/ })).toHaveAttribute('href', '#space-search');
+    expect(screen.getByRole('link', { name: /Student Accommodation/ })).toHaveAttribute('href', '/student-accommodation');
+    expect(screen.getByRole('link', { name: /List your accommodation/ })).toHaveAttribute('href', '/shared-living/list');
+    expect(screen.getByText(/Preview examples · not live inventory/i)).toBeInTheDocument();
+    expect(searchQuery).toHaveBeenCalledWith(expect.objectContaining({ page: 0 }), { retry: false });
   });
 
   it('shows the student accommodation entry as a filtered view of the same marketplace', () => {
@@ -31,6 +38,6 @@ describe('Shared Living public marketplace', () => {
     render(<SharedLiving studentMode />);
 
     expect(screen.getByRole('heading', { name: 'Student accommodation that feels like home.' })).toBeInTheDocument();
-    expect(searchQuery).toHaveBeenCalledWith(expect.objectContaining({ marketTag: 'student' }));
+    expect(searchQuery).toHaveBeenCalledWith(expect.objectContaining({ marketTag: 'student' }), { retry: false });
   });
 });
