@@ -39,6 +39,33 @@ exercise.
 Those same three suites were rerun through the authority wrapper after the
 empty-target rebuild and passed all 24 tests on the disposable schema.
 
+## Shared Living MVP candidate evidence, 2026-11-24
+
+The Shared Living MVP candidate now has a separate database-backed provider to
+seeker journey in
+`server/services/__tests__/sharedLivingJourney.integration.test.ts`. It ran
+through the authority test wrapper against the verified task-owned disposable
+database and passed one end-to-end API/database test. The journey covers a
+reviewed residence mandate, independent student spaces and prices, ownership
+isolation, typed photo upload/review, separate parent/space approval, public
+search/detail privacy, canonical lead capture and inbox delivery, and mandate
+revocation with historical lead retention.
+
+The run also found and corrected a lead inbox predicate mismatch: canonical
+lead custody uses `primary_custody`, while the Shared Living inbox query had
+looked for the retired `primary` purpose. This candidate evidence is limited
+to the isolated database and the Shared Living path. It does not verify a
+shared or production database and does not close P7. Independent P7 evidence
+for mixed-authority Land public journeys, broader Commercial economics, and
+the remaining domain-supply coverage is still required.
+
+The final full authority-suite result on this candidate was 862 passed, 13
+skipped, and 37 failed across 13 files. Failures include the reviewed 0197
+grant/rehearsal source bindings rejecting the 0210 candidate, legal-consent
+fixtures and existing disposable-database authority rows. These are recorded
+as verification blockers; no production/shared grant, rehearsal, database, or
+P7 authority was changed to make the suite pass.
+
 ## Provider decision, 2026-09-11
 
 The current TiDB audit is intentionally admission-blocked for 12

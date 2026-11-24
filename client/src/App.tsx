@@ -440,26 +440,21 @@ function Router() {
             </HeldJourneyGate>
           </Route>
           <Route path="/shared-living">
-            <HeldJourneyGate journey="shared_living">
-              <SharedLiving />
-            </HeldJourneyGate>
+            <SharedLiving />
+          </Route>
+          <Route path="/student-accommodation">
+            <SharedLiving studentMode />
           </Route>
           <Route path="/shared-living/list">
-            <HeldJourneyGate journey="shared_living" detail>
-              <RequireRole role={['visitor', 'agent']} unauthenticatedAuthEntry="register">
-                <SharedLivingLister />
-              </RequireRole>
-            </HeldJourneyGate>
+            <RequireRole role="agent" unauthenticatedAuthEntry="signin">
+              <SharedLivingLister />
+            </RequireRole>
           </Route>
           <Route path="/shared-living/thread/:token">
-            <HeldJourneyGate journey="shared_living" detail>
-              <SharedLivingThread />
-            </HeldJourneyGate>
+            <SharedLivingThread />
           </Route>
           <Route path="/shared-living/:slug">
-            <HeldJourneyGate journey="shared_living" detail>
-              <SharedLivingDetail />
-            </HeldJourneyGate>
+            <SharedLivingDetail />
           </Route>
           <Route path="/commercial/:slug">
             <HeldJourneyGate journey="commercial" detail>

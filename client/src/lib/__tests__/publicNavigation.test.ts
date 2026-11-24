@@ -258,12 +258,11 @@ describe('public navigation authority', () => {
     expect(sharedLivingItem).toBeDefined();
     expect(sharedLivingItem?.href).toBe('/shared-living');
     expect(sharedLivingItem?.capability).toBe('LAUNCH_READY');
-    // Held at launch: hidden from hosted builds even when named in the release manifest.
     const releasedContext = {
       hostedReleaseControlled: true,
       supplementalReleasedJourneys: ['shared_living'],
     };
-    expect(isPublicNavigationVisible(sharedLivingItem!, 'desktop', releasedContext)).toBe(false);
+    expect(isPublicNavigationVisible(sharedLivingItem!, 'desktop', releasedContext)).toBe(true);
     expect(
       isPublicNavigationVisible(sharedLivingItem!, 'desktop', {
         hostedReleaseControlled: false,
@@ -275,7 +274,8 @@ describe('public navigation authority', () => {
         hostedReleaseControlled: true,
         supplementalReleasedJourneys: [],
       }),
-    ).toBe(false);
+    ).toBe(true);
+    expect(items.find(item => item.id === 'renters-student-accommodation')?.href).toBe('/student-accommodation');
   });
 
   it('keeps Explore as one canonical public entry rather than a public menu of modes or publishing actions', () => {

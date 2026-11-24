@@ -1,86 +1,54 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { SHARED_LIVING_CANONICAL_ASSIGNMENT_BLOCKER } from '../../shared/sharedLivingDomain';
-const { getDbMock, captureMock } = vi.hoisted(() => ({
-  getDbMock: vi.fn(),
-  captureMock: vi.fn(),
-}));
-vi.mock('../db', () => ({ getDb: getDbMock }));
+const { captureMock, getDbMock } = vi.hoisted(() => ({ captureMock: vi.fn(), getDbMock: vi.fn() }));
 vi.mock('../services/publicLeadCaptureService', () => ({ capturePublicLead: captureMock }));
+vi.mock('../db-connection', () => ({ getDb: getDbMock }));
 
 import { sharedLivingRouter } from '../sharedLivingRouter';
 
-const PLACE_ID = 'pl-place-01-000000000000000000000001';
-
-function caller() {
+function caller(user: { id: number; role: string } | null = null) {
   return sharedLivingRouter.createCaller({
     req: { headers: {} },
     res: {},
-    user: null,
+    user,
     requestId: 'shared-living-canonical-contract',
   } as never);
 }
 
-describe('Shared Living canonical assignment gate', () => {
-  beforeEach(() => {
-    getDbMock.mockClear();
-    captureMock.mockClear();
+describe('Shared Living platform boundaries', () => {
+  beforeEach(() => { captureMock.mockReset(); getDbMock.mockResolvedValue(null); });
+
+  it('rejects display-text or legacy geography at the public search boundary', async () => {
+    await expect(caller().search({ locationId: 'suburb:34' } as never)).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    await expect(caller().search({ location: 'Sandton' } as never)).rejects.toMatchObject({ code: 'BAD_REQUEST' });
   });
 
-  it('rejects runtime geography input at the request boundary', async () => {
-    await expect(caller().search({ locationId: 'suburb:34' } as never)).rejects.toMatchObject({
-      code: 'BAD_REQUEST',
-    });
+  it('restricts inventory management to authenticated agent accounts', async () => {
+    await expect(caller().myPlaces()).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
+    await expect(caller({ id: 15, role: 'visitor' }).myPlaces()).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(caller({ id: 15, role: 'agent' }).myPlaces()).rejects.toMatchObject({ code: 'SERVICE_UNAVAILABLE' });
   });
 
-  it('answers public search with an empty page and never touches the database', async () => {
-    const empty = {
-      items: [],
-      total: 0,
-      page: 0,
-      pageSize: 24,
-      hasMore: false,
-      locationState: 'none',
-    };
-    await expect(caller().search({ canonicalPlaceId: PLACE_ID })).resolves.toEqual(empty);
-    await expect(caller().search()).resolves.toEqual(empty);
-    await expect(caller().search({ page: 3 })).resolves.toEqual({ ...empty, page: 3 });
-    expect(getDbMock).not.toHaveBeenCalled();
+  it('requires an exact residence and space target and routes enquiries through canonical lead capture', async () => {
+    await expect(caller().enquire({
+      slPlaceId: 4,
+      name: 'Test Person',
+      email: 'test@example.com',
+      message: 'Is this space available?',
+      captureRequestId: '123e4567-e89b-42d3-a456-426614174000',
+      consent: { accepted: true, version: 'shared-living-enquiry-v1', source: 'test' },
+    } as never)).rejects.toMatchObject({ code: 'BAD_REQUEST' });
     expect(captureMock).not.toHaveBeenCalled();
-  });
 
-  it('answers detail and enquiry with NOT_FOUND, never reaching the lead capture or database', async () => {
-    await expect(caller().detail({ slug: 'a-shared-place' })).rejects.toMatchObject({
-      code: 'NOT_FOUND',
-      message: 'This shared living listing was not found.',
+    captureMock.mockResolvedValue({ success: true, captureRequestId: '123e4567-e89b-42d3-a456-426614174000' });
+    await caller().enquire({
+      slPlaceId: 4,
+      slSpaceId: 9,
+      name: 'Test Person',
+      email: 'test@example.com',
+      message: 'Is this space available?',
+      captureRequestId: '123e4567-e89b-42d3-a456-426614174000',
+      consent: { accepted: true, version: 'shared-living-enquiry-v1', source: 'test' },
     });
-    await expect(
-      caller().enquire({
-        slPlaceId: 1,
-        slSpaceId: 1,
-        name: 'Test Person',
-        email: 'test@example.com',
-        message: 'Is this available?',
-        captureRequestId: '123e4567-e89b-42d3-a456-426614174000',
-        consent: { accepted: true, version: 'v1', source: 'test' },
-      }),
-    ).rejects.toMatchObject({
-      code: 'NOT_FOUND',
-      message: 'This shared living listing was not found.',
-    });
-    expect(getDbMock).not.toHaveBeenCalled();
-    expect(captureMock).not.toHaveBeenCalled();
-  });
-
-  it('keeps authoring held with the exact schema dependency', async () => {
-    const authed = sharedLivingRouter.createCaller({
-      req: { headers: {} },
-      res: {},
-      user: { id: 1, role: 'agent' },
-      requestId: 'shared-living-canonical-contract-authed',
-    } as never);
-    await expect(authed.myPlaces()).rejects.toMatchObject({
-      code: 'PRECONDITION_FAILED',
-      message: SHARED_LIVING_CANONICAL_ASSIGNMENT_BLOCKER,
-    });
+    expect(captureMock).toHaveBeenCalledWith(expect.objectContaining({ slPlaceId: 4, slSpaceId: 9, source: 'shared_living' }));
   });
 });

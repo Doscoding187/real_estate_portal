@@ -1,6 +1,6 @@
-import { asc, desc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, lte } from 'drizzle-orm';
 import { getDb } from '../db-connection';
-import { slLeadContexts, slMessages, slPlaces, slSpaces } from '../../drizzle/schema';
+import { leadDeliveries, place as canonicalPlace, placeName, slLeadContexts, slListingAuthorities, slMessages, slPlaces, slSpaces } from '../../drizzle/schema';
 
 /**
  * Shared Living enquiry authority.
@@ -16,7 +16,7 @@ export interface SharedLivingLeadCustodyResolution {
   placeId: number;
   spaceId: number | null;
   placeSlug: string;
-  ownerUserId: number;
+  recipientUserId: number;
   spaceLabelSnapshot: string;
   spaceTypeSnapshot: string;
 }
@@ -29,17 +29,41 @@ export async function resolveSharedLivingLeadCustody(input: {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
-  const [place] = await db
+  const [residence] = await db
     .select({
       id: slPlaces.id,
       slug: slPlaces.slug,
-      status: slPlaces.status,
-      ownerUserId: slPlaces.ownerUserId,
+      status: slPlaces.publicationStatus,
+      canonicalPlaceId: slPlaces.canonicalPlaceId,
     })
     .from(slPlaces)
     .where(eq(slPlaces.id, input.slPlaceId))
     .limit(1);
-  if (!place || place.status !== 'published') return null;
+  if (!residence || residence.status !== 'published') return null;
+
+  const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+  const [authority] = await db
+    .select({ agentUserId: slListingAuthorities.agentUserId })
+    .from(slListingAuthorities)
+    .innerJoin(canonicalPlace, eq(canonicalPlace.placeId, residence.canonicalPlaceId))
+    .innerJoin(placeName, and(
+      eq(placeName.placeId, canonicalPlace.placeId),
+      eq(placeName.nameRole, 'preferred_public'),
+      eq(placeName.nameState, 'active'),
+    ))
+    .where(and(
+      eq(slListingAuthorities.placeId, input.slPlaceId),
+      eq(slListingAuthorities.status, 'approved'),
+      lte(slListingAuthorities.effectiveAt, now),
+      gt(slListingAuthorities.expiresAt, now),
+      eq(canonicalPlace.lifecycleStatus, 'active'),
+      eq(canonicalPlace.searchEligible, 1),
+      eq(canonicalPlace.publicationEligible, 1),
+      eq(canonicalPlace.verificationStatus, 'verified'),
+    ))
+    .orderBy(desc(slListingAuthorities.effectiveAt))
+    .limit(1);
+  if (!authority) return null;
 
   let spaceLabelSnapshot = 'Whole place';
   let spaceTypeSnapshot = 'shared_living';
@@ -50,23 +74,24 @@ export async function resolveSharedLivingLeadCustody(input: {
         id: slSpaces.id,
         label: slSpaces.label,
         accommodationType: slSpaces.accommodationType,
-        status: slSpaces.status,
+        status: slSpaces.publicationStatus,
+        availabilityStatus: slSpaces.availabilityStatus,
         placeId: slSpaces.placeId,
       })
       .from(slSpaces)
       .where(eq(slSpaces.id, input.slSpaceId))
       .limit(1);
-    if (!space || Number(space.placeId) !== place.id || space.status !== 'available') return null;
+    if (!space || Number(space.placeId) !== residence.id || space.status !== 'published' || space.availabilityStatus !== 'available') return null;
     spaceId = space.id;
     spaceLabelSnapshot = space.label;
     spaceTypeSnapshot = space.accommodationType;
   }
 
   return {
-    placeId: place.id,
+    placeId: residence.id,
     spaceId,
-    placeSlug: place.slug,
-    ownerUserId: Number(place.ownerUserId),
+    placeSlug: residence.slug,
+    recipientUserId: Number(authority.agentUserId),
     spaceLabelSnapshot,
     spaceTypeSnapshot,
   };
@@ -169,13 +194,33 @@ export async function listerOwnsThread(userId: number, captureRequestId: string)
   if (!db) return false;
   const { leads } = await import('../../drizzle/schema');
   const [row] = await db
-    .select({ ownerId: slPlaces.ownerUserId })
+    .select({ recipientUserId: leadDeliveries.recipientUserId })
     .from(leads)
     .innerJoin(slLeadContexts, eq(slLeadContexts.leadId, leads.id))
-    .innerJoin(slPlaces, eq(slLeadContexts.placeId, slPlaces.id))
+    .innerJoin(leadDeliveries, and(eq(leadDeliveries.leadId, leads.id), eq(leadDeliveries.purpose, 'primary_custody')))
     .where(eq(leads.captureRequestId, captureRequestId))
     .limit(1);
-  return Boolean(row && Number(row.ownerId) === userId);
+  return Boolean(row && Number(row.recipientUserId) === userId);
+}
+
+async function listerCanReplyToThread(userId: number, captureRequestId: string): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  const { leads } = await import('../../drizzle/schema');
+  const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+  const [row] = await db.select({ id: slListingAuthorities.id })
+    .from(leads)
+    .innerJoin(slLeadContexts, eq(slLeadContexts.leadId, leads.id))
+    .innerJoin(slListingAuthorities, and(
+      eq(slListingAuthorities.placeId, slLeadContexts.placeId),
+      eq(slListingAuthorities.agentUserId, userId),
+      eq(slListingAuthorities.status, 'approved'),
+      lte(slListingAuthorities.effectiveAt, now),
+      gt(slListingAuthorities.expiresAt, now),
+    ))
+    .where(eq(leads.captureRequestId, captureRequestId))
+    .limit(1);
+  return Boolean(row);
 }
 
 export async function replyAsListerThread(
@@ -183,7 +228,7 @@ export async function replyAsListerThread(
   captureRequestId: string,
   body: string,
 ): Promise<boolean> {
-  if (!(await listerOwnsThread(userId, captureRequestId))) return false;
+  if (!(await listerOwnsThread(userId, captureRequestId)) || !(await listerCanReplyToThread(userId, captureRequestId))) return false;
   const db = await getDb();
   if (!db) throw new Error('Database not available');
   const { leads } = await import('../../drizzle/schema');
@@ -202,7 +247,7 @@ export async function replyAsListerThread(
   return true;
 }
 
-/** A durable, owner-scoped inbox is the Shared Living delivery destination. */
+/** Historical lead visibility follows the recipient snapshot recorded at capture. */
 export async function listListerThreads(userId: number) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
@@ -220,7 +265,8 @@ export async function listListerThreads(userId: number) {
     .from(slLeadContexts)
     .innerJoin(leads, eq(slLeadContexts.leadId, leads.id))
     .innerJoin(slPlaces, eq(slLeadContexts.placeId, slPlaces.id))
-    .where(eq(slPlaces.ownerUserId, userId))
+    .innerJoin(leadDeliveries, and(eq(leadDeliveries.leadId, leads.id), eq(leadDeliveries.purpose, 'primary_custody')))
+    .where(eq(leadDeliveries.recipientUserId, userId))
     .orderBy(desc(leads.createdAt));
 }
 

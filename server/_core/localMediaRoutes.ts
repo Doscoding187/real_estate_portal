@@ -12,6 +12,10 @@ import {
   verifyLandEvidenceDeliveryToken,
   verifyLandEvidenceUploadReservation,
 } from '../services/landEvidenceStorage';
+import {
+  verifySharedLivingEvidenceDeliveryToken,
+  verifySharedLivingEvidenceUploadReservation,
+} from '../services/sharedLivingEvidenceStorage';
 
 function queryString(value: unknown): string | null {
   return typeof value === 'string' && value.trim() ? value : null;
@@ -44,11 +48,19 @@ async function handleLocalMediaUpload(req: Request, res: Response): Promise<void
       try {
         reservation = verifyDeveloperMediaUploadReceipt(token, { requireConfirmed: false });
       } catch {
-        const privateReservation = verifyLandEvidenceUploadReservation(token);
-        reservation = {
-          ...privateReservation,
-          mediaType: privateReservation.contentType === 'application/pdf' ? 'pdf' : 'image',
-        };
+        try {
+          const privateReservation = verifyLandEvidenceUploadReservation(token);
+          reservation = {
+            ...privateReservation,
+            mediaType: privateReservation.contentType === 'application/pdf' ? 'pdf' : 'image',
+          };
+        } catch {
+          const privateReservation = verifySharedLivingEvidenceUploadReservation(token);
+          reservation = {
+            ...privateReservation,
+            mediaType: privateReservation.contentType === 'application/pdf' ? 'pdf' : 'image',
+          };
+        }
       }
     }
     const requestContentType = String(req.headers['content-type'] || '')
@@ -115,8 +127,13 @@ async function handlePrivateEvidenceDelivery(req: Request, res: Response): Promi
   const token = queryString(req.query.deliveryToken);
   if (!token) { res.status(400).json({ error: 'A private evidence delivery token is required.' }); return; }
   try {
-    const reservation = verifyLandEvidenceDeliveryToken(token);
-    const object = await getLocalMediaObjectForDelivery(reservation.key);
+    let key: string;
+    try {
+      key = verifyLandEvidenceDeliveryToken(token).key;
+    } catch {
+      key = verifySharedLivingEvidenceDeliveryToken(token).key;
+    }
+    const object = await getLocalMediaObjectForDelivery(key);
     res.setHeader('Content-Type', object.contentType);
     res.setHeader('Content-Length', String(object.contentLength));
     res.setHeader('Cache-Control', 'private, no-store');

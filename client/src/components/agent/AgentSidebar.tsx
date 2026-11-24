@@ -34,6 +34,7 @@ type NavItem = {
 const OPERATE_LINKS = [
   { label: 'Overview', href: '/agent/dashboard', icon: Home },
   { label: 'Listings', href: '/agent/listings', icon: Building2 },
+  { label: 'Shared Living', href: '/shared-living/list', icon: Home },
   { label: 'Leads & CRM', href: '/agent/leads', icon: Users },
   { label: 'Seller Growth', href: '/agent/canvassing', icon: MapPinned },
   { label: 'Calendar', href: '/agent/productivity?tab=calendar', icon: CalendarDays },
@@ -102,13 +103,16 @@ export function AgentSidebar({ mode = 'desktop' }: SidebarProps) {
     },
     {
       ...OPERATE_LINKS[2],
-      badge: activeLeadCount || undefined,
     },
     {
       ...OPERATE_LINKS[3],
+      badge: activeLeadCount || undefined,
     },
     {
       ...OPERATE_LINKS[4],
+    },
+    {
+      ...OPERATE_LINKS[5],
     },
   ];
 

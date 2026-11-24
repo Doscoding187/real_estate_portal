@@ -1,0 +1,23 @@
+CREATE TABLE `sl_place_media` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `place_id` INT NOT NULL,
+  `storage_key` VARCHAR(512) NOT NULL,
+  `uploaded_by_user_id` INT NOT NULL,
+  `content_type` VARCHAR(80) NOT NULL,
+  `byte_size` INT NOT NULL,
+  `caption` VARCHAR(255) NULL,
+  `display_order` INT NOT NULL DEFAULT 0,
+  `is_cover` TINYINT NOT NULL DEFAULT 0,
+  `review_status` ENUM('pending_review','approved','rejected') NOT NULL DEFAULT 'pending_review',
+  `reviewed_by_user_id` INT NULL,
+  `reviewed_at` DATETIME NULL,
+  `review_reason` VARCHAR(500) NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_sl_place_media_storage_key` (`storage_key`),
+  KEY `idx_sl_place_media_place_review` (`place_id`,`review_status`,`display_order`),
+  CONSTRAINT `fk_sl_place_media_place` FOREIGN KEY (`place_id`) REFERENCES `sl_places` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_sl_place_media_uploader` FOREIGN KEY (`uploaded_by_user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `fk_sl_place_media_reviewer` FOREIGN KEY (`reviewed_by_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL
+);

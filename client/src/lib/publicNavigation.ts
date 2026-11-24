@@ -131,6 +131,7 @@ const BASELINE_RELEASED_PUBLIC_JOURNEYS: readonly PublicHeroJourneyKey[] = [
   'buy',
   'rent',
   'developments',
+  'shared_living',
   'find_agent',
 ];
 
@@ -640,6 +641,15 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
             href: getPublicHeroJourney('shared_living').destination,
             owner: 'shared-living-search',
             capability: 'LAUNCH_READY',
+            journey: 'shared_living',
+          }),
+          destination({
+            id: 'renters-student-accommodation',
+            label: 'Student accommodation',
+            href: '/student-accommodation',
+            owner: 'shared-living-search',
+            capability: 'LAUNCH_READY',
+            activeHref: '/student-accommodation',
             journey: 'shared_living',
           }),
           destination({
