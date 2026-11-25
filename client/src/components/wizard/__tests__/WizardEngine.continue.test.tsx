@@ -126,6 +126,25 @@ describe('Continue moves exactly one step', () => {
     expect(store().createdDevelopmentId).toBeUndefined();
   });
 
+  it('an existing development opens with its house types cheapest first, then smaller; a draft keeps its order', () => {
+    const unit = (id: string, size: number, price: number) => ({
+      id,
+      name: `${size} m²`,
+      unitSize: size,
+      priceFrom: price,
+      basePriceFrom: price,
+      bedrooms: 3,
+      bathrooms: 2,
+    });
+    const units = [unit('z', 130, 2195000), unit('y', 155, 2445000), unit('x', 71, 1745000), unit('w', 91, 1930000)];
+    store().reset();
+    store().hydrateDevelopment({ id: 9, name: 'Existing', unitTypes: units });
+    expect(store().unitTypes.map(u => u.id)).toEqual(['x', 'w', 'z', 'y']);
+    store().reset();
+    store().hydrateDevelopment({ draftData: { workflowId: 'residential_sale', unitTypes: units } });
+    expect(store().unitTypes.map(u => u.id)).toEqual(['z', 'y', 'x', 'w']);
+  });
+
   it('a repeated or stale next call for a step already left does nothing', () => {
     store().goWorkflowNext('configuration');
     store().goWorkflowNext('configuration');

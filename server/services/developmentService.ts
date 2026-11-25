@@ -1362,6 +1362,8 @@ export async function createDevelopment(
       null,
     ),
     tagline: sanitizeString((developmentData as any).tagline),
+    // The wizard mirrors its tagline to subtitle; keep both on create as update does.
+    subtitle: sanitizeString((developmentData as any).subtitle ?? (developmentData as any).tagline),
     description: sanitizeString((developmentData as any).description),
     address: sanitizeString((developmentData as any).address),
     postalCode: sanitizeString((developmentData as any).postalCode),

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { describePublishFailure, publishConfirmText, stepForIssue } from '../wizardReview';
+import { buildReviewModel, describePublishFailure, publishConfirmText, stepForIssue } from '../wizardReview';
 
 describe('describePublishFailure', () => {
   it('uses the server message and lists readiness blockers', () => {
@@ -31,6 +31,14 @@ describe('describePublishFailure', () => {
     expect(failure.message).toBe('Failed to publish');
     expect(failure.details).toEqual(['name: Required', 'Bad input']);
     expect(describePublishFailure(null, 'x')).toEqual({ message: 'x', details: [] });
+  });
+});
+
+describe('review house type order', () => {
+  it('lists house types cheapest first, like the public page', () => {
+    const unit = (id: string, size: number, price: number) => ({ id, name: id, unitSize: size, priceFrom: price, bedrooms: 3, bathrooms: 2 });
+    const model = buildReviewModel({ unitTypes: [unit('big', 155, 2445000), unit('small', 71, 1745000), unit('mid', 91, 1930000)] });
+    expect(model.houseTypes.map(h => h.id)).toEqual(['small', 'mid', 'big']);
   });
 });
 

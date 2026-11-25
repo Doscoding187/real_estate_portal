@@ -12,6 +12,7 @@ import { isInformalSettlementName, validateHighlightList } from '@/lib/wizardLoc
 import { WorkflowId, WizardStepId, WizardData } from '@/lib/types/wizard-workflows';
 import { WORKFLOWS, getWorkflow, getVisibleSteps } from '@/lib/workflows';
 import { computeWizardProgress } from '@/lib/wizardProgress';
+import { sortHouseTypes } from '@/lib/houseTypes';
 
 export const DEVELOPMENT_WIZARD_STORAGE_KEY = 'development-wizard-storage-v2';
 export const PUBLISHER_DEVELOPMENT_WIZARD_STORAGE_KEY = 'publisher-development-wizard-storage-v1';
@@ -2069,6 +2070,15 @@ const createActions = (
           });
         } else {
           console.warn('[hydrateDevelopment] No unitTypes array found');
+        }
+        // An existing development opens with its house types cheapest first, then smaller
+        // (as the public page shows them), not in insertion or id order. A draft keeps the
+        // order the publisher left.
+        if (!isDraft && hydratedUnitTypes.length > 1) {
+          hydratedUnitTypes = sortHouseTypes(hydratedUnitTypes).map((unit: any, index: number) => ({
+            ...unit,
+            displayOrder: index,
+          }));
         }
 
         // ============================================================================

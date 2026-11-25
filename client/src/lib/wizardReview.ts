@@ -24,6 +24,7 @@ import {
   resolveCover,
 } from './wizardMedia';
 import { formatRandAmount, houseTypeCard } from './wizardHouseTypes';
+import { sortHouseTypes } from './houseTypes';
 
 export type ReviewSectionId =
   | 'basics'
@@ -238,7 +239,8 @@ export function buildReviewModel(
   if (other.length > 0) mediaRows.push({ label: 'Other documents', value: String(other.length) });
 
   // House types
-  const units: any[] = Array.isArray(data.unitTypes) ? data.unitTypes : [];
+  // Same order as the public page: cheapest first, then the smaller home.
+  const units: any[] = sortHouseTypes(Array.isArray(data.unitTypes) ? data.unitTypes : []);
   const houseTypes: ReviewHouseType[] = units.map(unit => {
     const card = houseTypeCard(unit, transaction);
     const available = card.tags.find(t => /available$/.test(t));

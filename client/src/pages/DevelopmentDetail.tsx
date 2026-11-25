@@ -82,6 +82,8 @@ import {
 } from '@/lib/bond-calculator';
 import { trackCTAClick, trackFunnelStep } from '@/lib/analytics/advertiseTracking';
 import { pickBrochureUrl, pickSpecSheetUrl } from '@/lib/developmentDocuments';
+import { publicParkingLabel, sortHouseTypes } from '@/lib/houseTypes';
+import { buildPublishedFacts } from '@/lib/publicDevelopmentFacts';
 import {
   appendDevelopmentSearchReturn,
   getDevelopmentSearchReturn,
@@ -1166,7 +1168,8 @@ export default function DevelopmentDetail() {
   // Missing declaration restoration
   const floorPlans: any[] = normalizedFloorPlans;
   const amenities = amenityList;
-  const units = dev.unitTypes || [];
+  // Cheapest first, then the smaller home (never insertion or id order).
+  const units = sortHouseTypes(dev.unitTypes || []);
 
   // Parse estateSpecs for ownership type
   const estateSpecs = (() => {
@@ -1293,16 +1296,27 @@ export default function DevelopmentDetail() {
         yardSize: u.yardSize ?? null,
         landSize: u.erfSize || u.yardSize,
         floorPlanAvailable: Boolean(resolveUnitFloorPlanUrl(u)),
-        parkingLabel: formatParkingLabel(
-          u.parkingType ?? u.parking,
-          parseNumber(u.parkingBays ?? u.parkingCount ?? u.publicFacts?.parkingCount) ?? undefined,
-        ),
+        parkingLabel:
+          publicParkingLabel(u.parkingType ?? u.parking, u.parkingBays) ??
+          formatParkingLabel(
+            u.parkingType ?? u.parking,
+            parseNumber(u.parkingBays ?? u.parkingCount ?? u.publicFacts?.parkingCount) ?? undefined,
+          ),
       };
     }),
 
     unifiedMedia: unifiedMedia,
   };
 
+  const publishedTagline =
+    String((dev as any).subtitle ?? '').trim() || String((dev as any).tagline ?? '').trim() || null;
+  const publishedFacts = buildPublishedFacts({
+    estateSpecs: (dev as any).estateSpecs,
+    highlights: (publicFacts as any).highlights,
+    status: publicFacts.status,
+    launchDate: (dev as any).launchDate,
+    completionDate: publicFacts.completionDate,
+  });
   const publishedDocuments = Array.isArray((dev as any).brochures) ? (dev as any).brochures : [];
   // The brochure button is only for a brochure, never the first document of any type.
   // Site plans and price lists have no area on this page yet, so they are not shown.
@@ -1481,11 +1495,9 @@ export default function DevelopmentDetail() {
           name={development.name}
           location={development.location}
           description={development.description}
-          heroSubtitle={
-            development.name.trim().toLowerCase() === 'baltimore lifestyle estate'
-              ? 'Contemporary family homes in a secure residential community in North Riding.'
-              : null
-          }
+          // The line under the name is the publisher's own tagline; none entered, no line.
+          heroSubtitle={publishedTagline}
+          publishedFacts={publishedFacts}
           heroImage={previewHeroImage}
           priceFrom={derivedPriceFrom}
           priceLabel={developmentPriceLabel}
