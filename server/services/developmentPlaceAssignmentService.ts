@@ -306,6 +306,9 @@ export async function getDevelopmentPlaceGeography(
  * given canonical Places. Each Development still needs one unambiguous Place,
  * exactly as in `listDevelopmentIdsForCanonicalPlace`.
  */
+/** Largest IN list sent to the database in one query. */
+const PLACE_ID_BATCH_SIZE = 500;
+
 export async function listDevelopmentIdsForCanonicalPlaces(
   placeIds: readonly string[],
 ): Promise<number[]> {
@@ -317,16 +320,23 @@ export async function listDevelopmentIdsForCanonicalPlaces(
 
   const db = await getDb();
   if (!db) throw new Error('Database not available');
-  const rows = await db
-    .select({ developmentId: developmentPlaceAssignments.developmentId })
-    .from(developmentPlaceAssignments)
-    .where(
-      and(
-        inArray(developmentPlaceAssignments.placeId, requested),
-        eq(developmentPlaceAssignments.assignmentKind, 'site'),
-        eq(developmentPlaceAssignments.reviewState, 'accepted'),
-      ),
+  // A province rolls up to ~1,000 localities: keep every IN list bounded.
+  const rows: Array<{ developmentId: number }> = [];
+  for (let offset = 0; offset < requested.length; offset += PLACE_ID_BATCH_SIZE) {
+    const batch = requested.slice(offset, offset + PLACE_ID_BATCH_SIZE);
+    rows.push(
+      ...(await db
+        .select({ developmentId: developmentPlaceAssignments.developmentId })
+        .from(developmentPlaceAssignments)
+        .where(
+          and(
+            inArray(developmentPlaceAssignments.placeId, batch),
+            eq(developmentPlaceAssignments.assignmentKind, 'site'),
+            eq(developmentPlaceAssignments.reviewState, 'accepted'),
+          ),
+        )),
     );
+  }
   const candidateIds: number[] = Array.from(
     new Set<number>(rows.map(row => Number(row.developmentId))),
   );

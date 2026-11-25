@@ -1,4 +1,5 @@
 import { BadgeCheck, Heart, Star, MapPin } from 'lucide-react';
+import { formatDevelopmentCardPrice } from '@/lib/developmentPriceLabel';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { useLocation } from 'wouter';
@@ -88,13 +89,7 @@ export function DevelopmentCard({
     return left.label.localeCompare(right.label, undefined, { numeric: true, sensitivity: 'base' });
   });
 
-  const formatPrice = (price: number) => {
-    const compactPrice = new Intl.NumberFormat('en-US', {
-      notation: 'compact',
-      maximumFractionDigits: 3,
-    }).format(price);
-    return `R${compactPrice.toLowerCase()}`;
-  };
+  const formatPrice = formatDevelopmentCardPrice;
 
   return (
     <article className="group relative mx-auto flex h-auto w-full flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-shadow duration-200 hover:shadow-md lg:min-h-[286px] lg:flex-row">

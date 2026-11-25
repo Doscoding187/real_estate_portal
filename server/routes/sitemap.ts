@@ -360,7 +360,15 @@ router.get('/sitemap-developments.xml', async (req, res, next) => {
       .from(developments)
       .where(publicDevelopmentEligibilityConditions())
       .orderBy(desc(developments.updatedAt))
-      .limit(SITEMAP_DEVELOPMENT_LIMIT);
+      .limit(SITEMAP_DEVELOPMENT_LIMIT + 1);
+    if (rows.length > SITEMAP_DEVELOPMENT_LIMIT) {
+      // Like the other sitemaps this one is a single file; say so loudly rather than
+      // silently dropping developments. Paging into an index is the next step.
+      console.warn(
+        `[sitemap-developments] more than ${SITEMAP_DEVELOPMENT_LIMIT} eligible developments; the newest ${SITEMAP_DEVELOPMENT_LIMIT} are listed`,
+      );
+      rows.length = SITEMAP_DEVELOPMENT_LIMIT;
+    }
 
     sendXml(
       res,

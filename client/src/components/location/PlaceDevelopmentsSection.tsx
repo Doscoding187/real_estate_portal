@@ -1,11 +1,7 @@
 import { trpc } from '@/lib/trpc';
+import { developmentPriceLabel } from '@/lib/developmentPriceLabel';
 
 const SECTION_LIMIT = 6;
-
-const formatRand = (value: number) =>
-  `R${Math.round(value)
-    .toString()
-    .replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
 
 /**
  * "New developments in <place>" for a city or province page. It is fed by the
@@ -75,7 +71,9 @@ export function PlaceDevelopmentsSection({
                   <span className="text-sm text-muted-foreground">by {item.publisher.name}</span>
                 ) : null}
                 {item.priceFrom ? (
-                  <span className="text-sm">From {formatRand(item.priceFrom)}</span>
+                  <span className="text-sm">
+                    From {developmentPriceLabel(item.priceFrom, item.transactionType)}
+                  </span>
                 ) : null}
               </a>
             </li>

@@ -283,6 +283,16 @@ describe('Canonical Place page robots', () => {
               locationLabels: ['North Riding'],
               publisher: { name: 'Cosmopolitan Projects' },
               priceFrom: 1930000,
+              transactionType: 'for_sale',
+            },
+            {
+              id: 2,
+              name: 'Harbour Rentals',
+              canonicalRoute: '/development/harbour-rentals',
+              locationLabels: ['Sea Point'],
+              publisher: { name: 'Harbour' },
+              priceFrom: 16000,
+              transactionType: 'for_rent',
             },
           ],
         },
@@ -301,7 +311,9 @@ describe('Canonical Place page robots', () => {
         '/development/baltimore-lifestyle-estate-5yr6po',
       );
       expect(within(section).getByText('North Riding')).toBeVisible();
-      expect(within(section).getByText('From R1,930,000')).toBeVisible();
+      expect(within(section).getByText('From R1.93m')).toBeVisible();
+      // Rent prices say so.
+      expect(within(section).getByText('From R16k / month')).toBeVisible();
       expect(within(section).getByRole('link', { name: 'See all developments' })).toHaveAttribute(
         'href',
         `/new-developments?canonicalPlaceId=${CITY}`,

@@ -13,7 +13,10 @@ vi.mock('../canonicalPlaceSearchService', () => ({
   loadCanonicalPlaceSearchProjection: loadProjection,
 }));
 
-import { developmentSearchPlaceIds } from '../placeLocalityRollupService';
+import {
+  developmentSearchPlaceIds,
+  resetDevelopmentSearchPlaceIdsCache,
+} from '../placeLocalityRollupService';
 
 const scopes: Record<string, string> = {
   [RANDBURG]: 'metro_city',
@@ -52,6 +55,7 @@ const database = {
 describe('developmentSearchPlaceIds (how a place search rolls up to its suburbs)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetDevelopmentSearchPlaceIdsCache();
     loadProjection.mockImplementation(async (_db: unknown, options: any) =>
       projectionFor(options.placeIds, options.includeProvinceMembers),
     );
@@ -90,5 +94,14 @@ describe('developmentSearchPlaceIds (how a place search rolls up to its suburbs)
   it('an unknown or unsearchable place resolves to itself only', async () => {
     loadProjection.mockResolvedValue({ executions: new Map(), labels: new Map() });
     expect(await developmentSearchPlaceIds(database, RANDBURG)).toEqual([RANDBURG]);
+  });
+
+  it('caches the rolled-up list for a few minutes, per place', async () => {
+    await developmentSearchPlaceIds(database, GAUTENG);
+    const calls = loadProjection.mock.calls.length;
+    await developmentSearchPlaceIds(database, GAUTENG);
+    expect(loadProjection.mock.calls.length).toBe(calls);
+    await developmentSearchPlaceIds(database, NORTH_RIDING);
+    expect(loadProjection.mock.calls.length).toBeGreaterThan(calls);
   });
 });

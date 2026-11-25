@@ -94,9 +94,21 @@ describe('developments sitemap', () => {
     expect(whereMock).toHaveBeenCalledWith(ELIGIBILITY);
   });
 
-  it('is bounded', async () => {
-    const { limit } = await requestDevelopmentsSitemap([]);
-    expect(limit).toHaveBeenCalledWith(5000);
+  it('is bounded to 5000 and warns instead of silently dropping developments', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const many = Array.from({ length: 5001 }, (_, i) => ({
+      id: i + 1,
+      slug: `dev-${i + 1}`,
+      updatedAt: '2026-11-20 10:00:00',
+    }));
+    const { capture, limit } = await requestDevelopmentsSitemap(many);
+    expect(limit).toHaveBeenCalledWith(5001);
+    expect(String(capture.body).match(/<loc>/g)).toHaveLength(5000);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('more than 5000 eligible developments'));
+    const none = await requestDevelopmentsSitemap(many.slice(0, 3));
+    expect(String(none.capture.body).match(/<loc>/g)).toHaveLength(3);
+    expect(warn).toHaveBeenCalledTimes(1);
+    warn.mockRestore();
   });
 
   it('emits an empty urlset when nothing is eligible', async () => {

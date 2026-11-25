@@ -85,7 +85,33 @@ export async function metroCityGuideLocalityIds(
  *   - province: every locality whose provincial bound is that province.
  * A place that is not searchable resolves to itself only.
  */
+const ROLLUP_CACHE_TTL_MS = 5 * 60 * 1000;
+/** Upper bound on rolled-up places; a province is ~1,100 localities. Beyond it the list is cut. */
+export const ROLLUP_MAX_PLACE_IDS = 3000;
+const rollupCache = new Map<string, { at: number; value: string[] }>();
+
+export function resetDevelopmentSearchPlaceIdsCache(): void {
+  rollupCache.clear();
+}
+
 export async function developmentSearchPlaceIds(
+  database: PlaceReadDatabase,
+  placeId: string,
+): Promise<string[]> {
+  const cached = rollupCache.get(placeId);
+  if (cached && Date.now() - cached.at < ROLLUP_CACHE_TTL_MS) return cached.value;
+  let value = await resolveDevelopmentSearchPlaceIds(database, placeId);
+  if (value.length > ROLLUP_MAX_PLACE_IDS) {
+    console.warn(
+      `[developmentSearchPlaceIds] ${placeId} rolls up to ${value.length} places; cut to ${ROLLUP_MAX_PLACE_IDS}`,
+    );
+    value = value.slice(0, ROLLUP_MAX_PLACE_IDS);
+  }
+  rollupCache.set(placeId, { at: Date.now(), value });
+  return value;
+}
+
+async function resolveDevelopmentSearchPlaceIds(
   database: PlaceReadDatabase,
   placeId: string,
 ): Promise<string[]> {
