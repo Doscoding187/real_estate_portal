@@ -91,13 +91,20 @@ export function buildPublishedFacts(input: {
     amounts.ratesAmount = rates;
     costs.push({ label: 'Rates & taxes', value: `${formatRandAmount(rates)} a month (estimate)` });
   }
-  if (specs.hasHOA === false) {
+  // "No levy" only when the publisher chose it (levyChoice 'none'); unanswered or older
+  // records (hasHOA false by default, no choice stored) publish nothing about the levy.
+  if (specs.levyChoice === 'none' && specs.hasHOA === false) {
     amounts.noLevy = true;
     costs.push({ label: 'Levy', value: 'No levy' });
-  } else {
+  } else if (specs.hasHOA !== false) {
     const levy = amount(specs.levyRange);
     if (levy > 0) {
-      const label = specs.governanceType === 'body_corporate' ? 'Body corporate levy' : 'HOA levy';
+      const label =
+        specs.governanceType === 'body_corporate'
+          ? 'Body corporate levy'
+          : specs.governanceType === 'hoa'
+            ? 'HOA levy'
+            : 'Levy';
       amounts.levyAmount = levy;
       amounts.levyLabel = label;
       costs.push({ label, value: `${formatRandAmount(levy)} a month (estimate)` });

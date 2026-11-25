@@ -140,6 +140,13 @@ describe('Continue moves exactly one step', () => {
     store().reset();
     store().hydrateDevelopment({ id: 9, name: 'Existing', unitTypes: units });
     expect(store().unitTypes.map(u => u.id)).toEqual(['x', 'w', 'z', 'y']);
+    // Sorted for display only: every house type keeps the displayOrder it was stored with.
+    expect(Object.fromEntries(store().unitTypes.map(u => [u.id, u.displayOrder]))).toEqual({
+      z: 0,
+      y: 1,
+      x: 2,
+      w: 3,
+    });
     store().reset();
     store().hydrateDevelopment({ draftData: { workflowId: 'residential_sale', unitTypes: units } });
     expect(store().unitTypes.map(u => u.id)).toEqual(['z', 'y', 'x', 'w']);

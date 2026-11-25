@@ -20,7 +20,14 @@ describe('published facts', () => {
       { label: 'Rates & taxes', value: 'R2,000 a month (estimate)' },
       { label: 'HOA levy', value: 'R1,500 a month (estimate)' },
     ]);
-    expect(buildPublishedFacts({ estateSpecs: { hasHOA: false } }).costs).toEqual([{ label: 'Levy', value: 'No levy' }]);
+    // Only an explicit "No levy" choice is published as such.
+    expect(buildPublishedFacts({ estateSpecs: { hasHOA: false, levyChoice: 'none' } }).costs).toEqual([
+      { label: 'Levy', value: 'No levy' },
+    ]);
+    // Unanswered, or an older record whose hasHOA defaulted to false: nothing about the levy.
+    expect(buildPublishedFacts({ estateSpecs: { hasHOA: false } }).costs).toEqual([]);
+    expect(buildPublishedFacts({ estateSpecs: {} }).costs).toEqual([]);
+    expect(buildPublishedFacts({ estateSpecs: {} }).amounts.noLevy).toBe(false);
   });
 
   it('reads the estate type, phase and handover dates, and de-duplicates highlights', () => {
@@ -117,10 +124,25 @@ describe('gallery and card highlights', () => {
       ...base,
       amenities: ['Swimming pool', 'Gym'],
       features: ['Fibre'],
-      details: { propertyHighlights: ['Invented'], amenitiesFeatures: ['Also invented'] },
+      propertyDetails: { amenitiesFeatures: ['Also invented'] },
     });
     expect(card?.highlights).toBeUndefined();
-    const stored: any = normalizePropertyForUI({ ...base, id: 2, highlights: ['Near schools', ' Pet friendly '] });
+  });
+
+  it('shows stored highlights, from the highlights field or a property\'s own highlight list', () => {
+    const base = { id: 2, title: 'Y', price: 1000000, city: 'Johannesburg', images: [] };
+    const stored: any = normalizePropertyForUI({ ...base, highlights: ['Near schools', ' Pet friendly '] });
     expect(stored?.highlights).toEqual(['Near schools', 'Pet friendly']);
+    const property: any = normalizePropertyForUI({ ...base, id: 3, propertyDetails: { propertyHighlights: ['Solar backup', 'Borehole water'] } });
+    expect(property?.highlights).toEqual(['Solar backup', 'Borehole water']);
+  });
+
+  it('makes machine keys readable, leaves normal text alone, and handles non-string items', () => {
+    const base = { id: 4, title: 'Z', price: 1000000, city: 'Johannesburg', images: [] };
+    const card: any = normalizePropertyForUI({
+      ...base,
+      highlights: ['24_hour_security', 'pet-friendly', 'Near schools', { label: 'Fibre ready' }, 42, null, ''],
+    });
+    expect(card?.highlights).toEqual(['24 Hour Security', 'Pet Friendly', 'Near schools', 'Fibre ready']);
   });
 });

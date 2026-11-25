@@ -736,6 +736,14 @@ export function buildDevelopmentSubmitPayload(input: DevelopmentSubmitPayloadInp
           ...(hasGovernanceSpecs
             ? {
                 hasHOA: submitSource.hasGoverningBody,
+                // Explicit levy answer, so "No levy" is only ever published when it was chosen.
+                ...(submitSource.hasGoverningBody === false
+                  ? { levyChoice: 'none' }
+                  : submitSource.hasGoverningBody === true &&
+                      (submitSource.governanceType === 'hoa' ||
+                        submitSource.governanceType === 'body_corporate')
+                    ? { levyChoice: submitSource.governanceType }
+                    : {}),
                 governanceType: submitSource.governanceType,
                 architecturalGuidelines: submitSource.architecturalGuidelines,
                 guidelinesSummary: submitSource.guidelinesSummary,
