@@ -55,6 +55,7 @@ import {
 } from 'lucide-react';
 import { NearbyLandmarks } from '@/components/property/NearbyLandmarks';
 import { MetaControl } from '@/components/seo/MetaControl';
+import { buildDevelopmentStructuredData } from '@/lib/developmentStructuredData';
 import { Breadcrumbs } from '@/components/search/Breadcrumbs';
 import { Footer } from '@/components/Footer';
 import {
@@ -1302,6 +1303,23 @@ export default function DevelopmentDetail() {
     unifiedMedia: unifiedMedia,
   };
 
+  // schema.org data for search engines: only facts this page already shows.
+  const developmentStructuredData = (imageUrl?: string | null) =>
+    buildDevelopmentStructuredData({
+      name: development.name,
+      description: development.description,
+      url:
+        typeof window === 'undefined'
+          ? ''
+          : `${window.location.origin}${window.location.pathname}`,
+      imageUrl,
+      locationLabels: publicFacts.locationLabels,
+      publisherName: development.developer,
+      transactionType: publicFacts.transactionType,
+      priceFrom: publicFacts.priceFrom,
+      priceTo: publicFacts.priceTo,
+    });
+
   const brochureUrl = (() => {
     const brochureItems = Array.isArray((dev as any).brochures) ? (dev as any).brochures : [];
     for (const item of brochureItems) {
@@ -1500,6 +1518,7 @@ export default function DevelopmentDetail() {
           title={`${development.name} | ${development.developer}`}
           description={development.description || undefined}
           image={previewHeroImage || undefined}
+          structuredData={developmentStructuredData(previewHeroImage)}
         />
         <DevelopmentDetailPage
           name={development.name}
@@ -1655,6 +1674,9 @@ export default function DevelopmentDetail() {
         image={
           development.heroMedia.type === 'image' ? development.heroMedia.image?.url : undefined
         }
+        structuredData={developmentStructuredData(
+          development.heroMedia.type === 'image' ? development.heroMedia.image?.url : undefined,
+        )}
       />
 
       <div className="min-h-screen bg-slate-50 pb-32 md:pb-20">
