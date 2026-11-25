@@ -2,7 +2,8 @@ import { cleanup, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LAND_VERTICAL_LAUNCH_STATE } from '@shared/landLaunchPolicy';
 
-const { resolveCanonicalUrl, landGuideAreas, propertyGuideAreas, metaControl } = vi.hoisted(() => ({
+const { resolveCanonicalUrl, landGuideAreas, propertyGuideAreas, metaControl, searchDevelopments } = vi.hoisted(() => ({
+  searchDevelopments: vi.fn(),
   resolveCanonicalUrl: vi.fn(),
   landGuideAreas: vi.fn(),
   propertyGuideAreas: vi.fn(),
@@ -13,7 +14,10 @@ vi.mock('@/lib/trpc', () => ({
   trpc: {
     placeAuthority: { resolveCanonicalUrl: { useQuery: resolveCanonicalUrl } },
     landPublic: { guideAreas: { useQuery: landGuideAreas } },
-    properties: { guideAreas: { useQuery: propertyGuideAreas } },
+    properties: {
+      guideAreas: { useQuery: propertyGuideAreas },
+      searchDevelopments: { useQuery: searchDevelopments },
+    },
   },
 }));
 
@@ -32,6 +36,7 @@ describe('Canonical Place area guides', () => {
 
   beforeEach(() => {
     originalLaunchState = launchState.enabled;
+    searchDevelopments.mockReturnValue({ data: { items: [] }, isPending: false, error: null });
     window.history.replaceState({}, '', '/gauteng/johannesburg');
     resolveCanonicalUrl.mockReturnValue({
       data: {
@@ -244,6 +249,7 @@ describe('Canonical Place page robots', () => {
     });
     landGuideAreas.mockReturnValue({ data: [], isLoading: false, error: null });
     propertyGuideAreas.mockReturnValue({ data: [], isLoading: false, error: null });
+    searchDevelopments.mockReturnValue({ data: { items: [] }, isPending: false, error: null });
   }
 
   beforeEach(() => metaControl.mockClear());
@@ -260,5 +266,52 @@ describe('Canonical Place page robots', () => {
     mockPlace(true);
     render(<CanonicalPlacePage />);
     expect(metaControl).toHaveBeenCalledWith(expect.objectContaining({ forceNoIndex: false }));
+  });
+
+  describe('developments on a city page', () => {
+    const CITY = 'pl-place-01-21f154cd5d0954c29ec7525f';
+
+    it('lists the published developments of the city and its suburbs, with a link to the search', () => {
+      mockPlace(true);
+      searchDevelopments.mockReturnValue({
+        data: {
+          items: [
+            {
+              id: 1,
+              name: 'Baltimore Lifestyle Estate',
+              canonicalRoute: '/development/baltimore-lifestyle-estate-5yr6po',
+              locationLabels: ['North Riding'],
+              publisher: { name: 'Cosmopolitan Projects' },
+              priceFrom: 1930000,
+            },
+          ],
+        },
+        isPending: false,
+        error: null,
+      });
+      render(<CanonicalPlacePage />);
+      expect(searchDevelopments).toHaveBeenCalledWith(
+        expect.objectContaining({ canonicalPlaceId: CITY }),
+        expect.anything(),
+      );
+      const section = screen.getByTestId('place-developments');
+      expect(within(section).getByRole('heading', { name: 'New developments in Johannesburg' })).toBeVisible();
+      expect(within(section).getByRole('link', { name: /Baltimore Lifestyle Estate/ })).toHaveAttribute(
+        'href',
+        '/development/baltimore-lifestyle-estate-5yr6po',
+      );
+      expect(within(section).getByText('North Riding')).toBeVisible();
+      expect(within(section).getByText('From R1,930,000')).toBeVisible();
+      expect(within(section).getByRole('link', { name: 'See all developments' })).toHaveAttribute(
+        'href',
+        `/new-developments?canonicalPlaceId=${CITY}`,
+      );
+    });
+
+    it('says honestly when there are none yet', () => {
+      mockPlace(true);
+      render(<CanonicalPlacePage />);
+      expect(screen.getByText('No published developments in Johannesburg yet.')).toBeVisible();
+    });
   });
 });
