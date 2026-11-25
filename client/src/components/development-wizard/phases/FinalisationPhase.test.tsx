@@ -489,10 +489,12 @@ describe('FinalisationPhase', () => {
         // House types
         const cards = screen.getAllByTestId('review-house-type');
         expect(cards).toHaveLength(2);
-        expect(cards[0].textContent).toContain('Carport · 2 bays');
-        expect(cards[0].textContent).toContain('50 available');
-        expect(cards[0].textContent).toContain('1 photo · 1 floor plan');
-        expect(cards[0].textContent).toContain('R1,930,000');
+        // Cheapest first, like the public page: "Second" (R1,745,000) before the 91 m² type.
+        expect(cards[0].textContent).toContain('Second');
+        expect(cards[1].textContent).toContain('Carport · 2 bays');
+        expect(cards[1].textContent).toContain('50 available');
+        expect(cards[1].textContent).toContain('1 photo · 1 floor plan');
+        expect(cards[1].textContent).toContain('R1,930,000');
       });
     });
 

@@ -259,10 +259,11 @@ export function normalizePropertyForUI(raw: any): PropertyCardProps | null {
       // Only highlights that were actually stored. Never invented from amenities or
       // features, and never re-cased: they are shown exactly as the publisher wrote them.
       const source = raw.highlights;
-      const clean = (list: unknown[]) =>
+      const clean = (list: unknown[]): string[] =>
         list
-          .map(item => (typeof item === 'string' ? item.trim() : item))
-          .filter(item => typeof item !== 'string' || item !== '');
+          .filter((item): item is string => typeof item === 'string')
+          .map(item => item.trim())
+          .filter(Boolean);
 
       if (Array.isArray(source)) {
         return source.length ? clean(source) : undefined;
