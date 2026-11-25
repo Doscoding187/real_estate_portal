@@ -180,7 +180,7 @@ describe('About: what blocks Continue / publish matches what the wizard asks', (
 
   it('asks for what is missing, by field', () => {
     const fields = validateAboutStep({}).map(e => e.field);
-    expect(fields).toEqual(['name', 'status', 'ownershipTypes', 'description', 'highlights']);
+    expect(fields).toEqual(['name', 'status', 'ownershipTypes', 'description']);
   });
 
   it('does not ask for dates the wizard does not require', () => {
@@ -205,13 +205,11 @@ describe('About: what blocks Continue / publish matches what the wizard asks', (
     ).toEqual([]);
   });
 
-  it('keeps the 50-character description and 3-highlight minimums', () => {
+  it('keeps the 50-character description minimum; highlights are asked in Amenities now', () => {
     expect(validateAboutStep({ ...complete, description: 'Too short' }).map(e => e.field)).toEqual([
       'description',
     ]);
-    expect(validateAboutStep({ ...complete, highlights: ['One', 'Two'] }).map(e => e.field)).toEqual(
-      ['highlights'],
-    );
+    expect(validateAboutStep({ ...complete, highlights: ['One', 'Two'] })).toEqual([]);
   });
 });
 

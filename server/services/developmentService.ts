@@ -7,6 +7,10 @@ import { generateUniqueSlug } from '../_core/utils/slug';
 import type { WizardData } from './publishNormalizer';
 import { normalizeDateTimeForDb } from './developmentDateUtils';
 import {
+  loadSuburbReadinessContext,
+  recordCuratedSuburbInTransaction,
+} from './developmentPlaceAssignmentService';
+import {
   submissionValidationError,
   validatePersistedSubmissionReadiness,
 } from './developmentSubmissionReadiness';
@@ -273,6 +277,14 @@ type DeveloperMediaWriteContext = {
   publisherId: number;
   developmentId: number | null;
 };
+
+/** The estateSpecs JSON as stored: a string, as the update path writes it; null when empty. */
+export function serializeEstateSpecsForCreate(value: unknown): string | null {
+  if (value === null || value === undefined || value === '') return null;
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object') return JSON.stringify(value);
+  return null;
+}
 
 function parseMediaCollection(value: unknown): unknown[] {
   if (Array.isArray(value)) return value;
@@ -1350,6 +1362,8 @@ export async function createDevelopment(
       null,
     ),
     tagline: sanitizeString((developmentData as any).tagline),
+    // The wizard mirrors its tagline to subtitle; keep both on create as update does.
+    subtitle: sanitizeString((developmentData as any).subtitle ?? (developmentData as any).tagline),
     description: sanitizeString((developmentData as any).description),
     address: sanitizeString((developmentData as any).address),
     postalCode: sanitizeString((developmentData as any).postalCode),
@@ -1380,7 +1394,10 @@ export async function createDevelopment(
     totalDevelopmentArea: sanitizeInt((developmentData as any).totalDevelopmentArea),
     customClassification: sanitizeString((developmentData as any).customClassification),
 
-    estateSpecs: (developmentData as any).estateSpecs || null,
+    // estateSpecs was destructured out of `data` above (as estateSpecsData), so it is not
+    // on developmentData: reading it from there stored null and dropped the suburb, the
+    // setting, "no street address" and the rest of the Basics/Location facts on create.
+    estateSpecs: serializeEstateSpecsForCreate(estateSpecsData),
     launchDate: sanitizeDate((developmentData as any).launchDate),
     completionDate: sanitizeDate((developmentData as any).completionDate),
 
@@ -2879,7 +2896,11 @@ async function publishDevelopment(
       throwAuctionPublicationDisabled();
     }
     const persistedUnits = await tx.select().from(unitTypes).where(eq(unitTypes.developmentId, id));
-    const blockers = validatePersistedSubmissionReadiness(ownedDevelopment, persistedUnits);
+    const blockers = validatePersistedSubmissionReadiness(
+      ownedDevelopment,
+      persistedUnits,
+      await loadSuburbReadinessContext(tx, ownedDevelopment),
+    );
     if (blockers.length > 0) throw submissionValidationError(blockers);
 
     const openRows = await tx
@@ -3072,7 +3093,11 @@ export async function submitPlatformCuratedDevelopment(
     if (development.transactionType === 'auction') throwAuctionPublicationDisabled();
 
     const persistedUnits = await tx.select().from(unitTypes).where(eq(unitTypes.developmentId, id));
-    const blockers = validatePersistedSubmissionReadiness(development, persistedUnits);
+    const blockers = validatePersistedSubmissionReadiness(
+      development,
+      persistedUnits,
+      await loadSuburbReadinessContext(tx, development),
+    );
     if (blockers.length > 0) throw submissionValidationError(blockers);
 
     const openRows = await tx
@@ -3309,6 +3334,20 @@ async function publishPlatformCuratedDevelopment(
   );
 }
 
+/** The suburb id chosen in the wizard, carried in estateSpecs. */
+function readChosenSuburbId(estateSpecs: unknown): string | null {
+  let specs: any = estateSpecs;
+  if (typeof specs === 'string') {
+    try {
+      specs = JSON.parse(specs);
+    } catch {
+      return null;
+    }
+  }
+  const id = String(specs?.suburbPlaceId ?? '').trim();
+  return id || null;
+}
+
 export async function publishPlatformCuratedDevelopmentInTransaction(
   tx: any,
   id: number,
@@ -3427,8 +3466,36 @@ export async function publishPlatformCuratedDevelopmentInTransaction(
     const openRow = openRows[0];
 
     const persistedUnits = await tx.select().from(unitTypes).where(eq(unitTypes.developmentId, id));
-    const blockers = validatePersistedSubmissionReadiness(existingDev, persistedUnits);
+    const suburbContext = await loadSuburbReadinessContext(tx, existingDev);
+    const blockers = validatePersistedSubmissionReadiness(
+      existingDev,
+      persistedUnits,
+      suburbContext,
+    );
     if (blockers.length > 0) throw submissionValidationError(blockers);
+
+    // The suburb chosen in the wizard is recorded as the accepted site assignment in
+    // this same transaction; any failure rolls the whole publication back.
+    const chosenSuburb = suburbContext.suburbPlaceValid
+      ? readChosenSuburbId(existingDev.estateSpecs)
+      : null;
+    if (chosenSuburb) {
+      try {
+        await recordCuratedSuburbInTransaction(tx, {
+          developmentId: id,
+          placeId: chosenSuburb,
+          reviewerUserId: actor.id,
+        });
+      } catch (error) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: `The suburb could not be recorded: ${
+            error instanceof Error ? error.message : 'unknown error'
+          }`,
+          cause: error,
+        });
+      }
+    }
 
     const priorRows = await tx
       .select({ id: developmentApprovalQueue.id })
@@ -3589,7 +3656,11 @@ export async function completeReviewInTransaction(
       .select()
       .from(unitTypes)
       .where(eq(unitTypes.developmentId, developmentId));
-    const blockers = validatePersistedSubmissionReadiness(development, reviewUnitTypes);
+    const blockers = validatePersistedSubmissionReadiness(
+      development,
+      reviewUnitTypes,
+      await loadSuburbReadinessContext(tx, development),
+    );
     if (blockers.length > 0) throw submissionValidationError(blockers);
   }
   const openRows = await tx
@@ -3757,7 +3828,11 @@ export async function publishDeveloperOwnedDevelopmentInTransaction(
     .select()
     .from(unitTypes)
     .where(eq(unitTypes.developmentId, developmentId));
-  const blockers = validatePersistedSubmissionReadiness(development, persistedUnits);
+  const blockers = validatePersistedSubmissionReadiness(
+    development,
+    persistedUnits,
+    await loadSuburbReadinessContext(tx, development),
+  );
   if (blockers.length > 0) throw submissionValidationError(blockers);
 
   if (development.approvalStatus === 'approved') {

@@ -57,6 +57,27 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { trpc } from '@/lib/trpc';
 import { HouseMeasureIcon } from '@/components/icons/HouseMeasureIcon';
+import { IMAGE_TYPES, PDF_TYPE, floorPlanRejection, rejectionMessage, sizeHint } from '@/lib/wizardMedia';
+import {
+  HOME_TYPES,
+  UNIT_OWNERSHIP_HINT,
+  UNIT_OWNERSHIP_OPTIONS,
+  applyAutoNames,
+  classificationFor,
+  duplicateUnitType,
+  homeTypeById,
+  homeTypeOf,
+  houseTypeCard,
+  isReadyNow,
+  FORM_FIELDS,
+  FORM_TAB_LABELS,
+  firstMissingFact,
+  missingFieldMessage,
+  needsUnitOwnership,
+  suggestUnitName,
+  withReadyNow,
+  type FormField,
+} from '@/lib/wizardHouseTypes';
 
 // -- CONSTANTS --
 
@@ -212,7 +233,11 @@ export function UnitTypesPhase() {
     unitTypeDraft,
     setUnitTypeDraft,
     saveWorkflowStepData,
+    getWizardData,
   } = useDevelopmentWizard();
+  // One development = one transaction (from the start screen). Ownership is asked per
+  // house type only when the development ownership is "Varies by house type".
+  const askUnitOwnership = needsUnitOwnership((getWizardData?.() as any)?.ownershipTypes);
   const transactionType = useDevelopmentWizard(
     state => state.transactionType ?? state.developmentData?.transactionType,
   );
@@ -235,23 +260,27 @@ export function UnitTypesPhase() {
       parkingKind?: 'none' | 'open' | 'covered' | 'carport' | 'garage';
       garageLayout?: 'side-by-side' | 'tandem';
       soldUnitsHistorical?: number;
+    nameAuto?: boolean;
+    readyNow?: boolean;
+    priceToExplicit?: boolean;
     }
   >({
     name: '',
     description: '',
-    bedrooms: 1,
-    bathrooms: 1,
-
-    // Initialize with UI defaults, will be hydrated
-    parkingKind: 'none',
-    parkingBays: 0,
+    // Facts start empty and stay required: pre-filled values would be published by accident.
+    bedrooms: undefined,
+    bathrooms: undefined,
+    parkingKind: undefined,
+    parkingBays: undefined,
     garageLayout: undefined,
 
     unitSize: 0,
     yardSize: 0,
-    unitCategory: 'apartment',
-    unitSubType: 'apartment',
-    structuralType: 'apartment',
+    ...classificationFor('freestanding'),
+    nameAuto: true,
+    readyNow: false,
+    ownershipType: undefined,
+    priceToExplicit: false,
 
     // Refactored Pricing
     priceFrom: 0, // Base Price
@@ -289,6 +318,58 @@ export function UnitTypesPhase() {
 
   const [unitGallery, setUnitGallery] = useState<MediaItem[]>([]);
   const [floorPlanImages, setFloorPlanImages] = useState<MediaItem[]>([]);
+  // A failed save: the message to show and the field to focus once its tab is showing.
+  const [formError, setFormError] = useState<{ field: FormField; message: string } | null>(null);
+  const [pendingFocus, setPendingFocus] = useState<FormField | null>(null);
+  useEffect(() => {
+    if (!pendingFocus) return;
+    const timer = setTimeout(() => {
+      const el = document.querySelector<HTMLElement>(`[data-field="${pendingFocus}"]`);
+      el?.focus();
+      setPendingFocus(null);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [pendingFocus, activeTab]);
+  // Rejected files stay visible under the section until the next good upload there.
+  const [mediaErrors, setMediaErrors] = useState<{ gallery?: string[]; floorPlans?: string[] }>({});
+
+  // Name is auto-suggested ("{size} m² {beds}-bedroom {home type}") until the publisher edits it.
+  useEffect(() => {
+    if (!isDialogOpen || formData.nameAuto === false) return;
+    const suggested = suggestUnitName(
+      {
+        unitSize: formData.unitSize,
+        bedrooms: formData.bedrooms,
+        bathrooms: formData.bathrooms,
+        homeType: homeTypeOf(formData),
+      },
+      unitTypes.filter(u => u.id !== editingId),
+      // Identical twins are numbered in list order; a new type goes last.
+      editingId
+        ? unitTypes.slice(
+            0,
+            Math.max(
+              0,
+              unitTypes.findIndex(u => u.id === editingId),
+            ),
+          )
+        : unitTypes,
+    );
+    if (suggested && suggested !== formData.name) {
+      setFormData(p => ({ ...p, name: suggested }));
+    }
+  }, [
+    isDialogOpen,
+    formData.nameAuto,
+    formData.unitSize,
+    formData.bedrooms,
+    formData.bathrooms,
+    formData.unitCategory,
+    formData.unitSubType,
+    formData.name,
+    unitTypes,
+    editingId,
+  ]);
   const reserveMediaUpload = trpc.developer.reserveMediaUpload.useMutation();
   const confirmMediaUpload = trpc.developer.confirmMediaUpload.useMutation();
   const presignCuratedUpload = trpc.upload.presign.useMutation();
@@ -315,16 +396,18 @@ export function UnitTypesPhase() {
     setFormData({
       name: '',
       description: '',
-      bedrooms: 1,
-      bathrooms: 1,
-      parkingKind: 'open',
-      parkingBays: 1,
+      bedrooms: undefined,
+      bathrooms: undefined,
+      parkingKind: undefined,
+      parkingBays: undefined,
       garageLayout: undefined,
       unitSize: 0,
       yardSize: 0,
-      unitCategory: 'apartment',
-      unitSubType: 'apartment',
-      structuralType: 'apartment',
+      ...classificationFor('freestanding'),
+      nameAuto: true,
+      readyNow: false,
+      ownershipType: undefined,
+      priceToExplicit: false,
 
       priceFrom: 0,
       priceTo: 0,
@@ -433,6 +516,14 @@ export function UnitTypesPhase() {
         auctionStatus: auctionStatusValue,
         soldUnitsHistorical: soldHistorical,
         availabilityNotProvided: Boolean((unit as any).availabilityNotProvided),
+        nameAuto: (unit as any).nameAuto === true,
+        readyNow: isReadyNow(unit),
+        // A "price to" that is not just base + extras was typed by the publisher.
+        priceToExplicit:
+          canonicalSaleTo > canonicalSaleFrom &&
+          canonicalSaleTo !==
+            canonicalSaleFrom +
+              (unit.extras || []).reduce((s: number, x: any) => s + (Number(x?.price) || 0), 0),
         extras: unit.extras || [],
         features: unit.features || {
           kitchen: [],
@@ -485,6 +576,8 @@ export function UnitTypesPhase() {
         resetForm();
       }
     }
+    setMediaErrors({});
+    setFormError(null);
     setIsDialogOpen(true);
   };
 
@@ -494,92 +587,17 @@ export function UnitTypesPhase() {
     toast.success('Draft discarded');
   };
 
+  /** Duplicate copies the house type straight into the list (new id, "(copy)" suffix); Edit refines it. */
   const handleDuplicate = (unit: UnitType) => {
-    const classification = inferClassification(unit);
-    // --- Hydrate Parking UI State (Same as Edit) ---
-    let pKind: any = 'none';
-    let pBays = unit.parkingBays ?? (unit as any).parking_bays ?? 0;
-    let pLayout: any = undefined;
+    const copy = duplicateUnitType(unit as any, `unit-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`);
+    const next = applyAutoNames([...unitTypes, { ...copy, displayOrder: unitTypes.length }]);
+    saveWorkflowStepData('unit_types', { unitTypes: next });
+    toast.success(`Duplicated as "${copy.name}". Edit it to change the details.`);
+  };
 
-    const pType = unit.parkingType || (unit as any).parking_type;
-
-    if (pType === 'carport') pKind = 'carport';
-    else if (pType === 'garage') pKind = 'garage';
-    else if (pType === 'open') pKind = 'open';
-    else if (pType === 'covered') pKind = 'covered';
-    else if (pType === 'none' || !pType) pKind = 'none';
-
-    if (pType === 'tandem' || pType === 'side-by-side') {
-      pKind = 'garage';
-      pLayout = pType;
-    }
-
-    if (pKind !== 'none' && (!pBays || pBays < 1)) {
-      pBays = 1;
-    }
-
-    const isFurnishedValue =
-      typeof (unit as any).isFurnished === 'boolean' ? (unit as any).isFurnished : false;
-    const depositValueRaw = (unit as any).depositRequired ?? (unit as any).deposit;
-    const depositValue = depositValueRaw == null ? undefined : Number(depositValueRaw);
-    const monthlyRentToRaw = (unit as any).monthlyRentTo;
-    const monthlyRentToValue = monthlyRentToRaw == null ? undefined : Number(monthlyRentToRaw);
-    const startingBidRaw = (unit as any).startingBid;
-    const startingBidValue = startingBidRaw == null ? undefined : Number(startingBidRaw);
-    const reservePriceRaw = (unit as any).reservePrice;
-    const reservePriceValue = reservePriceRaw == null ? undefined : Number(reservePriceRaw);
-    const auctionStartDateValue = formatDateTimeLocal((unit as any).auctionStartDate);
-    const auctionEndDateValue = formatDateTimeLocal((unit as any).auctionEndDate);
-    const auctionStatusValue = (unit as any).auctionStatus ?? 'scheduled';
-    const totalFromUnit = Math.max(0, Number((unit as any).totalUnits ?? 0));
-    const availableFromUnit = Math.max(0, Number((unit as any).availableUnits ?? 0));
-    const reservedFromUnit = Math.max(0, Number((unit as any).reservedUnits ?? 0));
-    const soldHistorical = Math.max(totalFromUnit - availableFromUnit - reservedFromUnit, 0);
-    const canonicalSaleFrom = Number((unit as any).basePriceFrom ?? (unit as any).priceFrom ?? 0);
-    const canonicalSaleToRaw = (unit as any).basePriceTo ?? (unit as any).priceTo;
-    const canonicalSaleTo = canonicalSaleToRaw == null ? 0 : Number(canonicalSaleToRaw);
-
-    setFormData({
-      ...unit,
-      priceFrom: canonicalSaleFrom,
-      priceTo: canonicalSaleTo,
-      name: `${unit.name} (Copy)`,
-      unitCategory: classification.unitCategory,
-      unitSubType: classification.unitSubType,
-      structuralType: toStructuralType(classification.unitSubType),
-      parkingKind: pKind,
-      parkingBays: pBays,
-      garageLayout: pLayout,
-      monthlyRentFrom: (unit as any).monthlyRentFrom ?? (unit as any).monthlyRent ?? 0,
-      monthlyRentTo: monthlyRentToValue,
-      depositRequired: depositValue,
-      leaseTerm: (unit as any).leaseTerm ?? '',
-      isFurnished: isFurnishedValue,
-      startingBid: startingBidValue,
-      reservePrice: reservePriceValue,
-      auctionStartDate: auctionStartDateValue,
-      auctionEndDate: auctionEndDateValue,
-      auctionStatus: auctionStatusValue,
-      soldUnitsHistorical: soldHistorical,
-      extras: unit.extras || [],
-      features: unit.features || {
-        kitchen: [],
-        bathroom: [],
-        flooring: [],
-        storage: [],
-        climate: [],
-        outdoor: [],
-        security: [],
-        other: [],
-      },
-    });
-    // Deep copy media to avoid reference issues
-    setUnitGallery(unit.baseMedia?.gallery ? [...unit.baseMedia.gallery] : []);
-    setFloorPlanImages(unit.baseMedia?.floorPlans ? [...unit.baseMedia.floorPlans] : []);
-
-    setEditingId(null); // Treat as new
-    setIsDialogOpen(true);
-    toast.info('Unit type duplicated. Please review details.');
+  const handleRemove = (id: string) => {
+    const next = applyAutoNames(unitTypes.filter(u => u.id !== id));
+    saveWorkflowStepData('unit_types', { unitTypes: next });
   };
 
   // --- LOGIC HANDLERS ---
@@ -631,50 +649,67 @@ export function UnitTypesPhase() {
   };
 
   const handleSave = (addAnother = false) => {
-    // Validation
-    if (!formData.name) return toast.error('Unit Name is required');
-    if (!formData.description) return toast.error('Description is required');
-    if (!formData.unitCategory) return toast.error('Unit category is required');
-    if (!formData.unitSubType) return toast.error('Unit subtype is required');
-    if (!formData.bedrooms && formData.bedrooms !== 0) return toast.error('Bedrooms are required');
-    if (!formData.bathrooms && formData.bathrooms !== 0)
-      return toast.error('Bathrooms are required');
-    if (!formData.unitSize || formData.unitSize <= 0) return toast.error('Unit Size is required');
+    // A failed save goes to the tab with the first invalid field, shows the message
+    // inline, focuses the field and says so in a toast.
+    const fail = (field: FormField, message?: string) => {
+      const meta = FORM_FIELDS[field];
+      const text = message
+        ? `${message} — ${FORM_TAB_LABELS[meta.tab]}`
+        : missingFieldMessage(field);
+      setActiveTab(meta.tab);
+      setFormError({ field, message: text });
+      setPendingFocus(field);
+      toast.error(text);
+    };
+    setFormError(null);
+
+    // Facts first (the suggested name comes from them); nothing is pre-filled.
+    const missingFact = firstMissingFact(formData);
+    if (missingFact) return fail(missingFact);
+    if (!formData.name) return fail('name');
+    if (!formData.description) return fail('description');
+    if (!formData.unitCategory || !formData.unitSubType) return fail('homeType');
+    if (askUnitOwnership && !formData.ownershipType) return fail('ownershipType');
     if (formData.unitCategory === 'house' && (!formData.yardSize || formData.yardSize <= 0)) {
       toast.warning('Erf/Garden size is recommended for house unit types');
     }
     if (isAuction) {
-      if (!formData.startingBid || formData.startingBid <= 0)
-        return toast.error('Starting bid is required');
-      if (!formData.auctionStartDate) return toast.error('Auction start date is required');
-      if (!formData.auctionEndDate) return toast.error('Auction end date is required');
+      if (!formData.startingBid || formData.startingBid <= 0) return fail('startingBid');
+      if (!formData.auctionStartDate) return fail('auctionStartDate');
+      if (!formData.auctionEndDate) return fail('auctionEndDate');
 
       const start = new Date(formData.auctionStartDate);
       const end = new Date(formData.auctionEndDate);
       if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-        return toast.error('Auction dates must be valid');
+        return fail('auctionStartDate', 'Auction dates must be valid');
       }
       if (end <= start) {
-        return toast.error('Auction end date must be after start date');
+        return fail('auctionEndDate', 'Auction end date must be after start date');
       }
       if (start < new Date()) {
-        return toast.error('Auction start date cannot be in the past');
+        return fail('auctionStartDate', 'Auction start date cannot be in the past');
       }
       if (
         formData.reservePrice != null &&
         formData.reservePrice > 0 &&
         formData.reservePrice < formData.startingBid
       ) {
-        return toast.error('Reserve price cannot be lower than starting bid');
+        return fail('startingBid', 'Reserve price cannot be lower than starting bid');
       }
     } else if (isRental) {
-      if (!formData.monthlyRentFrom || formData.monthlyRentFrom <= 0)
-        return toast.error('Monthly Rent is required');
+      if (!formData.monthlyRentFrom || formData.monthlyRentFrom <= 0) {
+        return fail('monthlyRentFrom');
+      }
     } else {
-      if (!formData.priceFrom) return toast.error('Base Price is required');
+      if (!formData.priceFrom) return fail('priceFrom');
+      if (
+        formData.priceToExplicit &&
+        Number(formData.priceTo) > 0 &&
+        Number(formData.priceTo) < Number(formData.priceFrom)
+      ) {
+        return fail('priceTo', 'Price to cannot be lower than price from');
+      }
     }
-    if (formData.parkingKind !== 'none' && (!formData.parkingBays || formData.parkingBays <= 0))
-      return toast.error('Parking Bays are required');
 
     const availabilityNotProvided =
       isCuratedPublisherMode && Boolean(formData.availabilityNotProvided);
@@ -698,7 +733,12 @@ export function UnitTypesPhase() {
     const extrasTotal = isSale
       ? (formData.extras || []).reduce((acc, curr) => acc + (Number(curr.price) || 0), 0)
       : 0;
-    const calculatedPriceTo = extrasTotal > 0 ? basePrice + extrasTotal : null;
+    // "Price to" typed by the publisher wins; otherwise base + extras (as before).
+    const explicitPriceTo =
+      isSale && formData.priceToExplicit && Number(formData.priceTo) > basePrice
+        ? Number(formData.priceTo)
+        : null;
+    const calculatedPriceTo = explicitPriceTo ?? (extrasTotal > 0 ? basePrice + extrasTotal : null);
 
     const monthlyRentFrom = Number(formData.monthlyRentFrom || 0);
     const monthlyRentTo =
@@ -724,8 +764,10 @@ export function UnitTypesPhase() {
         ? Number(formData.yardSize)
         : undefined;
 
-    const newUnit: any = {
+    const newUnitBase: any = {
       ...formData,
+      ownershipType: askUnitOwnership ? formData.ownershipType : undefined,
+      nameAuto: formData.nameAuto !== false,
       // CRITICAL: Always ensure ID is present for persistence
       id: editingId || `unit-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       // Legacy-shaped form fields are mirrored deliberately on explicit save;
@@ -782,19 +824,20 @@ export function UnitTypesPhase() {
       updatedAt: new Date(),
       createdAt: editingId ? undefined : new Date(),
     };
+    const newUnit = withReadyNow(newUnitBase, formData.readyNow === true);
 
     if (editingId) {
-      console.log('[UnitTypesPhase] Updating unit (canonical):', editingId);
-      const nextUnits = unitTypes.map(u => (u.id === editingId ? { ...u, ...newUnit } : u));
+      const nextUnits = applyAutoNames(
+        unitTypes.map(u => (u.id === editingId ? { ...u, ...newUnit } : u)),
+      );
       saveWorkflowStepData('unit_types', { unitTypes: nextUnits });
-      toast.success('Unit type updated');
+      toast.success('House type updated');
     } else {
-      console.log('[UnitTypesPhase] Creating new unit (canonical):', newUnit.id);
-      const nextUnits = [...unitTypes, newUnit];
+      const nextUnits = applyAutoNames([...unitTypes, newUnit]);
       saveWorkflowStepData('unit_types', { unitTypes: nextUnits });
 
       setUnitTypeDraft(null); // Clear draft
-      toast.success('Unit type created');
+      toast.success('House type added');
     }
 
     if (addAnother) {
@@ -810,7 +853,19 @@ export function UnitTypesPhase() {
     }
   };
 
-  const handleMediaUpload = async (files: File[], category: 'gallery' | 'floorPlans') => {
+  const handleMediaUpload = async (allFiles: File[], category: 'gallery' | 'floorPlans') => {
+    // Same checks and caps as the development Media step (15 MB photos, 25 MB PDFs);
+    // rejections stay under the section until the next good upload.
+    const problems: string[] = [];
+    const files: File[] = [];
+    for (const file of allFiles) {
+      const problem =
+        category === 'gallery' ? rejectionMessage(file, 'image') : floorPlanRejection(file);
+      if (problem) problems.push(problem);
+      else files.push(file);
+    }
+    setMediaErrors(prev => ({ ...prev, [category]: problems.length ? problems : undefined }));
+    if (files.length === 0) return;
     try {
       for (const file of files) {
         let mediaUrl: string;
@@ -899,7 +954,7 @@ export function UnitTypesPhase() {
           {/* Base Price */}
           <div className="bg-slate-50 p-6 rounded-xl border border-slate-200">
             <div className="space-y-3 max-w-sm">
-              <Label className="text-slate-900 font-medium">Base Price (Starting From)</Label>
+              <Label className="text-slate-900 font-medium">Price from</Label>
               <div className="flex items-center gap-2">
                 <div className="relative flex-1">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-medium">
@@ -909,6 +964,7 @@ export function UnitTypesPhase() {
                     className="pl-8 h-11 text-lg font-semibold text-slate-900"
                     type="number"
                     placeholder="0"
+                    data-field="priceFrom"
                     value={formData.priceFrom || ''}
                     onFocus={e => e.target.select()}
                     onChange={e => setFormData(p => ({ ...p, priceFrom: +e.target.value }))}
@@ -916,8 +972,33 @@ export function UnitTypesPhase() {
                 </div>
               </div>
               <p className="text-xs text-slate-500">
-                The base cost of the unit excluding any optional extras.
+                The price of the house excluding any optional extras.
               </p>
+              <Label className="text-slate-900 font-medium">
+                Price to <span className="text-xs font-normal text-slate-500">(optional)</span>
+              </Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-medium">
+                  R
+                </span>
+                <Input
+                  className="pl-8 h-11"
+                  type="number"
+                  placeholder="Only if the price varies"
+                  aria-label="Price to"
+                  data-field="priceTo"
+                  value={formData.priceToExplicit && formData.priceTo ? formData.priceTo : ''}
+                  onFocus={e => e.target.select()}
+                  onChange={e => {
+                    const v = e.target.value;
+                    setFormData(p => ({
+                      ...p,
+                      priceTo: v === '' ? 0 : +v,
+                      priceToExplicit: v !== '',
+                    }));
+                  }}
+                />
+              </div>
             </div>
           </div>
 
@@ -1044,6 +1125,7 @@ export function UnitTypesPhase() {
                 className="pl-8"
                 type="number"
                 placeholder="0"
+                data-field="monthlyRentFrom"
                 value={formData.monthlyRentFrom || ''}
                 onFocus={e => e.target.select()}
                 onChange={e =>
@@ -1143,6 +1225,7 @@ export function UnitTypesPhase() {
             </Label>
             <Input
               type="datetime-local"
+              data-field="auctionStartDate"
               value={formData.auctionStartDate ?? ''}
               onChange={e => setFormData(p => ({ ...p, auctionStartDate: e.target.value }))}
             />
@@ -1155,6 +1238,7 @@ export function UnitTypesPhase() {
             </Label>
             <Input
               type="datetime-local"
+              data-field="auctionEndDate"
               value={formData.auctionEndDate ?? ''}
               onChange={e => setFormData(p => ({ ...p, auctionEndDate: e.target.value }))}
             />
@@ -1182,6 +1266,7 @@ export function UnitTypesPhase() {
                 className="pl-8"
                 type="number"
                 placeholder="0"
+                data-field="startingBid"
                 value={formData.startingBid ?? ''}
                 onFocus={e => e.target.select()}
                 onChange={e => {
@@ -1260,20 +1345,19 @@ export function UnitTypesPhase() {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-3xl font-bold text-slate-900">Unit Types</h2>
-          <p className="text-slate-600">Configure your diverse unit mix.</p>
-          <p className="text-xs text-slate-500">
-            Recommended for cards: add at least 2 unit types with clear names and prices.
+          <h2 className="text-xl font-semibold text-slate-900">House types</h2>
+          <p className="mt-2 text-sm text-slate-600">
+            One card per house type, with its own photos and floor plans. Prices exclude optional
+            extras.
           </p>
         </div>
         <Button
           onClick={() => handleOpenDialog()}
-          size="lg"
-          className="bg-gradient-to-r from-blue-600 to-purple-600 text-white"
+          className="bg-blue-700 text-white hover:bg-blue-800"
         >
-          <Plus className="w-4 h-4 mr-2" /> Add Unit Type
+          <Plus className="w-4 h-4 mr-2" /> Add house type
         </Button>
       </div>
 
@@ -1282,137 +1366,83 @@ export function UnitTypesPhase() {
           <div className="flex justify-center mb-4">
             <Layers className="w-12 h-12 text-slate-300" />
           </div>
-          <h3 className="text-lg font-medium text-slate-900">No Unit Types defined</h3>
+          <h3 className="text-lg font-medium text-slate-900">No house types yet</h3>
           <p className="text-slate-500 mb-6">
-            Create your first unit type to start{' '}
+            Add your first house type to start{' '}
             {isAuction ? 'auctioning' : isRental ? 'leasing' : 'selling'}.
           </p>
           <Button onClick={() => handleOpenDialog()} variant="outline">
-            Create Unit Type
+            Add house type
           </Button>
         </Card>
       ) : (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2" data-testid="house-type-cards">
           {unitTypes.map(unit => {
-            const classification = inferClassification(unit as any);
+            const card = houseTypeCard(unit, transactionType ?? 'for_sale');
             return (
-              <Card key={unit.id} className="group hover:shadow-lg transition-all border-slate-200">
-                <div className="h-40 bg-slate-100 relative">
-                  {unit.baseMedia?.gallery?.[0] ? (
-                    <img
-                      src={unit.baseMedia.gallery[0].url}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center h-full text-slate-400">
-                      <Image className="w-8 h-8" />
+              <div
+                key={unit.id}
+                data-testid="house-type-card"
+                className="overflow-hidden rounded-lg border border-slate-200 bg-white transition-all hover:-translate-y-px hover:shadow-md"
+              >
+                {card.coverUrl ? (
+                  <img
+                    src={card.coverUrl}
+                    alt={`${card.name}, photo`}
+                    className="block h-[150px] w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-[150px] w-full items-center justify-center bg-slate-100 text-slate-400">
+                    <Image className="w-8 h-8" aria-hidden="true" />
+                  </div>
+                )}
+                <div className="flex flex-col gap-2 p-4">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <div className="text-base font-bold text-slate-900">{card.name}</div>
+                    <div className="whitespace-nowrap font-bold text-slate-900">
+                      {card.priceText || '---'}
                     </div>
-                  )}
-                  <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button
-                      size="icon"
-                      variant="secondary"
-                      className="h-8 w-8"
-                      onClick={() => handleDuplicate(unit)}
-                      title="Duplicate Unit Type"
-                    >
-                      <Copy className="w-4 h-4" />
+                  </div>
+                  <div className="text-[13px] text-slate-700">{card.facts}</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {card.tags.map((tag, i) => (
+                      <span
+                        key={tag}
+                        className={cn(
+                          'inline-flex h-5 items-center rounded px-2 text-[11px] font-semibold',
+                          i === 0
+                            ? 'bg-blue-50 text-blue-900'
+                            : tag === 'Ready now'
+                              ? 'bg-green-100 text-green-900'
+                              : 'bg-slate-100 text-slate-700',
+                        )}
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                    <span className="inline-flex h-5 items-center rounded bg-slate-100 px-2 text-[11px] font-semibold text-slate-700">
+                      {card.mediaText}
+                    </span>
+                  </div>
+                  <div className="mt-1 flex items-center gap-2">
+                    <Button variant="outline" onClick={() => handleOpenDialog(unit)}>
+                      Edit
+                    </Button>
+                    <Button variant="ghost" onClick={() => handleDuplicate(unit)}>
+                      Duplicate
                     </Button>
                     <Button
+                      variant="ghost"
                       size="icon"
-                      variant="secondary"
-                      className="h-8 w-8"
-                      onClick={() => handleOpenDialog(unit)}
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="destructive"
-                      className="h-8 w-8"
-                      onClick={() => removeUnitType(unit.id)}
+                      className="ml-auto text-red-500 hover:bg-red-50 hover:text-red-600"
+                      aria-label={`Remove ${card.name}`}
+                      onClick={() => handleRemove(unit.id)}
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
                 </div>
-                <CardHeader className="pb-2">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle className="text-lg">{unit.name}</CardTitle>
-                      <p className="text-xs text-slate-500 mt-1">
-                        {classification.unitCategory === 'house' ? 'House' : 'Apartment'} -{' '}
-                        {toSubtypeLabel(classification.unitSubType)}
-                      </p>
-                    </div>
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        unit.availabilityNotProvided
-                          ? 'text-slate-600 bg-slate-50'
-                          : unit.availableUnits > 0
-                            ? 'text-green-600 bg-green-50'
-                            : 'text-red-600 bg-red-50',
-                      )}
-                    >
-                      {unit.availabilityNotProvided
-                        ? 'Counts not supplied'
-                        : unit.availableUnits > 0
-                          ? `${unit.availableUnits} Avail`
-                          : 'Sold Out'}
-                    </Badge>
-                  </div>
-                  <p className="text-sm font-semibold text-blue-600">
-                    {(() => {
-                      const rentFrom = Number(
-                        (unit as any).monthlyRentFrom ?? (unit as any).monthlyRent ?? 0,
-                      );
-                      const rentTo = Number((unit as any).monthlyRentTo ?? 0);
-                      const auctionStart = Number((unit as any).startingBid ?? 0);
-                      const saleFrom = Number(unit.priceFrom ?? 0);
-                      const saleTo = Number(unit.priceTo ?? 0);
-
-                      const primaryValue = isRental
-                        ? rentFrom
-                        : isAuction
-                          ? auctionStart
-                          : saleFrom;
-                      const secondaryValue = isRental ? rentTo : isAuction ? 0 : saleTo;
-
-                      if (!primaryValue || primaryValue <= 0) return '---';
-
-                      return (
-                        <>
-                          R {primaryValue.toLocaleString()}{' '}
-                          {!isAuction &&
-                            secondaryValue > primaryValue &&
-                            `- R ${secondaryValue.toLocaleString()}`}
-                        </>
-                      );
-                    })()}
-                    {isRental && <span className="text-xs text-slate-500"> / month</span>}
-                    {isAuction && <span className="text-xs text-slate-500"> starting bid</span>}
-                  </p>
-                </CardHeader>
-                <CardContent className="text-sm text-slate-600 space-y-1">
-                  <div className="flex gap-4 items-center">
-                    <span className="flex items-center gap-1">
-                      <HouseMeasureIcon className="w-3.5 h-3.5" /> {unit.unitSize} m²
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <BedDouble className="w-3.5 h-3.5" /> {unit.bedrooms}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Bath className="w-3.5 h-3.5" /> {unit.bathrooms}
-                    </span>
-                    {unit.yardSize && unit.yardSize > 0 && (
-                      <span className="flex items-center gap-1 text-slate-600">
-                        <Maximize className="w-3.5 h-3.5" /> {unit.yardSize} m²
-                      </span>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+              </div>
             );
           })}
         </div>
@@ -1422,7 +1452,7 @@ export function UnitTypesPhase() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-4xl h-[75vh] flex flex-col p-0 gap-0">
           <DialogHeader className="px-6 py-4 border-b">
-            <DialogTitle>{editingId ? 'Edit Unit Type' : 'Add Unit Type'}</DialogTitle>
+            <DialogTitle>{editingId ? 'Edit house type' : 'Add house type'}</DialogTitle>
           </DialogHeader>
 
           <Tabs
@@ -1441,23 +1471,50 @@ export function UnitTypesPhase() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-6">
+              {formError ? (
+                <div
+                  role="alert"
+                  data-testid="house-form-error"
+                  className="mb-4 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800"
+                >
+                  {formError.message}
+                </div>
+              ) : null}
               <TabsContent value="basic" className="mt-0 space-y-6">
                 <div className="grid gap-4">
                   <div className="space-y-2">
                     <Label>
-                      Unit Type Name <span className="text-red-500">*</span>
+                      House type name <span className="text-red-500">*</span>
                     </Label>
                     <Input
                       value={formData.name}
-                      onChange={e => setFormData(p => ({ ...p, name: e.target.value }))}
-                      placeholder="e.g. 2 Bedroom Garden Apartment"
+                      aria-label="House type name"
+                      data-field="name"
+                      onChange={e =>
+                        setFormData(p => ({ ...p, name: e.target.value, nameAuto: false }))
+                      }
+                      placeholder="Suggested from the size, bedrooms and home type"
                     />
+                    <p className="text-xs text-slate-500">
+                      {formData.nameAuto !== false ? (
+                        'Suggested from the size, bedrooms and home type. Edit it to use your own name.'
+                      ) : (
+                        <button
+                          type="button"
+                          className="text-blue-700 underline"
+                          onClick={() => setFormData(p => ({ ...p, nameAuto: true }))}
+                        >
+                          Use the suggested name
+                        </button>
+                      )}
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label>
                       Description <span className="text-red-500">*</span>
                     </Label>
                     <Textarea
+                      data-field="description"
                       value={formData.description}
                       onChange={e => setFormData(p => ({ ...p, description: e.target.value }))}
                       placeholder="Highlight unique features..."
@@ -1467,64 +1524,49 @@ export function UnitTypesPhase() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>
-                        Unit Category <span className="text-red-500">*</span>
+                        Home type <span className="text-red-500">*</span>
                       </Label>
                       <Select
-                        value={(formData.unitCategory as string) || 'apartment'}
-                        onValueChange={v => {
-                          const category = v as 'house' | 'apartment';
-                          const fallbackSubType =
-                            UNIT_SUBTYPE_OPTIONS[category][0]?.value || 'apartment';
-                          setFormData(p => ({
-                            ...p,
-                            unitCategory: category,
-                            unitSubType: fallbackSubType,
-                            structuralType: toStructuralType(fallbackSubType),
-                          }));
-                        }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {UNIT_CATEGORY_OPTIONS.map(o => (
-                            <SelectItem key={o.value} value={o.value}>
-                              {o.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>
-                        Unit Subtype <span className="text-red-500">*</span>
-                      </Label>
-                      <Select
-                        value={
-                          (formData.unitSubType as string) ||
-                          subtypeOptions?.[0]?.value ||
-                          'apartment'
-                        }
+                        value={homeTypeOf(formData)}
                         onValueChange={v =>
-                          setFormData(p => ({
-                            ...p,
-                            unitSubType: v,
-                            structuralType: toStructuralType(v),
-                          }))
+                          setFormData(p => ({ ...p, ...classificationFor(v as any) }))
                         }
                       >
-                        <SelectTrigger>
+                        <SelectTrigger aria-label="Home type" data-field="homeType">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {subtypeOptions.map(o => (
-                            <SelectItem key={o.value} value={o.value}>
+                          {HOME_TYPES.map(o => (
+                            <SelectItem key={o.id} value={o.id}>
                               {o.label}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
+                    {askUnitOwnership && (
+                      <div className="space-y-2">
+                        <Label>
+                          Ownership <span className="text-red-500">*</span>
+                        </Label>
+                        <Select
+                          value={(formData.ownershipType as string) || ''}
+                          onValueChange={v => setFormData(p => ({ ...p, ownershipType: v as any }))}
+                        >
+                          <SelectTrigger aria-label="Ownership" data-field="ownershipType">
+                            <SelectValue placeholder="Choose ownership" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {UNIT_OWNERSHIP_OPTIONS.map(o => (
+                              <SelectItem key={o.value} value={o.value}>
+                                {o.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-slate-500">{UNIT_OWNERSHIP_HINT}</p>
+                      </div>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -1533,11 +1575,11 @@ export function UnitTypesPhase() {
                         Bedrooms <span className="text-red-500">*</span>
                       </Label>
                       <Select
-                        value={formData.bedrooms?.toString() ?? '1'}
+                        value={formData.bedrooms?.toString() ?? ''}
                         onValueChange={v => setFormData(p => ({ ...p, bedrooms: parseFloat(v) }))}
                       >
-                        <SelectTrigger>
-                          <SelectValue />
+                        <SelectTrigger aria-label="Bedrooms" data-field="bedrooms">
+                          <SelectValue placeholder="Select…" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="0">Studio</SelectItem>
@@ -1554,11 +1596,11 @@ export function UnitTypesPhase() {
                         Bathrooms <span className="text-red-500">*</span>
                       </Label>
                       <Select
-                        value={formData.bathrooms?.toString() ?? '1'}
+                        value={formData.bathrooms?.toString() ?? ''}
                         onValueChange={v => setFormData(p => ({ ...p, bathrooms: parseFloat(v) }))}
                       >
-                        <SelectTrigger>
-                          <SelectValue />
+                        <SelectTrigger aria-label="Bathrooms" data-field="bathrooms">
+                          <SelectValue placeholder="Select…" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="1">1</SelectItem>
@@ -1576,20 +1618,32 @@ export function UnitTypesPhase() {
                         Parking Type <span className="text-red-500">*</span>
                       </Label>
                       <Select
-                        value={formData.parkingKind || 'none'}
+                        value={formData.parkingKind || ''}
                         onValueChange={v => {
                           const kind = v as any;
-                          setFormData(p => ({
-                            ...p,
-                            parkingKind: kind,
-                            // Default logic when switching types
-                            parkingBays: kind === 'none' ? 0 : p.parkingBays || 1,
-                            garageLayout: kind === 'garage' ? p.garageLayout : undefined,
-                          }));
+                          // Re-selecting the same type (or an empty value, as a remounted select
+                          // can report) changes nothing, so typed bays are never reset.
+                          if (!kind) return;
+                          setFormData(p =>
+                            p.parkingKind === kind
+                              ? p
+                              : {
+                                  ...p,
+                                  parkingKind: kind,
+                                  // Only "No Parking" resets bays (to 0, hidden); otherwise keep them.
+                                  parkingBays:
+                                    kind === 'none'
+                                      ? 0
+                                      : p.parkingKind === 'none'
+                                        ? undefined
+                                        : p.parkingBays,
+                                  garageLayout: kind === 'garage' ? p.garageLayout : undefined,
+                                },
+                          );
                         }}
                       >
-                        <SelectTrigger>
-                          <SelectValue />
+                        <SelectTrigger aria-label="Parking type" data-field="parkingKind">
+                          <SelectValue placeholder="Select…" />
                         </SelectTrigger>
                         <SelectContent>
                           {PARKING_TYPE_OPTIONS.map(o => (
@@ -1601,29 +1655,31 @@ export function UnitTypesPhase() {
                       </Select>
                     </div>
 
-                    <div className="space-y-2">
-                      <Label>
-                        Parking Bays <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        type="number"
-                        value={formData.parkingBays ?? ''}
-                        disabled={formData.parkingKind === 'none'}
-                        min={formData.parkingKind === 'none' ? 0 : 1}
-                        onFocus={e => e.target.select()}
-                        onChange={e => {
-                          const raw = e.target.value;
-                          const n = raw === '' ? undefined : Number(raw);
-                          setFormData(p => ({
-                            ...p,
-                            parkingBays:
-                              p.parkingKind === 'none'
-                                ? 0
-                                : Math.max(1, Number.isFinite(n as any) ? (n as number) : 1),
-                          }));
-                        }}
-                      />
-                    </div>
+                    {formData.parkingKind !== 'none' && (
+                      <div className="space-y-2">
+                        <Label>
+                          Parking Bays <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          type="number"
+                          aria-label="Parking bays"
+                          data-field="parkingBays"
+                          placeholder="How many?"
+                          value={formData.parkingBays ?? ''}
+                          disabled={!formData.parkingKind}
+                          min={1}
+                          onFocus={e => e.target.select()}
+                          onChange={e => {
+                            const raw = e.target.value;
+                            const n = raw === '' ? undefined : Number(raw);
+                            setFormData(p => ({
+                              ...p,
+                              parkingBays: Number.isFinite(n as any) ? (n as number) : undefined,
+                            }));
+                          }}
+                        />
+                      </div>
+                    )}
 
                     {/* Conditional Garage Layout */}
                     {formData.parkingKind === 'garage' && (formData.parkingBays || 0) >= 2 && (
@@ -1655,6 +1711,7 @@ export function UnitTypesPhase() {
                       <Input
                         type="number"
                         placeholder="e.g. 70"
+                        data-field="unitSize"
                         value={formData.unitSize || ''}
                         onFocus={e => e.target.select()}
                         onChange={e =>
@@ -1718,11 +1775,22 @@ export function UnitTypesPhase() {
                     type="file"
                     className="hidden"
                     multiple
-                    accept="image/*"
-                    onChange={e =>
-                      e.target.files && handleMediaUpload(Array.from(e.target.files), 'gallery')
-                    }
+                    accept={IMAGE_TYPES.join(',')}
+                    data-testid="house-gallery-input"
+                    onChange={e => {
+                      const picked = e.target.files ? Array.from(e.target.files) : [];
+                      e.target.value = '';
+                      if (picked.length) handleMediaUpload(picked, 'gallery');
+                    }}
                   />
+                  <p className="text-xs text-slate-500">{sizeHint('image')}</p>
+                  {mediaErrors.gallery?.length ? (
+                    <div role="alert" data-testid="house-gallery-error" className="text-xs text-red-700">
+                      {mediaErrors.gallery.map(m => (
+                        <p key={m}>{m}</p>
+                      ))}
+                    </div>
+                  ) : null}
 
                   <div className="bg-slate-50/50 rounded-xl p-4 border border-slate-200 min-h-[200px]">
                     {unitGallery.length === 0 ? (
@@ -1809,11 +1877,28 @@ export function UnitTypesPhase() {
                     type="file"
                     className="hidden"
                     multiple
-                    accept="image/*,application/pdf"
-                    onChange={e =>
-                      e.target.files && handleMediaUpload(Array.from(e.target.files), 'floorPlans')
-                    }
+                    accept={[...IMAGE_TYPES, PDF_TYPE].join(',')}
+                    data-testid="house-floorplan-input"
+                    onChange={e => {
+                      const picked = e.target.files ? Array.from(e.target.files) : [];
+                      e.target.value = '';
+                      if (picked.length) handleMediaUpload(picked, 'floorPlans');
+                    }}
                   />
+                  <p className="text-xs text-slate-500">
+                    Pictures ({sizeHint('image')}) or PDF (up to 25 MB)
+                  </p>
+                  {mediaErrors.floorPlans?.length ? (
+                    <div
+                      role="alert"
+                      data-testid="house-floorplan-error"
+                      className="text-xs text-red-700"
+                    >
+                      {mediaErrors.floorPlans.map(m => (
+                        <p key={m}>{m}</p>
+                      ))}
+                    </div>
+                  ) : null}
 
                   <div className="bg-slate-50/50 rounded-xl p-4 border border-slate-200">
                     {floorPlanImages.length === 0 ? (
@@ -1961,6 +2046,19 @@ export function UnitTypesPhase() {
 
               <TabsContent value="stock" className="mt-0 space-y-6">
                 <div className="p-6 bg-slate-50/50 border rounded-xl space-y-8">
+                  <label className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-800">
+                    <Checkbox
+                      aria-label="Ready now"
+                      checked={Boolean(formData.readyNow)}
+                      onCheckedChange={checked =>
+                        setFormData(p => ({ ...p, readyNow: checked === true }))
+                      }
+                    />
+                    <span>
+                      <strong>Ready now</strong>: homes of this type can be moved into today (the
+                      development may still be building other types).
+                    </span>
+                  </label>
                   {isCuratedPublisherMode && (
                     <label className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
                       <Checkbox
@@ -2113,7 +2211,7 @@ export function UnitTypesPhase() {
                           onClick={() => handleSave(false)}
                           className="bg-gradient-to-r from-blue-600 to-purple-600 text-white"
                         >
-                          {editingId ? 'Update Unit Type' : 'Save Unit Type'}
+                          {editingId ? 'Update house type' : 'Save house type'}
                         </Button>
                       </div>
                     )}

@@ -8,9 +8,11 @@ import type {
   MarketingRole,
 } from '@/types/wizardTypes';
 import { AMENITY_REGISTRY } from '@/config/amenityRegistry';
+import { isInformalSettlementName, validateHighlightList } from '@/lib/wizardLocationCostsAmenities';
 import { WorkflowId, WizardStepId, WizardData } from '@/lib/types/wizard-workflows';
 import { WORKFLOWS, getWorkflow, getVisibleSteps } from '@/lib/workflows';
 import { computeWizardProgress } from '@/lib/wizardProgress';
+import { sortHouseTypes } from '@/lib/houseTypes';
 
 export const DEVELOPMENT_WIZARD_STORAGE_KEY = 'development-wizard-storage-v2';
 export const PUBLISHER_DEVELOPMENT_WIZARD_STORAGE_KEY = 'publisher-development-wizard-storage-v1';
@@ -474,6 +476,13 @@ export interface DevelopmentWizardState {
   draftId?: number;
   /** When (ms since epoch) the server last confirmed this draft, for the resume dialog. */
   draftSavedAt?: number;
+  /**
+   * The development a first publish attempt created from this draft. Kept on the draft
+   * (draftData.createdDevelopmentId) so a retry after a refused publish, even after a
+   * reload, updates that development instead of creating a second copy.
+   */
+  createdDevelopmentId?: number;
+  setCreatedDevelopmentId?: (id: number | undefined) => void;
   editingId?: number; // ID of development being edited
 
   // NEW: Unit Type Draft (Persistence against accidental closing)
@@ -549,7 +558,8 @@ export interface DevelopmentWizardState {
   // WORKFLOW ACTIONS
   setWorkflow: (id: WorkflowId | null) => void;
   setWorkflowStep: (stepId: WizardStepId) => void;
-  goWorkflowNext: () => void;
+  /** `fromStepId` (the step the user is looking at) makes a repeated or stale call a no-op. */
+  goWorkflowNext: (fromStepId?: string) => void;
   goWorkflowBack: () => void;
   saveWorkflowStepData: (stepId: WizardStepId, data: Record<string, any>) => void;
   /**
@@ -784,6 +794,9 @@ function normalizeDevelopmentData(
     postalCode: mergedLocation.postalCode ?? '',
     latitude: mergedLocation.latitude ?? '',
     longitude: mergedLocation.longitude ?? '',
+    ...(mergedLocation.noOfficialStreet !== undefined
+      ? { noOfficialStreet: mergedLocation.noOfficialStreet }
+      : {}),
   };
 
   return {
@@ -811,6 +824,9 @@ const DEVELOPMENT_WIZARD_LOCATION_FIELDS = [
   'latitude',
   'longitude',
   'postalCode',
+  // Derived from the map pin (never hand-picked): the suburb buyers see.
+  'suburbPlaceId',
+  'suburbLabel',
   'gpsAccuracy',
   'noOfficialStreet',
 ] as const;
@@ -858,11 +874,14 @@ const createActions = (
     const derivedMedia = {
       ...state.developmentData.media,
       ...mediaData,
+      // An explicit null means the cover was removed on purpose: no stale or first-photo fallback.
       heroImage:
-        mediaData.heroImage ??
-        state.developmentData.media?.heroImage ??
-        (mediaData.photos?.find((p: MediaItem) => p.category === 'featured' || p.isPrimary) ||
-          mediaData.photos?.[0]),
+        mediaData.heroImage === null
+          ? null
+          : (mediaData.heroImage ??
+            state.developmentData.media?.heroImage ??
+            (mediaData.photos?.find((p: MediaItem) => p.category === 'featured' || p.isPrimary) ||
+              mediaData.photos?.[0])),
     };
 
     // 3. Construct Wizard Data with Strict Precedence
@@ -900,6 +919,14 @@ const createActions = (
       // Merge other step data
       ...config,
       ...governance,
+      // Monthly costs: the estimated amounts reach the existing finance columns
+      // (levy -> monthlyLevyFrom/To, rates & taxes -> ratesFrom/To).
+      ...(governance.levyRange
+        ? { monthlyLevyFrom: governance.levyRange.min, monthlyLevyTo: governance.levyRange.max }
+        : {}),
+      ...(governance.rightsAndTaxes
+        ? { ratesFrom: governance.rightsAndTaxes.min, ratesTo: governance.rightsAndTaxes.max }
+        : {}),
       ...amenities,
 
       // Marketing Summary (Map keySellingPoints -> highlights, tagline -> subtitle)
@@ -916,9 +943,11 @@ const createActions = (
       media: derivedMedia,
       // Root-level heroImage for validation (Phase 2I.1)
       heroImage:
-        derivedMedia.heroImage?.url ??
-        (typeof derivedMedia.heroImage === 'string' ? derivedMedia.heroImage : undefined) ??
-        derivedMedia.photos?.[0]?.url,
+        derivedMedia.heroImage === null
+          ? undefined
+          : (derivedMedia.heroImage?.url ??
+            (typeof derivedMedia.heroImage === 'string' ? derivedMedia.heroImage : undefined) ??
+            derivedMedia.photos?.[0]?.url),
 
       // Unit Types (Canonical Persistence)
       unitTypes: state.stepData?.unit_types?.unitTypes ?? state.unitTypes ?? [],
@@ -976,11 +1005,11 @@ const createActions = (
       }
 
       const highlightCount = Array.isArray(wizardData.highlights)
-        ? wizardData.highlights.length
+        ? wizardData.highlights.filter(item => String(item ?? '').trim()).length
         : 0;
-      if (highlightCount < 4) {
+      if (highlightCount < 3) {
         recommendations.push(
-          'Add at least 4 highlights to keep chips consistent across cards (only the first few are shown).',
+          'Add at least 3 highlights to keep chips consistent across cards (only the first few are shown).',
         );
       }
 
@@ -1223,9 +1252,17 @@ const createActions = (
           }
           break;
         case 5: {
-          if (!state.developmentData?.location?.address) errors.push('Location is required');
+          if (
+            !state.developmentData?.location?.address &&
+            state.developmentData?.location?.noOfficialStreet !== true
+          )
+            errors.push('Location is required');
+          if (!(state.stepData?.location as any)?.suburbPlaceId) {
+            errors.push('Choose the suburb from the list');
+          }
           const latitude = state.developmentData?.location?.latitude?.trim();
           const longitude = state.developmentData?.location?.longitude?.trim();
+          // The server's readiness check needs the address and the map pin.
           if (
             !latitude ||
             !longitude ||
@@ -1233,6 +1270,8 @@ const createActions = (
             !Number.isFinite(Number(longitude))
           ) {
             errors.push('Verified development entrance coordinates are required');
+          } else if (Number(latitude) === 0 && Number(longitude) === 0) {
+            errors.push('Place the pin on the development');
           }
           break;
         }
@@ -1272,7 +1311,23 @@ const createActions = (
       if (!wizardData.name) errors.push('Development Name is required');
 
       // Location (canonical)
-      if (!wizardData.location?.address) errors.push('Location Address is required');
+      if (!wizardData.location?.address && wizardData.location?.noOfficialStreet !== true)
+        errors.push('Location Address is required');
+      if (
+        !wizardData.location?.suburbPlaceId ||
+        isInformalSettlementName(String(wizardData.location?.suburbLabel ?? ''))
+      ) {
+        errors.push('Choose the suburb from the list');
+      }
+      {
+        const lat = String(wizardData.location?.latitude ?? '').trim();
+        const lng = String(wizardData.location?.longitude ?? '').trim();
+        if (!lat || !lng || !Number.isFinite(Number(lat)) || !Number.isFinite(Number(lng))) {
+          errors.push('Map pin (latitude and longitude) is required');
+        } else if (Number(lat) === 0 && Number(lng) === 0) {
+          errors.push('Place the pin on the development');
+        }
+      }
 
       // Media (canonical) - at least 1 image total
       const photosCount = wizardData.media?.photos?.length ?? 0;
@@ -1288,8 +1343,11 @@ const createActions = (
       if (!state.classification?.type) errors.push('Classification Type is required');
 
       // Marketing Summary (canonical)
-      const highlightsLen = wizardData.highlights?.length ?? 0;
-      if (highlightsLen < 3) errors.push('Add at least 3 highlights');
+      for (const issue of validateHighlightList(
+        Array.isArray(wizardData.highlights) ? wizardData.highlights : [],
+      )) {
+        errors.push(issue.message);
+      }
 
       const descLen = String(wizardData.description ?? '').trim().length;
       if (descLen === 0) {
@@ -1422,7 +1480,20 @@ const createActions = (
 
     ensureResidentialWorkflow: (transactionType: 'for_sale' | 'for_rent' = 'for_sale') => {
       const state = get();
-      if (state.workflowId && state.developmentType && state.transactionType) return;
+      if (state.workflowId && state.developmentType) {
+        // A workflow is already running (for example a resumed draft, whose root
+        // transactionType is not restored). Never restart it: that would send the
+        // publisher back to step 1 and clear every tick. Only back-fill the answer.
+        if (!state.transactionType) {
+          const known = normalizeTransactionType(
+            state.developmentData?.transactionType ??
+              state.stepData?.identity_market?.transactionType ??
+              state.stepData?.configuration?.transactionType,
+          );
+          set({ transactionType: known ?? (state.workflowId === 'residential_rent' ? 'for_rent' : 'for_sale') });
+        }
+        return;
+      }
       get().initializeWorkflow('residential', transactionType);
     },
 
@@ -1453,6 +1524,7 @@ const createActions = (
         editingId: undefined,
         draftId: undefined,
         draftSavedAt: undefined,
+        createdDevelopmentId: undefined,
         developerId: undefined,
         currentStepId: null,
         workflowId: null,
@@ -1472,9 +1544,14 @@ const createActions = (
 
     setWorkflowStep: (stepId: WizardStepId) => set({ currentStepId: stepId }),
 
-    goWorkflowNext: () =>
+    setCreatedDevelopmentId: (id: number | undefined) => set({ createdDevelopmentId: id }),
+
+    goWorkflowNext: (fromStepId?: string) =>
       set(state => {
         if (!state.workflowId || !state.currentStepId) return {};
+        // Continue moves exactly one step from the step on screen: a second or
+        // stale call for a step we have already left does nothing.
+        if (fromStepId && fromStepId !== state.currentStepId) return {};
         const workflow = WORKFLOWS[state.workflowId];
         if (!workflow) return {};
 
@@ -1994,6 +2071,15 @@ const createActions = (
         } else {
           console.warn('[hydrateDevelopment] No unitTypes array found');
         }
+        // An existing development opens with its house types cheapest first, then smaller
+        // (as the public page shows them), not in insertion or id order. A draft keeps the
+        // order the publisher left.
+        if (!isDraft && hydratedUnitTypes.length > 1) {
+          hydratedUnitTypes = sortHouseTypes(hydratedUnitTypes).map((unit: any, index: number) => ({
+            ...unit,
+            displayOrder: index,
+          }));
+        }
 
         // ============================================================================
         // Hydrate Marketing/Overview
@@ -2038,13 +2124,15 @@ const createActions = (
         })();
 
         const estateSpecs = parse(source.estateSpecs, {});
+        // Nothing entered stays null; 0 is never stored for "not given".
+        const orNull = (value: number) => (value > 0 ? value : null);
         const resolvedLevyRange = {
-          min: toNumber(estateSpecs?.levyRange?.min ?? source.monthlyLevyFrom ?? 0, 0),
-          max: toNumber(estateSpecs?.levyRange?.max ?? source.monthlyLevyTo ?? 0, 0),
+          min: orNull(toNumber(estateSpecs?.levyRange?.min ?? source.monthlyLevyFrom ?? 0, 0)),
+          max: orNull(toNumber(estateSpecs?.levyRange?.max ?? source.monthlyLevyTo ?? 0, 0)),
         };
         const resolvedRightsAndTaxes = {
-          min: toNumber(estateSpecs?.rightsAndTaxes?.min ?? source.ratesFrom ?? 0, 0),
-          max: toNumber(estateSpecs?.rightsAndTaxes?.max ?? source.ratesTo ?? 0, 0),
+          min: orNull(toNumber(estateSpecs?.rightsAndTaxes?.min ?? source.ratesFrom ?? 0, 0)),
+          max: orNull(toNumber(estateSpecs?.rightsAndTaxes?.max ?? source.ratesTo ?? 0, 0)),
         };
 
         // Basics / About answers have no columns of their own; they were saved in estateSpecs.
@@ -2084,7 +2172,14 @@ const createActions = (
                 }
               : {}),
           },
-          location: { ...canonicalDevelopmentData.location },
+          location: {
+            ...canonicalDevelopmentData.location,
+            // "No street address yet" is kept in estateSpecs and read back here.
+            ...(estateSpecs?.noStreetAddress === true ? { noOfficialStreet: true } : {}),
+            ...(estateSpecs?.suburbPlaceId
+              ? { suburbPlaceId: estateSpecs.suburbPlaceId, suburbLabel: estateSpecs.suburbLabel }
+              : {}),
+          },
           governance_finances: {
             hasGoverningBody: estateSpecs?.hasHOA ?? false,
             governanceType: estateSpecs?.governanceType ?? '',
@@ -2147,6 +2242,14 @@ const createActions = (
           workflowId: sourceWorkflowId,
           currentStepId: sourceCurrentStepId,
           completedSteps: sourceCompletedSteps,
+          createdDevelopmentId:
+            isDraft && Number.isSafeInteger(Number(source.createdDevelopmentId)) && Number(source.createdDevelopmentId) > 0
+              ? Number(source.createdDevelopmentId)
+              : undefined,
+          // Restore the root answer too, so a resumed draft is not mistaken for a new one.
+          transactionType:
+            normalizeTransactionType(canonicalDevelopmentData.transactionType) ??
+            state.transactionType,
 
           developmentType:
             source.developmentType === 'mixed_use'
@@ -2411,6 +2514,8 @@ const createActions = (
         workflowId: state.workflowId,
         currentStepId: state.currentStepId,
         completedSteps: state.completedSteps,
+        // Remembered on the draft so a retry never creates a second development.
+        ...(state.createdDevelopmentId ? { createdDevelopmentId: state.createdDevelopmentId } : {}),
         stepData: {
           ...state.stepData,
           unit_types: {
@@ -2504,6 +2609,7 @@ export const useDevelopmentWizard = create<DevelopmentWizardState>()(
         // Server draft this local copy belongs to, so resuming never forks a duplicate.
         draftId: state.draftId,
         draftSavedAt: state.draftSavedAt,
+        createdDevelopmentId: state.createdDevelopmentId,
 
         residentialConfig: state.residentialConfig,
         landConfig: state.landConfig,

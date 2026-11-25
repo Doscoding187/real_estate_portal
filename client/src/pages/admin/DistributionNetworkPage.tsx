@@ -561,7 +561,7 @@ export default function DistributionNetworkPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setLocation('/developer/create-development')}
+                  onClick={() => setLocation('/admin/publisher/developments/new')}
                 >
                   Create Development
                 </Button>

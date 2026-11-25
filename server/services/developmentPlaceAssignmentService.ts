@@ -412,3 +412,195 @@ export async function countAcceptedDevelopmentsByPlace(): Promise<Map<string, nu
   }
   return counts;
 }
+
+// -----------------------------------------------------------------------------
+// Transaction-aware helpers for recording the suburb chosen in the development
+// wizard. They run inside the caller's transaction so the suburb is recorded
+// atomically with publication.
+// -----------------------------------------------------------------------------
+
+const INFORMAL_SETTLEMENT_NAME = /informal[\s-]*settlement/i;
+
+export const CURATED_SUBURB_EVIDENCE_REFERENCE =
+  'Suburb chosen from our canonical geography in the development wizard';
+
+type Tx = any;
+
+/**
+ * The place must be an active, searchable locality (a suburb) with a public name
+ * that is not an informal settlement. Returns its id and public name.
+ */
+export async function assertAssignableSuburbInTransaction(
+  tx: Tx,
+  placeId: string,
+): Promise<{ placeId: string; name: string }> {
+  if (!isPlaceId(placeId)) {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'The suburb is not a valid place.' });
+  }
+  const [row] = await tx
+    .select({
+      placeId: place.placeId,
+      searchScope: place.searchScope,
+      name: placeName.name,
+    })
+    .from(place)
+    .leftJoin(
+      placeName,
+      and(
+        eq(placeName.placeId, place.placeId),
+        eq(placeName.nameRole, 'preferred_public'),
+        eq(placeName.nameState, 'active'),
+      ),
+    )
+    .where(
+      and(
+        eq(place.placeId, placeId),
+        eq(place.lifecycleStatus, 'active'),
+        eq(place.searchEligible, 1),
+      ),
+    )
+    .limit(1);
+  if (!row || row.searchScope !== 'locality') {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'The suburb must be an active, searchable suburb.',
+    });
+  }
+  const name = String(row.name ?? '');
+  if (INFORMAL_SETTLEMENT_NAME.test(name)) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'An informal settlement cannot be used as the suburb.',
+    });
+  }
+  return { placeId: row.placeId as string, name };
+}
+
+/**
+ * Records the suburb as the development's single accepted "site" assignment.
+ * Locks the development's accepted site rows first; if exactly one exists and it
+ * is the same place nothing changes, otherwise ALL accepted site rows (any phase)
+ * are withdrawn and the new accepted row is inserted. Existing states only.
+ */
+export async function recordCuratedSuburbInTransaction(
+  tx: Tx,
+  input: { developmentId: number; placeId: string; reviewerUserId: number },
+): Promise<{ changed: boolean }> {
+  await assertAssignableSuburbInTransaction(tx, input.placeId);
+
+  const accepted: Array<{ id: number; placeId: string }> = await tx
+    .select({
+      id: developmentPlaceAssignments.id,
+      placeId: developmentPlaceAssignments.placeId,
+    })
+    .from(developmentPlaceAssignments)
+    .where(
+      and(
+        eq(developmentPlaceAssignments.developmentId, input.developmentId),
+        eq(developmentPlaceAssignments.assignmentKind, 'site'),
+        eq(developmentPlaceAssignments.reviewState, 'accepted'),
+      ),
+    )
+    .for('update');
+
+  if (accepted.length === 1 && accepted[0].placeId === input.placeId) {
+    return { changed: false };
+  }
+
+  const reviewedAt = normalizeDateTimeForDb(new Date());
+  if (!reviewedAt) throw new Error('Unable to record the Development Place review time.');
+
+  for (const row of accepted) {
+    await tx
+      .update(developmentPlaceAssignments)
+      .set({
+        reviewState: 'withdrawn',
+        reviewedByUserId: input.reviewerUserId,
+        reviewedAt,
+        reviewNote: 'Replaced by the suburb chosen in the development wizard',
+      })
+      .where(eq(developmentPlaceAssignments.id, row.id));
+  }
+  await tx.insert(developmentPlaceAssignments).values({
+    developmentId: input.developmentId,
+    phaseId: null,
+    placeId: input.placeId,
+    assignmentKind: 'site',
+    reviewState: 'accepted',
+    evidenceReference: CURATED_SUBURB_EVIDENCE_REFERENCE,
+    createdByUserId: input.reviewerUserId,
+    reviewedByUserId: input.reviewerUserId,
+    reviewedAt,
+    reviewNote: null,
+  });
+  return { changed: true };
+}
+
+export type SuburbReadinessContext = {
+  /** estateSpecs.suburbPlaceId resolves to an active searchable suburb. */
+  suburbPlaceValid: boolean;
+  /** The development already has an accepted site place assignment (legacy / reviewer). */
+  hasAcceptedSiteAssignment: boolean;
+};
+
+/** Reads what readiness needs to judge the suburb requirement. */
+export async function loadSuburbReadinessContext(
+  tx: Tx,
+  development: { id: number; estateSpecs?: unknown },
+): Promise<SuburbReadinessContext> {
+  let specs: any = development.estateSpecs;
+  if (typeof specs === 'string') {
+    try {
+      specs = JSON.parse(specs);
+    } catch {
+      specs = null;
+    }
+  }
+  const suburbId = String(specs?.suburbPlaceId ?? '').trim();
+  let suburbPlaceValid = false;
+  if (suburbId) {
+    try {
+      await assertAssignableSuburbInTransaction(tx, suburbId);
+      suburbPlaceValid = true;
+    } catch {
+      suburbPlaceValid = false;
+    }
+  }
+  const accepted = await tx
+    .select({ id: developmentPlaceAssignments.id })
+    .from(developmentPlaceAssignments)
+    .where(
+      and(
+        eq(developmentPlaceAssignments.developmentId, development.id),
+        eq(developmentPlaceAssignments.assignmentKind, 'site'),
+        eq(developmentPlaceAssignments.reviewState, 'accepted'),
+      ),
+    )
+    .limit(1);
+  return { suburbPlaceValid, hasAcceptedSiteAssignment: accepted.length > 0 };
+}
+
+/**
+ * The same readiness context as loadSuburbReadinessContext, for read models that
+ * already hold the development's reviewed geography (Home and operating lists):
+ * an accepted site assignment shows up there, so no extra query is needed. The
+ * chosen suburb is taken as valid when present; publish re-checks it for real.
+ */
+export function suburbReadinessContextFromGeography(
+  development: { estateSpecs?: unknown },
+  geography: DevelopmentPlaceGeography,
+): SuburbReadinessContext {
+  let specs: any = development.estateSpecs;
+  if (typeof specs === 'string') {
+    try {
+      specs = JSON.parse(specs);
+    } catch {
+      specs = null;
+    }
+  }
+  return {
+    suburbPlaceValid: String(specs?.suburbPlaceId ?? '').trim() !== '',
+    hasAcceptedSiteAssignment:
+      geography.canonicalPlaceId !== null || geography.locationLabels.length > 0,
+  };
+}

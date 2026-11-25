@@ -12,6 +12,7 @@ import { placeIndexability } from './services/placeIndexabilityService';
 import { isPlaceIndexAllowlistedPath } from '../shared/placeIndexAllowlist';
 import { placeGuideService } from './services/placeGuideService';
 import { nearbyPlacesService } from './services/nearbyPlacesService';
+import { placeCentreService } from './services/placeCentreService';
 import { MULTI_LOCATION_MAX } from '../shared/searchScope';
 import { PLACE_ID_REGEX, isCanonicalPlaceId } from '../shared/placeAuthority';
 import {
@@ -120,6 +121,14 @@ export const placeAuthorityRouter = router({
         .strict(),
     )
     .query(({ input }) => nearbyPlacesService.getNearbyPlaces([...new Set(input.canonicalPlaceIds)])),
+
+  /**
+   * The centre of a canonical suburb from our committed centroid data, or null.
+   * Read-only; used by the development wizard's "pin is far from the suburb" warning.
+   */
+  getPlaceCentre: publicProcedure
+    .input(z.object({ placeId: z.string().trim().regex(PLACE_ID_REGEX) }).strict())
+    .query(({ input }) => placeCentreService.getCentre(input.placeId)),
 
   /** Resolve a selected Place identity for canonical search controls. */
   resolveSearchPlace: publicProcedure

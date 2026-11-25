@@ -1,739 +1,521 @@
-// @ts-nocheck
 import React, { useRef, useState } from 'react';
-import { useDevelopmentWizard, type MediaItem } from '@/hooks/useDevelopmentWizard';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Input } from '@/components/ui/input';
+import { FileText, Image as ImageIcon, Loader2, Plus, Video, X } from 'lucide-react';
 import { toast } from 'sonner';
-import {
-  Upload,
-  X,
-  Star,
-  Image as ImageIcon,
-  Video,
-  TreePine,
-  Dumbbell,
-  FileText,
-  MapPin,
-  Layout,
-  ShieldCheck,
-  AlertCircle,
-  CheckCircle2,
-} from 'lucide-react';
+import { useDevelopmentWizard, type MediaItem } from '@/hooks/useDevelopmentWizard';
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { usePublisherContext } from '@/hooks/usePublisherContext';
-import { SortableMediaGrid } from '@/components/media/SortableMediaGrid';
-import type { MediaItem as GridMediaItem } from '@/components/media/SortableMediaGrid';
+import {
+  DOCUMENT_SLOTS,
+  IMAGE_TYPES,
+  PDF_TYPE,
+  PHOTO_SLOTS,
+  VIDEO_TYPES,
+  documentMeta,
+  documentSlotOf,
+  groupDocuments,
+  normalizePhotosForCover,
+  photosForSlot,
+  rejectionMessage,
+  resolveCover,
+  sizeHint,
+  slotById,
+  stampDocuments,
+  type DocumentSlotId,
+  type MediaKind,
+  type PhotoSlotId,
+} from '@/lib/wizardMedia';
+import { wizardTokens as t } from '../../wizard/ui/wizardTokens';
+import { WizardSection } from '../../wizard/ui/WizardUi';
 
-const DEVELOPMENT_IMAGE_CATEGORY_OPTIONS: Array<{
-  value: NonNullable<GridMediaItem['category']>;
-  label: string;
-}> = [
-  { value: 'outdoors', label: 'Exterior & Outdoors' },
-  { value: 'general', label: 'Development Overview' },
-  { value: 'amenities', label: 'Amenities' },
-  { value: 'photo', label: 'Location & Views' },
-  { value: 'render', label: 'Aerial & Drone' },
-];
+type SlotKey = PhotoSlotId | 'video' | DocumentSlotId;
 
+const IMAGE_ACCEPT = IMAGE_TYPES.join(',');
+const VIDEO_ACCEPT = VIDEO_TYPES.join(',');
+
+/**
+ * Media: about the development as a whole (house photos and floor plans go in
+ * House types). Guided photo slots -> existing media categories (see
+ * lib/wizardMedia.ts), one video, and PDF-only documents for buyers.
+ *
+ * Upload path: a platform curator (super admin operating as a curated
+ * publisher) uses the publisher presign + PUT route; every other user uses the
+ * developer reserve + PUT + confirm route. Same two routes as before.
+ */
 export function MediaPhase() {
-  const { developmentData, saveWorkflowStepData, stepData: allStepData } = useDevelopmentWizard();
+  const { saveWorkflowStepData, getWizardData, stepData, stepErrors, currentStepId } =
+    useDevelopmentWizard();
   const editingDevelopmentId = useDevelopmentWizard(state => state.editingId);
   const { user } = useAuth();
   const { context: publisherContext } = usePublisherContext();
   const isCuratedPublisherMode =
     user?.role === 'super_admin' && publisherContext?.mode === 'platform_curator';
 
-  const [activeTab, setActiveTab] = useState('gallery');
-
-  // SOURCE OF TRUTH: stepData.development_media
-  // FALLBACK: developmentData.media (legacy migration only)
-  const currentStepData = allStepData?.development_media || {};
-
-  const photos = currentStepData.photos ?? developmentData.media?.photos ?? [];
-  const videos = currentStepData.videos ?? developmentData.media?.videos ?? [];
-  // Important: Canonical source calls it 'documents', legacy fallback might be 'documents' or 'brochures'
-  const documents =
-    currentStepData.documents ??
-    developmentData.media?.documents ??
-    (developmentData.media as any)?.brochures ??
-    [];
-
-  // Hero Image Derivation (Deterministic)
-  // heroImage = first photo where category === 'hero' OR first photo
-  const heroImage = (() => {
-    const heroCandidate = photos.find(p => p.category === 'hero') || photos[0];
-    return heroCandidate; // Return the full object for display
-  })();
-
-  const featuredCount = photos.filter(p => p.category === 'featured').length;
-  // All photos that are not featured count as gallery, plus featured ones are technically photos too.
-  // The logic in previous was: photos.filter(p => p.category !== 'featured').length + featuredCount
-  // Simplify: basically all photos count except the hero might be special in UI but in data it's just category='hero'.
-  // Use legacy 'featured' category check for migration, but new hero category is 'hero' (from prompt instructions? Prompt said "hero selection stable... category === 'hero' OR first photo").
-  // Wait, previous code used `category: isHero ? 'featured' : category`.
-  // Let's stick to consistent category names.
-  // If we want deterministic hero, let's say category 'hero' is explicit hero.
-  // But previous code saved hero as 'featured'. Let's support 'featured' as hero category for now to minimize drift.
-
-  const galleryCount = photos.length;
-
-  // Progress Calculation
-  const hasHero = !!heroImage;
-  const hasMinGallery = galleryCount >= 3;
-  const hasDocuments = documents.length >= 1;
-
-  const progressPercent = [
-    hasHero ? 40 : 0,
-    Math.min(galleryCount, 5) * 6, // Max 30 (5 items)
-    hasDocuments ? 30 : 0, // Documents requirement
-  ].reduce((a, b) => a + b, 0);
-
   const reserveMediaUpload = trpc.developer.reserveMediaUpload.useMutation();
   const confirmMediaUpload = trpc.developer.confirmMediaUpload.useMutation();
   const presignCuratedUpload = trpc.upload.presign.useMutation();
 
-  // ACTIONS ------------------------------------------------------------------
+  const [busy, setBusy] = useState<SlotKey | null>(null);
+  const [slotErrors, setSlotErrors] = useState<Partial<Record<SlotKey, string[]>>>({});
+  const inputs = useRef<Record<string, HTMLInputElement | null>>({});
 
-  const persistMedia = (
-    newPhotos?: MediaItem[],
-    newVideos?: MediaItem[],
-    newDocuments?: MediaItem[],
-  ) => {
-    saveWorkflowStepData('development_media', {
-      photos: newPhotos ?? photos,
-      videos: newVideos ?? videos,
-      documents: newDocuments ?? documents,
-    } as any);
-  };
+  // Source of truth: stepData.development_media; fall back to the wizard data
+  // (legacy drafts keep their media there).
+  const saved = (stepData?.development_media ?? {}) as Record<string, any>;
+  const wizardMedia = ((getWizardData() as Record<string, any>)?.media ?? {}) as Record<string, any>;
+  const photos: any[] = saved.photos ?? wizardMedia.photos ?? [];
+  const videos: any[] = saved.videos ?? wizardMedia.videos ?? [];
+  // Older drafts may hold documents as bare URLs; give them an id and a file name.
+  const documents: any[] = (
+    saved.documents ??
+    wizardMedia.documents ??
+    wizardMedia.brochures ??
+    []
+  ).map((doc: any, index: number) =>
+    typeof doc === 'string'
+      ? { id: `doc-legacy-${index}`, url: doc, fileName: doc.split('/').pop() || 'Document.pdf' }
+      : { id: doc?.id ?? `doc-legacy-${index}`, ...doc },
+  );
 
-  const handleAddMedia = (item: MediaItem) => {
-    if (item.type === 'image') {
-      // If adding a hero (featured), pre-pend or append?
-      // If category is 'featured', it's hero.
-      persistMedia([...photos, item], undefined, undefined);
-    } else if (item.type === 'video') {
-      persistMedia(undefined, [...videos, item], undefined);
-    } else if (item.type === 'pdf' || item.type === 'document') {
-      persistMedia(undefined, undefined, [...documents, item]);
-    }
-  };
+  // ONE cover rule (lib/wizardMedia.ts resolveCover): the draft's heroImage; older drafts
+  // without one show their first photo as the cover; null means it was removed on purpose.
+  const heroSource = 'heroImage' in saved ? saved.heroImage : wizardMedia.heroImage;
+  const cover = resolveCover({ heroImage: heroSource, photos });
+  const coverUrl: string | null = cover?.url ?? null;
+  const { bySlot: docBySlot, other: otherDocs } = groupDocuments(documents);
 
-  const handleRemoveMedia = (id: string) => {
-    // Search all arrays
-    if (photos.some(p => p.id === id)) {
-      persistMedia(
-        photos.filter(p => p.id !== id),
-        undefined,
-        undefined,
-      );
-    } else if (videos.some(v => v.id === id)) {
-      persistMedia(
-        undefined,
-        videos.filter(v => v.id !== id),
-        undefined,
-      );
-    } else if (documents.some(d => d.id === id)) {
-      persistMedia(
-        undefined,
-        undefined,
-        documents.filter(d => d.id !== id),
-      );
-    }
-  };
+  const errors = (currentStepId && stepErrors?.[currentStepId]) || [];
+  const mediaError = errors.find((e: any) => e?.field === 'media')?.message as string | undefined;
 
-  const handleChangePhotoCategory = (
-    id: string,
-    category: NonNullable<GridMediaItem['category']>,
-  ) => {
-    const target = photos.find(photo => photo.id === id);
-    if (!target || target.category === category) return;
-
-    persistMedia(
-      photos.map(photo => (photo.id === id ? { ...photo, category } : photo)),
-      undefined,
-      undefined,
-    );
-    const label =
-      DEVELOPMENT_IMAGE_CATEGORY_OPTIONS.find(option => option.value === category)?.label ??
-      'the selected section';
-    toast.success(`Moved image to ${label}. Save the development to publish the change.`);
-  };
-
-  const handleReorderMedia = (newItems: MediaItem[]) => {
-    // Reorder applies to the list passed to SortableMediaGrid
-    // We need to figure out which list it is.
-    // SortableMediaGrid mixes types? No, it usually takes one list.
-    // In this UI, we have Tabs.
-    // If we are in Gallery tab, we are reordering Photos.
-    // We can infer from the items passed.
-
-    const firstItem = newItems[0];
-    if (!firstItem) return; // Empty list
-
-    if (firstItem.type === 'image') {
-      // We might be receiving a filtered list (e.g. only particular category).
-      // But SortableMediaGrid usually shows all unless filtered.
-      // Current implementation shows filtered items by category. Reordering filtered lists is tricky.
-      // However, the previous implementation passed `items` (filtered) to SortableMediaGrid.
-      // Only reorder within that category? Or globally?
-      // Ideally, reorder should update the GLOBAL photos list order.
-
-      // If we are viewing ALL photos (or a category), we need to reflect that in main list.
-      // Simplest for now: The previous code filtered items by category.
-      // Reordering within a category?
-      // The previous code had `reorderMedia` action which likely handled finding items by ID and updating displayOrder.
-      // Since we store flat arrays `photos`, we should just update their order in the array.
-
-      // Strategy:
-      // 1. Map all existing photos to a map by ID.
-      // 2. Iterate newItems, update their order/index.
-      // 3. Reconstruct photos array respecting new order for these items, keeping others stable?
-      // actually, if we drag-drop in a filtered view, we only reorder relative to each other.
-
-      // Simple approach: Replace the items in the main array that match these IDs with the new order.
-      // But if we only see a subset, we can't trivially reorder the whole array without gaps.
-
-      // Let's assume for MVP Refactor that SortableMediaGrid returns the reordered subset.
-      // We take `photos`, separate out the ones NOT in `newItems`.
-      // Then append `newItems` (reordered)? Or place them back?
-      // Placing them back is hard if they were scattered.
-
-      // Let's just update the `displayOrder` property and sort the whole list?
-      // `SortableMediaGrid` usually returns the array in the visual order.
-      // We should just update the `photos` array.
-
-      // Map IDs from newItems
-      const newOrderIds = newItems.map(i => i.id);
-
-      // Filter output: items NOT in newItems + items IN newItems (sorted by newOrderIds)
-      const others = photos.filter(p => !newOrderIds.includes(p.id));
-      const reorderedSubset = newItems;
-
-      // If we are reordering 'gallery', which might be split across tabs? No, tabs split by category.
-      // If I reorder 'outdoors', I expect them to stay 'outdoors' but change order relative to each other.
-
-      // Combine: others + reorderedSubset? This changes global order (e.g. 'general' media might now be after 'outdoors' media).
-      // That's acceptable for a unified "photos" array.
-
-      persistMedia([...others, ...reorderedSubset], undefined, undefined);
-    } else if (firstItem.type === 'video') {
-      // Videos usually valid
-      const newOrderIds = newItems.map(i => i.id);
-      const others = videos.filter(v => !newOrderIds.includes(v.id));
-      persistMedia(undefined, [...others, ...newItems], undefined);
-    }
-  };
-
-  const UploadSection = ({
-    category,
-    title,
-    description,
-    icon: Icon,
-    isHero = false,
-    acceptedTypes = 'image/*',
-  }: {
-    category: MediaItem['category'];
-    title: string;
-    description: string;
-    icon: any;
-    isHero?: boolean;
-    acceptedTypes?: string;
+  /**
+   * Saves the step. `cover` is the URL of the new cover, `null` for "no cover", or
+   * left out to keep the current one. Exactly one photo is saved as the cover; the
+   * heroImage mirrors it so the preview and the publish payload agree.
+   */
+  const persist = (next: {
+    photos?: any[];
+    videos?: any[];
+    documents?: any[];
+    cover?: string | null;
   }) => {
-    // Filter items for this view
-    let items: MediaItem[] = [];
-    if (isHero) {
-      // Explicitly hero category ('hero' or 'featured')
-      items = photos.filter(p => p.category === 'hero' || p.category === 'featured'); // Support both for now, ideally shift to 'hero'
-      // But UI wants to show THE Hero image.
-      // We derived `heroImage` above.
-      // If we want to manage it, we show the derived one?
-      // Or if specific category uploading:
-      // previous code: `isHero ? [heroImage] : []`.
-      // Let's match that.
-      items = heroImage ? [heroImage] : [];
-    } else if (category === 'videos') {
-      items = videos;
-    } else if (category === 'document') {
-      items = documents;
-    } else {
-      // Gallery categories
-      items = photos.filter(p => p.category === category);
-    }
-
-    const [isDragging, setIsDragging] = useState(false);
-
-    const processFiles = async (files: File[]) => {
-      // 1. Concurrent Uploads
-      const uploadPromises = files.map(async file => {
-        const loadingToast = toast.loading(`Uploading ${file.name}...`);
-
-        try {
-          let type: MediaItem['type'] = 'image';
-          if (file.type.startsWith('video')) type = 'video';
-          if (file.type === 'application/pdf') type = 'pdf';
-          const receiptCategory =
-            type === 'video'
-              ? 'development_video'
-              : type === 'pdf'
-                ? 'development_document'
-                : 'development_image';
-          let mediaUrl: string;
-          let storageKey: string;
-          let fileSize: number;
-          let uploadReceipt: string | undefined;
-
-          if (isCuratedPublisherMode) {
-            const target = await presignCuratedUpload.mutateAsync({
-              filename: file.name,
-              contentType: file.type,
-            });
-            const uploadResponse = await fetch(target.url, {
-              method: 'PUT',
-              body: file,
-              headers: { 'Content-Type': file.type },
-            });
-            if (!uploadResponse.ok) {
-              throw new Error(`Upload failed with status ${uploadResponse.status}.`);
-            }
-            mediaUrl = target.publicUrl;
-            storageKey = target.key;
-            fileSize = file.size;
-          } else {
-            const reservation = await reserveMediaUpload.mutateAsync({
-              filename: file.name,
-              contentType: file.type,
-              category: receiptCategory,
-              ...(editingDevelopmentId ? { developmentId: editingDevelopmentId } : {}),
-            });
-            const uploadResponse = await fetch(reservation.uploadUrl, {
-              method: 'PUT',
-              body: file,
-              headers: { 'Content-Type': file.type },
-            });
-            if (!uploadResponse.ok) {
-              throw new Error(`Upload failed with status ${uploadResponse.status}.`);
-            }
-            const confirmed = await confirmMediaUpload.mutateAsync({
-              uploadReceipt: reservation.uploadReceipt,
-            });
-            mediaUrl = confirmed.url;
-            storageKey = confirmed.key;
-            fileSize = confirmed.fileSize;
-            uploadReceipt = confirmed.uploadReceipt;
-          }
-
-          toast.dismiss(loadingToast);
-          toast.success(`Uploaded ${file.name}`);
-
-          return {
-            id: `media-${Date.now()}-${Math.random()}`,
-            url: mediaUrl,
-            type,
-            category: isHero ? 'hero' : category, // Enforce 'hero' category on new uploads
-            isPrimary: isHero,
-            displayOrder: 0,
-            fileName: file.name,
-            fileSize,
-            storageKey,
-            ...(uploadReceipt ? { uploadReceipt } : {}),
-            uploadedAt: new Date(),
-          } as MediaItem;
-        } catch (error) {
-          console.error('Upload failed:', error);
-          toast.error(`Failed to upload ${file.name}`, { id: loadingToast });
-          return null;
-        }
-      });
-
-      // 2. Gather results
-      const results = await Promise.all(uploadPromises);
-      const newItems = results.filter((item): item is MediaItem => item !== null);
-
-      if (newItems.length === 0) return;
-
-      // 3. Batch Update & Dedupe
-      const dedupe = (base: MediaItem[], added: MediaItem[]) => {
-        const seen = new Set(base.map(i => i.url));
-        return [...base, ...added.filter(i => !seen.has(i.url))];
-      };
-
-      const newImages = newItems.filter(i => i.type === 'image');
-      const newVideos = newItems.filter(i => i.type === 'video');
-      const newDocs = newItems.filter(i => i.type === 'pdf' || i.type === 'document');
-
-      persistMedia(
-        newImages.length > 0 ? dedupe(photos, newImages) : undefined,
-        newVideos.length > 0 ? dedupe(videos, newVideos) : undefined,
-        newDocs.length > 0 ? dedupe(documents, newDocs) : undefined,
-      );
-    };
-
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="p-2 bg-slate-100 rounded-lg">
-            <Icon className="w-5 h-5 text-slate-600" />
-          </div>
-          <div>
-            <h3 className="font-semibold text-base text-slate-900">{title}</h3>
-            <p className="text-sm text-slate-500">{description}</p>
-          </div>
-        </div>
-
-        {/* Dropzone */}
-        {(items.length === 0 || !isHero) && (
-          <div
-            className={cn(
-              'border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center text-center transition-all cursor-pointer group min-h-[160px]',
-              isDragging ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:bg-slate-50',
-            )}
-            onDragOver={e => {
-              e.preventDefault();
-              setIsDragging(true);
-            }}
-            onDragLeave={e => {
-              e.preventDefault();
-              setIsDragging(false);
-            }}
-            onDrop={async e => {
-              e.preventDefault();
-              setIsDragging(false);
-              if (e.dataTransfer.files.length) await processFiles(Array.from(e.dataTransfer.files));
-            }}
-            onClick={e => {
-              const input = e.currentTarget.querySelector('input');
-              input?.click();
-            }}
-          >
-            <div className="mb-3 p-3 bg-white rounded-full shadow-sm group-hover:scale-110 transition-transform">
-              <Upload className={cn('w-5 h-5', isDragging ? 'text-blue-600' : 'text-slate-400')} />
-            </div>
-            <p className="text-sm font-medium text-slate-900">
-              {isDragging
-                ? 'Drop files here'
-                : `Click to upload ${isHero ? 'Hero Image' : 'files'}`}
-            </p>
-            <p className="text-xs text-slate-500 mt-1">
-              {category === 'videos'
-                ? 'MP4, WebM (Max 100MB)'
-                : category === 'document'
-                  ? 'PDF (Max 10MB)'
-                  : 'JPG, PNG, WebP (Max 5MB)'}
-            </p>
-            <input
-              type="file"
-              className="hidden"
-              multiple={!isHero}
-              accept={acceptedTypes}
-              onClick={e => e.stopPropagation()}
-              onChange={e => {
-                if (e.target.files) processFiles(Array.from(e.target.files));
-                e.target.value = '';
-              }}
-            />
-          </div>
-        )}
-
-        {/* File List / Grid */}
-        {items.length > 0 && (
-          <>
-            {category === 'document' ? (
-              <div className="grid gap-4 grid-cols-1">
-                {items.map(item => (
-                  <div
-                    key={item.id}
-                    className="relative group rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shadow-sm hover:shadow-md transition-all flex items-center p-3 gap-3"
-                  >
-                    <div className="p-2 bg-red-50 rounded text-red-600">
-                      <FileText className="w-6 h-6" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-900 truncate">
-                        {item.fileName || 'Document'}
-                      </p>
-                      <p className="text-xs text-slate-500">PDF Document</p>
-                    </div>
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                      className="h-7 w-7"
-                      onClick={e => {
-                        e.stopPropagation();
-                        handleRemoveMedia(item.id);
-                      }}
-                    >
-                      <X className="w-3 h-3" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            ) : isHero ? (
-              <div className="grid gap-4 grid-cols-1">
-                {items.map(item => (
-                  <div
-                    key={item.id}
-                    className="relative group rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shadow-sm hover:shadow-md transition-all aspect-video max-w-lg"
-                  >
-                    <img src={item.url} alt="Hero" className="w-full h-full object-cover" />
-                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 p-1 rounded-lg">
-                      <Button
-                        variant="destructive"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={e => {
-                          e.stopPropagation();
-                          handleRemoveMedia(item.id);
-                        }}
-                      >
-                        <X className="w-3 h-3" />
-                      </Button>
-                    </div>
-                    <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent p-2">
-                      <span className="text-[10px] text-yellow-300 font-bold uppercase tracking-wider">
-                        Primary Hero
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <SortableMediaGrid
-                media={items.map(
-                  (item, idx) =>
-                    ({
-                      id: item.id,
-                      url: item.url,
-                      type: item.type === 'video' ? 'video' : item.type === 'pdf' ? 'pdf' : 'image',
-                      category: item.category,
-                      fileName: item.fileName,
-                      isPrimary: item.isPrimary,
-                      displayOrder: item.displayOrder ?? idx,
-                    }) as GridMediaItem,
-                )}
-                categoryOptions={
-                  !isHero && category !== 'videos' && category !== 'document'
-                    ? DEVELOPMENT_IMAGE_CATEGORY_OPTIONS
-                    : undefined
-                }
-                onChangeCategory={
-                  !isHero && category !== 'videos' && category !== 'document'
-                    ? handleChangePhotoCategory
-                    : undefined
-                }
-                onReorder={reordered => {
-                  // Map back to MediaItem
-                  const asMediaItems = reordered.map(
-                    r => {
-                      const existing = items.find(item => item.id === r.id);
-                      return {
-                        ...existing,
-                        id: r.id,
-                        url: r.url,
-                        type: r.type,
-                        category: r.category,
-                        isPrimary: r.isPrimary,
-                        displayOrder: r.displayOrder,
-                        fileName: r.fileName,
-                      } as unknown as MediaItem;
-                    },
-                  );
-                  handleReorderMedia(asMediaItems);
-                }}
-                onRemove={handleRemoveMedia}
-              />
-            )}
-          </>
-        )}
-      </div>
-    );
+    const nextPhotos = next.photos ?? photos;
+    const wantedCover = next.cover !== undefined ? next.cover : coverUrl;
+    const normalized = normalizePhotosForCover(nextPhotos, wantedCover);
+    const hero = wantedCover ? (normalized.find(p => p.url === wantedCover) ?? null) : null;
+    saveWorkflowStepData('development_media', {
+      photos: normalized,
+      videos: next.videos ?? videos,
+      documents: stampDocuments(next.documents ?? documents),
+      heroImage: hero,
+    });
   };
+
+  /** One upload: curated publisher route or developer reserve/confirm route. */
+  const uploadOne = async (file: File, kind: MediaKind) => {
+    const receiptCategory =
+      kind === 'video'
+        ? 'development_video'
+        : kind === 'pdf'
+          ? 'development_document'
+          : 'development_image';
+    if (isCuratedPublisherMode) {
+      const target = await presignCuratedUpload.mutateAsync({
+        filename: file.name,
+        contentType: file.type,
+      });
+      const response = await fetch(target.url, {
+        method: 'PUT',
+        body: file,
+        headers: { 'Content-Type': file.type },
+      });
+      if (!response.ok) throw new Error(`Upload failed with status ${response.status}.`);
+      return {
+        url: target.publicUrl as string,
+        storageKey: target.key as string,
+        fileSize: file.size,
+        uploadReceipt: undefined as string | undefined,
+      };
+    }
+    const reservation = await reserveMediaUpload.mutateAsync({
+      filename: file.name,
+      contentType: file.type,
+      category: receiptCategory,
+      ...(editingDevelopmentId ? { developmentId: editingDevelopmentId } : {}),
+    });
+    const response = await fetch(reservation.uploadUrl, {
+      method: 'PUT',
+      body: file,
+      headers: { 'Content-Type': file.type },
+    });
+    if (!response.ok) throw new Error(`Upload failed with status ${response.status}.`);
+    const confirmed = await confirmMediaUpload.mutateAsync({
+      uploadReceipt: reservation.uploadReceipt,
+    });
+    return {
+      url: confirmed.url as string,
+      storageKey: confirmed.key as string,
+      fileSize: confirmed.fileSize as number,
+      uploadReceipt: confirmed.uploadReceipt as string | undefined,
+    };
+  };
+
+  const upload = async (slot: SlotKey, files: File[]) => {
+    const kind: MediaKind = slot === 'video' ? 'video' : isDocumentSlot(slot) ? 'pdf' : 'image';
+    // The cover and the video hold one file; documents hold one per slot.
+    const single = slot === 'cover' || slot === 'video' || isDocumentSlot(slot);
+    const chosen = single ? files.slice(0, 1) : files;
+
+    // Client-side checks use the same limits as the server.
+    // Rejections stay visible under the slot until the next good upload there.
+    const accepted: File[] = [];
+    const problems: string[] = [];
+    for (const file of chosen) {
+      const problem = rejectionMessage(file, kind);
+      if (problem) problems.push(problem);
+      else accepted.push(file);
+    }
+    setSlotErrors(prev => ({ ...prev, [slot]: problems.length ? problems : undefined }));
+    if (accepted.length === 0) return;
+
+    setBusy(slot);
+    const added: any[] = [];
+    for (const file of accepted) {
+      try {
+        const result = await uploadOne(file, kind);
+        const base = {
+          id: `media-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          url: result.url,
+          fileName: file.name,
+          fileSize: result.fileSize,
+          storageKey: result.storageKey,
+          displayOrder: 0,
+          uploadedAt: new Date(),
+          ...(result.uploadReceipt ? { uploadReceipt: result.uploadReceipt } : {}),
+        };
+        if (kind === 'image') {
+          const def = slotById(slot as PhotoSlotId);
+          added.push({
+            ...base,
+            type: 'image',
+            category: def.category,
+            isPrimary: slot === 'cover',
+          });
+        } else if (kind === 'video') {
+          added.push({ ...base, type: 'video', category: 'videos', isPrimary: false });
+        } else {
+          added.push({
+            ...base,
+            type: 'pdf',
+            isPrimary: false,
+            ...documentMeta(slot as DocumentSlotId),
+          });
+        }
+      } catch (error) {
+        console.error('Upload failed:', error);
+        toast.error(`Failed to upload ${file.name}`);
+      }
+    }
+    setBusy(null);
+    if (added.length === 0) return;
+
+    if (kind === 'image') {
+      // A new cover replaces the old one, which stops being featured/primary.
+      const kept = slot === 'cover' ? photos.filter(p => p.url !== coverUrl) : photos;
+      const known = new Set(kept.map(p => p.url));
+      const fresh = added.filter(p => !known.has(p.url));
+      persist({
+        photos: [...kept, ...fresh],
+        ...(slot === 'cover' ? { cover: fresh[0]?.url ?? coverUrl } : {}),
+      });
+    } else if (kind === 'video') {
+      persist({ videos: added });
+    } else {
+      // One document per slot: a new upload replaces that slot's file.
+      const kept = documents.filter(
+        d => d !== docBySlot[slot as DocumentSlotId] && documentSlotOf(d) !== slot,
+      );
+      persist({ documents: [...kept, ...added] });
+    }
+    toast.success(accepted.length === 1 ? `Uploaded ${accepted[0].name}` : `Uploaded ${added.length} files`);
+  };
+
+  const remove = (id: string) => {
+    if (id === 'cover-hero') {
+      persist({ cover: null });
+      return;
+    }
+    const photo = photos.find(p => p.id === id);
+    if (photo) {
+      // Removing the cover leaves the draft without one (no other photo is promoted).
+      persist({
+        photos: photos.filter(p => p.id !== id),
+        ...(photo.url === coverUrl ? { cover: null } : {}),
+      });
+    } else if (videos.some(v => v.id === id)) persist({ videos: videos.filter(v => v.id !== id) });
+    else persist({ documents: documents.filter(d => d.id !== id) });
+  };
+
+  const openPicker = (slot: SlotKey) => inputs.current[slot]?.click();
+
+  const hiddenInput = (slot: SlotKey, accept: string, multiple: boolean) => (
+    <input
+      ref={el => {
+        inputs.current[slot] = el;
+      }}
+      type="file"
+      className="hidden"
+      accept={accept}
+      multiple={multiple}
+      aria-label={`Upload ${slot}`}
+      data-testid={`media-input-${slot}`}
+      onChange={e => {
+        const files = Array.from(e.target.files ?? []);
+        e.target.value = '';
+        if (files.length) void upload(slot, files);
+      }}
+    />
+  );
+
+  const slotError = (slot: SlotKey) =>
+    slotErrors[slot]?.length ? (
+      <div role="alert" data-testid={`media-error-${slot}`} className="text-xs text-red-700">
+        {slotErrors[slot]!.map(message => (
+          <p key={message}>{message}</p>
+        ))}
+      </div>
+    ) : null;
+
+  const addButton = (slot: SlotKey, label: string) => (
+    <button
+      type="button"
+      onClick={() => openPicker(slot)}
+      disabled={busy !== null}
+      className="inline-flex h-16 min-w-16 items-center justify-center gap-1 rounded-md border border-dashed border-slate-400 bg-white px-3 text-sm font-semibold text-blue-700 transition-colors hover:border-blue-500 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      {busy === slot ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+      {label}
+    </button>
+  );
+
+  const coverPresent = Boolean(coverUrl);
+  const otherPhotos = photosForSlot(photos, 'other', coverUrl);
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-      {/* Header & Stats */}
-      <div className="flex flex-col md:flex-row justify-between gap-6">
-        <div className="space-y-2">
-          <h2 className="text-2xl md:text-3xl font-bold text-slate-900">Development Media</h2>
-          <p className="text-slate-600">
-            Use this gallery for the whole development: exteriors, shared amenities, and site plans.
-            Add kitchens, bedrooms, and finishes under each unit type.
+    <div className={cn(t.card, 'flex flex-col gap-7')}>
+      <div className="flex items-start gap-4">
+        <div className={t.headIconTile}>
+          <ImageIcon className="h-6 w-6" />
+        </div>
+        <div>
+          <h2 className="text-xl font-semibold text-slate-900">
+            Development photos, video &amp; documents
+          </h2>
+          <p className="mt-2 text-sm leading-relaxed text-slate-600">
+            About the development as a whole. These appear on the development page and on the
+            publisher&rsquo;s profile. Photos and floor plans of each house go in House types.
           </p>
         </div>
-
-        <div className="w-full md:w-80 bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
-          <div className="flex justify-between text-sm font-medium mb-1">
-            <span className="text-slate-700">Media Quality Score</span>
-            <span className={cn(progressPercent >= 100 ? 'text-green-600' : 'text-blue-600')}>
-              {Math.round(progressPercent)}%
-            </span>
-          </div>
-          <Progress value={progressPercent} className="h-2" />
-          <div className="space-y-1 pt-2">
-            <div className="flex items-center gap-2 text-xs">
-              {hasHero ? (
-                <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
-              ) : (
-                <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
-              )}
-              <span className={hasHero ? 'text-slate-600' : 'text-slate-400'}>
-                Hero Image (Required)
-              </span>
-            </div>
-            <div className="flex items-center gap-2 text-xs">
-              {hasMinGallery ? (
-                <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
-              ) : (
-                <AlertCircle className="w-3.5 h-3.5 text-slate-300" />
-              )}
-              <span className={hasMinGallery ? 'text-slate-600' : 'text-slate-400'}>
-                Gallery Images ({galleryCount}/3+)
-              </span>
-            </div>
-            <div className="flex items-center gap-2 text-xs">
-              {hasDocuments ? (
-                <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
-              ) : (
-                <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
-              )}
-              <span className={hasDocuments ? 'text-slate-600' : 'text-slate-400'}>
-                Brochure/Documents (Required)
-              </span>
-            </div>
-          </div>
-        </div>
       </div>
 
-      <div className="space-y-6">
-        {/* Hero Section */}
-        <Card>
-          <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-4">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" /> Hero Image
-            </CardTitle>
-            <CardDescription>
-              The main face of your development. This appears at the top of your listing.
-            </CardDescription>
-            <p className="text-xs text-slate-500">
-              Recommended for cards: 3+ total images so previews look complete.
-            </p>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <UploadSection
-              // Current hero finding logic: category='hero' or photos[0].
-              // Let's pass 'hero' category to be explicit.
-              category="hero"
-              title="Hero Image"
-              description="Upload a high-quality image that best represents your development."
-              icon={Star}
-              isHero={true}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Gallery Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h3 className="text-lg font-semibold text-slate-900">Media Gallery</h3>
-              <p className="mt-1 text-sm text-slate-500">
-                Category-specific photos are optional. The public page uses a labeled placeholder
-                when amenity or outdoor photos are not supplied. Use the category menu on a photo
-                to move it between sections without uploading it again.
-              </p>
-            </div>
-            <TabsList className="bg-slate-100">
-              <TabsTrigger value="gallery">Photos</TabsTrigger>
-              <TabsTrigger value="videos">Videos</TabsTrigger>
-              <TabsTrigger value="docs">
-                Documents
-                {documents.length > 0 && (
-                  <Badge variant="secondary" className="ml-2 h-5 px-1">
-                    {documents.length}
-                  </Badge>
+      <WizardSection label="Photos" hint={sizeHint('image')}>
+        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+          {PHOTO_SLOTS.map(slot => {
+            const inSlot = photosForSlot(photos, slot.id, coverUrl);
+            // A cover that is only held as the draft's heroImage still shows in its slot.
+            const items =
+              slot.id === 'cover' && cover && inSlot.length === 0
+                ? [{ id: 'cover-hero', fileName: 'Cover photo', ...cover }]
+                : inSlot;
+            const missingCover = slot.id === 'cover' && !coverPresent && Boolean(mediaError);
+            return (
+              <div
+                key={slot.id}
+                data-testid={`media-slot-${slot.id}`}
+                className={cn(
+                  'flex flex-col gap-2.5 rounded-lg border bg-white p-3.5',
+                  missingCover ? 'border-red-400' : 'border-slate-200',
                 )}
-              </TabsTrigger>
-            </TabsList>
+              >
+                <div className="flex items-baseline justify-between gap-2">
+                  <div className="text-sm font-semibold text-slate-900">{slot.title}</div>
+                  <span
+                    className={cn(
+                      'rounded-md px-2 py-0.5 text-xs font-semibold',
+                      slot.id === 'cover' ? 'bg-orange-100 text-orange-800' : 'bg-slate-100 text-slate-700',
+                    )}
+                  >
+                    {slot.need}
+                  </span>
+                </div>
+                <p className="text-[13px] leading-snug text-slate-600">{slot.guide}</p>
+                <div className="flex flex-wrap gap-2">
+                  {items.map(item => (
+                    <div
+                      key={item.id}
+                      className="group relative h-16 w-24 overflow-hidden rounded-md border border-slate-200 bg-slate-100"
+                    >
+                      <img
+                        src={item.url}
+                        alt={item.fileName || slot.title}
+                        className="h-full w-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        aria-label={`Remove ${item.fileName || slot.title}`}
+                        onClick={() => remove(item.id)}
+                        className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded bg-black/60 text-white hover:bg-black/80"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                  {slot.max === 1 && items.length >= 1
+                    ? addButton(slot.id, 'Replace')
+                    : addButton(slot.id, 'Add')}
+                </div>
+                {slotError(slot.id)}
+                {hiddenInput(slot.id, IMAGE_ACCEPT, slot.max !== 1)}
+              </div>
+            );
+          })}
+        </div>
+        {mediaError ? (
+          <p role="alert" className="mt-3 text-xs text-red-700">
+            {mediaError}
+          </p>
+        ) : null}
+        {otherPhotos.length > 0 ? (
+          <div data-testid="media-other-photos" className="mt-3.5 rounded-lg border border-slate-200 bg-white p-3.5">
+            <div className="text-sm font-semibold text-slate-900">Other photos</div>
+            <p className="text-[13px] text-slate-600">
+              Saved earlier and kept as they are. They still show on the development page.
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {otherPhotos.map(item => (
+                <div
+                  key={item.id}
+                  className="relative h-16 w-24 overflow-hidden rounded-md border border-slate-200 bg-slate-100"
+                >
+                  <img
+                    src={item.url}
+                    alt={item.fileName || 'Other photo'}
+                    className="h-full w-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    aria-label={`Remove ${item.fileName || 'other photo'}`}
+                    onClick={() => remove(item.id)}
+                    className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded bg-black/60 text-white hover:bg-black/80"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
+        ) : null}
+      </WizardSection>
 
-          <TabsContent value="gallery" className="mt-0 space-y-6">
-            <Card>
-              <CardContent className="pt-6 grid gap-8">
-                <UploadSection
-                  category="outdoors"
-                  title="Exterior & Outdoors"
-                  description="Facades, gardens, and landscaping."
-                  icon={TreePine}
-                />
-                <UploadSection
-                  category="general"
-                  title="Development Overview"
-                  description="Site maps, master plan images, and other development-wide visuals."
-                  icon={ImageIcon}
-                />
-                <UploadSection
-                  category="amenities"
-                  title="Amenities"
-                  description="Pool, gym, and shared spaces."
-                  icon={Dumbbell}
-                />
-                <UploadSection
-                  category="photo"
-                  title="Location & Views"
-                  description="Neighborhood and scenic views."
-                  icon={MapPin}
-                />
-                <UploadSection
-                  category="render"
-                  title="Aerial & Drone"
-                  description="Site overview and scale."
-                  icon={Layout}
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
+      <WizardSection label="Video" hint={sizeHint('video')}>
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-3.5">
+          <div className="flex items-center gap-3">
+            <Video className="h-5 w-5 text-slate-500" />
+            <div>
+              <div className="text-sm font-semibold text-slate-900">Development video</div>
+              <div className="text-[13px] text-slate-600">
+                {videos[0]?.fileName ?? 'A walkthrough or drone clip. Optional.'}
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {videos[0] ? (
+              <button
+                type="button"
+                aria-label="Remove video"
+                onClick={() => remove(videos[0].id)}
+                className="flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            ) : null}
+            {addButton('video', videos[0] ? 'Replace' : 'Upload video')}
+          </div>
+          <div className="w-full">{slotError('video')}</div>
+          {hiddenInput('video', VIDEO_ACCEPT, false)}
+        </div>
+      </WizardSection>
 
-          <TabsContent value="videos" className="mt-0 space-y-4">
-            <Card>
-              <CardContent className="pt-6">
-                <UploadSection
-                  category="videos"
-                  title="Videos & Virtual Tours"
-                  description="Upload walkthroughs (MP4)."
-                  icon={Video}
-                  acceptedTypes="video/*"
-                />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="pt-6 text-sm text-slate-600">
-                Developer media accepts verified uploaded files. External video links are not used as
-                attachment authority.
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="docs" className="mt-0">
-            <Card>
-              <CardContent className="pt-6">
-                <UploadSection
-                  category="document"
-                  title="Brochures & Floor Plans"
-                  description="Downloadable PDFs for buyers."
-                  icon={FileText}
-                  acceptedTypes="application/pdf"
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
+      <WizardSection label="Documents for buyers" hint={sizeHint('pdf')}>
+        <div className="flex flex-col gap-2.5">
+          {DOCUMENT_SLOTS.map(slot => {
+            const doc = docBySlot[slot.id];
+            return (
+              <div
+                key={slot.id}
+                data-testid={`media-doc-${slot.id}`}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-3.5"
+              >
+                <div className="max-w-[70%]">
+                  <div className="text-sm font-semibold text-slate-900">{slot.title}</div>
+                  <div className="text-[13px] leading-snug text-slate-600">{slot.guide}</div>
+                  {doc ? (
+                    <div className="mt-1.5 flex items-center gap-1.5 text-xs text-slate-700">
+                      <FileText className="h-4 w-4 text-red-600" />
+                      <span className="truncate">{doc.fileName || 'Document.pdf'}</span>
+                    </div>
+                  ) : null}
+                </div>
+                <div className="flex items-center gap-2">
+                  {doc ? (
+                    <button
+                      type="button"
+                      aria-label={`Remove ${slot.title}`}
+                      onClick={() => remove(doc.id)}
+                      className="flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  ) : null}
+                  {addButton(slot.id, doc ? 'Replace PDF' : 'Upload PDF')}
+                </div>
+                <div className="w-full">{slotError(slot.id)}</div>
+                {hiddenInput(slot.id, PDF_TYPE, false)}
+              </div>
+            );
+          })}
+          {otherDocs.length > 0 ? (
+            <div data-testid="media-other-docs" className="rounded-lg border border-slate-200 bg-white p-3.5">
+              <div className="text-sm font-semibold text-slate-900">Other documents</div>
+              <p className="text-[13px] text-slate-600">
+                Saved earlier and not matched to a slot above. Remove any you no longer want.
+              </p>
+              <ul className="mt-2 flex flex-col gap-1.5">
+                {otherDocs.map(doc => (
+                  <li key={doc.id} className="flex items-center justify-between gap-2 text-xs text-slate-700">
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <FileText className="h-4 w-4 flex-none text-red-600" />
+                      <span className="truncate">{doc.fileName || doc.title || 'Document'}</span>
+                    </span>
+                    <button
+                      type="button"
+                      aria-label={`Remove ${doc.fileName || doc.title || 'document'}`}
+                      onClick={() => remove(doc.id)}
+                      className="flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 hover:bg-slate-50"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </div>
+      </WizardSection>
     </div>
   );
+}
+
+function isDocumentSlot(slot: SlotKey): slot is DocumentSlotId {
+  return DOCUMENT_SLOTS.some(d => d.id === slot);
 }

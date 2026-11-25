@@ -256,30 +256,23 @@ export function normalizePropertyForUI(raw: any): PropertyCardProps | null {
     hasVirtualTour,
     hasPublicDocuments,
     highlights: (() => {
-      const source =
-        raw.highlights ||
-        details.propertyHighlights ||
-        details.amenitiesFeatures ||
-        raw.amenities ||
-        raw.features;
-
-      const formatHighlight = (s: string) => {
-        if (!s || typeof s !== 'string') return s;
-        // Parse snake_case or kebab-case
-        return s
-          .split(/[_-\s]+/)
-          .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-          .join(' ');
-      };
+      // Only highlights that were actually stored. Never invented from amenities or
+      // features, and never re-cased: they are shown exactly as the publisher wrote them.
+      const source = raw.highlights;
+      const clean = (list: unknown[]): string[] =>
+        list
+          .filter((item): item is string => typeof item === 'string')
+          .map(item => item.trim())
+          .filter(Boolean);
 
       if (Array.isArray(source)) {
-        return source.map(formatHighlight);
+        return source.length ? clean(source) : undefined;
       }
 
       if (typeof source === 'string') {
         try {
           const parsed = JSON.parse(source);
-          return Array.isArray(parsed) ? parsed.map(formatHighlight) : undefined;
+          return Array.isArray(parsed) && parsed.length ? clean(parsed) : undefined;
         } catch (e) {
           return undefined;
         }

@@ -91,6 +91,8 @@ type DevelopmentRow = {
   name: string;
   slug: string | null;
   description: string | null;
+  tagline?: string | null;
+  subtitle?: string | null;
   images: unknown;
   canonicalPlaceId: string | null;
   locationLabels: string[];
@@ -357,6 +359,8 @@ export class PublicDevelopmentSearchService {
         name: developments.name,
         slug: developments.slug,
         description: developments.description,
+        tagline: developments.tagline,
+        subtitle: developments.subtitle,
         images: developments.images,
         developmentType: developments.developmentType,
         transactionType: developments.transactionType,
