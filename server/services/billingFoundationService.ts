@@ -1194,7 +1194,7 @@ export async function requestPaidLaunchAccessInvoice(input: {
     // not be rolled back from payment_under_review to pending_payment.
     if (lockedSubscription) {
       const [underReview] = await tx
-        .select({ id: billingInvoices.id, paymentReference: billingInvoices.paymentReference })
+        .select()
         .from(billingInvoices)
         .where(
           and(
@@ -1204,10 +1204,18 @@ export async function requestPaidLaunchAccessInvoice(input: {
         )
         .limit(1);
       if (underReview) {
-        throw new TRPCError({
-          code: 'CONFLICT',
-          message: `Payment under review (ref ${underReview.paymentReference}). We will unlock access once finance confirms.`,
-        });
+        // Idempotent: hand back the order already under review so the client
+        // shows Finance review. No second order, no subscription rewrite.
+        return {
+          ownerType: owner.ownerType,
+          ownerId: owner.ownerId,
+          plan,
+          subscription: lockedSubscription,
+          invoice: underReview,
+          bankDetails,
+          paymentReference: underReview.paymentReference,
+          reused: true,
+        };
       }
     }
 

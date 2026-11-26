@@ -203,6 +203,9 @@ describe('PlanGateDialog', () => {
     expect(screen.getByTestId('agent-access-panel')).toHaveAttribute('data-step', '3');
     expect(screen.getByRole('heading', { name: 'Finance review' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Next' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /I.ve paid/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /proof|upload|submit/i })).not.toBeInTheDocument();
+    expect(submitMock).not.toHaveBeenCalled();
   });
 
   it('shows a rejected payment reason at step 2', () => {

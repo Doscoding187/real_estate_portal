@@ -83,7 +83,13 @@ describe('agent Launch Access status (single source of truth)', () => {
     expect(guardIndex).toBeGreaterThan(0);
     // The refusal happens before the subscription can be rolled back to pending_payment.
     expect(upsertIndex).toBeGreaterThan(guardIndex);
-    expect(billing.slice(guardIndex, upsertIndex)).toContain("eq(billingInvoices.status, 'submitted')");
-    expect(billing.slice(guardIndex, upsertIndex)).toContain("code: 'CONFLICT'");
+    expect(billing.slice(guardIndex, upsertIndex)).toContain(
+      "eq(billingInvoices.status, 'submitted')",
+    );
+    // Idempotent: returns the existing submitted order instead of erroring.
+    const guard = billing.slice(guardIndex, upsertIndex);
+    expect(guard).toContain('invoice: underReview');
+    expect(guard).toContain('reused: true');
+    expect(guard).not.toContain('insert(');
   });
 });
