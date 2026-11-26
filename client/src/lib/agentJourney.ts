@@ -1,4 +1,5 @@
 import type {
+  AgentLaunchAccess,
   AgentRecommendedNextStep,
   AgentSubscriptionDisplayStatus,
 } from '@shared/agentJourney';
@@ -217,17 +218,45 @@ export function isAgentPlanEntitled(
     | {
         fullFeaturesUnlocked?: boolean;
         subscriptionStatus?: string | null;
+        launchAccess?: Pick<AgentLaunchAccess, 'paid'> | null;
       }
     | null
     | undefined,
 ) {
+  // The server's launchAccess.paid is the single source of truth (canonical
+  // Launch Access entitlement; independent of profile completion). The older
+  // fullFeaturesUnlocked rule only applies to payloads without it.
+  if (status?.launchAccess) return status.launchAccess.paid === true;
   return (
     Boolean(status?.fullFeaturesUnlocked) &&
     PAID_SUBSCRIPTION_STATUSES.includes(String(status?.subscriptionStatus))
   );
 }
 
+/** The Launch Access order finance is still reviewing, if any. */
+export function getAgentPendingOrder(
+  status:
+    | { launchAccess?: Pick<AgentLaunchAccess, 'state' | 'pendingOrder'> | null }
+    | null
+    | undefined,
+): { reference: string | null } | null {
+  const launchAccess = status?.launchAccess;
+  if (!launchAccess || launchAccess.state !== 'under_review') return null;
+  return { reference: launchAccess.pendingOrder?.reference ?? null };
+}
+
+export function getAgentPaymentUnderReviewCopy(reference?: string | null): {
+  title: string;
+  description: string;
+} {
+  return {
+    title: 'Payment under review',
+    description: `We'll unlock listings once finance confirms${reference ? ` (ref ${reference})` : ''}.`,
+  };
+}
+
 type PublishStatus = {
+  launchAccess?: Pick<AgentLaunchAccess, 'paid'> | null;
   fullFeaturesUnlocked?: boolean;
   subscriptionStatus?: string | null;
   recommendedNextStep?: AgentRecommendedNextStep;

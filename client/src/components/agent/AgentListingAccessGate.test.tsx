@@ -51,6 +51,48 @@ describe('AgentListingAccessGate', () => {
     expect(gate.result.current).toBe(true);
   });
 
+  it('unlocks for a server-paid agent even before the profile is complete', () => {
+    authMock.mockReturnValue({ user: { role: 'agent' } });
+    statusMock.mockReturnValue({
+      status: {
+        recommendedNextStep: 'publish_profile',
+        fullFeaturesUnlocked: false,
+        subscriptionStatus: 'active',
+        launchAccess: { paid: true, state: 'paid', pendingOrder: null },
+        profileCompletionScore: 90,
+        entitlements: { canPublishListings: true },
+      },
+      isLoading: false,
+      error: null,
+    });
+    render(<AgentListingAccessGate>Wizard</AgentListingAccessGate>);
+    expect(screen.getByText('Wizard')).toBeInTheDocument();
+  });
+
+  it('shows payment under review with the reference instead of choose-a-plan copy', () => {
+    authMock.mockReturnValue({ user: { role: 'agent' } });
+    statusMock.mockReturnValue({
+      status: {
+        recommendedNextStep: 'await_payment_review',
+        fullFeaturesUnlocked: false,
+        subscriptionStatus: 'payment_under_review',
+        launchAccess: {
+          paid: false,
+          state: 'under_review',
+          pendingOrder: { reference: 'PLAN990101-8344DC' },
+        },
+        entitlements: { canPublishListings: false },
+      },
+      isLoading: false,
+      error: null,
+    });
+    render(<AgentListingAccessGate>Wizard</AgentListingAccessGate>);
+    expect(screen.queryByText('Wizard')).not.toBeInTheDocument();
+    expect(screen.queryByText('Listings unlock with a plan')).not.toBeInTheDocument();
+    expect(screen.getByText('Payment under review')).toBeInTheDocument();
+    expect(screen.getByText(/once finance confirms \(ref PLAN990101-8344DC\)/)).toBeInTheDocument();
+  });
+
   it('fails closed with a retry when the status cannot be confirmed', async () => {
     authMock.mockReturnValue({ user: { role: 'agent' } });
     statusMock.mockReturnValue({
