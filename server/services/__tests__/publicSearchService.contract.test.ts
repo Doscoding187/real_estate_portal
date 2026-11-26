@@ -520,4 +520,61 @@ describe('publicSearchService unit_type development result shape', () => {
     expect(result.cards.map(c => c.id)).toEqual(['p-1']);
     expect(mockSearchDevelopments).not.toHaveBeenCalled();
   });
+
+  it('reaches unit types in later developments: filters run before paging and the total is exact', async () => {
+    const items = Array.from({ length: 30 }, (_, index) => {
+      const base = developmentItem(index + 1);
+      const price = index >= 20 ? 9 : 4;
+      return {
+        ...base,
+        unitTypes: [{ ...base.unitTypes[0], id: `unit-${index + 1}`, priceFrom: price, priceTo: price }],
+      };
+    });
+    mockSearchDevelopments.mockResolvedValue({
+      items, total: 30, page: 0, pageSize: 50, hasMore: false, locationState: 'resolved', unpricedHiddenCount: 0,
+    });
+    const first = await publicSearchService.searchInventory({
+      canonicalPlaceId: PLACE_ID, listingType: 'sale', listingSource: 'development', pageSize: 5, minPrice: 5,
+      developmentResultShape: 'unit_type',
+    });
+    expect(first.total).toBe(10);
+    expect(first.cards).toHaveLength(5);
+    expect(first.hasMore).toBe(true);
+    mockLoadPlaceProjection.mockResolvedValueOnce(projection('locality'));
+    const second = await publicSearchService.searchInventory({
+      canonicalPlaceId: PLACE_ID, listingType: 'sale', listingSource: 'development', pageSize: 5, minPrice: 5, page: 1,
+      developmentResultShape: 'unit_type',
+    });
+    expect(second.cards.map(c => (c as any).unitTypeId)).toEqual([
+      'unit-26', 'unit-27', 'unit-28', 'unit-29', 'unit-30',
+    ]);
+    expect(second.total).toBe(10);
+    expect(second.hasMore).toBe(false);
+  });
+
+  it('warns and stops at the development bound', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    mockSearchDevelopments.mockImplementation(async (input: { page: number }) => ({
+      items: Array.from({ length: 50 }, (_, index) => developmentItem(input.page * 50 + index + 1)),
+      total: 1000, page: input.page, pageSize: 50, hasMore: true, locationState: 'resolved', unpricedHiddenCount: 0,
+    }));
+    const result = await publicSearchService.searchInventory({
+      canonicalPlaceId: PLACE_ID, listingType: 'sale', listingSource: 'development', pageSize: 10,
+      developmentResultShape: 'unit_type',
+    });
+    expect(mockSearchDevelopments).toHaveBeenCalledTimes(4);
+    expect(result.total).toBe(200);
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it('never runs an unfiltered development search when the place cannot be searched', async () => {
+    mockLoadPlaceProjection.mockResolvedValueOnce({ ...projection('locality'), labels: new Map() });
+    const result = await publicSearchService.searchInventory({
+      canonicalPlaceIds: [PLACE_ID, 'pl-place-01-000000000000000000000003'], listingType: 'sale',
+      developmentResultShape: 'unit_type',
+    });
+    expect(result.cards).toEqual([]);
+    expect(mockSearchDevelopments).not.toHaveBeenCalled();
+  });
 });

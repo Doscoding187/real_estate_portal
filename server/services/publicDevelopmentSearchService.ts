@@ -35,7 +35,7 @@ import {
   listDevelopmentPlaceGeography,
   type DevelopmentPlaceGeography,
 } from './developmentPlaceAssignmentService';
-import { developmentSearchPlaceIds } from './placeLocalityRollupService';
+import { developmentSearchPlaceIds, ROLLUP_MAX_PLACE_IDS } from './placeLocalityRollupService';
 import {
   COMMERCIAL_PUBLIC_JOURNEY_HANDOFF_MESSAGE,
   isCommercialMarketingPropertyType,
@@ -347,7 +347,13 @@ export class PublicDevelopmentSearchService {
       const rolled = await Promise.all(
         input.canonicalPlaceIds.map(placeId => developmentSearchPlaceIds(db as any, placeId)),
       );
-      const searchPlaceIds = [...new Set(rolled.flat())];
+      let searchPlaceIds = [...new Set(rolled.flat())];
+      if (searchPlaceIds.length > ROLLUP_MAX_PLACE_IDS) {
+        console.warn(
+          `[publicDevelopmentSearch] ${input.canonicalPlaceIds.length} searched places roll up to ${searchPlaceIds.length}; cut to ${ROLLUP_MAX_PLACE_IDS}`,
+        );
+        searchPlaceIds = searchPlaceIds.slice(0, ROLLUP_MAX_PLACE_IDS);
+      }
       const matchingDevelopmentIds = searchPlaceIds.length
         ? await listDevelopmentIdsForCanonicalPlaces(searchPlaceIds)
         : [];

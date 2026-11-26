@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const SUBURB = 'pl-place-01-aaaaaaaaaaaaaaaaaaaaaaaa';
 const CITY = 'pl-place-01-bbbbbbbbbbbbbbbbbbbbbbbb';
+const BIG = 'pl-place-01-ffffffffffffffffffffffff';
 const OTHER_CITY = 'pl-place-01-cccccccccccccccccccccccc';
 
 const developmentRow = {
@@ -51,6 +52,7 @@ const mocks = vi.hoisted(() => ({
   assignedPlaceId: 'pl-place-01-aaaaaaaaaaaaaaaaaaaaaaaa',
   queryResults: [] as unknown[][],
   matched: false,
+  lastPlaceIds: [] as string[],
 }));
 
 vi.mock('../../db-connection', () => ({
@@ -69,8 +71,13 @@ vi.mock('../../db-connection', () => ({
 }));
 
 vi.mock('../placeLocalityRollupService', () => ({
+  ROLLUP_MAX_PLACE_IDS: 3,
   developmentSearchPlaceIds: async (_db: unknown, placeId: string) =>
-    placeId === CITY ? [CITY, SUBURB] : [placeId],
+    placeId === CITY
+      ? [CITY, SUBURB]
+      : placeId === BIG
+        ? ['pl-place-01-dddddddddddddddddddddddd', 'pl-place-01-eeeeeeeeeeeeeeeeeeeeeeee', OTHER_CITY, SUBURB]
+        : [placeId],
 }));
 
 vi.mock('../publicDevelopmentEligibility', () => ({
@@ -83,6 +90,7 @@ vi.mock('../developmentPlaceAssignmentService', () => ({
     return mocks.matched ? [7] : [];
   },
   listDevelopmentIdsForCanonicalPlaces: async (placeIds: string[]) => {
+    mocks.lastPlaceIds = placeIds;
     mocks.matched = placeIds.includes(mocks.assignedPlaceId);
     return mocks.matched ? [7] : [];
   },
@@ -119,5 +127,13 @@ describe('unit-type cards follow the city rollup', () => {
 
   it('does not return them for an unrelated city', async () => {
     expect(await unitTypeCardsFor([OTHER_CITY])).toEqual([]);
+  });
+
+  it('caps the deduplicated union across several searched places and warns', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    await unitTypeCardsFor([BIG, CITY]);
+    expect(mocks.lastPlaceIds).toHaveLength(3);
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
   });
 });

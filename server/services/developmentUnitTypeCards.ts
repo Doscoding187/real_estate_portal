@@ -97,7 +97,9 @@ function finitePositive(value: unknown): number | null {
  * One card per available unit type of a development. A unit type is available
  * when the shared projection (the same one the development page reads) states
  * availabilityState 'available'; unpriced unit types and other transaction
- * types yield no card. Unit gallery images are preferred, with the development
+ * types yield no card. A unit type with no published price gets no card, and a unit type
+ * whose stock is not stated (availabilityState 'not_stated') gets none either: an unknown
+ * price or unknown stock is hidden here, never shown as a guess. Unit gallery images are preferred, with the development
  * gallery used only when the unit type has no image. With requirePhoto set, a
  * card needs an image from either gallery.
  * Prices are already transaction-aware in the projection (basePriceFrom for
