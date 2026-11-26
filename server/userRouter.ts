@@ -315,7 +315,11 @@ export const userRouter = router({
     });
 
     const [updated] = await db.select().from(users).where(eq(users.id, input.userId));
-    return updated ? toSafeAdminUser(updated) : updated;
+    // sessionVersion is a revocation counter, not a credential: the role/session audit
+    // contract (b07) requires the caller to see that the role change revoked sessions.
+    return updated
+      ? { ...toSafeAdminUser(updated), sessionVersion: updated.sessionVersion }
+      : updated;
   }),
 
   /**
