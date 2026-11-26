@@ -17,6 +17,7 @@ import { canonicalPlaceSelectionFromResolved } from '@/lib/canonicalPlaceSelecti
 import { applySeo } from '@/lib/seo';
 import { ProNavigation } from '@/components/services/ProNavigation';
 import { useServiceProviderOnboardingStatus } from '@/hooks/useServiceProviderOnboardingStatus';
+import { ProviderBusinessPresenceWorkspace } from '@/features/services/onboarding/ProviderBusinessPresenceWorkspace';
 
 type EditableCoverageArea = {
   id?: number;
@@ -259,12 +260,8 @@ export default function ProProfilePage() {
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-8 md:px-6">
       <header>
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-          Partner Setup
-        </p>
-        <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
-          Directory and partner profile configuration
-        </h1>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Service business workspace</p>
+        <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Manage your business website</h1>
       </header>
       <ProNavigation />
 
@@ -345,9 +342,11 @@ export default function ProProfilePage() {
 
       {profile && (
         <>
+          <ProviderBusinessPresenceWorkspace />
+
           <Card>
             <CardHeader>
-              <CardTitle>Public profile</CardTitle>
+              <CardTitle>Business identity and contact</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <Input

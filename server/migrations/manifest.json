@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0197_drop_seller_prospects_province.sql",
+  "expectedHead": "0200_services_provider_credentials.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -2082,6 +2082,36 @@
       "statementPolicy": "approved-exception",
       "requiredReferenceDataVersion": null,
       "approvalReference": "DBX-PLACE-CANONICAL-CUTOVER-2026-10-26-Edward"
+    },
+    {
+      "sequence": 198,
+      "filename": "0198_services_provider_website_onboarding.sql",
+      "checksum": "13895f9cbe250c47524fe19ba5a4110b96655389d1992c7da4a172f29389dd00",
+      "parent": "0197_drop_seller_prospects_province.sql",
+      "parentChecksum": "a4882bef419ae95e3401ef5f619fcb32f3d6fecd544fd115d4c5ee0aa8568266",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 199,
+      "filename": "0199_services_provider_projects.sql",
+      "checksum": "02fa6627714178f92ba165ac78c9bbf02a8eab8d21f4cf35133d1bb58375e053",
+      "parent": "0198_services_provider_website_onboarding.sql",
+      "parentChecksum": "13895f9cbe250c47524fe19ba5a4110b96655389d1992c7da4a172f29389dd00",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 200,
+      "filename": "0200_services_provider_credentials.sql",
+      "checksum": "0bc2057f3da1e826792155efea1bf8b921d448ccc9c9f3859664236f783bdb87",
+      "parent": "0199_services_provider_projects.sql",
+      "parentChecksum": "02fa6627714178f92ba165ac78c9bbf02a8eab8d21f4cf35133d1bb58375e053",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
     }
   ]
 }

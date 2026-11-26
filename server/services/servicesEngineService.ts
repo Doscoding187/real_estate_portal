@@ -23,20 +23,58 @@ import {
   serviceProviderReviews,
   serviceProviderReviewReports,
   serviceProviderSubscriptions,
+  serviceProviderProjects,
+  serviceProviderCredentials,
+  SERVICE_PROVIDER_BUSINESS_TYPE_VALUES,
+  SERVICE_PROVIDER_WEBSITE_TEMPLATE_VALUES,
+  SERVICE_PROVIDER_SUBMISSION_STATUS_VALUES,
+  SERVICE_PROVIDER_PROJECT_MODERATION_STATUS_VALUES,
+  SERVICE_PROVIDER_CREDENTIAL_STATUS_VALUES,
   users,
 } from '../../drizzle/schema';
 import { getDb } from '../db';
 import { AuditActions } from '../_core/auditLog';
 import { isCanonicalPlaceId } from '../../shared/placeAuthority';
 import { loadCanonicalPlaceSearchProjection } from './canonicalPlaceSearchService';
+import { computeProviderWebsiteReadiness } from './providerWebsiteReadiness';
+import {
+  createServiceProviderCredentialDeliveryToken,
+  createServiceProviderCredentialS3DeliveryUrl,
+  createServiceProviderCredentialS3UploadUrl,
+  createServiceProviderCredentialUploadReservation,
+  inspectServiceProviderCredentialS3Object,
+  SERVICE_PROVIDER_CREDENTIAL_MAX_BYTES,
+  verifyServiceProviderCredentialUploadReservation,
+} from './serviceProviderCredentialStorage';
+import {
+  buildLocalMediaUploadUrl,
+  getMediaStorageAdapter,
+  deleteLocalMediaObject,
+  inspectLocalMediaObject,
+} from '../_core/mediaStorage';
 
 export type ServiceCategory = (typeof SERVICE_CATEGORY_VALUES)[number];
 export type ServiceIntentStage = (typeof SERVICE_INTENT_STAGE_VALUES)[number];
 export type ServiceLeadEventType = (typeof SERVICE_LEAD_EVENT_TYPE_VALUES)[number];
 export type ServiceSourceSurface = (typeof SERVICE_SOURCE_SURFACE_VALUES)[number];
 export type ServiceLeadStatus = (typeof SERVICE_LEAD_STATUS_VALUES)[number];
+export type ServiceProviderBusinessType = (typeof SERVICE_PROVIDER_BUSINESS_TYPE_VALUES)[number];
+export type ServiceProviderWebsiteTemplate =
+  (typeof SERVICE_PROVIDER_WEBSITE_TEMPLATE_VALUES)[number];
+export type ServiceProviderSubmissionStatus =
+  (typeof SERVICE_PROVIDER_SUBMISSION_STATUS_VALUES)[number];
+export type ServiceProviderSocialLinks = {
+  facebook: string | null;
+  instagram: string | null;
+  linkedin: string | null;
+};
 
-export const SERVICE_PROVIDER_PUBLICATION_DECISIONS = ['publish', 'unpublish', 'reject'] as const;
+export const SERVICE_PROVIDER_PUBLICATION_DECISIONS = [
+  'publish',
+  'unpublish',
+  'reject',
+  'request_changes',
+] as const;
 
 export type ServiceProviderPublicationDecision =
   (typeof SERVICE_PROVIDER_PUBLICATION_DECISIONS)[number];
@@ -122,9 +160,38 @@ export type ServiceProviderPublicationReadinessInput = {
 };
 
 export type ServiceProviderPublicationQueueEntry = ServiceProviderPublicationReadiness & {
+  submissionStatus: ServiceProviderSubmissionStatus;
+  submittedAt: string | null;
+  businessType: ServiceProviderBusinessType | null;
+  websiteTemplate: ServiceProviderWebsiteTemplate;
+  logoUrl: string | null;
   headline: string | null;
   bio: string | null;
   websiteUrl: string | null;
+  reviewedAt: string | null;
+  reviewNote: string | null;
+  projects: Array<{
+    id: number;
+    title: string;
+    description: string | null;
+    category: ServiceCategory;
+    canonicalPlaceId: string | null;
+    locationLabel: string | null;
+    coverImageUrl: string | null;
+    gallery: string[];
+    moderationStatus: (typeof SERVICE_PROVIDER_PROJECT_MODERATION_STATUS_VALUES)[number];
+  }>;
+  credentials: Array<{
+    id: number;
+    credentialType: string;
+    title: string;
+    issuingBody: string | null;
+    reference: string | null;
+    status: (typeof SERVICE_PROVIDER_CREDENTIAL_STATUS_VALUES)[number];
+    originalFileName?: string;
+    mimeType?: string;
+    byteSize?: number;
+  }>;
   contactEmail: string | null;
   contactPhone: string | null;
   serviceCategories: ServiceCategory[];
@@ -206,6 +273,37 @@ type ProviderProfileResult = {
   headline: string | null;
   bio: string | null;
   websiteUrl: string | null;
+  businessType: ServiceProviderBusinessType | null;
+  websiteTemplate: ServiceProviderWebsiteTemplate;
+  businessYearsInOperation: number | null;
+  operatingHours: string | null;
+  socialLinks: ServiceProviderSocialLinks;
+  submissionStatus: ServiceProviderSubmissionStatus;
+  submittedAt: string | null;
+  reviewedAt: string | null;
+  reviewNote: string | null;
+  projects: Array<{
+    id: number;
+    title: string;
+    description: string | null;
+    category: ServiceCategory;
+    canonicalPlaceId: string | null;
+    locationLabel: string | null;
+    coverImageUrl: string | null;
+    gallery: string[];
+    moderationStatus: (typeof SERVICE_PROVIDER_PROJECT_MODERATION_STATUS_VALUES)[number];
+  }>;
+  credentials: Array<{
+    id: number;
+    credentialType: string;
+    title: string;
+    issuingBody: string | null;
+    reference: string | null;
+    status: (typeof SERVICE_PROVIDER_CREDENTIAL_STATUS_VALUES)[number];
+    originalFileName?: string;
+    mimeType?: string;
+    byteSize?: number;
+  }>;
   averageRating: number;
   reviewCount: number;
   acceptingRequests: boolean | null;
@@ -255,9 +353,17 @@ type PublicProviderProfileResult = Omit<
   | 'subscriptionStatus'
   | 'contactEmail'
   | 'contactPhone'
+  | 'submissionStatus'
+  | 'submittedAt'
+  | 'reviewedAt'
+  | 'reviewNote'
+  | 'projects'
+  | 'credentials'
   | 'services'
   | 'locations'
 > & {
+  projects: Array<Omit<ProviderProfileResult['projects'][number], 'moderationStatus'>>;
+  credentials: Array<Omit<ProviderProfileResult['credentials'][number], 'reference' | 'status' | 'originalFileName' | 'mimeType' | 'byteSize'>>;
   services: Array<Omit<ProviderProfileResult['services'][number], 'isActive'>>;
   locations: ProviderProfileResult['locations'];
   responsePerformance: LeadResponsePerformance;
@@ -359,6 +465,55 @@ function providerGallery(metadata: unknown): string[] {
   return raw
     .map(item => (typeof item === 'string' ? item.trim() : ''))
     .filter(item => /^(https?:\/\/|\/)/i.test(item))
+    .slice(0, 12);
+}
+
+function providerBusinessYears(metadata: unknown): number | null {
+  const value = providerMetadataRecord(metadata).businessYearsInOperation;
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed >= 0 && parsed <= 150 ? parsed : null;
+}
+
+function providerOperatingHours(metadata: unknown): string | null {
+  const value = providerMetadataRecord(metadata).operatingHours;
+  return typeof value === 'string' && value.trim() ? value.trim().slice(0, 500) : null;
+}
+
+function providerSocialLinks(metadata: unknown): ServiceProviderSocialLinks {
+  const value = providerMetadataRecord(metadata).socialLinks;
+  const links = value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+  const safeUrl = (input: unknown) => {
+    if (typeof input !== 'string') return null;
+    try {
+      const url = new URL(input.trim());
+      return url.protocol === 'http:' || url.protocol === 'https:' ? url.toString() : null;
+    } catch {
+      return null;
+    }
+  };
+  return {
+    facebook: safeUrl(links.facebook),
+    instagram: safeUrl(links.instagram),
+    linkedin: safeUrl(links.linkedin),
+  };
+}
+
+function normalizeImageUrls(value: unknown): string[] {
+  let parsed = value;
+  if (typeof parsed === 'string') {
+    try {
+      parsed = JSON.parse(parsed);
+    } catch {
+      return [];
+    }
+  }
+  if (!Array.isArray(parsed)) return [];
+  return parsed
+    .map(item => (typeof item === 'string' ? item.trim() : ''))
+    .filter(item => /^https?:\/\//i.test(item))
     .slice(0, 12);
 }
 
@@ -760,6 +915,11 @@ export type UpsertProviderProfileInput = {
   headline?: string | null;
   bio?: string | null;
   websiteUrl?: string | null;
+  businessType?: ServiceProviderBusinessType | null;
+  websiteTemplate?: ServiceProviderWebsiteTemplate;
+  businessYearsInOperation?: number | null;
+  operatingHours?: string | null;
+  socialLinks?: Partial<ServiceProviderSocialLinks> | null;
   contactEmail?: string | null;
   contactPhone?: string | null;
   logoUrl?: string | null;
@@ -907,6 +1067,12 @@ export class ServicesEngineService {
         profileHeadline: serviceProviderProfiles.headline,
         profileBio: serviceProviderProfiles.bio,
         profileWebsiteUrl: serviceProviderProfiles.websiteUrl,
+        profileBusinessType: serviceProviderProfiles.businessType,
+        profileWebsiteTemplate: serviceProviderProfiles.websiteTemplate,
+        profileSubmissionStatus: serviceProviderProfiles.submissionStatus,
+        profileSubmittedAt: serviceProviderProfiles.submittedAt,
+        profileReviewedAt: serviceProviderProfiles.reviewedAt,
+        profileReviewNote: serviceProviderProfiles.reviewNote,
         profileContactEmail: serviceProviderProfiles.contactEmail,
         profileContactPhone: serviceProviderProfiles.contactPhone,
         profileModerationTier: serviceProviderProfiles.moderationTier,
@@ -952,11 +1118,53 @@ export class ServicesEngineService {
       .from(serviceProviderLocations)
       .where(eq(serviceProviderLocations.providerId, providerId))
       .orderBy(desc(serviceProviderLocations.isPrimary), serviceProviderLocations.id);
+    const projectRows = await db
+      .select({
+        id: serviceProviderProjects.id,
+        title: serviceProviderProjects.title,
+        description: serviceProviderProjects.description,
+        category: serviceProviderProjects.serviceCategory,
+        canonicalPlaceId: serviceProviderProjects.canonicalPlaceId,
+        coverImageUrl: serviceProviderProjects.coverImageUrl,
+        gallery: serviceProviderProjects.gallery,
+        moderationStatus: serviceProviderProjects.moderationStatus,
+      })
+      .from(serviceProviderProjects)
+      .where(eq(serviceProviderProjects.providerId, providerId))
+      .orderBy(desc(serviceProviderProjects.createdAt), desc(serviceProviderProjects.id));
+    const credentialRows = await db
+      .select({
+        id: serviceProviderCredentials.id,
+        credentialType: serviceProviderCredentials.credentialType,
+        title: serviceProviderCredentials.title,
+        issuingBody: serviceProviderCredentials.issuingBody,
+        reference: serviceProviderCredentials.reference,
+        status: serviceProviderCredentials.status,
+        originalFileName: serviceProviderCredentials.originalFileName,
+        mimeType: serviceProviderCredentials.mimeType,
+        byteSize: serviceProviderCredentials.byteSize,
+      })
+      .from(serviceProviderCredentials)
+      .where(eq(serviceProviderCredentials.providerId, providerId))
+      .orderBy(desc(serviceProviderCredentials.createdAt), desc(serviceProviderCredentials.id));
     const locationPlaceIds = locations
       .map(location => location.canonicalPlaceId)
       .filter((placeId): placeId is string => isCanonicalPlaceId(placeId));
     const locationProjection = await loadCanonicalPlaceSearchProjection(db as never, {
       placeIds: locationPlaceIds,
+    });
+    const projectPlaceIds: string[] = Array.from(
+      new Set<string>(
+        projectRows.flatMap(project =>
+          typeof project.canonicalPlaceId === 'string' &&
+          isCanonicalPlaceId(project.canonicalPlaceId)
+            ? [project.canonicalPlaceId]
+            : [],
+        ),
+      ),
+    );
+    const projectPlaceProjection = await loadCanonicalPlaceSearchProjection(db as never, {
+      placeIds: projectPlaceIds,
     });
 
     const reviewRows = await db
@@ -1009,6 +1217,52 @@ export class ServicesEngineService {
         },
       ];
     });
+    const projectsResult = projectRows
+      .filter(project => includePrivate || project.moderationStatus === 'published')
+      .flatMap(project => {
+        const canonicalPlaceId = project.canonicalPlaceId;
+        const locationLabel = canonicalPlaceId
+          ? projectPlaceProjection.labels.get(canonicalPlaceId)?.label || null
+          : null;
+        if (
+          canonicalPlaceId &&
+          (!isCanonicalPlaceId(canonicalPlaceId) ||
+            !locationLabel ||
+            !projectPlaceProjection.executions.has(canonicalPlaceId))
+        ) {
+          return [];
+        }
+        return [
+          {
+            id: Number(project.id),
+            title: project.title,
+            description: project.description || null,
+            category: project.category as ServiceCategory,
+            canonicalPlaceId,
+            locationLabel,
+            coverImageUrl: project.coverImageUrl || null,
+            gallery: normalizeImageUrls(project.gallery),
+            moderationStatus: project.moderationStatus,
+          },
+        ];
+      });
+    const credentialsResult = credentialRows
+      .filter(credential => includePrivate || credential.status === 'verified')
+      .map(credential => ({
+        id: Number(credential.id),
+        credentialType: credential.credentialType,
+        title: credential.title,
+        issuingBody: credential.issuingBody || null,
+        reference: includePrivate ? credential.reference || null : null,
+        status: credential.status,
+        ...(includePrivate
+          ? {
+              originalFileName: credential.originalFileName,
+              mimeType: credential.mimeType,
+              byteSize: Number(credential.byteSize),
+            }
+          : {}),
+      }));
     const activeServicesResult = servicesResult.filter(service => service.isActive);
     const isPublished =
       isProviderDirectoryEligible({
@@ -1036,6 +1290,18 @@ export class ServicesEngineService {
       headline: base.profileHeadline || null,
       bio: base.profileBio || null,
       websiteUrl: normalizePublicWebsiteUrl(base.profileWebsiteUrl),
+      businessType: (base.profileBusinessType || null) as ServiceProviderBusinessType | null,
+      websiteTemplate: (base.profileWebsiteTemplate ||
+        'corporate_brand') as ServiceProviderWebsiteTemplate,
+      businessYearsInOperation: providerBusinessYears(base.profileMetadata),
+      operatingHours: providerOperatingHours(base.profileMetadata),
+      socialLinks: providerSocialLinks(base.profileMetadata),
+      submissionStatus: (base.profileSubmissionStatus || 'draft') as ServiceProviderSubmissionStatus,
+      submittedAt: base.profileSubmittedAt || null,
+      reviewedAt: base.profileReviewedAt || null,
+      reviewNote: base.profileReviewNote || null,
+      projects: projectsResult,
+      credentials: credentialsResult,
       averageRating: Number(base.averageRating || 0),
       reviewCount: Number(base.reviewCount || 0),
       acceptingRequests: providerAcceptingRequests(base.profileMetadata),
@@ -1085,6 +1351,22 @@ export class ServicesEngineService {
       headline: profile.headline,
       bio: profile.bio,
       websiteUrl: profile.websiteUrl,
+      businessType: profile.businessType,
+      websiteTemplate: profile.websiteTemplate,
+      businessYearsInOperation: profile.businessYearsInOperation,
+      operatingHours: profile.operatingHours,
+      socialLinks: profile.socialLinks,
+      projects: profile.projects
+        .filter(project => project.moderationStatus === 'published')
+        .map(({ moderationStatus: _moderationStatus, ...project }) => project),
+      credentials: profile.credentials
+        .filter(credential => credential.status === 'verified')
+        .map(({ id, credentialType, title, issuingBody }) => ({
+          id,
+          credentialType,
+          title,
+          issuingBody,
+        })),
       averageRating: profile.averageRating,
       reviewCount: profile.reviewCount,
       acceptingRequests: profile.acceptingRequests,
@@ -1858,6 +2140,67 @@ export class ServicesEngineService {
     });
   }
 
+  private async readProviderWebsiteReadiness(executor: any, providerId: number) {
+    const [provider] = await executor
+      .select({ companyName: partners.companyName, logoUrl: partners.logoUrl })
+      .from(partners)
+      .where(eq(partners.id, providerId))
+      .limit(1);
+    const [profile] = await executor
+      .select({
+        businessType: serviceProviderProfiles.businessType,
+        headline: serviceProviderProfiles.headline,
+        bio: serviceProviderProfiles.bio,
+        contactEmail: serviceProviderProfiles.contactEmail,
+        contactPhone: serviceProviderProfiles.contactPhone,
+        websiteTemplate: serviceProviderProfiles.websiteTemplate,
+      })
+      .from(serviceProviderProfiles)
+      .where(eq(serviceProviderProfiles.providerId, providerId))
+      .limit(1);
+    if (!provider || !profile) return null;
+
+    const services = await executor
+      .select({
+        displayName: serviceProviderServices.displayName,
+        description: serviceProviderServices.description,
+        isActive: serviceProviderServices.isActive,
+      })
+      .from(serviceProviderServices)
+      .where(eq(serviceProviderServices.providerId, providerId));
+    const locations = await executor
+      .select({ canonicalPlaceId: serviceProviderLocations.canonicalPlaceId })
+      .from(serviceProviderLocations)
+      .where(eq(serviceProviderLocations.providerId, providerId));
+    const placeIds = locations
+      .map(location => location.canonicalPlaceId)
+      .filter((placeId): placeId is string => isCanonicalPlaceId(placeId));
+    const placeProjection = await loadCanonicalPlaceSearchProjection(executor as never, {
+      placeIds,
+    });
+    const canonicalCoverageCount = locations.filter(location => {
+      const placeId = location.canonicalPlaceId;
+      return Boolean(
+        placeId && placeProjection.executions.has(placeId) && placeProjection.labels.has(placeId),
+      );
+    }).length;
+
+    return computeProviderWebsiteReadiness({
+      companyName: provider.companyName,
+      businessType: profile.businessType,
+      headline: profile.headline,
+      bio: profile.bio,
+      contactEmail: profile.contactEmail,
+      contactPhone: profile.contactPhone,
+      websiteTemplate: profile.websiteTemplate,
+      services: services.map(service => ({
+        ...service,
+        isActive: Number(service.isActive) === 1,
+      })),
+      canonicalCoverageCount,
+    });
+  }
+
   async getProviderPublicationReadiness(
     providerId: number,
   ): Promise<ServiceProviderPublicationReadiness> {
@@ -1906,6 +2249,11 @@ export class ServicesEngineService {
         isActive: partners.isActive,
         createdAt: partners.createdAt,
         profileId: serviceProviderProfiles.id,
+        submissionStatus: serviceProviderProfiles.submissionStatus,
+        submittedAt: serviceProviderProfiles.submittedAt,
+        businessType: serviceProviderProfiles.businessType,
+        websiteTemplate: serviceProviderProfiles.websiteTemplate,
+        logoUrl: partners.logoUrl,
         headline: serviceProviderProfiles.headline,
         bio: serviceProviderProfiles.bio,
         websiteUrl: serviceProviderProfiles.websiteUrl,
@@ -2002,6 +2350,11 @@ export class ServicesEngineService {
 
       return {
         ...readiness,
+        submissionStatus: (row.submissionStatus || 'draft') as ServiceProviderSubmissionStatus,
+        submittedAt: row.submittedAt || null,
+        businessType: (row.businessType || null) as ServiceProviderBusinessType | null,
+        websiteTemplate: (row.websiteTemplate || 'corporate_brand') as ServiceProviderWebsiteTemplate,
+        logoUrl: row.logoUrl || null,
         headline: row.headline || null,
         bio: row.bio || null,
         websiteUrl: row.websiteUrl || null,
@@ -2026,7 +2379,9 @@ export class ServicesEngineService {
     });
 
     const counts = {
-      awaitingReview: entries.filter(entry => !entry.isPublished && entry.readyForPublication)
+      awaitingReview: entries.filter(
+        entry => !entry.isPublished && entry.readyForPublication && entry.submissionStatus === 'submitted',
+      )
         .length,
       ready: entries.filter(entry => entry.readyForPublication).length,
       published: entries.filter(entry => entry.isPublished).length,
@@ -2036,7 +2391,9 @@ export class ServicesEngineService {
 
     const filtered = entries.filter(entry => {
       if (view === 'ready') return entry.readyForPublication;
-      if (view === 'awaiting_review') return !entry.isPublished && entry.readyForPublication;
+      if (view === 'awaiting_review') {
+        return !entry.isPublished && entry.readyForPublication && entry.submissionStatus === 'submitted';
+      }
       if (view === 'published') return entry.isPublished;
       if (view === 'blocked') return entry.blockers.length > 0;
       if (view === 'drifted') return entry.publicationDriftDetected;
@@ -2104,10 +2461,35 @@ export class ServicesEngineService {
         directoryActive: readiness.directoryActive,
         isActive: readiness.isActive,
       };
+      const [profileSubmission] = await tx
+        .select({
+          submissionStatus: serviceProviderProfiles.submissionStatus,
+          submittedAt: serviceProviderProfiles.submittedAt,
+        })
+        .from(serviceProviderProfiles)
+        .where(eq(serviceProviderProfiles.providerId, providerId))
+        .limit(1)
+        .for('update');
       let after = before;
       let changed = false;
 
       if (decision === 'publish') {
+        if (
+          !readiness.isPublished &&
+          profileSubmission?.submissionStatus !== 'submitted' &&
+          profileSubmission?.submissionStatus !== 'approved'
+        ) {
+          throw new Error('Provider website has not been submitted for review');
+        }
+        if (!readiness.isPublished) {
+          const websiteReadiness = await this.readProviderWebsiteReadiness(tx, providerId);
+          if (!websiteReadiness) throw new Error('Provider website is incomplete');
+          if (!websiteReadiness.readyForSubmission) {
+            throw new Error(
+              `Provider website is not ready for publication: ${websiteReadiness.blockers.join(', ')}`,
+            );
+          }
+        }
         if (!readiness.readyForPublication) {
           throw new Error(
             `Provider is not ready for publication: ${readiness.blockers.join(', ')}`,
@@ -2119,7 +2501,12 @@ export class ServicesEngineService {
           .where(eq(partners.id, providerId));
         await tx
           .update(serviceProviderProfiles)
-          .set({ directoryActive: 1 })
+          .set({
+            directoryActive: 1,
+            submissionStatus: 'approved',
+            reviewedAt: new Date(),
+            reviewNote: notes,
+          })
           .where(eq(serviceProviderProfiles.providerId, providerId));
         after = { ...before, verificationStatus: 'verified' as const, directoryActive: true };
         changed = before.verificationStatus !== 'verified' || !before.directoryActive;
@@ -2132,6 +2519,20 @@ export class ServicesEngineService {
           changed = true;
         }
         after = { ...before, directoryActive: false };
+      } else if (decision === 'request_changes') {
+        if (profileSubmission?.submissionStatus !== 'submitted') {
+          throw new Error('Only submitted provider websites can be returned for changes');
+        }
+        if (!notes) throw new Error('Add a short note explaining the requested changes');
+        await tx
+          .update(serviceProviderProfiles)
+          .set({
+            submissionStatus: 'changes_requested',
+            reviewedAt: new Date(),
+            reviewNote: notes,
+          })
+          .where(eq(serviceProviderProfiles.providerId, providerId));
+        changed = true;
       } else {
         await tx
           .update(partners)
@@ -2143,6 +2544,14 @@ export class ServicesEngineService {
             .set({ directoryActive: 0 })
             .where(eq(serviceProviderProfiles.providerId, providerId));
         }
+        await tx
+          .update(serviceProviderProfiles)
+          .set({
+            submissionStatus: 'rejected',
+            reviewedAt: new Date(),
+            reviewNote: notes,
+          })
+          .where(eq(serviceProviderProfiles.providerId, providerId));
         after = { ...before, verificationStatus: 'rejected' as const, directoryActive: false };
         changed = before.verificationStatus !== 'rejected' || before.directoryActive;
       }
@@ -2159,6 +2568,8 @@ export class ServicesEngineService {
           before,
           after,
           blockers: readiness.blockers,
+          submissionStatus: decision === 'publish' ? 'approved' : decision,
+          submittedAt: profileSubmission?.submittedAt || null,
         }),
       });
 
@@ -2234,82 +2645,579 @@ export class ServicesEngineService {
   async upsertProviderProfile(providerId: number, input: UpsertProviderProfileInput) {
     const db = await getDb();
     if (!db) throw new Error('Database not available');
+    return db.transaction(async tx => {
+      await tx
+        .select({ id: partners.id })
+        .from(partners)
+        .where(eq(partners.id, providerId))
+        .limit(1)
+        .for('update');
+      const [existingProfile] = await tx
+        .select()
+        .from(serviceProviderProfiles)
+        .where(eq(serviceProviderProfiles.providerId, providerId))
+        .limit(1)
+        .for('update');
+      if (existingProfile?.submissionStatus === 'submitted') {
+        throw new Error('Your website is awaiting review. Edit access will reopen if the reviewer requests changes.');
+      }
 
-    const [existingProfile] = await db
-      .select()
-      .from(serviceProviderProfiles)
-      .where(eq(serviceProviderProfiles.providerId, providerId))
-      .limit(1);
+      const metadata = {
+        ...providerMetadataRecord(existingProfile?.metadata),
+        ...(input.metadata === undefined ? {} : providerMetadataRecord(input.metadata)),
+      };
+      if (input.gallery !== undefined) {
+        metadata.gallery = (input.gallery || [])
+          .map(item => String(item || '').trim())
+          .filter(item => /^(https?:\/\/|\/)/i.test(item))
+          .slice(0, 12);
+      }
+      if (input.availability !== undefined) {
+        metadata.availability = normalizeAvailability(input.availability);
+      }
+      if (input.businessYearsInOperation !== undefined) {
+        metadata.businessYearsInOperation = input.businessYearsInOperation;
+      }
+      if (input.operatingHours !== undefined) {
+        metadata.operatingHours = normalizeText(input.operatingHours || null) || null;
+      }
+      if (input.socialLinks !== undefined) {
+        metadata.socialLinks = { ...providerSocialLinks(existingProfile?.metadata), ...input.socialLinks };
+      }
 
-    const metadata = {
-      ...providerMetadataRecord(existingProfile?.metadata),
-      ...(input.metadata === undefined ? {} : providerMetadataRecord(input.metadata)),
-    };
-    if (input.gallery !== undefined) {
-      metadata.gallery = (input.gallery || [])
-        .map(item => String(item || '').trim())
-        .filter(item => /^(https?:\/\/|\/)/i.test(item))
-        .slice(0, 12);
-    }
-    if (input.availability !== undefined) {
-      metadata.availability = normalizeAvailability(input.availability);
-    }
-
-    const profileValues = {
-      providerId,
-      headline:
-        input.headline === undefined
+      const profileValues = {
+        providerId,
+        headline: input.headline === undefined
           ? existingProfile?.headline || null
           : normalizeText(input.headline) || null,
-      bio:
-        input.bio === undefined ? existingProfile?.bio || null : normalizeText(input.bio) || null,
-      websiteUrl:
-        input.websiteUrl === undefined
+        bio: input.bio === undefined
+          ? existingProfile?.bio || null
+          : normalizeText(input.bio) || null,
+        websiteUrl: input.websiteUrl === undefined
           ? existingProfile?.websiteUrl || null
           : normalizeText(input.websiteUrl) || null,
-      contactEmail:
-        input.contactEmail === undefined
+        businessType: input.businessType === undefined
+          ? existingProfile?.businessType || null
+          : input.businessType,
+        websiteTemplate: input.websiteTemplate === undefined
+          ? existingProfile?.websiteTemplate || 'corporate_brand'
+          : input.websiteTemplate,
+        contactEmail: input.contactEmail === undefined
           ? existingProfile?.contactEmail || null
           : normalizeText(input.contactEmail) || null,
-      contactPhone:
-        input.contactPhone === undefined
+        contactPhone: input.contactPhone === undefined
           ? existingProfile?.contactPhone || null
           : normalizeText(input.contactPhone) || null,
-      moderationTier: existingProfile?.moderationTier || 'basic',
-      directoryActive: existingProfile ? Number(existingProfile.directoryActive || 0) : 0,
-      exploreCreatorActive: existingProfile ? Number(existingProfile.exploreCreatorActive || 0) : 0,
-      dashboardActive: existingProfile ? Number(existingProfile.dashboardActive || 0) : 1,
-      metadata: Object.keys(metadata).length > 0 ? metadata : null,
-    };
+        moderationTier: existingProfile?.moderationTier || 'basic',
+        directoryActive: existingProfile ? Number(existingProfile.directoryActive || 0) : 0,
+        exploreCreatorActive: existingProfile ? Number(existingProfile.exploreCreatorActive || 0) : 0,
+        dashboardActive: existingProfile ? Number(existingProfile.dashboardActive || 0) : 1,
+        metadata: Object.keys(metadata).length > 0 ? metadata : null,
+      };
 
-    if (input.logoUrl !== undefined) {
-      await db
-        .update(partners)
-        .set({ logoUrl: normalizeText(input.logoUrl) || null })
-        .where(eq(partners.id, providerId));
-    }
+      if (input.logoUrl !== undefined) {
+        await tx
+          .update(partners)
+          .set({ logoUrl: normalizeText(input.logoUrl) || null })
+          .where(eq(partners.id, providerId));
+      }
 
-    await db
-      .insert(serviceProviderProfiles)
-      .values(profileValues)
-      .onDuplicateKeyUpdate({
-        set: {
-          headline: profileValues.headline,
-          bio: profileValues.bio,
-          websiteUrl: profileValues.websiteUrl,
-          contactEmail: profileValues.contactEmail,
-          contactPhone: profileValues.contactPhone,
-          metadata: profileValues.metadata,
-        },
+      await tx
+        .insert(serviceProviderProfiles)
+        .values(profileValues)
+        .onDuplicateKeyUpdate({
+          set: {
+            headline: profileValues.headline,
+            bio: profileValues.bio,
+            websiteUrl: profileValues.websiteUrl,
+            businessType: profileValues.businessType,
+            websiteTemplate: profileValues.websiteTemplate,
+            contactEmail: profileValues.contactEmail,
+            contactPhone: profileValues.contactPhone,
+            metadata: profileValues.metadata,
+          },
+        });
+
+      const [profile] = await tx
+        .select()
+        .from(serviceProviderProfiles)
+        .where(eq(serviceProviderProfiles.providerId, providerId))
+        .limit(1);
+      return profile || null;
+    });
+  }
+
+  async submitProviderWebsite(input: { providerId: number; userId: number }) {
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+    return db.transaction(async tx => {
+      await tx
+        .select({ id: partners.id })
+        .from(partners)
+        .where(eq(partners.id, input.providerId))
+        .limit(1)
+        .for('update');
+      const [provider] = await tx
+        .select({ companyName: partners.companyName, logoUrl: partners.logoUrl })
+        .from(partners)
+        .where(and(eq(partners.id, input.providerId), eq(partners.userId, input.userId)))
+        .limit(1);
+      const [profile] = await tx
+        .select({
+          headline: serviceProviderProfiles.headline,
+          bio: serviceProviderProfiles.bio,
+          businessType: serviceProviderProfiles.businessType,
+          websiteTemplate: serviceProviderProfiles.websiteTemplate,
+          contactEmail: serviceProviderProfiles.contactEmail,
+          contactPhone: serviceProviderProfiles.contactPhone,
+          submissionStatus: serviceProviderProfiles.submissionStatus,
+          directoryActive: serviceProviderProfiles.directoryActive,
+        })
+        .from(serviceProviderProfiles)
+        .where(eq(serviceProviderProfiles.providerId, input.providerId))
+        .limit(1)
+        .for('update');
+      if (!provider || !profile) throw new Error('Provider profile not found');
+      if (Number(profile.directoryActive || 0) === 1) {
+        throw new Error('Published provider websites are managed through the provider workspace.');
+      }
+      if (profile.submissionStatus === 'submitted') {
+        throw new Error('This provider website is already awaiting review.');
+      }
+      if (profile.submissionStatus === 'rejected') {
+        throw new Error('This provider application was rejected. Contact Services support.');
+      }
+
+      const readiness = await this.readProviderWebsiteReadiness(tx, input.providerId);
+      if (!readiness) throw new Error('Provider profile not found');
+      if (!readiness.readyForSubmission) {
+        throw new Error(`Provider website is not ready for review: ${readiness.blockers.join('; ')}`);
+      }
+
+      const now = new Date();
+      await tx
+        .update(serviceProviderProfiles)
+        .set({
+          submissionStatus: 'submitted',
+          submittedAt: now,
+          reviewedAt: null,
+          reviewNote: null,
+          updatedAt: now,
+        })
+        .where(eq(serviceProviderProfiles.providerId, input.providerId));
+      await tx
+        .update(serviceProviderProjects)
+        .set({ moderationStatus: 'pending', updatedAt: now })
+        .where(
+          and(
+            eq(serviceProviderProjects.providerId, input.providerId),
+            eq(serviceProviderProjects.moderationStatus, 'draft'),
+          ),
+        );
+      await tx.insert(auditLogs).values({
+        userId: input.userId,
+        action: AuditActions.SUBMIT_SERVICE_PROVIDER_WEBSITE,
+        targetType: 'service_provider',
+        targetId: input.providerId,
+        metadata: JSON.stringify({ completionPercent: readiness.completionPercent }),
       });
+      return { providerId: input.providerId, submissionStatus: 'submitted' as const, submittedAt: now.toISOString() };
+    });
+  }
 
-    const [profile] = await db
-      .select()
-      .from(serviceProviderProfiles)
-      .where(eq(serviceProviderProfiles.providerId, providerId))
+  async saveProviderProject(input: {
+    providerId: number;
+    projectId?: number;
+    title: string;
+    description?: string | null;
+    category: ServiceCategory;
+    canonicalPlaceId?: string | null;
+    coverImageUrl?: string | null;
+    gallery?: string[];
+  }) {
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+    const title = normalizeText(input.title);
+    if (!title || title.length < 3) throw new Error('Project title must be at least 3 characters');
+    const canonicalPlaceId = input.canonicalPlaceId || null;
+    if (canonicalPlaceId && !isCanonicalPlaceId(canonicalPlaceId)) {
+      throw new Error('Project location must be an approved Place');
+    }
+    if (canonicalPlaceId) {
+      const places = await loadCanonicalPlaceSearchProjection(db as never, {
+        placeIds: [canonicalPlaceId],
+      });
+      if (!places.executions.has(canonicalPlaceId) || !places.labels.has(canonicalPlaceId)) {
+        throw new Error('Project location must be an approved Place');
+      }
+    }
+    const coverImageUrl = normalizeText(input.coverImageUrl);
+    if (coverImageUrl && !/^https?:\/\//i.test(coverImageUrl)) {
+      throw new Error('Project image must use an http or https URL');
+    }
+    const gallery = (input.gallery || [])
+      .map(value => String(value || '').trim())
+      .filter(value => /^https?:\/\//i.test(value))
+      .slice(0, 12);
+
+    return db.transaction(async tx => {
+      await tx
+        .select({ id: partners.id })
+        .from(partners)
+        .where(eq(partners.id, input.providerId))
+        .limit(1)
+        .for('update');
+      const [profile] = await tx
+        .select({ submissionStatus: serviceProviderProfiles.submissionStatus })
+        .from(serviceProviderProfiles)
+        .where(eq(serviceProviderProfiles.providerId, input.providerId))
+        .limit(1)
+        .for('update');
+      if (!profile) throw new Error('Provider profile not found');
+      if (profile.submissionStatus === 'submitted') {
+        throw new Error('Your website is awaiting review. Edit access will reopen if the reviewer requests changes.');
+      }
+      const [existing] = input.projectId
+        ? await tx
+            .select()
+            .from(serviceProviderProjects)
+            .where(
+              and(
+                eq(serviceProviderProjects.id, input.projectId),
+                eq(serviceProviderProjects.providerId, input.providerId),
+              ),
+            )
+            .limit(1)
+            .for('update')
+        : [];
+      if (input.projectId && !existing) throw new Error('Project not found for this provider');
+      const moderationStatus =
+        profile.submissionStatus === 'approved' || existing?.moderationStatus === 'published'
+          ? 'pending'
+          : 'draft';
+      if (existing) {
+        await tx
+          .update(serviceProviderProjects)
+          .set({
+            title,
+            description: normalizeText(input.description) || null,
+            serviceCategory: input.category,
+            canonicalPlaceId,
+            coverImageUrl,
+            gallery,
+            moderationStatus,
+            moderationNote: null,
+            reviewedAt: null,
+            reviewedByUserId: null,
+            updatedAt: new Date(),
+          })
+          .where(eq(serviceProviderProjects.id, existing.id));
+        return { id: Number(existing.id), moderationStatus };
+      }
+      const inserted = await tx.insert(serviceProviderProjects).values({
+        providerId: input.providerId,
+        title,
+        description: normalizeText(input.description) || null,
+        serviceCategory: input.category,
+        canonicalPlaceId,
+        coverImageUrl,
+        gallery,
+        moderationStatus,
+      });
+      const id = Number((inserted as any)?.[0]?.insertId || 0);
+      if (!id) throw new Error('Project could not be saved');
+      return { id, moderationStatus };
+    });
+  }
+
+  async deleteProviderProject(input: { providerId: number; projectId: number }) {
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+    return db.transaction(async tx => {
+      await tx
+        .select({ id: partners.id })
+        .from(partners)
+        .where(eq(partners.id, input.providerId))
+        .limit(1)
+        .for('update');
+      const [profile] = await tx
+        .select({ submissionStatus: serviceProviderProfiles.submissionStatus })
+        .from(serviceProviderProfiles)
+        .where(eq(serviceProviderProfiles.providerId, input.providerId))
+        .limit(1)
+        .for('update');
+      if (profile?.submissionStatus === 'submitted') {
+        throw new Error('Your website is awaiting review. Edit access will reopen if the reviewer requests changes.');
+      }
+      const [project] = await tx
+        .select({ id: serviceProviderProjects.id })
+        .from(serviceProviderProjects)
+        .where(
+          and(
+            eq(serviceProviderProjects.id, input.projectId),
+            eq(serviceProviderProjects.providerId, input.providerId),
+          ),
+        )
+        .limit(1)
+        .for('update');
+      if (!project) throw new Error('Project not found for this provider');
+      await tx
+        .delete(serviceProviderProjects)
+        .where(
+          and(
+            eq(serviceProviderProjects.id, input.projectId),
+            eq(serviceProviderProjects.providerId, input.providerId),
+          ),
+        );
+      return { projectId: input.projectId, deleted: true };
+    });
+  }
+
+  async listProviderProjectReviewQueue() {
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+    return db
+      .select({
+        id: serviceProviderProjects.id,
+        providerId: serviceProviderProjects.providerId,
+        companyName: partners.companyName,
+        title: serviceProviderProjects.title,
+        description: serviceProviderProjects.description,
+        category: serviceProviderProjects.serviceCategory,
+        canonicalPlaceId: serviceProviderProjects.canonicalPlaceId,
+        coverImageUrl: serviceProviderProjects.coverImageUrl,
+        moderationStatus: serviceProviderProjects.moderationStatus,
+        createdAt: serviceProviderProjects.createdAt,
+      })
+      .from(serviceProviderProjects)
+      .innerJoin(partners, eq(partners.id, serviceProviderProjects.providerId))
+      .where(eq(serviceProviderProjects.moderationStatus, 'pending'))
+      .orderBy(desc(serviceProviderProjects.createdAt), desc(serviceProviderProjects.id))
+      .limit(100);
+  }
+
+  async reviewProviderProject(input: {
+    projectId: number;
+    actorUserId: number;
+    decision: 'publish' | 'reject';
+    notes?: string | null;
+  }) {
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+    return db.transaction(async tx => {
+      const [project] = await tx
+        .select({
+          providerId: serviceProviderProjects.providerId,
+          moderationStatus: serviceProviderProjects.moderationStatus,
+        })
+        .from(serviceProviderProjects)
+        .where(eq(serviceProviderProjects.id, input.projectId))
+        .limit(1)
+        .for('update');
+      if (!project) throw new Error('Project not found');
+      if (project.moderationStatus !== 'pending') throw new Error('Project is not awaiting review');
+      const moderationStatus = input.decision === 'publish' ? 'published' : 'rejected';
+      const notes = normalizeText(input.notes);
+      await tx
+        .update(serviceProviderProjects)
+        .set({
+          moderationStatus,
+          reviewedByUserId: input.actorUserId,
+          moderationNote: notes,
+          reviewedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(serviceProviderProjects.id, input.projectId));
+      await tx.insert(auditLogs).values({
+        userId: input.actorUserId,
+        action: AuditActions.REVIEW_SERVICE_PROVIDER_PROJECT,
+        targetType: 'service_provider_project',
+        targetId: input.projectId,
+        metadata: JSON.stringify({ decision: input.decision, providerId: Number(project.providerId), notes }),
+      });
+      return { projectId: input.projectId, providerId: Number(project.providerId), moderationStatus };
+    });
+  }
+
+  async requestServiceProviderCredentialUpload(input: {
+    providerId: number;
+    userId: number;
+    fileName: string;
+    contentType: string;
+    byteSize: number;
+  }) {
+    const reservation = createServiceProviderCredentialUploadReservation(input);
+    const uploadUrl = getMediaStorageAdapter() === 'local'
+      ? buildLocalMediaUploadUrl(reservation.token)
+      : await createServiceProviderCredentialS3UploadUrl(reservation.payload);
+    return { uploadUrl, uploadToken: reservation.token, expiresInSeconds: 600 };
+  }
+
+  async addServiceProviderCredential(input: {
+    providerId: number;
+    userId: number;
+    uploadToken: string;
+    credentialType: string;
+    title: string;
+    issuingBody?: string | null;
+    reference?: string | null;
+  }) {
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+    const reservation = verifyServiceProviderCredentialUploadReservation(input.uploadToken, {
+      userId: input.userId,
+      providerId: input.providerId,
+    });
+    const uploaded = getMediaStorageAdapter() === 'local'
+      ? await inspectLocalMediaObject(reservation.key, reservation.contentType)
+      : await inspectServiceProviderCredentialS3Object(reservation);
+    if (uploaded.contentLength !== reservation.byteSize) {
+      if (getMediaStorageAdapter() === 'local') {
+        await deleteLocalMediaObject(reservation.key).catch(() => undefined);
+      }
+      throw new Error('Uploaded credential did not satisfy its private storage authority.');
+    }
+    if (uploaded.contentLength > SERVICE_PROVIDER_CREDENTIAL_MAX_BYTES) {
+      throw new Error('Credential document exceeds the 25 MB limit');
+    }
+    const title = normalizeText(input.title);
+    const credentialType = normalizeText(input.credentialType);
+    if (!title || title.length > 180 || !credentialType || credentialType.length > 80) {
+      throw new Error('Credential title and type are required');
+    }
+    const inserted = await db.insert(serviceProviderCredentials).values({
+      providerId: input.providerId,
+      credentialType,
+      title,
+      issuingBody: normalizeText(input.issuingBody) || null,
+      reference: normalizeText(input.reference) || null,
+      privateStorageKey: reservation.key,
+      originalFileName: reservation.fileName,
+      mimeType: uploaded.contentType,
+      byteSize: uploaded.contentLength,
+      status: 'pending',
+      submittedByUserId: input.userId,
+    });
+    const id = Number((inserted as any)?.[0]?.insertId || 0);
+    if (!id) throw new Error('Credential could not be saved');
+    return { id, status: 'pending' as const };
+  }
+
+  async accessServiceProviderCredential(input: {
+    credentialId: number;
+    actorUserId: number;
+    role?: string | null;
+  }) {
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+    const [credential] = await db
+      .select({
+        id: serviceProviderCredentials.id,
+        providerId: serviceProviderCredentials.providerId,
+        submittedByUserId: serviceProviderCredentials.submittedByUserId,
+        privateStorageKey: serviceProviderCredentials.privateStorageKey,
+        originalFileName: serviceProviderCredentials.originalFileName,
+        mimeType: serviceProviderCredentials.mimeType,
+      })
+      .from(serviceProviderCredentials)
+      .where(eq(serviceProviderCredentials.id, input.credentialId))
       .limit(1);
+    if (!credential) throw new Error('Private provider credential not found');
+    const [provider] = await db
+      .select({ userId: partners.userId })
+      .from(partners)
+      .where(eq(partners.id, credential.providerId))
+      .limit(1);
+    const allowed =
+      input.role === 'super_admin' ||
+      Number(provider?.userId || 0) === input.actorUserId ||
+      Number(credential.submittedByUserId) === input.actorUserId;
+    await db.insert(auditLogs).values({
+      userId: input.actorUserId,
+      action: AuditActions.ACCESS_SERVICE_PROVIDER_CREDENTIAL,
+      targetType: 'service_provider_credential',
+      targetId: input.credentialId,
+      metadata: JSON.stringify({ providerId: Number(credential.providerId), allowed }),
+    });
+    if (!allowed) throw new Error('Not authorized to access this provider credential');
+    const deliveryUrl = getMediaStorageAdapter() === 'local'
+      ? `/api/local-media/private-evidence?deliveryToken=${encodeURIComponent(
+          createServiceProviderCredentialDeliveryToken({
+            credentialId: input.credentialId,
+            actorUserId: input.actorUserId,
+            key: credential.privateStorageKey,
+          }),
+        )}`
+      : await createServiceProviderCredentialS3DeliveryUrl(credential.privateStorageKey);
+    return {
+      id: input.credentialId,
+      fileName: credential.originalFileName,
+      mimeType: credential.mimeType,
+      deliveryUrl,
+      expiresInSeconds: 300,
+    };
+  }
 
-    return profile || null;
+  async listServiceProviderCredentialReviewQueue() {
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+    return db
+      .select({
+        id: serviceProviderCredentials.id,
+        providerId: serviceProviderCredentials.providerId,
+        companyName: partners.companyName,
+        credentialType: serviceProviderCredentials.credentialType,
+        title: serviceProviderCredentials.title,
+        issuingBody: serviceProviderCredentials.issuingBody,
+        originalFileName: serviceProviderCredentials.originalFileName,
+        mimeType: serviceProviderCredentials.mimeType,
+        status: serviceProviderCredentials.status,
+        createdAt: serviceProviderCredentials.createdAt,
+      })
+      .from(serviceProviderCredentials)
+      .innerJoin(partners, eq(partners.id, serviceProviderCredentials.providerId))
+      .where(eq(serviceProviderCredentials.status, 'pending'))
+      .orderBy(desc(serviceProviderCredentials.createdAt), desc(serviceProviderCredentials.id))
+      .limit(100);
+  }
+
+  async reviewServiceProviderCredential(input: {
+    credentialId: number;
+    actorUserId: number;
+    decision: 'verified' | 'rejected';
+    notes?: string | null;
+  }) {
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+    return db.transaction(async tx => {
+      const [credential] = await tx
+        .select({ providerId: serviceProviderCredentials.providerId, status: serviceProviderCredentials.status })
+        .from(serviceProviderCredentials)
+        .where(eq(serviceProviderCredentials.id, input.credentialId))
+        .limit(1)
+        .for('update');
+      if (!credential) throw new Error('Provider credential not found');
+      if (credential.status !== 'pending') throw new Error('Provider credential is not awaiting review');
+      const notes = normalizeText(input.notes);
+      await tx
+        .update(serviceProviderCredentials)
+        .set({
+          status: input.decision,
+          reviewedByUserId: input.actorUserId,
+          reviewNote: notes,
+          reviewedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(serviceProviderCredentials.id, input.credentialId));
+      await tx.insert(auditLogs).values({
+        userId: input.actorUserId,
+        action: AuditActions.REVIEW_SERVICE_PROVIDER_CREDENTIAL,
+        targetType: 'service_provider_credential',
+        targetId: input.credentialId,
+        metadata: JSON.stringify({ decision: input.decision, providerId: Number(credential.providerId), notes }),
+      });
+      return { credentialId: input.credentialId, providerId: Number(credential.providerId), status: input.decision };
+    });
   }
 
   async replaceProviderServices(providerId: number, services: ReplaceProviderServiceInput[]) {
@@ -2356,6 +3264,21 @@ export class ServicesEngineService {
     }
 
     await db.transaction(async tx => {
+      await tx
+        .select({ id: partners.id })
+        .from(partners)
+        .where(eq(partners.id, providerId))
+        .limit(1)
+        .for('update');
+      const [profile] = await tx
+        .select({ submissionStatus: serviceProviderProfiles.submissionStatus })
+        .from(serviceProviderProfiles)
+        .where(eq(serviceProviderProfiles.providerId, providerId))
+        .limit(1)
+        .for('update');
+      if (profile?.submissionStatus === 'submitted') {
+        throw new Error('Your website is awaiting review. Edit access will reopen if the reviewer requests changes.');
+      }
       const existing = await tx
         .select()
         .from(serviceProviderServices)
@@ -2516,6 +3439,15 @@ export class ServicesEngineService {
         .where(eq(partners.id, providerId))
         .limit(1)
         .for('update');
+      const [providerProfile] = await tx
+        .select({ submissionStatus: serviceProviderProfiles.submissionStatus })
+        .from(serviceProviderProfiles)
+        .where(eq(serviceProviderProfiles.providerId, providerId))
+        .limit(1)
+        .for('update');
+      if (providerProfile?.submissionStatus === 'submitted') {
+        throw new Error('Your website is awaiting review. Edit access will reopen if the reviewer requests changes.');
+      }
       const existing = await tx
         .select()
         .from(serviceProviderLocations)

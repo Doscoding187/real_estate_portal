@@ -24,7 +24,7 @@ export type LocalMediaObject = {
 };
 
 const DEFAULT_LOCAL_MEDIA_ROOT = join(homedir(), '.local', 'share', 'property-listify', 'media');
-const LOCAL_MEDIA_KEY_PATTERN = /^(?:properties\/(?:\d+|draft-\d+)|private\/land\/\d+)\/[A-Za-z0-9][A-Za-z0-9._-]*$/;
+const LOCAL_MEDIA_KEY_PATTERN = /^(?:properties\/(?:\d+|draft-\d+)|private\/land\/\d+|private\/services\/credentials\/\d+)\/[A-Za-z0-9][A-Za-z0-9._-]*$/;
 const LOCAL_MEDIA_MAX_BYTES = {
   image: 15 * 1024 * 1024,
   video: 80 * 1024 * 1024,
@@ -276,6 +276,12 @@ export async function writeLocalMediaObject(
     }
     throw error;
   }
+}
+
+export async function deleteLocalMediaObject(key: string): Promise<void> {
+  const { path: objectPath } = await resolveLocalMediaPath(key);
+  await unlink(objectPath).catch(() => undefined);
+  await unlink(`${objectPath}.meta.json`).catch(() => undefined);
 }
 
 async function inspectLocalMediaObjectInternal(
