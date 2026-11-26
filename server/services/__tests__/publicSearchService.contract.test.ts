@@ -5,7 +5,9 @@ const {
   mockLoadPlaceProjection,
   mockSearchProperties,
   mockSearchDevelopments,
+  mockRollup,
 } = vi.hoisted(() => ({
+  mockRollup: vi.fn(),
   mockLoadPlaceProjection: vi.fn(),
   mockSearchProperties: vi.fn(),
   mockSearchDevelopments: vi.fn(),
@@ -15,6 +17,13 @@ vi.mock('../canonicalPlaceSearchService', async importOriginal => ({
   ...(await importOriginal<typeof import('../canonicalPlaceSearchService')>()),
   loadCanonicalPlaceSearchProjection: mockLoadPlaceProjection,
 }));
+
+vi.mock('../placeLocalityRollupService', async importOriginal => ({
+  ...(await importOriginal<typeof import('../placeLocalityRollupService')>()),
+  developmentSearchPlaceIds: mockRollup,
+}));
+
+vi.mock('../../db-connection', () => ({ getDb: async () => ({}) }));
 
 vi.mock('../propertySearchService', () => ({
   propertySearchService: { searchProperties: mockSearchProperties },
@@ -113,6 +122,7 @@ function developmentItem(id = 1) {
 describe('publicSearchService canonical Place contract', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockRollup.mockImplementation(async (_db: unknown, id: string) => [id]);
     mockLoadPlaceProjection.mockResolvedValue(projection('locality'));
     mockSearchProperties.mockResolvedValue({
       cards: [card('property', 'p-1', 1), card('property', 'p-2', 2), card('property', 'p-3', 3)],
@@ -150,6 +160,28 @@ describe('publicSearchService canonical Place contract', () => {
       );
     },
   );
+
+  it('rolls a city search up to the suburbs beneath it for resale listings, same as developments', async () => {
+    const SUBURB = 'pl-place-01-6a145c6d642ba208a2c12de7';
+    mockRollup.mockResolvedValueOnce([PLACE_ID, SUBURB]);
+    mockLoadPlaceProjection.mockResolvedValueOnce(projection('metro_city'));
+    await publicSearchService.searchInventory({ canonicalPlaceId: PLACE_ID, listingType: 'sale' });
+
+    const [filters, , , , options] = mockSearchProperties.mock.calls[0];
+    expect(filters.canonicalPlaceIds).toEqual([PLACE_ID, SUBURB]);
+    // Labels must be loaded for the suburbs too, so the selected-place projection is not reused.
+    expect(options.placeProjection).toBeUndefined();
+  });
+
+  it('keeps a suburb search exact and does not pull in an unrelated city', async () => {
+    mockLoadPlaceProjection.mockResolvedValueOnce(projection('locality'));
+    await publicSearchService.searchInventory({ canonicalPlaceId: PLACE_ID, listingType: 'sale' });
+
+    const [filters, , , , options] = mockSearchProperties.mock.calls[0];
+    expect(filters.canonicalPlaceIds).toEqual([PLACE_ID]);
+    expect(options.placeProjection).toBeDefined();
+    expect(mockRollup).not.toHaveBeenCalled();
+  });
 
   it('fails closed for absent, malformed, or unresolved Place authority', async () => {
     const missing = await publicSearchService.searchInventory({
