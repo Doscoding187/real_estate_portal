@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useComparison } from '@/contexts/ComparisonContext';
 import { formatCurrency } from '@/lib/utils';
+import { withRentalPeriod } from '@/lib/rentPresentation';
 import { OptimizedImageCard } from './OptimizedImage';
 import { Badge } from './ui/badge';
 import { useLocation } from 'wouter';
@@ -30,6 +31,8 @@ interface ImageUrls {
 interface AgentInfo {
   name: string;
   image?: string;
+  /** True only when the agent really holds a featured placement. */
+  featured?: boolean;
 }
 
 export interface PropertyCardListProps {
@@ -229,7 +232,7 @@ const PropertyCardList: React.FC<PropertyCardListProps> = ({
               <span>{location}</span>
             </div>
 
-            <div className="text-xl font-bold text-[#1e1b4b]">{formatCurrency(price)}</div>
+            <div className="text-xl font-bold text-[#1e1b4b]">{withRentalPeriod(formatCurrency(price), listingType)}</div>
           </div>
 
           {/* Specs */}
@@ -280,7 +283,9 @@ const PropertyCardList: React.FC<PropertyCardListProps> = ({
                 </div>
                 <div>
                   <div className="text-xs font-medium text-slate-900">{agent.name}</div>
-                  <div className="text-[10px] text-slate-500">Featured Agent</div>
+                  <div className="text-[10px] text-slate-500">
+                    {agent.featured ? 'Featured Agent' : 'Property practitioner'}
+                  </div>
                 </div>
               </>
             ) : (
@@ -293,8 +298,8 @@ const PropertyCardList: React.FC<PropertyCardListProps> = ({
                   />
                 </div>
                 <div>
-                  <div className="text-xs font-medium text-slate-900">Luxury Estates</div>
-                  <div className="text-[10px] text-slate-500">Featured Dealer</div>
+                  <div className="text-xs font-medium text-slate-900">Listing agent</div>
+                  <div className="text-[10px] text-slate-500">Property practitioner</div>
                 </div>
               </>
             )}

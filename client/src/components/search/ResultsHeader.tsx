@@ -38,7 +38,7 @@ interface ResultsHeaderProps {
 function formatResultCountLabel(total: number, newDevelopmentHomes: number): string {
   const homes = Math.min(Math.max(0, Math.floor(newDevelopmentHomes)), total);
   const listings = total - homes;
-  const listingLabel = `${listings.toLocaleString()} verified ${listings === 1 ? 'listing' : 'listings'}`;
+  const listingLabel = `${listings.toLocaleString()} ${listings === 1 ? 'listing' : 'listings'}`;
   return homes > 0
     ? `${listingLabel} · ${homes.toLocaleString()} new-development ${homes === 1 ? 'home' : 'homes'}`
     : listingLabel;

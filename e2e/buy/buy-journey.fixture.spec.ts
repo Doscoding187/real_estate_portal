@@ -448,7 +448,7 @@ test('desktop buyer moves from canonical discovery to detail and one durable enq
   await cityAreaPicker.getByRole('button', { name: /Browse all Johannesburg/ }).click();
 
   await expect(page).toHaveURL(/\/property-for-sale\?.*locationId=city%3A12/);
-  await expect(page.getByRole('status').filter({ hasText: '3 verified listings' })).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: '3 listings' })).toBeVisible();
   await expect(page.getByRole('heading', { name: searchCards[0].title })).toBeVisible();
   await expect(page.getByText('Naledi Mokoena').first()).toBeVisible();
   await expectNoHorizontalOverflow(page);

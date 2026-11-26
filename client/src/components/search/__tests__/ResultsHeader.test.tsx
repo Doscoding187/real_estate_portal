@@ -35,7 +35,7 @@ describe('ResultsHeader result truth', () => {
     const onViewModeChange = vi.fn();
     render(<ResultsHeader {...baseProps} resultCount={1} onViewModeChange={onViewModeChange} />);
 
-    expect(screen.getByRole('status')).toHaveTextContent('1 verified listing');
+    expect(screen.getByRole('status')).toHaveTextContent('1 listing');
     expect(screen.getByRole('button', { name: 'Show list view' })).toHaveAttribute(
       'aria-pressed',
       'true',
@@ -65,12 +65,12 @@ describe('ResultsHeader result truth', () => {
       <ResultsHeader {...baseProps} resultCount={12} newDevelopmentHomeCount={5} />,
     );
     expect(screen.getByRole('status')).toHaveTextContent(
-      '7 verified listings · 5 new-development homes',
+      '7 listings · 5 new-development homes',
     );
     rerender(<ResultsHeader {...baseProps} resultCount={12} newDevelopmentHomeCount={0} />);
-    expect(screen.getByRole('status')).toHaveTextContent('12 verified listings');
+    expect(screen.getByRole('status')).toHaveTextContent('12 listings');
     expect(screen.getByRole('status')).not.toHaveTextContent('new-development');
     rerender(<ResultsHeader {...baseProps} resultCount={3} newDevelopmentHomeCount={1} />);
-    expect(screen.getByRole('status')).toHaveTextContent('2 verified listings · 1 new-development home');
+    expect(screen.getByRole('status')).toHaveTextContent('2 listings · 1 new-development home');
   });
 });
