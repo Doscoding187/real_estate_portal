@@ -35,7 +35,7 @@ import {
   listDevelopmentPlaceGeography,
   type DevelopmentPlaceGeography,
 } from './developmentPlaceAssignmentService';
-import { developmentSearchPlaceIds } from './placeLocalityRollupService';
+import { developmentSearchPlaceIds, ROLLUP_MAX_PLACE_IDS } from './placeLocalityRollupService';
 import {
   COMMERCIAL_PUBLIC_JOURNEY_HANDOFF_MESSAGE,
   isCommercialMarketingPropertyType,
@@ -43,6 +43,11 @@ import {
 
 export interface PublicDevelopmentSearchInput {
   canonicalPlaceId?: string;
+  /**
+   * Several Places (a searched area plus its member suburbs, or a multi-area search). A Development
+   * matches when its reviewed, accepted site Place is any of them. Exclusive with canonicalPlaceId.
+   */
+  canonicalPlaceIds?: string[];
   developmentType?: PublicDevelopmentSearchDevelopmentType;
   developmentStatus?: PublicDevelopmentSearchStatus;
   transactionType?: 'for_sale' | 'for_rent';
@@ -56,6 +61,11 @@ export interface PublicDevelopmentSearchInput {
   pageSize?: number;
   /** Opt-in: attach each unit type's unitSize (m2) to the returned unit types. */
   includeUnitSize?: boolean;
+  /**
+   * Opt-in: skip the development-level price and bedroom filters. The caller filters each unit
+   * type by its own facts instead (unit-type result cards).
+   */
+  skipDevelopmentRangeFilters?: boolean;
   /** Legacy offset/limit callers are translated at this boundary only. */
 }
 
@@ -331,7 +341,28 @@ export class PublicDevelopmentSearchService {
     if (!db) throw new Error('Database not available');
 
     const conditions: SQL[] = [publicDevelopmentEligibilityConditions()];
-    if (location.canonicalPlaceId) {
+    if (input.canonicalPlaceIds) {
+      // Each searched Place rolls up the same way a single-Place search does (a city includes the
+      // localities beneath it), so unit-type cards follow the same place set as the listings.
+      const rolled = await Promise.all(
+        input.canonicalPlaceIds.map(placeId => developmentSearchPlaceIds(db as any, placeId)),
+      );
+      let searchPlaceIds = [...new Set(rolled.flat())];
+      if (searchPlaceIds.length > ROLLUP_MAX_PLACE_IDS) {
+        console.warn(
+          `[publicDevelopmentSearch] ${input.canonicalPlaceIds.length} searched places roll up to ${searchPlaceIds.length}; cut to ${ROLLUP_MAX_PLACE_IDS}`,
+        );
+        searchPlaceIds = searchPlaceIds.slice(0, ROLLUP_MAX_PLACE_IDS);
+      }
+      const matchingDevelopmentIds = searchPlaceIds.length
+        ? await listDevelopmentIdsForCanonicalPlaces(searchPlaceIds)
+        : [];
+      conditions.push(
+        matchingDevelopmentIds.length
+          ? inArray(developments.id, matchingDevelopmentIds)
+          : sql`1 = 0`,
+      );
+    } else if (location.canonicalPlaceId) {
       // A city or province search includes the developments assigned to the
       // localities beneath it (same child rules as the area guides); a suburb
       // search stays an exact match.
@@ -476,7 +507,11 @@ export class PublicDevelopmentSearchService {
         });
       }
     }
-    const developmentFilters = developmentFiltersFromInput(input);
+    const developmentFilters = developmentFiltersFromInput(
+      input.skipDevelopmentRangeFilters
+        ? { ...input, minPrice: undefined, maxPrice: undefined, minBedrooms: undefined, maxBedrooms: undefined }
+        : input,
+    );
     const filtered = filterPublicDevelopmentSearchItems(items, developmentFilters);
     const unpricedHiddenCount = countUnpricedHiddenByPriceFilter(items, developmentFilters);
     const sortOption = isSearchResultSortOption(input.sortOption)

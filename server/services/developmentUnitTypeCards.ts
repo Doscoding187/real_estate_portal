@@ -37,9 +37,53 @@ export type DevelopmentUnitTypeCard = SearchCardResult & {
   };
 };
 
+/** Search filters applied to each unit type by its own public facts (not the development's range). */
+export interface DevelopmentUnitTypeFilters {
+  minPrice?: number;
+  maxPrice?: number;
+  minBedrooms?: number;
+  maxBedrooms?: number;
+  /**
+   * A requested property type (apartment, house, townhouse...). A unit type matches only when its
+   * own recorded structural type says so; an unrecorded type never matches a type filter.
+   */
+  propertyType?: string;
+}
+
 export interface DevelopmentUnitTypeCardOptions {
   listingType: 'sale' | 'rent';
   requirePhoto?: boolean;
+  filters?: DevelopmentUnitTypeFilters;
+}
+
+/** Which unit structural types satisfy each public property type filter. */
+const STRUCTURAL_TYPES_BY_PROPERTY_TYPE: Record<string, readonly string[]> = {
+  apartment: ['apartment', 'penthouse', 'studio'],
+  house: ['freestanding-house', 'plot-and-plan'],
+  townhouse: ['townhouse', 'simplex', 'duplex'],
+  cluster_home: ['townhouse', 'simplex', 'duplex'],
+};
+
+function unitMatchesFilters(
+  unit: PublicDevelopmentSearchUnitWithSize,
+  price: number,
+  filters: DevelopmentUnitTypeFilters | undefined,
+): boolean {
+  if (!filters) return true;
+  if (filters.minPrice !== undefined && price < filters.minPrice) return false;
+  if (filters.maxPrice !== undefined && price > filters.maxPrice) return false;
+  const hasBedFilter = filters.minBedrooms !== undefined || filters.maxBedrooms !== undefined;
+  if (hasBedFilter) {
+    if (unit.bedrooms === null || unit.bedrooms === undefined) return false;
+    if (filters.minBedrooms !== undefined && unit.bedrooms < filters.minBedrooms) return false;
+    if (filters.maxBedrooms !== undefined && unit.bedrooms > filters.maxBedrooms) return false;
+  }
+  if (filters.propertyType && filters.propertyType !== 'plot') {
+    const wanted = STRUCTURAL_TYPES_BY_PROPERTY_TYPE[filters.propertyType];
+    const own = unit.structuralType ? String(unit.structuralType) : null;
+    if (!wanted || !own || !wanted.includes(own)) return false;
+  }
+  return true;
 }
 
 function finitePositive(value: unknown): number | null {
@@ -53,7 +97,9 @@ function finitePositive(value: unknown): number | null {
  * One card per available unit type of a development. A unit type is available
  * when the shared projection (the same one the development page reads) states
  * availabilityState 'available'; unpriced unit types and other transaction
- * types yield no card. Unit gallery images are preferred, with the development
+ * types yield no card. A unit type with no published price gets no card, and a unit type
+ * whose stock is not stated (availabilityState 'not_stated') gets none either: an unknown
+ * price or unknown stock is hidden here, never shown as a guess. Unit gallery images are preferred, with the development
  * gallery used only when the unit type has no image. With requirePhoto set, a
  * card needs an image from either gallery.
  * Prices are already transaction-aware in the projection (basePriceFrom for
@@ -82,6 +128,7 @@ export function developmentUnitTypeCards(
       .map(url => url.trim());
     const cardImages = unitImages.length ? unitImages : item.images;
     if (options.requirePhoto && cardImages.length === 0) continue;
+    if (!unitMatchesFilters(unit, price, options.filters)) continue;
     const unitSize = finitePositive(unit.unitSize);
     const title =
       unit.bedrooms !== null && unit.bedrooms !== undefined

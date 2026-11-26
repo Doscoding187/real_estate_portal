@@ -22,7 +22,10 @@ interface ResultsHeaderProps {
     onRemove?: () => void;
     onChange?: () => void;
   };
+  /** Every result on offer (listings plus new-development homes). */
   resultCount?: number;
+  /** How many of resultCount are new-development homes; shown as a separate line, never as listings. */
+  newDevelopmentHomeCount?: number;
   isLoading?: boolean;
   hasError?: boolean;
   viewMode: ViewMode;
@@ -32,11 +35,21 @@ interface ResultsHeaderProps {
   onSaveSearch?: () => void;
   hideDesktopActions?: boolean;
 }
+function formatResultCountLabel(total: number, newDevelopmentHomes: number): string {
+  const homes = Math.min(Math.max(0, Math.floor(newDevelopmentHomes)), total);
+  const listings = total - homes;
+  const listingLabel = `${listings.toLocaleString()} verified ${listings === 1 ? 'listing' : 'listings'}`;
+  return homes > 0
+    ? `${listingLabel} · ${homes.toLocaleString()} new-development ${homes === 1 ? 'home' : 'homes'}`
+    : listingLabel;
+}
+
 export function ResultsHeader({
   title = 'Properties',
   scopeLabels = [],
   selectedLocation,
   resultCount,
+  newDevelopmentHomeCount = 0,
   isLoading,
   hasError,
   viewMode,
@@ -52,7 +65,7 @@ export function ResultsHeader({
     : hasError
       ? 'Property results are temporarily unavailable'
       : hasSettledCount
-        ? `${resultCount.toLocaleString()} verified ${resultCount === 1 ? 'listing' : 'listings'}`
+        ? formatResultCountLabel(resultCount, newDevelopmentHomeCount)
         : 'Preparing property results';
 
   return (

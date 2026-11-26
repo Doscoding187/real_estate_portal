@@ -31,15 +31,23 @@ import { publicDevelopmentSearchService } from './publicDevelopmentSearchService
 import {
   developmentUnitTypeCards,
   mixListingsAndUnitTypes,
+  type DevelopmentUnitTypeCard,
 } from './developmentUnitTypeCards';
 import { propertySearchService, type ManualPropertySortOption } from './propertySearchService';
+
+/** Unit-type results read at most this many eligible developments per search (50 per read). */
+export const UNIT_TYPE_DEVELOPMENT_BOUND = 200;
+const UNIT_TYPE_DEVELOPMENT_PAGE_SIZE = 50;
 
 /** Public inventory sort values: the shared search sorts plus the homepage rail's trending order. */
 export type PublicInventorySortOption = SearchResultSortOption | 'trending';
 
 export interface PublicSearchInventoryInput {
   canonicalPlaceId?: string;
-  /** 1..MULTI_LOCATION_MAX selected Places; exclusive with canonicalPlaceId. Manual listings only. */
+  /**
+   * 1..MULTI_LOCATION_MAX selected Places; exclusive with canonicalPlaceId. Manual listings, plus
+   * development unit types when developmentResultShape is 'unit_type'.
+   */
   canonicalPlaceIds?: string[];
   propertyType?: string;
   listingType?: 'sale' | 'rent';
@@ -163,12 +171,18 @@ function buildPublicFilters(
 }
 
 function buildDevelopmentSearchInput(
-  input: PublicSearchInventoryInput & { canonicalPlaceId: string },
+  input: PublicSearchInventoryInput,
   page: number,
   pageSize: number,
+  placeIds?: string[],
 ): Parameters<typeof publicDevelopmentSearchService.search>[0] {
+  const unitTypeShape = input.developmentResultShape === 'unit_type';
   return {
-    canonicalPlaceId: input.canonicalPlaceId,
+    // Unit-type cards match a development whose accepted site Place is any searched Place
+    // (the area and its member suburbs, or each selected area); whole developments stay exact.
+    ...(unitTypeShape && placeIds?.length
+      ? { canonicalPlaceIds: placeIds }
+      : { canonicalPlaceId: input.canonicalPlaceId }),
     transactionType: input.listingType === 'rent' ? 'for_rent' : 'for_sale',
     developmentType:
       input.propertyType === 'plot'
@@ -183,7 +197,7 @@ function buildDevelopmentSearchInput(
     sortOption: input.sortOption === 'trending' ? 'date_desc' : input.sortOption,
     page,
     pageSize,
-    ...(input.developmentResultShape === 'unit_type' ? { includeUnitSize: true } : {}),
+    ...(unitTypeShape ? { includeUnitSize: true, skipDevelopmentRangeFilters: true } : {}),
   };
 }
 
@@ -424,8 +438,20 @@ export class PublicSearchService {
 
     const filters = buildPublicFilters(input, placeMemberIds);
     const manualEnabled = input.listingSource !== 'development';
-    const developmentEnabled = input.listingSource !== 'manual' && Boolean(input.canonicalPlaceId);
-    const unitTypeShape = input.developmentResultShape === 'unit_type' && developmentEnabled;
+    const unitTypePlaceIds = placeMemberIds?.length ? placeMemberIds : undefined;
+    // Unit types follow the searched Places (one, a place with its members, or several areas);
+    // whole development cards stay single-Place.
+    const unitTypeShape =
+      input.developmentResultShape === 'unit_type' &&
+      input.listingSource !== 'manual' &&
+      (Boolean(input.canonicalPlaceId) || Boolean(multiPlaceIds?.length));
+    // A requested place that resolves to no searchable member Places yields no unit types; it must
+    // never widen into an unfiltered development search. (A province keeps its own scoped rollup.)
+    const unitTypeScopeEmpty =
+      unitTypeShape && !provincePlaceId && !unitTypePlaceIds?.length;
+    const developmentEnabled =
+      (unitTypeShape && !unitTypeScopeEmpty) ||
+      (!unitTypeShape && input.listingSource !== 'manual' && Boolean(input.canonicalPlaceId));
     const fetchSourceResults = async (requestedPage: number) => {
       const combined = (manualEnabled && developmentEnabled) || unitTypeShape;
       const sourcePageSize = combined ? (requestedPage + 1) * pageSize : pageSize;
@@ -446,42 +472,80 @@ export class PublicSearchService {
               },
             )
           : null,
-        developmentEnabled
+        developmentEnabled && !unitTypeShape
           ? publicDevelopmentSearchService.search(
               buildDevelopmentSearchInput(
-                { ...input, canonicalPlaceId: input.canonicalPlaceId! },
+                input,
                 developmentSourcePage,
                 sourcePageSize,
+                unitTypePlaceIds,
               ),
             )
           : null,
       ]);
     };
 
-    let [manualResults, developmentResults] = await fetchSourceResults(page);
-    let manualTotal = manualResults?.total || 0;
-    const unitCardsFrom = () =>
-      (developmentResults?.items || []).flatMap(item =>
+    // Unit-type cards are built and filtered from the whole eligible development set (bounded), so
+    // the total is exact and every match is reachable; only then are they mixed and paged.
+    let unitTypeCards: DevelopmentUnitTypeCard[] = [];
+    if (unitTypeShape && developmentEnabled) {
+      const developmentItems: PublicDevelopmentSearchItem[] = [];
+      for (
+        let developmentPage = 0;
+        developmentItems.length < UNIT_TYPE_DEVELOPMENT_BOUND;
+        developmentPage += 1
+      ) {
+        const chunk = await publicDevelopmentSearchService.search(
+          buildDevelopmentSearchInput(
+            input,
+            developmentPage,
+            UNIT_TYPE_DEVELOPMENT_PAGE_SIZE,
+            unitTypePlaceIds,
+          ),
+        );
+        developmentItems.push(...chunk.items);
+        if (!chunk.hasMore) break;
+        if (developmentItems.length >= UNIT_TYPE_DEVELOPMENT_BOUND) {
+          console.warn(
+            `[publicSearch] unit-type results cut to the first ${UNIT_TYPE_DEVELOPMENT_BOUND} developments`,
+          );
+          break;
+        }
+      }
+      unitTypeCards = developmentItems.flatMap(item =>
         developmentUnitTypeCards(item, {
           listingType: input.listingType!,
           requirePhoto: input.requirePhoto,
+          filters: {
+            minPrice: input.minPrice,
+            maxPrice: input.maxPrice,
+            minBedrooms: input.minBedrooms,
+            maxBedrooms: input.maxBedrooms,
+            propertyType: input.propertyType,
+          },
         }),
       );
-    let unitTypeCards = unitTypeShape ? unitCardsFrom() : [];
-    let developmentTotal = unitTypeShape ? unitTypeCards.length : developmentResults?.total || 0;
+    }
+
+    let [manualResults, developmentResults] = await fetchSourceResults(page);
+    let manualTotal = manualResults?.total || 0;
+    const developmentTotalFor = () =>
+      unitTypeShape ? unitTypeCards.length : developmentResults?.total || 0;
+    let developmentTotal = developmentTotalFor();
     let total = manualTotal + developmentTotal;
     const canonicalPage = normalizePublicSearchPageForTotal(page, total, pageSize);
 
     if (canonicalPage !== page) {
       [manualResults, developmentResults] = await fetchSourceResults(canonicalPage);
       manualTotal = manualResults?.total || 0;
-      unitTypeCards = unitTypeShape ? unitCardsFrom() : [];
-      developmentTotal = unitTypeShape ? unitTypeCards.length : developmentResults?.total || 0;
+      developmentTotal = developmentTotalFor();
       total = manualTotal + developmentTotal;
     }
 
     const manualCards = (manualResults?.cards || []) as SearchCardResult[];
-    const developmentCards = (developmentResults?.items || []).map(developmentCard);
+    const developmentCards = unitTypeShape
+      ? []
+      : (developmentResults?.items || []).map(developmentCard);
     const blended =
       manualEnabled && developmentEnabled
         ? blendSearchSources(

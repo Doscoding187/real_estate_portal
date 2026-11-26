@@ -4,6 +4,8 @@ import { properties } from '../../drizzle/schema';
 import { getDb } from '../db';
 import { loadCanonicalPlaceSearchProjection } from './canonicalPlaceSearchService';
 import { canonicalPlaceUrlByPlaceId } from './canonicalPlaceUrlService';
+import { developmentUnitTypeCards } from './developmentUnitTypeCards';
+import { publicDevelopmentSearchService } from './publicDevelopmentSearchService';
 import { publicListingBaseConditions, publishedPath } from './homeMarketInsightsService';
 import {
   haversineKm,
@@ -49,6 +51,11 @@ export type PlaceGuide = {
   stats: {
     saleCount: number;
     rentCount: number;
+    /**
+     * Available development unit types at this Place. Reported on their own line and never part of
+     * saleCount, rentCount, medians, price per m2 or the type mix.
+     */
+    newDevelopmentHomes: { sale: number; rent: number; /** True when the count stopped at its bound, so read it as "N+". */ capped?: boolean };
     saleMedian: number | null;
     rentMedian: number | null;
     salePricePerM2Median: number | null;
@@ -234,6 +241,45 @@ export function orderNeighbourhoods<
     .slice(0, PLACE_GUIDE_MAX_NEIGHBOURHOODS);
 }
 
+/** Most developments read when counting a place's new-development homes. */
+export const NEW_DEVELOPMENT_HOMES_BOUND = 200;
+
+/**
+ * Available development unit types at one Place, counted with the same development search as the
+ * buy results (residential developments, rolled-up place set, unit facts). A failure to read them
+ * never hides the guide. When the bound is hit the counts are minimums and `capped` is true.
+ */
+export async function countNewDevelopmentHomes(
+  placeId: string,
+): Promise<{ sale: number; rent: number; capped?: boolean }> {
+  try {
+    let sale = 0;
+    let rent = 0;
+    let seen = 0;
+    let capped = false;
+    for (let page = 0; seen < NEW_DEVELOPMENT_HOMES_BOUND; page += 1) {
+      const result = await publicDevelopmentSearchService.search({
+        canonicalPlaceId: placeId,
+        developmentType: 'residential',
+        sortOption: 'date_desc',
+        page,
+        pageSize: 50,
+        skipDevelopmentRangeFilters: true,
+      });
+      for (const development of result?.items ?? []) {
+        sale += developmentUnitTypeCards(development, { listingType: 'sale' }).length;
+        rent += developmentUnitTypeCards(development, { listingType: 'rent' }).length;
+      }
+      seen += result?.items?.length ?? 0;
+      if (!result?.hasMore) break;
+      if (seen >= NEW_DEVELOPMENT_HOMES_BOUND) capped = true;
+    }
+    return capped ? { sale, rent, capped } : { sale, rent };
+  } catch {
+    return { sale: 0, rent: 0 };
+  }
+}
+
 export const placeGuideService = {
   async getPlaceGuide(
     placeId: string,
@@ -400,6 +446,7 @@ export const placeGuideService = {
       };
     });
 
+    const newDevelopmentHomes = await countNewDevelopmentHomes(placeId);
     const provinceId = urlEntry.province_place_id;
     return {
       place: {
@@ -414,6 +461,7 @@ export const placeGuideService = {
       stats: {
         saleCount: self.insights.sale.listingCount,
         rentCount: self.insights.rent.listingCount,
+        newDevelopmentHomes,
         saleMedian: self.insights.sale.medianPrice,
         rentMedian: self.insights.rent.medianPrice,
         salePricePerM2Median: self.insights.sale.medianPricePerM2,
