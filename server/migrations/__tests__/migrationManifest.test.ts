@@ -326,7 +326,7 @@ describe('canonical migration manifest', () => {
     expect(historicalCompatibilityApproved.map(entry => entry.statementCount)).toEqual([
       4, 15, 3, 3, 3, 4, 3, 3, 3, 3,
     ]);
-    expect(manifest.expectedHead.filename).toBe('0197_drop_seller_prospects_province.sql');
+    expect(manifest.expectedHead.filename).toBe('0200_services_provider_credentials.sql');
   });
 
   it('plans the identity-and-custody migration chain from the integrated 0007 head', () => {
@@ -342,11 +342,11 @@ describe('canonical migration manifest', () => {
         checksum: item.checksum,
       })),
       acceptedOldHead: currentIntegratedHead.filename,
-      expectedNewHead: '0197_drop_seller_prospects_province.sql',
+      expectedNewHead: '0200_services_provider_credentials.sql',
     });
 
     expect(plan.acceptedOldHead).toBe('0007_paid_launch_access_invoice_term.sql');
-    expect(plan.pending).toHaveLength(190);
+    expect(plan.pending).toHaveLength(193);
     expect(plan.pending.map(item => item.filename)).toEqual([
       '0008_developer_organisations.sql',
       '0009_developer_organisation_memberships.sql',
@@ -538,8 +538,11 @@ describe('canonical migration manifest', () => {
       '0195_drop_seller_prospects_suburb.sql',
       '0196_drop_seller_prospects_city.sql',
       '0197_drop_seller_prospects_province.sql',
+      '0198_services_provider_website_onboarding.sql',
+      '0199_services_provider_projects.sql',
+      '0200_services_provider_credentials.sql',
     ]);
-    expect(plan.expectedNewHead).toBe('0197_drop_seller_prospects_province.sql');
+    expect(plan.expectedNewHead).toBe('0200_services_provider_credentials.sql');
   });
 
   it('accepts an isolated 0000 -> 0001 -> 0002 progression in ancestry order', () => {

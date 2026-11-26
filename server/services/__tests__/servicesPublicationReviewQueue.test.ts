@@ -278,11 +278,12 @@ describe('Services publication review queue', () => {
     mockQueueDb(
       [
         // Ready, not yet published.
-        makeBaseRow({ providerId: 20 }),
+        makeBaseRow({ providerId: 20, submissionStatus: 'submitted' }),
         // Published and eligible.
         makeBaseRow({
           providerId: 21,
           companyName: 'Published Provider',
+          submissionStatus: 'approved',
           verificationStatus: 'verified',
           directoryActive: 1,
           subscriptionStatus: 'active',
