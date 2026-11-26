@@ -149,7 +149,7 @@ describe('ServicesCategoryPage', () => {
     expect(heroHeading.tagName).toBe('H1');
     expect(
       screen.getByText(
-        'From emergency repairs to installations, find trusted plumbing professionals in your area.',
+        'From emergency repairs to installations, find plumbing professionals in your area.',
       ),
     ).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Choose your area')).toHaveAttribute(
@@ -169,7 +169,7 @@ describe('ServicesCategoryPage', () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/profiles reviewed\s+before going live/i)).toBeInTheDocument();
     expect(screen.getByText(/local experts\s+in your area/i)).toBeInTheDocument();
-    expect(screen.getByText(/real customer\s+reviews/i)).toBeInTheDocument();
+    expect(screen.getByText(/read reviews\s+before you choose/i)).toBeInTheDocument();
     expect(screen.getByText(/dedicated support\s+when you need help/i)).toBeInTheDocument();
     expect(screen.getByText(/replacing a fixture/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /view all services/i })).toBeInTheDocument();

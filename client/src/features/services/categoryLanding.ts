@@ -519,7 +519,7 @@ export const SERVICE_CATEGORY_LANDING_CONTENT: Record<
 const PLUMBING_FOCUS: ServiceFocusLandingOverride = {
   title: 'Plumbing & maintenance',
   description:
-    'From emergency repairs to installations, find trusted plumbing professionals in your area.',
+    'From emergency repairs to installations, find plumbing professionals in your area.',
   heroImage: SERVICES_IMAGES.plumbingHero,
   featureImage: '/images/services/plumbing-faucet-feature.jpeg',
   providerImage: SERVICES_IMAGES.providerNetworkCta,

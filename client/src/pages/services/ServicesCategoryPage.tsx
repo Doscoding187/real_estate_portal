@@ -577,7 +577,7 @@ export default function ServicesCategoryPage() {
               },
               {
                 icon: Star,
-                title: 'Real Customer\nReviews',
+                title: 'Read Reviews\nBefore You Choose',
               },
               {
                 icon: Headphones,

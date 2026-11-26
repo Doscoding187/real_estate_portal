@@ -33,7 +33,7 @@ describe('service category landing content', () => {
     expect(plumbing?.title).toBe('Plumbing & maintenance');
     expect(plumbing?.servicePathways).toHaveLength(6);
     expect(plumbing?.description).toBe(
-      'From emergency repairs to installations, find trusted plumbing professionals in your area.',
+      'From emergency repairs to installations, find plumbing professionals in your area.',
     );
     expect(plumbing?.description).not.toMatch(/emergency service available/i);
     expect(plumbing?.heroImage).toBe('/images/services/plumbing-hero-kitchen-sink.jpg');
