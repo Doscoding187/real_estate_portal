@@ -6,6 +6,7 @@
  * contract.listing-lifecycle-db.test.ts.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { setLandRuntimeOverride } from '../../shared/landLaunchPolicy';
 
 // ---------------------------------------------------------------------------
 // Mock the entire db module so we can assert what the router asks of it
@@ -851,6 +852,59 @@ describe('listing lifecycle — canonical identity contract', () => {
 
     await expect(caller.listing.getAnalytics({ listingId: 1001 })).resolves.toMatchObject({
       totalViews: 12,
+    });
+  });
+
+  describe('Land marketing media follows the Land gate', () => {
+    const LAND_MESSAGE =
+      'Land inventory is unavailable through the generic listing workflow for this launch cohort.';
+    const landListing = () =>
+      mockListing({ propertyDetails: { landEngine: true } } as never);
+
+    it('refuses a Land image reservation when the Land vertical is unavailable', async () => {
+      const caller = makeCaller(ownerUser);
+      vi.mocked(mockDb.getListingById).mockResolvedValue(landListing());
+      vi.mocked(mockDb.assertNotDedicatedLandWorkflowListing).mockRejectedValue(
+        new LandLaunchContainmentError('Land listings use the dedicated Land workflow.'),
+      );
+      await expect(
+        caller.listing.uploadMedia({
+          listingId: 1001,
+          type: 'image',
+          filename: 'plot.jpg',
+          contentType: 'image/jpeg',
+        }),
+      ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED', message: LAND_MESSAGE });
+    });
+
+    it('does not apply the generic Land refusal to media when the Land vertical is available', async () => {
+      setLandRuntimeOverride(() => true);
+      try {
+        const caller = makeCaller(ownerUser);
+        vi.mocked(mockDb.getListingById).mockResolvedValue(landListing());
+        vi.mocked(mockDb.assertNotDedicatedLandWorkflowListing).mockRejectedValue(
+          new LandLaunchContainmentError('Land listings use the dedicated Land workflow.'),
+        );
+        const outcome = await caller.listing
+          .uploadMedia({
+            listingId: 1001,
+            type: 'image',
+            filename: 'plot.jpg',
+            contentType: 'image/jpeg',
+          })
+          .then(
+            () => 'ok',
+            (error: Error) => error.message,
+          );
+        expect(outcome).not.toBe(LAND_MESSAGE);
+        // Other generic lifecycle routes still refuse Land.
+        await expect(caller.listing.getById({ id: 1001 })).rejects.toMatchObject({
+          code: 'PRECONDITION_FAILED',
+          message: LAND_MESSAGE,
+        });
+      } finally {
+        setLandRuntimeOverride(() => false);
+      }
     });
   });
 

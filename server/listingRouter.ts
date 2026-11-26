@@ -76,6 +76,8 @@ import {
   type ListingContentActor,
 } from './services/listingContentCustody';
 import { resolveCurrentAgencyMembershipForAgent } from './services/agencyMembershipService';
+import './_core/landRuntime';
+import { isLandVerticalAvailable } from '../shared/landLaunchPolicy';
 import { LandLaunchContainmentError } from './services/landLaunchContainmentService';
 import { safeErrorSummary } from './_core/safeError';
 
@@ -192,7 +194,14 @@ async function assertListingMediaCustody(
     });
   }
 
-  await assertGenericListingRouteAvailable(listingId, listing as Record<string, unknown>);
+  // Land marketing images are uploaded through the media routes. They follow
+  // the Land gate (custody still enforced below); every other generic lifecycle
+  // route keeps rejecting Land, and generic search/projection still excludes it.
+  const landMediaAllowed =
+    isLandVerticalAvailable() && isDedicatedLandWorkflowListingRecord(listing as Record<string, unknown>);
+  if (!landMediaAllowed) {
+    await assertGenericListingRouteAvailable(listingId, listing as Record<string, unknown>);
+  }
   await assertListingContentCustody(listing, user, message);
   return listing;
 }
