@@ -1,5 +1,6 @@
 import { Resend } from 'resend';
 import { appendFileSync, chmodSync } from 'node:fs';
+import { appendLocalAuthOutbox } from './localAuthOutbox';
 import {
   DEPLOYED_TRANSACTIONAL_EMAIL_UNAVAILABLE_MESSAGE,
   isTransactionalEmailConfigured,
@@ -123,6 +124,14 @@ export async function sendVerificationEmail({
       subject: 'Verify your email - Property Listify',
       verificationUrl,
     });
+    if (!capturedInGovernedSink) {
+      appendLocalAuthOutbox({
+        kind: 'verification',
+        to,
+        subject: 'Verify your email - Property Listify',
+        url: verificationUrl,
+      });
+    }
     console.warn('[Email] RESEND_API_KEY missing — skipping sendVerificationEmail');
     // The governed B06 fixture is the only permitted token-bearing capture.
     // Ordinary local logs must never contain a credential-bearing URL.
@@ -221,6 +230,12 @@ export async function sendPasswordResetEmail({
   const resetUrl = `${transactionalEmailOrigin('app')}/reset-password?token=${resetToken}`;
 
   if (!resend) {
+    appendLocalAuthOutbox({
+      kind: 'password_reset',
+      to,
+      subject: 'Reset your password - Property Listify',
+      url: resetUrl,
+    });
     console.warn('[Email] RESEND_API_KEY missing — skipping sendPasswordResetEmail');
     console.log('[Email Local Dev] Password reset delivery simulated.');
     return { success: true, messageId: 'dev-mock-id' };
