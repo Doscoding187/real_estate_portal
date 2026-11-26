@@ -19,18 +19,12 @@ type CoverageAreasStepProps = {
 };
 
 export function CoverageAreasStep({ state, dispatch, onNext, onBack }: CoverageAreasStepProps) {
-  const utils = trpc.useUtils();
   const isPending = state.pendingStep === 4;
   const error = state.errors[4];
 
   const replaceLocations = trpc.servicesEngine.replaceProviderLocations.useMutation({
-    onSuccess: async () => {
-      await Promise.all([
-        utils.servicesEngine.myProviderProfile.invalidate(),
-        utils.servicesEngine.myOnboardingStatus.invalidate(),
-      ]);
+    onSuccess: () => {
       dispatch({ type: 'CLEAR_ERROR', step: 4 });
-      dispatch({ type: 'MARK_STEP_SAVED', step: 4 });
       dispatch({ type: 'SET_PENDING', step: null });
       onNext();
     },
@@ -67,7 +61,7 @@ export function CoverageAreasStep({ state, dispatch, onNext, onBack }: CoverageA
   return (
     <div className="space-y-6">
       <div className="space-y-1">
-        <h2 className="text-xl font-semibold text-slate-900">Choose your service areas</h2>
+        <h2 className="text-xl font-semibold text-slate-900">Where do you operate?</h2>
         <p className="text-sm text-slate-500">
           Select the exact approved Places you serve. Requests match only the selected Place.
         </p>
@@ -130,7 +124,7 @@ export function CoverageAreasStep({ state, dispatch, onNext, onBack }: CoverageA
           Back
         </Button>
         <Button onClick={handleContinue} disabled={isPending || !hasValidRow}>
-          {isPending ? 'Saving...' : 'Save service areas and continue'}
+          {isPending ? 'Saving...' : 'Continue'}
         </Button>
       </div>
     </div>

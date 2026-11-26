@@ -2080,30 +2080,6 @@
       "approvedFiles": [
         "server/migrations/0197_drop_seller_prospects_province.sql"
       ]
-    },
-    {
-      "path": "server/migrations/0198_services_provider_website_onboarding.sql",
-      "classification": "canonical active",
-      "purpose": "Adds provider business-site template and explicit submission/review state to the canonical Services profile.",
-      "approvedFiles": [
-        "server/migrations/0198_services_provider_website_onboarding.sql"
-      ]
-    },
-    {
-      "path": "server/migrations/0199_services_provider_projects.sql",
-      "classification": "canonical active",
-      "purpose": "Adds provider-owned portfolio project records with canonical Place and reviewer-controlled publication.",
-      "approvedFiles": [
-        "server/migrations/0199_services_provider_projects.sql"
-      ]
-    },
-    {
-      "path": "server/migrations/0200_services_provider_credentials.sql",
-      "classification": "canonical active",
-      "purpose": "Adds private provider credential evidence records with reviewer status and private storage keys.",
-      "approvedFiles": [
-        "server/migrations/0200_services_provider_credentials.sql"
-      ]
     }
   ],
   "prohibitedPaths": [

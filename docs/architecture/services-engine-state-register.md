@@ -43,8 +43,8 @@ task-owned worktree with evidence recorded in the register line itself.
 
 ## §1 Engine stage statement
 
-**Historical source audit (`origin/main` @ `93723fdb`, #761, 2026-11-12):** the
-Services engine was a contract-governed pilot marketplace and provider workspace —
+**As of `origin/main` @ `d5504b5a` (#791, refreshed 2026-11-21):** the Services
+engine is a contract-governed pilot marketplace and provider workspace —
 the six-category directory (`/services` and `/services/:category`), provider
 profiles, and five topic pages are indexable with canonicals; the localized
 directory route was retired by #693. The engine also has fail-closed reviewed
@@ -56,15 +56,16 @@ a super-admin review workspace, and a gated provider workspace. DELTA-1 per-
 service pages (#704), DELTA-3 response measurement (#701), DELTA-4 SEO (#700),
 and DELTA-7 workspace upgrades (#702) are merged. Canonical Place coverage is
 implemented through #693; broader service-by-Place landing pages remain future
-work. At that audit point, provider applications remained held and service-
-description editing was incomplete. Those two historical gaps were subsequently
-addressed; campaign capture, managed media, export/handover and automated
-notifications remain future work.
+work. Provider applications are open through the existing email-verification
+and private-onboarding flow (#768), and the provider editor can maintain its
+canonical service descriptions (#766). Campaign landing/capture, provider
+media, export/handover, automated notifications, and monetization are not
+implemented or approved for launch.
 
-**Historical implementation evidence (2026-11-13):** DELTA-12 provider acquisition and the
-approved provider service-description editor improvement are implemented in
-`feat/services-master-product-vision-and-provider-acquisition-20261112` and
-verified against the exact task-owned disposable MySQL database. The new
+**Historical verification update (2026-11-13):** DELTA-12 provider acquisition
+and the approved provider service-description editor improvement were verified
+against the exact task-owned disposable MySQL database before shipping through
+#768 and #766. The new
 `server/__tests__/integration.services-provider-acquisition.test.ts` uses real
 registration and verification HTTP routes, real authenticated provider
 mutations and reads, persistent service-description writes, ownership checks,
@@ -100,83 +101,6 @@ authority status and schema-congruency checks. No database files were removed,
 and no shared/production database, schema, migration, deployment or provider
 promotion was touched. The master vision remains the strategic product
 authority; this register tracks implementation state only.
-
-**Current source baseline: `origin/main` @ `d5504b5a` (#791, refreshed
-2026-11-22):** the existing provider acquisition route, email-verification and
-role authority, provider workspace and editable service descriptions are in the
-source baseline. This task branch adds a guided, persisted website-building
-journey, server-computed publication readiness, one Professional Business
-template in the current onboarding/workspace experience, a private preview,
-optional moderated project records and private credential evidence. The public
-renderer and stored template field retain legacy variants for existing records;
-new template choices are deferred. Migrations 0198–0200 are present only on this task branch. The
-disposable worktree database is at manifest head 0200 and schema congruent;
-production and shared databases remain untouched.
-
-**Task branch update (2026-11-22):** focused application and local-storage
-verification covers registration and email-verification routes (email
-captured in memory), provider-owned service edits, readiness and submission,
-reviewer publication, project moderation, credential projection and
-authorization, private local credential delivery, wizard progress and generated
-public-site rendering. The approved legal release and external email delivery
-are not verified.
-
-**Prior implementation verification (2026-11-22):** the focused run passed 13
-affected files (122 tests); the isolated-CI grant inventory test passed 7/7
-after it was updated to include the two new provider tables. Its full-suite
-result was superseded by the onboarding correctness follow-up below.
-
-**Onboarding correctness follow-up (2026-11-22):** five focused files passed
-(77 tests). `pnpm check` passed. `pnpm run lint:check` exited 0 with zero
-errors and 13,697 warnings across the repository. The complete
-`pnpm test:authority` run finished with 862 files passed, 15 failed and 12
-skipped (6,370 tests passed, 43 failed and 100 skipped; 889 files / 6,513
-tests total). The Services acquisition database integration passed. The failed
-files include Database Authority checks that correctly refuse the branch's
-0200 migration lineage while grant and guarded-source registrations remain
-pinned to 0197; do not change those registrations inside this Services task.
-Other failures include launch-access tests missing test-only `JWT_SECRET` or
-current legal-release fixture state, database tests affected by seeded
-super-admin/legal-fixture cross-test state, and hosted-readiness monitor
-timeouts under full-suite load. These failures are not evidence of a failed
-Services onboarding assertion, but the authority suite is red and Database
-Authority review remains a release gate.
-
-The local browser preview showed the provider resuming at persisted step 2,
-the shared public-profile renderer in private-draft mode, and no “Reviewed
-profile” claim. Desktop and mobile captures are in `/tmp/services-onboarding-desktop.png`
-and `/tmp/services-onboarding-mobile.png`. Browser verification did not save
-provider data; persistence and authorization are covered by focused and
-database-backed tests. This follow-up added no schema or migration changes.
-Published service-description edits remain immediate under the V1 contract;
-this work did not add a separate edit-review workflow.
-
-**Screenshot-driven onboarding layout revision (2026-11-22):** the supplied
-Step 1 design now governs the wizard composition: five-step navigation inside
-the primary frame, form left and a large shared-renderer website preview right
-on desktop, with the preview below the form on mobile. Step 1 uses the
-reference's business name, business type, optional brand image, short
-introduction and Continue layout. The mobile site preview now keeps its
-navigation and enquiry action within the viewport. Persisted resume position
-is applied only on entry, so providers can return to Step 1 from a later saved
-step. Four focused UI test files pass (29 tests), and `pnpm check` passes. Desktop and mobile captures at
-`/tmp/services-onboarding-step1-reference-desktop.png` and
-`/tmp/services-onboarding-step1-reference-mobile.png` use mocked authentication
-and onboarding status; no provider or database changes were made by the browser
-rehearsal. The layout revision adds no schema or migration changes.
-
-The local service's stale PID file referenced absent PID 23704; port 3307 had no
-listener. The guarded `pnpm db:authority:service:recover` removed only the exact
-stale PID/socket/lock metadata, after which the approved service start/wait
-sequence restored the same task-owned disposable database. Authority status
-confirms manifest head 0200, schema congruency and no incomplete attempts. No
-database files or data were reset, and no shared/production database was
-accessed.
-
-**Review limitation:** provider project metadata remains moderation-gated, but
-project images use the generic public media URL path and may be directly
-retrievable if a URL is known before approval. Do not claim those image bytes
-are private. Credential files remain on the private signed-delivery path.
 
 **Task branch update (2026-11-21):**
 `feat/services-public-marketplace-readiness-20261120` removes only `services`
@@ -234,7 +158,7 @@ engines.
 | # | Artifact | Status | Disposition |
 | --- | --- | --- | --- |
 | S-1 | `services-v1-product-contract.md` | **Authority for shipped public behaviour.** V2 review authorship/moderation/aggregates, DELTA-3 response measurement, DELTA-1 service pages, DELTA-4 SEO and canonical Place coverage are later shipped extensions. Reviewer staffing/cadence remains an operational dependency; contact evidence and formal quotes remain open. | Keep and reconcile current-state notes without removing dated history. |
-| S-2 | `services-v2-product-contract.md` | Authority for approved direction. §6 "provider mini-site" vocabulary is superseded by the approved V3 web-presence/growth-journey model; its sequence (existing data first, schema only when evidenced) carries forward. | V2/V3 still record a free controlled pilot. Edward's 2026-11-22 directive states paid access, free applications and no automatic three-month trial. Reconcile the contracts before implementing charges or entitlements; no billing was added here. |
+| S-2 | `services-v2-product-contract.md` | Authority for approved direction. §6 "provider mini-site" vocabulary is superseded by the approved V3 web-presence/growth-journey model; its sequence (existing data first, schema only when evidenced) carries forward. | Keep as the source of the free controlled pilot, hosted presence, and review decisions; V3 is the approved growth contract. |
 | S-3 | `.kiro/specs/services-marketplace-overhaul/` (`requirements.md`, `design.md`, `tasks.md`) | **Superseded.** Pre-contract UI-overhaul spec ("Angi-style" polish, wizard replacement, `Trust_Bar`, provider-card *response time and job count* — invented trust signals). It is the paper trail explaining the unmounted components in §4.2, which were built against this spec and never landed in routed code. | *Proposed: Archive in place* (no deletion, no merge). Never resurrect its response-time/job-count display: trust claims may come only from measured event truth (DELTA-3) and the platforms verified/reviews ladder. |
 | S-4 | Phase-0 notification/orphan-scheduler implementation (`feature_services-engine-phase0`, recovery copies `origin/recovery/services-engine-clean-baseline-2026-07-02`, `origin/recovery/safety-2026-07-03/feature_services-engine-phase0`) | **Retired archive-only** (recorded in `docs/operations/repository-convergence-2026-08-31-classification.md:72`). Relies on retired migration/delivery assumptions. Local branch `feature/services-engine-phase0` no longer exists; local worktree path `/home/edwardspc/Desktop/Dev/listify-services-engine-phase0` is gone. | Do not resurrect. Any notification/reminder/delivery capability is created fresh only as DELTA-8 (new domain, new owner, new contract). |
 | S-5 | `svc/future-state-wt` classification | Historical: broad alternative services-engine rewrite with retired `0062–0074` migration assumptions (convergence doc `:158`). Not a registered worktree today. | Reference-only. Any services schema replacement requires a fresh database-authority design. |
@@ -252,24 +176,40 @@ Statuses: `Proposed` (awaiting founder/V3 approval) · `Approved, not started` �
 | DELTA-3 Measured response performance from `service_lead_events` | Code | **Done on `origin/main` #761** (PR #701, commit `b2dd9a18b`) | 90-day median from response-event truth; public display requires three measured leads |
 | DELTA-4 Services SEO infrastructure (sitemap child, JSON-LD, slug canonicalization) | Code | **Done on `origin/main` #761** (PR #700, commit `dd5e11114`) | Category and eligible provider/service sitemap entries; localized URLs omitted; category aliases redirect to canonical slugs |
 | DELTA-5 Provider media library | Schema (DB authority) | Proposed, evidence-gated | V2 MINI-1 |
-| DELTA-6 Provider project content and moderation | Schema (DB authority) | **Implemented on this task branch; review/release gates pending** | Migration 0199 adds provider-owned project records with canonical Place and reviewer-controlled publication; no arbitrary project count blocks initial publication. |
+| DELTA-6 Provider content model (case studies/projects) | Schema (DB authority) | Proposed, evidence-gated | V2 MINI-2 |
 | DELTA-7 Lead workspace upgrades (filters/totals/event analytics) + client hygiene sweep | Code | **Done on `origin/main` #761** (PR #702, commit `3a18d781f`) | Fail-closed status filtering, request-mix and response-performance panels, honest below-sample states, and client hygiene cleanup; read-only queries, no schema change |
 | DELTA-8 Fresh notification/delivery domain (alerts, reminders) | Contract + ops authority | Proposed | Fresh design only; S-4 stays retired |
 | DELTA-9 Export/handover with POPIA consent semantics | Contract (+ legal review) | Proposed | Platform stays attribution system of record |
 | DELTA-10 Canonical Place coverage and geography | Place Authority consumer slice | **Foundation shipped through #693** (commit `cbff3e7b3`); service-by-Place pages remain future | Provider coverage/search uses canonical Place IDs; this does not implement radius search or service-by-Place SEO routes |
 | DELTA-11 Commercial model (tiers/placement/lead fees) | Founder decision | Proposed | V2 §3.1 gate: research then approval |
-| DELTA-12 Provider acquisition and registration | Code + operations | **Shipped on `origin/main` #791; regression DB verification passed in this task branch** | Uses existing `service_provider` registration, legal acceptance and verification. External email delivery and current approved legal release remain separate release checks. |
-| DELTA-13 Provider-editable service descriptions | Code | **Shipped on `origin/main` #791; regression DB verification passed in this task branch** | Reuses `service_provider_services.description`; provider-scoped writes, persistence, validation, public projection and unpublished privacy are covered. Published edits remain immediate under V1; no edit-review state is implemented or claimed. |
-| DELTA-14 Guided website onboarding, readiness and generated template | Code + schema (Database Authority) | **Implemented on this task branch; focused DB verification passed; merge/release authority pending** | Five-step save/resume onboarding uses persisted readiness and presents one Professional Business (Corporate Brand) template. Preview and public profile reuse the same renderer; legacy stored template variants remain readable for existing records. Migrations 0198–0200 add onboarding fields plus optional project/credential authorities. Draft pages remain private; super-admin publication remains the public transition. Project image bytes use the generic public media path and are not private before approval. |
+| DELTA-12 Provider acquisition and registration | Code + operations | **Done on `origin/main` #768; release email/legal verification pending** | Services acquisition route enters existing `service_provider` registration; real registration and verification HTTP routes established the provider role/session; onboarding completed against existing profile/service/Place authorities; pending provider remained private until super-admin publication. Evidence: `integration.services-provider-acquisition.test.ts`, role/auth/session/onboarding tests. Verification mail was captured in memory; current legal bundle and external delivery not verified. No schema, pricing, provider promotion or deployment. |
+| DELTA-13 Provider-editable service descriptions | Code | **Done on `origin/main` #766; release validation pending** | Existing provider editor and `service_provider_services.description` authority are reused. Real DB integration proves save/reload, optional blank clear, 2,000-character limit, foreign-service rejection, public profile/service projection, and unpublished privacy. No schema or migration. Published edits remain immediate under V1; no edit-review state is implemented or claimed. |
 | Readiness-1 Category destinations, public discovery focus and request planning | Code | **Implemented on `feat/services-public-marketplace-readiness-20261120`; conditionally review-ready with unrelated full-suite failures recorded** | The homepage still requires a deliberate service choice. Each canonical category now reads from one reusable content authority for its hero, pathways, request planning, practical guidance and truthful no-match/provider-acquisition states. Existing popular-service links preserve their server-backed `query` focus (for example, Plumbing) through normal directory refinement; pathways link into that same query authority. Guidance distinguishes prompt attention, planned maintenance, installation and larger-project intent without treating prompts as provider availability filters or claiming emergency/same-day availability. The authority suite reports no Services failure; the subsequent client-only results-anchor correction has focused tests, typecheck, lint and browser-smoke evidence. No server, schema, migration, data, publication or authorization change. |
+| Readiness-2 Cross-category service guide library and shared category conversion sections | Code + editorial content | **Implemented in local commit `53ba25eab`; review/release pending** | Added a central `serviceGuides.ts` registry, `/services/guides` library, article routes, category-card links and a consistent provider CTA across all six service categories. The registry contains 22 guides: four plumbing-specific guides and three guides for each catalog category. A manual browser smoke opened one guide from each category with no console errors; no automated tests/typecheck/lint were run for this commit. Plumbing articles have source links; the other initial guides are general request-preparation content without an editorial CMS/review flow. No schema, provider, authorization, publication or enquiry change. |
+| Readiness-3 Provider recruitment landing and channel destination | Code + content | **Implemented in the current readiness worktree; local desktop/mobile preview, typecheck and focused lint verified; review/release pending** | `/advertise/services` is now a provider-focused destination for social, search and direct outreach. It explains the existing business presence, listed services/coverage and request workspace; the free controlled pilot; private onboarding and reviewer publication; and the six current categories. It links to the existing `service_provider` registration flow. Route-specific SEO/social metadata, WebPage JSON-LD, an approved Services image and build-time prerendered HTML expose the share preview before JavaScript. It makes no guaranteed lead or revenue claim and adds no campaign tracking, analytics, auth, API, schema, migration or paid entitlements. External platform unfurl and deployed metadata remain unverified. |
+| Readiness-4 Provider acquisition measurement and organic pilot kit | Investigation + operational preparation | **No durable source-to-application measurement; channel method and draft outreach kit recorded in the master roadmap** | The landing route does not call the generic Advertise tracker. That tracker can send session, user and referrer metadata, but `server/routes/analytics.ts` currently keeps only an allow-listed event type and drops source dimensions; it has no dedicated persistent report. The provider registration flow drops UTM values, and no configured gtag loader/ID was found. The master roadmap now contains organic social, direct outreach and referral copy for the approved pilot targets, plus channel evidence and a blank stage-register template. The template must not be used until an access-controlled operational location and retention owner are confirmed; no live register or campaign has been created. Do not claim channel conversion measurement. No code, database, legal or analytics-provider change. |
+| Readiness-5 Provider onboarding journey presentation | Client UX + product authority | **Clarity updates implemented in the current readiness worktree; runtime verification pending** | The onboarding wizard now frames setup as creating a business presence, removes the duplicate short-description and unpersisted primary-category inputs from the first step, labels the five stages, summarizes service descriptions and canonical coverage before completion, and explains reviewer-controlled publication. The service-provider registration confirmation now says email verification continues into private setup instead of instructing the applicant to log in. Existing step saves, role checks, email verification, canonical Place authority, eligibility calculation and super-admin publication remain unchanged. No API, schema, analytics or commercial change. Source review also found no separate durable provider-submit state: a complete, ready, unpublished profile is included in the `awaiting_review` queue based on readiness. This V1 semantic question is recorded in the master roadmap; no new submission workflow is claimed. No tests or runtime preview were run for these client-only changes. |
 
-**Current direction:** V3 remains the approved growth contract. DELTA-1/3/4/7
-and DELTA-10's Place foundation are shipped. DELTA-12 and DELTA-13 are present
-on #791. DELTA-14 is branch-only until Database Authority review and normal
-code review/release. Actual email/legal-release verification, launch supply,
-operational readiness and the full authority-suite result remain separate
-gates. Later deltas retain their stated evidence, founder, legal, and Database
-Authority gates.
+**Current direction:** V3 is approved. DELTA-1/3/4/7 and the DELTA-10 canonical
+Place foundation, DELTA-12 and DELTA-13 are shipped on the refreshed baseline.
+Readiness-1 and Readiness-2 are implemented on the current local branch and are
+not yet merged or released. Readiness-3 adds the service-provider recruitment
+destination; campaign attribution, channel analytics and external social-card
+validation remain future work. Readiness-4 confirms that campaign-source
+attribution is not currently durable. The master roadmap now includes draft,
+unpublished provider-recruitment copy for the approved pilot markets and the
+measurement limits. No campaign has run; a linked applicant-source register
+remains gated on an approved restricted location and retention owner. Automation
+and paid acquisition still require the recorded privacy and analytics-authority
+decisions. Readiness-5 improves onboarding copy and the final profile summary;
+its local runtime path remains unverified, and the difference between profile
+readiness and an explicit provider submission action is an open V1/product
+authority question.
+The public-marketplace readiness branch remains review-only until normal
+review/merge/release. Actual email/legal-release verification, launch supply,
+exact production artifacts, Azure/API availability and operational/release
+readiness remain outstanding. Later deltas retain their stated evidence,
+founder, legal, and Database Authority gates.
 
 ## §4 Asset reconciliation
 
@@ -398,7 +338,7 @@ Resolved hygiene history:
 
 ## §5 Maintenance
 
-- **Evidence age:** current source baseline `origin/main` @ `d5504b5a` (#791), refreshed 2026-11-22; older asset and branch-lineage checks remain historical.
+- **Evidence age:** refreshed source baseline `origin/main` @ `d5504b5a` (#791), 2026-11-21.
   Any register line
   older than one merge involving its area must be re-verified before acting on it.
 - Queue and asset lines are updated **in the PR** that changes them — never in a
@@ -411,5 +351,7 @@ Resolved hygiene history:
 
 *Historical asset and branch-lineage checks: reference sweeps (`rg -l`),
 `git rev-list --left-right --count`, `git log`, and registered-path status at
-`main` @ `026586690`. Current product-state reconciliation: `origin/main` @
-`d5504b5a` (#791), 2026-11-22, with the evidence in §1 and DELTA rows above.*
+`main` @ `026586690`. Historical product-state reconciliation was
+`origin/main` @ `93723fdb` (#761), 2026-11-12; the current reconciliation is
+`origin/main` @ `d5504b5a` (#791), 2026-11-21, with the evidence in §1 and
+DELTA rows above.*

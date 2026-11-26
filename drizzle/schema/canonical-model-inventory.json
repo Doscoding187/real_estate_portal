@@ -3,12 +3,12 @@
   "formatVersion": 2,
   "generatedFrom": "drizzle/schema/index.ts via drizzle-orm 0.44 normalized metadata",
   "generator": "scripts/generateCanonicalModelInventory.ts",
-  "structuralDigest": "4bf6f12700b27b86b5b38119223be245681a3c4ff1c1c1eccf555a65f49df23d",
+  "structuralDigest": "869f441f3131b0f1bf4b56d416d049292bb48204918f8172d3699625c3208da7",
   "excludedRunnerControlTables": [
     "sql_migration_history",
     "sql_migration_attempts"
   ],
-  "tableCount": 227,
+  "tableCount": 225,
   "tables": [
     "activities",
     "affordability_assessments",
@@ -204,10 +204,8 @@
     "service_explore_videos",
     "service_lead_events",
     "service_leads",
-    "service_provider_credentials",
     "service_provider_locations",
     "service_provider_profiles",
-    "service_provider_projects",
     "service_provider_review_reports",
     "service_provider_reviews",
     "service_provider_services",

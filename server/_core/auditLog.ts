@@ -87,10 +87,6 @@ export const AuditActions = {
 
   // Services V1 reviewed publication authority
   REVIEW_SERVICE_PROVIDER_PUBLICATION: 'services.provider_publication_reviewed',
-  SUBMIT_SERVICE_PROVIDER_WEBSITE: 'services.provider_website_submitted',
-  REVIEW_SERVICE_PROVIDER_PROJECT: 'services.provider_project_reviewed',
-  REVIEW_SERVICE_PROVIDER_CREDENTIAL: 'services.provider_credential_reviewed',
-  ACCESS_SERVICE_PROVIDER_CREDENTIAL: 'services.provider_credential_accessed',
   MODERATE_SERVICE_PROVIDER_REVIEW: 'services.provider_review_moderated',
   REPORT_SERVICE_PROVIDER_REVIEW: 'services.provider_review_reported',
   RESOLVE_SERVICE_PROVIDER_REVIEW_REPORT: 'services.provider_review_report_resolved',

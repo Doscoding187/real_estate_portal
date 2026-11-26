@@ -69,9 +69,6 @@ vi.mock('@/hooks/useServiceProviderOnboardingStatus', () => ({
 
 vi.mock('wouter', () => ({ useLocation: () => ['/service/profile', vi.fn()] }));
 vi.mock('@/components/services/ProNavigation', () => ({ ProNavigation: () => null }));
-vi.mock('@/features/services/onboarding/ProviderBusinessPresenceWorkspace', () => ({
-  ProviderBusinessPresenceWorkspace: () => null,
-}));
 vi.mock('@/components/location/CanonicalPlaceSelector', () => ({
   CanonicalPlaceSelector: () => null,
 }));

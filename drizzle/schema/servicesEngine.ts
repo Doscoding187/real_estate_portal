@@ -103,35 +103,6 @@ export const SERVICE_PROVIDER_REVIEW_REPORT_STATUS_VALUES = [
   'resolved',
   'dismissed',
 ] as const;
-export const SERVICE_PROVIDER_BUSINESS_TYPE_VALUES = [
-  'independent_professional',
-  'registered_company',
-  'partnership',
-  'other',
-] as const;
-export const SERVICE_PROVIDER_WEBSITE_TEMPLATE_VALUES = [
-  'personal_brand',
-  'corporate_brand',
-  'project_showcase',
-] as const;
-export const SERVICE_PROVIDER_SUBMISSION_STATUS_VALUES = [
-  'draft',
-  'submitted',
-  'changes_requested',
-  'approved',
-  'rejected',
-] as const;
-export const SERVICE_PROVIDER_PROJECT_MODERATION_STATUS_VALUES = [
-  'draft',
-  'pending',
-  'published',
-  'rejected',
-] as const;
-export const SERVICE_PROVIDER_CREDENTIAL_STATUS_VALUES = [
-  'pending',
-  'verified',
-  'rejected',
-] as const;
 export const SERVICE_EXPLORE_MODERATION_STATUS_VALUES = [
   'pending',
   'reviewing',
@@ -166,25 +137,6 @@ export const serviceProviderProfiles = mysqlTable(
     metadata: json('metadata'),
     createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
-    businessType: mysqlEnum(
-      'business_type',
-      SERVICE_PROVIDER_BUSINESS_TYPE_VALUES as unknown as [string, ...string[]],
-    ),
-    websiteTemplate: mysqlEnum(
-      'website_template',
-      SERVICE_PROVIDER_WEBSITE_TEMPLATE_VALUES as unknown as [string, ...string[]],
-    )
-      .default('corporate_brand')
-      .notNull(),
-    submissionStatus: mysqlEnum(
-      'submission_status',
-      SERVICE_PROVIDER_SUBMISSION_STATUS_VALUES as unknown as [string, ...string[]],
-    )
-      .default('draft')
-      .notNull(),
-    submittedAt: timestamp('submitted_at', { mode: 'string' }),
-    reviewedAt: timestamp('reviewed_at', { mode: 'string' }),
-    reviewNote: varchar('review_note', { length: 1000 }),
   },
   table => [
     unique('ux_service_provider_profiles_provider').on(table.providerId),
@@ -237,88 +189,6 @@ export const serviceProviderServices = mysqlTable(
     unique('ux_service_provider_services_unique').on(table.providerId, table.serviceCode),
     index('idx_service_provider_services_provider').on(table.providerId),
     index('idx_service_provider_services_category').on(table.serviceCategory),
-  ],
-);
-
-/** Provider-submitted portfolio work. Projects stay private until a reviewer publishes them. */
-export const serviceProviderProjects = mysqlTable(
-  'service_provider_projects',
-  {
-    id: int('id').autoincrement().primaryKey(),
-    providerId: int('provider_id')
-      .notNull()
-      .references(() => partners.id, { onDelete: 'cascade' }),
-    title: varchar('title', { length: 180 }).notNull(),
-    description: text('description'),
-    serviceCategory: mysqlEnum(
-      'service_category',
-      SERVICE_CATEGORY_VALUES as unknown as [string, ...string[]],
-    ).notNull(),
-    canonicalPlaceId: varchar('canonical_place_id', { length: 40 }).references(
-      () => place.placeId,
-      { onDelete: 'restrict', onUpdate: 'restrict' },
-    ),
-    coverImageUrl: varchar('cover_image_url', { length: 500 }),
-    gallery: json('gallery'),
-    moderationStatus: mysqlEnum(
-      'moderation_status',
-      SERVICE_PROVIDER_PROJECT_MODERATION_STATUS_VALUES as unknown as [string, ...string[]],
-    )
-      .default('draft')
-      .notNull(),
-    reviewedByUserId: int('reviewed_by_user_id').references(() => users.id, {
-      onDelete: 'set null',
-    }),
-    moderationNote: varchar('moderation_note', { length: 1000 }),
-    reviewedAt: timestamp('reviewed_at', { mode: 'string' }),
-    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
-    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
-  },
-  table => [
-    index('idx_service_provider_projects_provider_status').on(
-      table.providerId,
-      table.moderationStatus,
-    ),
-    index('idx_service_provider_projects_place').on(table.canonicalPlaceId),
-  ],
-);
-
-/** Private provider credentials; object keys are never part of public profile projections. */
-export const serviceProviderCredentials = mysqlTable(
-  'service_provider_credentials',
-  {
-    id: int('id').autoincrement().primaryKey(),
-    providerId: int('provider_id')
-      .notNull()
-      .references(() => partners.id, { onDelete: 'cascade' }),
-    credentialType: varchar('credential_type', { length: 80 }).notNull(),
-    title: varchar('title', { length: 180 }).notNull(),
-    issuingBody: varchar('issuing_body', { length: 180 }),
-    reference: varchar('reference', { length: 120 }),
-    privateStorageKey: varchar('private_storage_key', { length: 500 }).notNull(),
-    originalFileName: varchar('original_file_name', { length: 255 }).notNull(),
-    mimeType: varchar('mime_type', { length: 80 }).notNull(),
-    byteSize: int('byte_size').notNull(),
-    status: mysqlEnum(
-      'status',
-      SERVICE_PROVIDER_CREDENTIAL_STATUS_VALUES as unknown as [string, ...string[]],
-    )
-      .default('pending')
-      .notNull(),
-    submittedByUserId: int('submitted_by_user_id')
-      .notNull()
-      .references(() => users.id, { onDelete: 'restrict' }),
-    reviewedByUserId: int('reviewed_by_user_id').references(() => users.id, {
-      onDelete: 'set null',
-    }),
-    reviewNote: varchar('review_note', { length: 1000 }),
-    reviewedAt: timestamp('reviewed_at', { mode: 'string' }),
-    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
-    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
-  },
-  table => [
-    unique('ux_service_provider_credentials_storage_key').on(table.privateStorageKey),
-    index('idx_service_provider_credentials_provider_status').on(table.providerId, table.status),
   ],
 );
 

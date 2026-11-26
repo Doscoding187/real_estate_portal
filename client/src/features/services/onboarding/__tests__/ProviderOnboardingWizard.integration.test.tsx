@@ -6,16 +6,6 @@ const mockProfile = vi.fn();
 const mockProfileLoading = vi.fn(() => false);
 const mockReplaceServices = vi.fn();
 const mockReplaceLocations = vi.fn();
-const mockSubmitWebsite = vi.fn();
-const mockRegisterIdentity = vi.fn();
-const mockUpsertProfile = vi.fn();
-const mockInvalidate = vi.fn(async () => undefined);
-const mockUtils = {
-  servicesEngine: {
-    myProviderProfile: { invalidate: mockInvalidate, refetch: mockInvalidate },
-    myOnboardingStatus: { invalidate: mockInvalidate, refetch: mockInvalidate },
-  },
-};
 const PLACE_SANDTON = 'pl-place-01-000000000000000000000001';
 const PLACE_ARCADIA = 'pl-place-01-000000000000000000000002';
 const selectedCoveragePlace = {
@@ -30,7 +20,6 @@ const selectedCoveragePlace = {
 
 vi.mock('@/lib/trpc', () => ({
   trpc: {
-    useUtils: () => mockUtils,
     servicesEngine: {
       myOnboardingStatus: {
         useQuery: () => ({
@@ -42,26 +31,17 @@ vi.mock('@/lib/trpc', () => ({
       myProviderProfile: {
         useQuery: () => ({ data: mockProfile(), isLoading: mockProfileLoading(), error: null }),
       },
-      getProviderPublicProfile: {
-        useQuery: () => ({ data: null, isLoading: false, error: null }),
-      },
 
       registerProviderIdentity: {
         useMutation: ({ onSuccess }: { onSuccess: (data: unknown) => void }) => ({
-          mutate: (input: unknown) => {
-            mockRegisterIdentity(input);
-            onSuccess({});
-          },
+          mutate: () => onSuccess({}),
           isPending: false,
           error: null,
         }),
       },
       upsertProviderProfile: {
         useMutation: ({ onSuccess }: { onSuccess: (data: unknown) => void }) => ({
-          mutate: (input: unknown) => {
-            mockUpsertProfile(input);
-            onSuccess({});
-          },
+          mutate: () => onSuccess({}),
           isPending: false,
           error: null,
         }),
@@ -86,27 +66,7 @@ vi.mock('@/lib/trpc', () => ({
           error: null,
         }),
       },
-      saveProviderProject: {
-        useMutation: () => ({ mutate: vi.fn(), mutateAsync: vi.fn(async () => ({})), isPending: false, error: null }),
-      },
-      deleteProviderProject: {
-        useMutation: () => ({ mutate: vi.fn(), isPending: false, error: null }),
-      },
-      requestProviderCredentialUpload: {
-        useMutation: () => ({ mutateAsync: vi.fn(async () => ({ uploadUrl: '/', uploadToken: 'test-upload-token' })), isPending: false, error: null }),
-      },
-      addProviderCredential: {
-        useMutation: () => ({ mutateAsync: vi.fn(async () => ({ id: 1, status: 'pending' })), isPending: false, error: null }),
-      },
-      submitProviderWebsite: {
-        useMutation: ({ onSuccess }: { onSuccess: () => void }) => ({
-          mutate: () => { mockSubmitWebsite(); onSuccess(); },
-          isPending: false,
-          error: null,
-        }),
-      },
     },
-    upload: { presign: { useMutation: () => ({ mutateAsync: vi.fn(async () => ({ url: '/', publicUrl: '/test-image' })), isPending: false, error: null }) } },
     placeAuthority: {
       resolveSearchPlaces: {
         useQuery: ({ placeIds }: { placeIds: string[] }) => ({
@@ -188,11 +148,8 @@ describe('ProviderOnboardingWizard', () => {
     mockProfileLoading.mockReset();
     mockProfileLoading.mockReturnValue(false);
     mockReplaceServices.mockReset();
-    mockSubmitWebsite.mockReset();
 
     mockReplaceLocations.mockReset();
-    mockRegisterIdentity.mockReset();
-    mockUpsertProfile.mockReset();
     mockStatus.mockReturnValue({
       hasProviderIdentity: false,
       profileConfigured: false,
@@ -210,69 +167,6 @@ describe('ProviderOnboardingWizard', () => {
   it('shows the five-step setup flow', () => {
     render(<ProviderOnboardingWizard />);
     expect(screen.getByText('Step 1 of 5')).toBeInTheDocument();
-    expect(screen.getByRole('navigation', { name: 'Website setup steps' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /step 5: review & publish, not available yet/i })).toBeDisabled();
-  });
-
-  it('keeps Continue visually available and explains the required business name on submit', () => {
-    render(<ProviderOnboardingWizard />);
-    const continueButton = screen.getByRole('button', { name: 'Continue' });
-    expect(continueButton).toBeEnabled();
-
-    fireEvent.click(continueButton);
-
-    expect(screen.getByRole('alert')).toHaveTextContent('Enter a business name to continue.');
-    expect(mockRegisterIdentity).not.toHaveBeenCalled();
-  });
-
-  it('starts onboarding with a business name without requiring a business type', async () => {
-    render(<ProviderOnboardingWizard />);
-    fireEvent.change(screen.getByLabelText(/business name/i), { target: { value: 'Acme Maintenance' } });
-    await clickContinue();
-
-    await waitFor(() => expect(screen.getByText('Step 2 of 5')).toBeInTheDocument());
-    expect(mockRegisterIdentity.mock.calls[0]?.[0]).toHaveProperty('businessType', undefined);
-  });
-
-  it('lets the provider return to a saved step without losing its information', async () => {
-    render(<ProviderOnboardingWizard />);
-    fireEvent.change(screen.getByLabelText(/business name/i), { target: { value: 'Acme Plumbing' } });
-    fireEvent.change(screen.getByLabelText(/business type/i), { target: { value: 'registered_company' } });
-    await clickContinue();
-    await waitFor(() => expect(screen.getByText('Step 2 of 5')).toBeInTheDocument());
-
-    fireEvent.click(screen.getByRole('button', { name: /step 1: your business, completed/i }));
-
-    expect(screen.getByLabelText(/business name/i)).toHaveValue('Acme Plumbing');
-  });
-
-  it('resumes at the saved step and keeps Step 1 reachable afterward', async () => {
-    mockStatus.mockReturnValue({
-      hasProviderIdentity: true,
-      profileConfigured: true,
-      servicesConfigured: false,
-      locationsConfigured: false,
-      onboardingStep: 2,
-      dashboardUnlocked: false,
-      fullFeaturesUnlocked: false,
-      recommendedNextStep: '/service/profile',
-      provider: null,
-    });
-    mockProfile.mockReturnValue({
-      companyName: 'Existing Provider',
-      businessType: 'registered_company',
-      bio: 'A saved business introduction',
-      services: [],
-      locations: [],
-    });
-
-    render(<ProviderOnboardingWizard />);
-    await waitFor(() => expect(screen.getByText('Step 3 of 5')).toBeInTheDocument());
-
-    fireEvent.click(screen.getByRole('button', { name: /step 1: your business, completed/i }));
-
-    await waitFor(() => expect(screen.getByText('Step 1 of 5')).toBeInTheDocument());
-    expect(screen.getByLabelText(/business name/i)).toHaveValue('Existing Provider');
   });
 
   it('does not expose editable steps while an existing profile is still hydrating', () => {
@@ -295,38 +189,30 @@ describe('ProviderOnboardingWizard', () => {
     expect(screen.queryByRole('button', { name: /continue/i })).not.toBeInTheDocument();
   });
 
-  it('does not allow submission until the server reports persisted profile readiness', async () => {
+  it('completes setup with a truthful directory-review state', async () => {
     render(<ProviderOnboardingWizard />);
 
     fireEvent.change(screen.getByLabelText(/business name/i), {
       target: { value: 'Acme Plumbing' },
     });
-    fireEvent.change(screen.getByLabelText(/business type/i), {
-      target: { value: 'registered_company' },
-    });
-    expect(screen.getByLabelText(/logo or brand image/i)).not.toHaveAttribute('aria-required', 'true');
-    expect(screen.getByTitle('Business website desktop preview')).toBeInTheDocument();
     await clickContinue();
     await waitFor(() => expect(screen.getByText('Step 2 of 5')).toBeInTheDocument());
-    expect(mockRegisterIdentity.mock.calls[0]?.[0]).not.toHaveProperty('description');
-    // Step 1 saves identity only; no marketing intro is collected or sent.
-    expect(mockUpsertProfile).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByLabelText(/headline/i), {
+      target: { value: 'Clear property services' },
+    });
+    fireEvent.change(screen.getByLabelText(/about your business/i), {
+      target: { value: 'We provide clear property services.' },
+    });
     fireEvent.change(screen.getByLabelText(/contact email/i), {
       target: { value: 'hello@acme.example' },
     });
     await clickContinue();
 
     await waitFor(() => expect(screen.getByText('Step 3 of 5')).toBeInTheDocument());
-    expect(mockUpsertProfile.mock.calls[0]?.[0]).not.toHaveProperty('bio');
-    expect(mockUpsertProfile.mock.calls[0]?.[0]).not.toHaveProperty('headline');
     fireEvent.change(screen.getByPlaceholderText(/geyser replacement/i), {
       target: { value: 'Plumbing repair' },
     });
-    fireEvent.change(screen.getByLabelText(/primary service category/i), {
-      target: { value: 'finance_legal' },
-    });
-    fireEvent.click(screen.getByText(/optional service details/i));
-    fireEvent.change(screen.getByLabelText(/factual notes/i), {
+    fireEvent.change(screen.getByLabelText(/service description/i), {
       target: { value: 'Repair leaks, taps and household pipework.' },
     });
     await clickContinue();
@@ -335,15 +221,16 @@ describe('ProviderOnboardingWizard', () => {
     await clickContinue();
     await waitFor(() => expect(screen.getByText('Step 5 of 5')).toBeInTheDocument());
 
-    expect(screen.getByText('0%')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /submit website for review/i })).toBeDisabled();
-    expect(mockSubmitWebsite).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: /finish setup/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Profile setup complete')).toBeInTheDocument();
+    });
     expect(mockReplaceServices).toHaveBeenCalledWith({
       services: [
         expect.objectContaining({
           displayName: 'Plumbing repair',
           description: 'Repair leaks, taps and household pipework.',
-          category: 'finance_legal',
         }),
       ],
     });
@@ -355,53 +242,7 @@ describe('ProviderOnboardingWizard', () => {
         }),
       ],
     });
-  });
-
-  it('warns before leaving with unsaved form edits and clears the warning after the step saves', async () => {
-    render(<ProviderOnboardingWizard />);
-    fireEvent.change(screen.getByLabelText(/business name/i), {
-      target: { value: 'Acme Plumbing' },
-    });
-    const unsavedNavigation = new Event('beforeunload', { cancelable: true });
-    window.dispatchEvent(unsavedNavigation);
-    expect(unsavedNavigation.defaultPrevented).toBe(true);
-
-    fireEvent.change(screen.getByLabelText(/business type/i), {
-      target: { value: 'registered_company' },
-    });
-    await clickContinue();
-    await waitFor(() => expect(screen.getByText('Step 2 of 5')).toBeInTheDocument());
-    expect(screen.queryByText(/unsaved changes/i)).not.toBeInTheDocument();
-    const savedNavigation = new Event('beforeunload', { cancelable: true });
-    window.dispatchEvent(savedNavigation);
-    expect(savedNavigation.defaultPrevented).toBe(false);
-  });
-
-  it('hydrates a legacy provider description into the single business introduction field', async () => {
-    mockStatus.mockReturnValue({
-      hasProviderIdentity: true,
-      profileConfigured: true,
-      servicesConfigured: false,
-      locationsConfigured: false,
-      onboardingStep: 0,
-      dashboardUnlocked: false,
-      fullFeaturesUnlocked: false,
-      recommendedNextStep: '/service/profile',
-      provider: null,
-    });
-    mockProfile.mockReturnValue({
-      companyName: 'Existing Provider',
-      description: 'Legacy company description',
-      bio: null,
-      businessType: 'registered_company',
-    });
-
-    render(<ProviderOnboardingWizard />);
-    await waitFor(() => expect(screen.getByText('Step 1 of 5')).toBeInTheDocument());
-    // The marketing introduction field was intentionally removed from the wizard.
-    expect(screen.queryByLabelText(/business introduction/i)).not.toBeInTheDocument();
-    expect(screen.queryByLabelText(/short description/i)).not.toBeInTheDocument();
-    expect(screen.queryByLabelText(/about your business/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/not publicly published yet/i)).toBeInTheDocument();
   });
 
   it('does not render editable steps before existing profile hydration completes', () => {
@@ -469,7 +310,7 @@ describe('ProviderOnboardingWizard', () => {
     render(<ProviderOnboardingWizard />);
     await waitFor(() => expect(screen.getByText('Step 3 of 5')).toBeInTheDocument());
     expect(screen.getByLabelText(/service name/i)).toHaveValue('Plumbing repairs');
-    const description = screen.getByLabelText('Factual notes');
+    const description = screen.getByLabelText('Service description');
     expect(description).toHaveValue('Existing description');
     expect(description).toHaveAttribute('maxLength', '2000');
     fireEvent.change(description, { target: { value: 'Updated pipe repair description.' } });

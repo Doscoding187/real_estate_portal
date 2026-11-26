@@ -27,7 +27,7 @@ vi.mock('../_core/email', () => ({
 
 import { COOKIE_NAME } from '../../shared/const';
 import type { AppRouter } from '../routers';
-import { users, partners, auditLogs, serviceProviderCredentials } from '../../drizzle/schema';
+import { users, partners, auditLogs } from '../../drizzle/schema';
 import { authService } from '../_core/auth';
 import { registerAuthRoutes } from '../_core/authRoutes';
 import { createContext } from '../_core/context';
@@ -71,12 +71,11 @@ async function cleanupFixtures() {
     ...new Set([...createdProviderIds, ...providerRows.map(row => Number(row.id))]),
   ];
   if (providerIds.length) {
-    await db.delete(auditLogs).where(
-      and(
-        inArray(auditLogs.userId, userIds),
-        like(auditLogs.targetType, 'service_provider%'),
-      ),
-    );
+    await db
+      .delete(auditLogs)
+      .where(
+        and(eq(auditLogs.targetType, 'service_provider'), inArray(auditLogs.targetId, providerIds)),
+      );
     await db.delete(partners).where(inArray(partners.id, providerIds));
   }
   if (userIds.length) {
@@ -181,8 +180,6 @@ describeWithDb('Services provider acquisition and editable descriptions', () => 
     const identity = await ownerClient.servicesEngine.registerProviderIdentity.mutate({
       companyName: `Local Services Provider ${suffix.slice(0, 8)}`,
       description: 'A local-only provider used to verify the Services application journey.',
-      logoUrl: 'https://example.test/local-services-provider.png',
-      businessType: 'registered_company',
     });
     const providerId = Number(identity.id);
     createdProviderIds.push(providerId);
@@ -190,7 +187,6 @@ describeWithDb('Services provider acquisition and editable descriptions', () => 
       headline: 'Property maintenance and plumbing',
       bio: 'Local-only factual description for verification.',
       contactEmail: owner.email,
-      websiteTemplate: 'personal_brand',
     });
     const [service] = await ownerClient.servicesEngine.replaceProviderServices.mutate({
       services: [
@@ -262,27 +258,6 @@ describeWithDb('Services provider acquisition and editable descriptions', () => 
       (await ownerClient.servicesEngine.myProviderProfile.query())?.services[0]?.description,
     ).toBe(savedDescription);
 
-    const websiteReadiness = (await ownerClient.servicesEngine.myOnboardingStatus.query()).readiness;
-    expect(websiteReadiness).toMatchObject({ completionPercent: 100, readyForSubmission: true });
-    await ownerClient.servicesEngine.submitProviderWebsite.mutate();
-    expect((await ownerClient.servicesEngine.myProviderProfile.query())?.submissionStatus).toBe(
-      'submitted',
-    );
-    await expect(
-      ownerClient.servicesEngine.replaceProviderServices.mutate({
-        services: [
-          {
-            id: Number(service!.id),
-            category: 'home_improvement',
-            code: 'plumbing',
-            displayName: 'Plumbing',
-            description: 'Attempted change while awaiting reviewer approval.',
-          },
-        ],
-      }),
-    ).rejects.toThrow('awaiting review');
-    expect(await trpcClient().servicesEngine.getProviderPublicProfile.query({ providerId })).toBeNull();
-
     const other = await registerAndVerify(
       `services-other-${suffix}@invalid.example`,
       'Other Provider',
@@ -334,73 +309,6 @@ describeWithDb('Services provider acquisition and editable descriptions', () => 
     expect(publicProfile?.services).toEqual(
       expect.arrayContaining([expect.objectContaining({ description: savedDescription })]),
     );
-    expect(publicProfile).toMatchObject({
-      businessType: 'registered_company',
-      websiteTemplate: 'personal_brand',
-    });
-    expect((await ownerClient.servicesEngine.myProviderProfile.query())?.submissionStatus).toBe(
-      'approved',
-    );
-
-    const project = await ownerClient.servicesEngine.saveProviderProject.mutate({
-      title: 'Completed plumbing upgrade',
-      description: 'A project submitted for reviewer approval.',
-      category: 'home_improvement',
-      canonicalPlaceId: CANONICAL_SANDTON_PLACE_ID,
-    });
-    expect(project.moderationStatus).toBe('pending');
-    expect(
-      (await trpcClient().servicesEngine.getProviderPublicProfile.query({ providerId }))?.projects,
-    ).toEqual([]);
-    await expect(
-      otherClient.servicesEngine.deleteProviderProject.mutate({ projectId: project.id }),
-    ).rejects.toThrow();
-    await reviewerClient.servicesEngine.reviewProviderProject.mutate({
-      projectId: project.id,
-      decision: 'publish',
-      notes: 'Local project review fixture only.',
-    });
-    expect(
-      (await trpcClient().servicesEngine.getProviderPublicProfile.query({ providerId }))?.projects,
-    ).toEqual([expect.objectContaining({ id: project.id, title: 'Completed plumbing upgrade' })]);
-
-    const credentialInsert = await db.insert(serviceProviderCredentials).values({
-      providerId,
-      credentialType: 'registration',
-      title: 'Electrical contractor registration',
-      issuingBody: 'Local test authority',
-      reference: 'PRIVATE-REFERENCE-9081',
-      privateStorageKey: `private/services/credentials/${providerId}/registration.pdf`,
-      originalFileName: 'registration.pdf',
-      mimeType: 'application/pdf',
-      byteSize: 24,
-      status: 'pending',
-      submittedByUserId: Number(ownerRows[0]!.id),
-    });
-    const credentialId = Number(credentialInsert[0].insertId);
-    expect(
-      (await trpcClient().servicesEngine.getProviderPublicProfile.query({ providerId }))?.credentials,
-    ).toEqual([]);
-    await expect(
-      otherClient.servicesEngine.accessProviderCredential.query({ credentialId }),
-    ).rejects.toThrow();
-    await reviewerClient.servicesEngine.reviewProviderCredential.mutate({
-      credentialId,
-      decision: 'verified',
-      notes: 'Local credential review fixture only.',
-    });
-    const publicWithCredential = await trpcClient().servicesEngine.getProviderPublicProfile.query({
-      providerId,
-    });
-    expect(publicWithCredential?.credentials).toEqual([
-      expect.objectContaining({
-        credentialType: 'registration',
-        title: 'Electrical contractor registration',
-        issuingBody: 'Local test authority',
-      }),
-    ]);
-    expect(JSON.stringify(publicWithCredential)).not.toContain('PRIVATE-REFERENCE-9081');
-    expect(JSON.stringify(publicWithCredential)).not.toContain('private/services/credentials');
 
     const publishedEdit = 'Updated published description shown immediately after save.';
     await ownerClient.servicesEngine.replaceProviderServices.mutate({

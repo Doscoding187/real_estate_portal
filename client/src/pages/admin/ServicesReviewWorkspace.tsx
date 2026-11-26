@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { formatPriceRange } from '@/features/services/catalog';
 import ServicesReviewModerationPanel from './ServicesReviewModerationPanel';
-import ServicesBusinessPresenceReviewPanel from './ServicesBusinessPresenceReviewPanel';
 
 /**
  * Private super-admin review surface for the Services publication authority.
@@ -53,7 +52,7 @@ function priceLabel(service: { minPrice: number | null; maxPrice: number | null 
 
 export default function ServicesReviewWorkspace() {
   const utils = trpc.useUtils();
-  const [section, setSection] = useState<'publication' | 'presence' | 'reviews'>('publication');
+  const [section, setSection] = useState<'publication' | 'reviews'>('publication');
   const [view, setView] = useState<QueueView>('awaiting_review');
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
@@ -102,18 +101,6 @@ export default function ServicesReviewWorkspace() {
           }
         >
           Provider publication
-        </button>
-        <button
-          type="button"
-          aria-pressed={section === 'presence'}
-          onClick={() => setSection('presence')}
-          className={
-            section === 'presence'
-              ? 'rounded bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white'
-              : 'rounded border bg-white px-3 py-1.5 text-sm'
-          }
-        >
-          Website content
         </button>
         <button
           type="button"
@@ -210,11 +197,9 @@ export default function ServicesReviewWorkspace() {
         {entries.map(entry => {
           const note = notes[entry.providerId] || '';
           const busy = review.isPending;
-          const canPublish =
-            entry.readyForPublication && !entry.isPublished && entry.submissionStatus === 'submitted';
+          const canPublish = entry.readyForPublication && !entry.isPublished;
           const canUnpublish = entry.isPublished;
           const canReject = entry.verificationStatus !== 'rejected';
-          const canRequestChanges = entry.submissionStatus === 'submitted';
 
           return (
             <li key={entry.providerId} className="rounded border bg-white p-5">
@@ -224,9 +209,6 @@ export default function ServicesReviewWorkspace() {
                   <p className="text-xs text-slate-500">
                     Provider #{entry.providerId} · verification {entry.verificationStatus} ·
                     subscription {entry.subscriptionStatus ?? 'none'}
-                  </p>
-                  <p className="mt-1 text-xs text-slate-600">
-                    Website {entry.submissionStatus.replace(/_/g, ' ')} · {entry.websiteTemplate.replace(/_/g, ' ')} · {entry.businessType?.replace(/_/g, ' ') || 'business type missing'}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2 text-xs">
@@ -314,7 +296,7 @@ export default function ServicesReviewWorkspace() {
                   onChange={event =>
                     setNotes(previous => ({ ...previous, [entry.providerId]: event.target.value }))
                   }
-                  placeholder="Review note or requested changes"
+                  placeholder="Optional note recorded with the decision"
                   className="min-w-0 flex-1 rounded border p-2 text-sm"
                 />
                 <button
@@ -344,20 +326,6 @@ export default function ServicesReviewWorkspace() {
                   className="rounded border px-4 py-2 text-sm font-semibold disabled:opacity-50"
                 >
                   Unpublish
-                </button>
-                <button
-                  type="button"
-                  disabled={!canRequestChanges || !note.trim() || busy}
-                  onClick={() =>
-                    review.mutate({
-                      providerId: entry.providerId,
-                      decision: 'request_changes',
-                      notes: note.trim(),
-                    })
-                  }
-                  className="rounded border border-amber-300 px-4 py-2 text-sm font-semibold text-amber-900 disabled:opacity-50"
-                >
-                  Request changes
                 </button>
                 <button
                   type="button"
@@ -415,7 +383,6 @@ export default function ServicesReviewWorkspace() {
       </>)}
 
       {section === 'reviews' && <ServicesReviewModerationPanel />}
-      {section === 'presence' && <ServicesBusinessPresenceReviewPanel />}
     </main>
   );
 }

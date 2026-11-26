@@ -37,18 +37,13 @@ export type OnboardingState = {
   currentStep: number; // 1–5, or 6 for completion screen
   // Step 1
   companyName: string;
-  businessType: 'independent_professional' | 'registered_company' | 'partnership' | 'other' | null;
-  logoUrl: string;
+  primaryCategory: ServiceCategory | null;
   bio: string;
   // Step 2
   headline: string;
   contactEmail: string;
   contactPhone: string;
   websiteUrl: string;
-  websiteTemplate: 'personal_brand' | 'corporate_brand' | 'project_showcase';
-  businessYearsInOperation: string;
-  operatingHours: string;
-  socialLinks: { facebook: string; instagram: string; linkedin: string };
   // Step 3
   services: ServiceRow[];
   // Step 4
@@ -58,7 +53,6 @@ export type OnboardingState = {
   // Meta
   errors: Record<number, string>; // step → error message
   pendingStep: number | null; // which step has a pending mutation
-  dirtySteps: Record<number, boolean>;
 };
 
 export type OnboardingAction =
@@ -78,20 +72,19 @@ export type OnboardingAction =
     }
   | { type: 'SET_ERROR'; step: number; message: string }
   | { type: 'CLEAR_ERROR'; step: number }
-  | { type: 'SET_PENDING'; step: number | null }
-  | { type: 'MARK_STEP_SAVED'; step: number };
+  | { type: 'SET_PENDING'; step: number | null };
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function makeServiceRow(category: ServiceCategory = 'home_improvement'): ServiceRow {
+function makeServiceRow(): ServiceRow {
   return {
     id: crypto.randomUUID(),
     code: '',
     displayName: '',
     description: '',
-    category,
+    category: 'home_improvement',
     minPrice: '',
     maxPrice: '',
     currency: 'ZAR',
@@ -114,23 +107,17 @@ function makeLocationRow(): LocationRow {
 export const initialOnboardingState: OnboardingState = {
   currentStep: 1,
   companyName: '',
-  businessType: null,
-  logoUrl: '',
+  primaryCategory: null,
   bio: '',
   headline: '',
   contactEmail: '',
   contactPhone: '',
   websiteUrl: '',
-  websiteTemplate: 'corporate_brand',
-  businessYearsInOperation: '',
-  operatingHours: '',
-  socialLinks: { facebook: '', instagram: '', linkedin: '' },
   services: [makeServiceRow()],
   locations: [makeLocationRow()],
   selectedPlan: null,
   errors: {},
   pendingStep: null,
-  dirtySteps: {},
 };
 
 export function isOnboardingStatePristine(state: OnboardingState) {
@@ -152,30 +139,15 @@ export function isOnboardingStatePristine(state: OnboardingState) {
 
   return !(
     state.companyName !== '' ||
-    state.businessType !== null ||
-    state.logoUrl !== '' ||
+    state.primaryCategory !== null ||
     state.bio !== '' ||
     state.headline !== '' ||
     state.contactEmail !== '' ||
     state.contactPhone !== '' ||
     state.websiteUrl !== '' ||
-    state.websiteTemplate !== 'corporate_brand' ||
-    state.businessYearsInOperation !== '' ||
-    state.operatingHours !== '' ||
-    Object.values(state.socialLinks).some(Boolean) ||
     state.selectedPlan !== null ||
     hasEditedServiceRows ||
     hasEditedLocationRows
-  );
-}
-
-export function primaryServiceCategoryFromState(
-  state: Pick<OnboardingState, 'services'>,
-): ServiceCategory | null {
-  return (
-    state.services.find(service => service.isActive && service.displayName.trim())?.category ||
-    state.services[0]?.category ||
-    null
   );
 }
 
@@ -192,36 +164,12 @@ export function onboardingReducer(
       return { ...state, currentStep: action.step };
 
     case 'SET_FIELD':
-      {
-        const step =
-          action.field === 'companyName' ||
-          action.field === 'businessType' ||
-          action.field === 'logoUrl' ||
-          action.field === 'headline' ||
-          action.field === 'bio'
-            ? 1
-            : action.field === 'contactEmail' ||
-                action.field === 'contactPhone' ||
-                action.field === 'websiteUrl' ||
-                action.field === 'businessYearsInOperation' ||
-                action.field === 'operatingHours' ||
-                action.field === 'socialLinks'
-              ? 2
-              : action.field === 'websiteTemplate'
-                ? 5
-                : null;
-        return {
-          ...state,
-          [action.field]: action.value,
-          dirtySteps: step ? { ...state.dirtySteps, [step]: true } : state.dirtySteps,
-        };
-      }
+      return { ...state, [action.field]: action.value };
 
     case 'HYDRATE':
       return {
         ...state,
         ...action.value,
-        dirtySteps: {},
         services:
           action.value.services && action.value.services.length > 0
             ? action.value.services
@@ -234,47 +182,29 @@ export function onboardingReducer(
 
     case 'ADD_SERVICE': {
       if (state.services.length >= 10) return state;
-      return {
-        ...state,
-        services: [
-          ...state.services,
-          makeServiceRow(
-            state.services.find(service => service.displayName.trim())?.category ||
-              state.services[0]?.category,
-          ),
-        ],
-        dirtySteps: { ...state.dirtySteps, 3: true },
-      };
+      return { ...state, services: [...state.services, makeServiceRow()] };
     }
 
     case 'REMOVE_SERVICE': {
       if (state.services.length <= 1) return state;
-      const services = state.services.filter(s => s.id !== action.id);
       return {
         ...state,
-        services,
-        dirtySteps: { ...state.dirtySteps, 3: true },
+        services: state.services.filter(s => s.id !== action.id),
       };
     }
 
     case 'UPDATE_SERVICE': {
-      const services = state.services.map(s =>
-        s.id === action.id ? { ...s, [action.field]: action.value } : s,
-      );
       return {
         ...state,
-        services,
-        dirtySteps: { ...state.dirtySteps, 3: true },
+        services: state.services.map(s =>
+          s.id === action.id ? { ...s, [action.field]: action.value } : s,
+        ),
       };
     }
 
     case 'ADD_LOCATION': {
       if (state.locations.length >= 5) return state;
-      return {
-        ...state,
-        locations: [...state.locations, makeLocationRow()],
-        dirtySteps: { ...state.dirtySteps, 4: true },
-      };
+      return { ...state, locations: [...state.locations, makeLocationRow()] };
     }
 
     case 'REMOVE_LOCATION': {
@@ -282,7 +212,6 @@ export function onboardingReducer(
       return {
         ...state,
         locations: state.locations.filter(l => l.id !== action.id),
-        dirtySteps: { ...state.dirtySteps, 4: true },
       };
     }
 
@@ -292,7 +221,6 @@ export function onboardingReducer(
         locations: state.locations.map(l =>
           l.id === action.id ? { ...l, [action.field]: action.value } : l,
         ),
-        dirtySteps: { ...state.dirtySteps, 4: true },
       };
     }
 
@@ -310,12 +238,6 @@ export function onboardingReducer(
 
     case 'SET_PENDING':
       return { ...state, pendingStep: action.step };
-
-    case 'MARK_STEP_SAVED': {
-      const dirtySteps = { ...state.dirtySteps };
-      delete dirtySteps[action.step];
-      return { ...state, dirtySteps };
-    }
 
     default:
       return state;

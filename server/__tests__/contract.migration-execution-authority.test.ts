@@ -573,11 +573,8 @@ describe('migration execution authority', () => {
       '0195_drop_seller_prospects_suburb.sql',
       '0196_drop_seller_prospects_city.sql',
       '0197_drop_seller_prospects_province.sql',
-      '0198_services_provider_website_onboarding.sql',
-      '0199_services_provider_projects.sql',
-      '0200_services_provider_credentials.sql',
     ]);
-    expect(executionManifest.expectedHead).toBe('0200_services_provider_credentials.sql');
+    expect(executionManifest.expectedHead).toBe('0197_drop_seller_prospects_province.sql');
     expect(archivedSqlFiles.length).toBeGreaterThan(0);
     expect(activeSqlFiles.some(file => file.includes('_archived'))).toBe(false);
     expect(executionManifest.historyTable).toBe('sql_migration_history');

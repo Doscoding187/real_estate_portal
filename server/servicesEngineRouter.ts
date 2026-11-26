@@ -12,8 +12,6 @@ import {
   SERVICE_PROVIDER_REVIEW_REPORT_RATE_LIMITED_MESSAGE,
   SERVICE_REQUEST_REPLAY_UNAVAILABLE,
   servicesEngineService,
-  type ServiceProviderBusinessType,
-  type ServiceProviderWebsiteTemplate,
   type ServiceProviderReviewReportReason,
 } from './services/servicesEngineService';
 import {
@@ -24,13 +22,10 @@ import { getDb } from './db';
 import {
   SERVICE_LEAD_STATUS_VALUES,
   SERVICE_PROVIDER_REVIEW_REPORT_REASON_VALUES,
-  SERVICE_PROVIDER_BUSINESS_TYPE_VALUES,
-  SERVICE_PROVIDER_WEBSITE_TEMPLATE_VALUES,
   users,
 } from '../drizzle/schema';
 import { eq } from 'drizzle-orm';
 import { isCanonicalPlaceId } from '../shared/placeAuthority';
-import { computeProviderWebsiteReadiness } from './services/providerWebsiteReadiness';
 
 const serviceCategorySchema = z.enum([
   'home_improvement',
@@ -150,7 +145,6 @@ const PROVIDER_REPLACEMENT_VALIDATION_MESSAGES = [
   'Coverage area identifiers must be unique',
   'Coverage areas must be unique within a provider profile',
   'Coverage area not found for this provider',
-  'Your website is awaiting review. Edit access will reopen if the reviewer requests changes.',
 ];
 
 function throwProviderReplacementError(error: unknown): never {
@@ -182,17 +176,6 @@ export const servicesEngineRouter = router({
     const locationsConfigured = Boolean(
       profile && (profile.locations || []).some(hasProviderCoverage),
     );
-    const websiteReadiness = computeProviderWebsiteReadiness({
-      companyName: profile?.companyName,
-      businessType: profile?.businessType,
-      headline: profile?.headline,
-      bio: profile?.bio,
-      contactEmail: profile?.contactEmail,
-      contactPhone: profile?.contactPhone,
-      websiteTemplate: profile?.websiteTemplate,
-      services: profile?.services,
-      canonicalCoverageCount: (profile?.locations || []).filter(hasProviderCoverage).length,
-    });
     const hasAssignedRequests = provider?.id
       ? await servicesEngineService.hasProviderLeads(provider.id)
       : false;
@@ -207,12 +190,17 @@ export const servicesEngineRouter = router({
       profile?.isPublished || (hasProviderIdentity && hasAssignedRequests),
     );
 
-    const fullFeaturesUnlocked = hasProviderIdentity && websiteReadiness.readyForSubmission;
+    const fullFeaturesUnlocked =
+      hasProviderIdentity && profileConfigured && servicesConfigured && locationsConfigured;
     const recommendedNextStep = !hasProviderIdentity
       ? '/service/profile'
-      : profile?.isPublished || profile?.submissionStatus === 'submitted'
-        ? '/service/dashboard'
-        : '/service/profile';
+      : !profileConfigured
+        ? '/service/profile'
+        : !servicesConfigured
+          ? '/service/profile'
+          : !locationsConfigured
+            ? '/service/profile'
+            : '/service/dashboard';
 
     const db = await getDb();
     if (
@@ -239,7 +227,6 @@ export const servicesEngineRouter = router({
       dashboardUnlocked,
       hasAssignedRequests,
       fullFeaturesUnlocked,
-      readiness: websiteReadiness,
       recommendedNextStep,
       provider: profile
         ? {
@@ -250,8 +237,6 @@ export const servicesEngineRouter = router({
             publicationStatus: profile.publicationStatus,
             subscriptionTier: profile.subscriptionTier,
             subscriptionStatus: profile.subscriptionStatus,
-            submissionStatus: profile.submissionStatus,
-            submittedAt: profile.submittedAt,
           }
         : null,
     };
@@ -263,51 +248,28 @@ export const servicesEngineRouter = router({
         companyName: z.string().trim().min(2).max(255),
         description: z.string().trim().max(2000).optional(),
         logoUrl: z.string().trim().max(500).optional(),
-        businessType: z
-          .enum(SERVICE_PROVIDER_BUSINESS_TYPE_VALUES as unknown as [string, ...string[]])
-          .optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
       const user = requireUser(ctx);
       requireProviderRole(user.role);
-      const provider = await servicesEngineService.upsertProviderIdentity({
+      return servicesEngineService.upsertProviderIdentity({
         userId: user.id,
         companyName: input.companyName,
         description: input.description || null,
         logoUrl: input.logoUrl || null,
       });
-      if (provider?.id && input.businessType) {
-        await servicesEngineService.upsertProviderProfile(Number(provider.id), {
-          businessType: input.businessType as (typeof SERVICE_PROVIDER_BUSINESS_TYPE_VALUES)[number],
-        });
-      }
-      return provider;
     }),
 
   upsertProviderProfile: protectedProcedure
     .input(
       z.object({
-        headline: z.string().trim().max(180).nullable().optional(),
-        bio: z.string().trim().max(4000).nullable().optional(),
-        websiteUrl: websiteUrlSchema.nullable().optional(),
-        businessType: z
-          .enum(SERVICE_PROVIDER_BUSINESS_TYPE_VALUES as unknown as [string, ...string[]])
-          .nullable()
-          .optional(),
-        websiteTemplate: z
-          .enum(SERVICE_PROVIDER_WEBSITE_TEMPLATE_VALUES as unknown as [string, ...string[]])
-          .optional(),
-        businessYearsInOperation: z.number().int().min(0).max(150).nullable().optional(),
-        operatingHours: z.string().trim().max(500).nullable().optional(),
-        socialLinks: z.object({
-          facebook: websiteUrlSchema.nullable().optional(),
-          instagram: websiteUrlSchema.nullable().optional(),
-          linkedin: websiteUrlSchema.nullable().optional(),
-        }).strict().nullable().optional(),
+        headline: z.string().trim().max(180).optional(),
+        bio: z.string().trim().max(4000).optional(),
+        websiteUrl: websiteUrlSchema.optional(),
 
-        contactEmail: z.string().trim().email().max(320).nullable().optional(),
-        contactPhone: z.string().trim().max(50).nullable().optional(),
+        contactEmail: z.string().trim().email().max(320).optional(),
+        contactPhone: z.string().trim().max(50).optional(),
         logoUrl: z.string().trim().max(500).optional(),
         gallery: z.array(z.string().trim().url().max(500)).max(12).optional(),
         availability: z.enum(['accepting', 'waitlist']).optional(),
@@ -318,29 +280,17 @@ export const servicesEngineRouter = router({
       const user = requireUser(ctx);
       requireProviderRole(user.role);
       const providerId = await requireProviderId(user.id);
-      try {
-        return await servicesEngineService.upsertProviderProfile(providerId, {
-          headline: input.headline,
-          bio: input.bio,
-          websiteUrl: input.websiteUrl,
-          businessType: input.businessType as ServiceProviderBusinessType | null | undefined,
-          websiteTemplate: input.websiteTemplate as ServiceProviderWebsiteTemplate | undefined,
-          businessYearsInOperation: input.businessYearsInOperation,
-          operatingHours: input.operatingHours,
-          socialLinks: input.socialLinks,
-          contactEmail: input.contactEmail,
-          contactPhone: input.contactPhone,
-          logoUrl: input.logoUrl,
-          gallery: input.gallery,
-          availability: input.availability,
-          metadata: input.metadata,
-        });
-      } catch (error) {
-        if (String((error as { message?: unknown })?.message || '') === 'Your website is awaiting review. Edit access will reopen if the reviewer requests changes.') {
-          throw new TRPCError({ code: 'PRECONDITION_FAILED', message: String((error as Error).message) });
-        }
-        throw error;
-      }
+      return servicesEngineService.upsertProviderProfile(providerId, {
+        headline: input.headline,
+        bio: input.bio,
+        websiteUrl: input.websiteUrl,
+        contactEmail: input.contactEmail,
+        contactPhone: input.contactPhone,
+        logoUrl: input.logoUrl,
+        gallery: input.gallery,
+        availability: input.availability,
+        metadata: input.metadata,
+      });
     }),
 
   replaceProviderServices: protectedProcedure
@@ -412,190 +362,6 @@ export const servicesEngineRouter = router({
       }
     }),
 
-  submitProviderWebsite: protectedProcedure.mutation(async ({ ctx }) => {
-    const user = requireUser(ctx);
-    requireProviderRole(user.role);
-    const providerId = await requireProviderId(user.id);
-    try {
-      return await servicesEngineService.submitProviderWebsite({ providerId, userId: user.id });
-    } catch (error) {
-      const message = String((error as { message?: unknown })?.message || '');
-      if (
-        message === 'Provider profile not found' ||
-        message === 'This provider website is already awaiting review.' ||
-        message === 'This provider application was rejected. Contact Services support.' ||
-        message.startsWith('Provider website is not ready for review:') ||
-        message.startsWith('Published provider websites')
-      ) {
-        throw new TRPCError({ code: 'PRECONDITION_FAILED', message });
-      }
-      throw error;
-    }
-  }),
-
-  saveProviderProject: protectedProcedure
-    .input(
-      z
-        .object({
-          projectId: z.number().int().positive().optional(),
-          title: z.string().trim().min(3).max(180),
-          description: z.string().trim().max(4000).optional(),
-          category: serviceCategorySchema,
-          canonicalPlaceId: z.string().trim().max(40).refine(isCanonicalPlaceId).nullable().optional(),
-          coverImageUrl: z.string().trim().url().max(500).nullable().optional(),
-          gallery: z.array(z.string().trim().url().max(500)).max(12).optional(),
-        })
-        .strict(),
-    )
-    .mutation(async ({ ctx, input }) => {
-      const user = requireUser(ctx);
-      requireProviderRole(user.role);
-      const providerId = await requireProviderId(user.id);
-      try {
-        return await servicesEngineService.saveProviderProject({ ...input, providerId });
-      } catch (error) {
-        const message = String((error as { message?: unknown })?.message || '');
-        if (message.includes('Project') || message.includes('Place') || message.includes('image')) {
-          throw new TRPCError({ code: 'BAD_REQUEST', message });
-        }
-        if (message.includes('awaiting review')) throw new TRPCError({ code: 'PRECONDITION_FAILED', message });
-        throw error;
-      }
-    }),
-
-  deleteProviderProject: protectedProcedure
-    .input(z.object({ projectId: z.number().int().positive() }).strict())
-    .mutation(async ({ ctx, input }) => {
-      const user = requireUser(ctx);
-      requireProviderRole(user.role);
-      const providerId = await requireProviderId(user.id);
-      try {
-        return await servicesEngineService.deleteProviderProject({
-          providerId,
-          projectId: input.projectId,
-        });
-      } catch (error) {
-        const message = String((error as { message?: unknown })?.message || '');
-        if (message === 'Project not found for this provider') {
-          throw new TRPCError({ code: 'NOT_FOUND', message });
-        }
-        if (message.includes('awaiting review')) throw new TRPCError({ code: 'PRECONDITION_FAILED', message });
-        throw error;
-      }
-    }),
-
-  requestProviderCredentialUpload: protectedProcedure
-    .input(
-      z.object({
-        fileName: z.string().trim().min(1).max(255),
-        contentType: z.string().trim().min(1).max(100),
-        byteSize: z.number().int().min(1).max(25 * 1024 * 1024),
-      }).strict(),
-    )
-    .mutation(async ({ ctx, input }) => {
-      const user = requireUser(ctx);
-      requireProviderRole(user.role);
-      const providerId = await requireProviderId(user.id);
-      try {
-        return await servicesEngineService.requestServiceProviderCredentialUpload({
-          ...input,
-          providerId,
-          userId: user.id,
-        });
-      } catch (error) {
-        const message = String((error as { message?: unknown })?.message || '');
-        if (/credential|private/i.test(message)) {
-          throw new TRPCError({ code: 'BAD_REQUEST', message });
-        }
-        throw error;
-      }
-    }),
-
-  addProviderCredential: protectedProcedure
-    .input(
-      z.object({
-        uploadToken: z.string().trim().min(20).max(4000),
-        credentialType: z.string().trim().min(1).max(80),
-        title: z.string().trim().min(1).max(180),
-        issuingBody: z.string().trim().max(180).optional(),
-        reference: z.string().trim().max(120).optional(),
-      }).strict(),
-    )
-    .mutation(async ({ ctx, input }) => {
-      const user = requireUser(ctx);
-      requireProviderRole(user.role);
-      const providerId = await requireProviderId(user.id);
-      try {
-        return await servicesEngineService.addServiceProviderCredential({
-          ...input,
-          providerId,
-          userId: user.id,
-        });
-      } catch (error) {
-        const message = String((error as { message?: unknown })?.message || '');
-        if (/credential|upload|private/i.test(message)) {
-          throw new TRPCError({ code: 'BAD_REQUEST', message });
-        }
-        throw error;
-      }
-    }),
-
-  accessProviderCredential: protectedProcedure
-    .input(z.object({ credentialId: z.number().int().positive() }).strict())
-    .query(async ({ ctx, input }) => {
-      const user = requireUser(ctx);
-      try {
-        return await servicesEngineService.accessServiceProviderCredential({
-          credentialId: input.credentialId,
-          actorUserId: user.id,
-          role: user.role,
-        });
-      } catch (error) {
-        const message = String((error as { message?: unknown })?.message || '');
-        if (message === 'Not authorized to access this provider credential') {
-          throw new TRPCError({ code: 'FORBIDDEN', message });
-        }
-        if (message === 'Private provider credential not found') {
-          throw new TRPCError({ code: 'NOT_FOUND', message });
-        }
-        throw error;
-      }
-    }),
-
-  listProviderProjectReviewQueue: superAdminProcedure.query(() =>
-    servicesEngineService.listProviderProjectReviewQueue(),
-  ),
-
-  reviewProviderProject: superAdminProcedure
-    .input(
-      z.object({
-        projectId: z.number().int().positive(),
-        decision: z.enum(['publish', 'reject']),
-        notes: z.string().trim().max(1000).optional(),
-      }).strict(),
-    )
-    .mutation(async ({ ctx, input }) => {
-      const user = requireUser(ctx);
-      return servicesEngineService.reviewProviderProject({ ...input, actorUserId: user.id });
-    }),
-
-  listProviderCredentialReviewQueue: superAdminProcedure.query(() =>
-    servicesEngineService.listServiceProviderCredentialReviewQueue(),
-  ),
-
-  reviewProviderCredential: superAdminProcedure
-    .input(
-      z.object({
-        credentialId: z.number().int().positive(),
-        decision: z.enum(['verified', 'rejected']),
-        notes: z.string().trim().max(1000).optional(),
-      }).strict(),
-    )
-    .mutation(async ({ ctx, input }) => {
-      const user = requireUser(ctx);
-      return servicesEngineService.reviewServiceProviderCredential({ ...input, actorUserId: user.id });
-    }),
-
   /**
    * Super-admin publication review worklist. It is read-only: it reports
    * canonical provider state so a reviewer can decide, and it never grants
@@ -646,7 +412,7 @@ export const servicesEngineRouter = router({
     .input(
       z.object({
         providerId: z.number().int().positive(),
-        decision: z.enum(['publish', 'unpublish', 'reject', 'request_changes']),
+        decision: z.enum(['publish', 'unpublish', 'reject']),
         notes: z.string().trim().max(500).optional(),
       }),
     )
@@ -671,9 +437,6 @@ export const servicesEngineRouter = router({
           throw new TRPCError({ code: 'BAD_REQUEST', message });
         }
         if (message.startsWith('Provider is not ready for publication')) {
-          throw new TRPCError({ code: 'PRECONDITION_FAILED', message });
-        }
-        if (/not been submitted|returned for changes|short note/.test(message)) {
           throw new TRPCError({ code: 'PRECONDITION_FAILED', message });
         }
         throw error;
