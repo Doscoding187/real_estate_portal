@@ -22,12 +22,18 @@ type ServicesOfferedStepProps = {
 };
 
 export function ServicesOfferedStep({ state, dispatch, onNext, onBack }: ServicesOfferedStepProps) {
+  const utils = trpc.useUtils();
   const isPending = state.pendingStep === 3;
   const error = state.errors[3];
 
   const replaceServices = trpc.servicesEngine.replaceProviderServices.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
+      await Promise.all([
+        utils.servicesEngine.myProviderProfile.invalidate(),
+        utils.servicesEngine.myOnboardingStatus.invalidate(),
+      ]);
       dispatch({ type: 'CLEAR_ERROR', step: 3 });
+      dispatch({ type: 'MARK_STEP_SAVED', step: 3 });
       dispatch({ type: 'SET_PENDING', step: null });
       onNext();
     },
@@ -83,9 +89,9 @@ export function ServicesOfferedStep({ state, dispatch, onNext, onBack }: Service
   return (
     <div className="space-y-6">
       <div className="space-y-1">
-        <h2 className="text-xl font-semibold text-slate-900">What services do you offer?</h2>
+        <h2 className="text-xl font-semibold text-slate-900">Showcase your services</h2>
         <p className="text-sm text-slate-500">
-          Add the services you provide and set your pricing in ZAR
+          These are the services customers will see on your website. Choose a category for each service and explain what the work includes.
         </p>
       </div>
 
@@ -144,35 +150,41 @@ export function ServicesOfferedStep({ state, dispatch, onNext, onBack }: Service
                 />
               </div>
 
-              <div className="space-y-1.5 sm:col-span-2">
-                <div className="flex items-center justify-between gap-3">
-                  <Label htmlFor={`svc-description-${svc.id}`}>Service description</Label>
-                  <span className="text-xs text-slate-400">{svc.description.length}/2000</span>
+              <details className="sm:col-span-2 rounded-lg border px-3 py-2">
+                <summary className="cursor-pointer text-sm font-medium text-slate-700">
+                  Optional service details{svc.description.trim() ? ' · added' : ''}
+                </summary>
+                <div className="mt-3 space-y-1.5">
+                  <div className="flex items-center justify-between gap-3">
+                    <Label htmlFor={`svc-description-${svc.id}`}>Factual notes</Label>
+                    <span className="text-xs text-slate-400">{svc.description.length}/2000</span>
+                  </div>
+                  <Textarea
+                    id={`svc-description-${svc.id}`}
+                    value={svc.description}
+                    onChange={e =>
+                      dispatch({
+                        type: 'UPDATE_SERVICE',
+                        id: svc.id,
+                        field: 'description',
+                        value: e.target.value.slice(0, 2000),
+                      })
+                    }
+                    maxLength={2000}
+                    rows={3}
+                    placeholder="Add useful facts about this service, if you have them."
+                    disabled={isPending}
+                  />
+                  <p className="text-xs text-slate-500">
+                    You do not need to write marketing copy. Leaving this blank will not block submission.
+                  </p>
                 </div>
-                <Textarea
-                  id={`svc-description-${svc.id}`}
-                  value={svc.description}
-                  onChange={e =>
-                    dispatch({
-                      type: 'UPDATE_SERVICE',
-                      id: svc.id,
-                      field: 'description',
-                      value: e.target.value.slice(0, 2000),
-                    })
-                  }
-                  maxLength={2000}
-                  rows={3}
-                  placeholder="Explain what this service includes and what customers can expect."
-                  disabled={isPending}
-                />
-                <p className="text-xs text-slate-500">
-                  This stays private until your profile is published. Changes to an already
-                  published service page take effect when saved.
-                </p>
-              </div>
+              </details>
 
               <div className="space-y-1.5">
-                <Label htmlFor={`svc-cat-${svc.id}`}>Category</Label>
+                <Label htmlFor={`svc-cat-${svc.id}`}>
+                  {index === 0 ? 'Primary service category' : 'Service category'}
+                </Label>
                 <select
                   id={`svc-cat-${svc.id}`}
                   value={svc.category}
@@ -265,7 +277,7 @@ export function ServicesOfferedStep({ state, dispatch, onNext, onBack }: Service
           Back
         </Button>
         <Button onClick={handleContinue} disabled={isPending || !hasValidRow}>
-          {isPending ? 'Saving…' : 'Continue'}
+          {isPending ? 'Saving…' : 'Save services and continue'}
         </Button>
       </div>
     </div>

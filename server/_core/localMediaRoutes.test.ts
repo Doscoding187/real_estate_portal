@@ -100,6 +100,51 @@ describe('local listing media storage boundary', () => {
     expect(Buffer.from(await deliveryResponse.arrayBuffer()).toString()).toBe('png-test-data');
   });
 
+  it('stores provider credential files privately and serves them only through a signed delivery token', async () => {
+    const {
+      createServiceProviderCredentialDeliveryToken,
+      createServiceProviderCredentialUploadReservation,
+    } = await import('../services/serviceProviderCredentialStorage');
+    const reservation = createServiceProviderCredentialUploadReservation({
+      providerId: 9081,
+      userId: 42,
+      fileName: 'electrical-registration.pdf',
+      contentType: 'application/pdf',
+    });
+    const uploadResponse = await fetch(
+      `${baseUrl}${mediaStorage.buildLocalMediaUploadUrl(reservation.token)}`,
+      {
+        method: 'PUT',
+        headers: { 'content-type': 'application/pdf' },
+        body: Buffer.from('%PDF-1.4 private provider credential'),
+      },
+    );
+
+    expect(uploadResponse.status).toBe(200);
+    await expect(
+      mediaStorage.inspectLocalMediaObject(reservation.payload.key, 'application/pdf'),
+    ).resolves.toMatchObject({ contentType: 'application/pdf' });
+    expect(() => mediaStorage.buildLocalMediaPublicUrl(reservation.payload.key)).toThrow(
+      /private/i,
+    );
+    const publicResponse = await fetch(
+      `${baseUrl}/api/local-media/object?key=${encodeURIComponent(reservation.payload.key)}`,
+    );
+    expect(publicResponse.status).toBe(404);
+
+    const deliveryToken = createServiceProviderCredentialDeliveryToken({
+      credentialId: 3401,
+      actorUserId: 42,
+      key: reservation.payload.key,
+    });
+    const privateResponse = await fetch(
+      `${baseUrl}/api/local-media/private-evidence?deliveryToken=${encodeURIComponent(deliveryToken)}`,
+    );
+    expect(privateResponse.status).toBe(200);
+    expect(privateResponse.headers.get('cache-control')).toBe('private, no-store');
+    expect(Buffer.from(await privateResponse.arrayBuffer()).toString()).toContain('%PDF-1.4');
+  });
+
   it('rejects tampered, expired, and content-type-mismatched upload authorities', async () => {
     const missingTokenResponse = await fetch(`${baseUrl}/api/local-media/upload`, {
       method: 'PUT',

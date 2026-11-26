@@ -75,8 +75,9 @@ export default function AdvertiseServicesPage() {
               );
             })}
             <p className="text-xs leading-5 text-slate-500">
-              Services is opening applications for a controlled provider pilot. Profiles remain
-              private until approved. The pilot does not include paid plans or paid placement.
+              Services is accepting applications for a controlled provider pilot. Applying is free.
+              Any subscription, pricing or access terms will be shared before paid activation.
+              Profiles remain private until approved; paid placement is not available.
             </p>
           </CardContent>
         </Card>

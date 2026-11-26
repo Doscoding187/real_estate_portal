@@ -6,6 +6,9 @@ const mockReviewMutate = vi.fn();
 const queueEntry = {
   providerId: 20,
   companyName: 'Sandton Repairs',
+  submissionStatus: 'submitted' as const,
+  websiteTemplate: 'corporate_brand' as const,
+  businessType: 'registered_company' as const,
   verificationStatus: 'pending' as const,
   isActive: true,
   directoryActive: false,

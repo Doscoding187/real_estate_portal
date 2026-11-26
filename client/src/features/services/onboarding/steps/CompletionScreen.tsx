@@ -2,6 +2,7 @@ import { CheckCircle2 } from 'lucide-react';
 import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { formatCategoryLabel } from '@/features/services/catalog';
+import { primaryServiceCategoryFromState } from '../useOnboardingReducer';
 import { type OnboardingState } from '../useOnboardingReducer';
 
 type CompletionScreenProps = {
@@ -9,8 +10,9 @@ type CompletionScreenProps = {
 };
 
 export function CompletionScreen({ state }: CompletionScreenProps) {
-  const categoryLabel = state.primaryCategory
-    ? formatCategoryLabel(state.primaryCategory)
+  const primaryCategory = primaryServiceCategoryFromState(state);
+  const categoryLabel = primaryCategory
+    ? formatCategoryLabel(primaryCategory)
     : 'your services';
 
   return (

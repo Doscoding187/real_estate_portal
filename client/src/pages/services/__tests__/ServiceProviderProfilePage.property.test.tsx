@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
 const mockProfileData = vi.fn();
 const mockSetLocation = vi.fn();
@@ -31,7 +31,10 @@ vi.mock('@/components/EnhancedNavbar', () => ({ EnhancedNavbar: () => null }));
 
 vi.mock('@/lib/seo', () => ({ applySeo: vi.fn() }));
 
-import ServiceProviderProfilePage from '../ServiceProviderProfilePage';
+import ServiceProviderProfilePage, {
+  type ProviderWebsitePublicProfile,
+} from '../ServiceProviderProfilePage';
+import { applySeo } from '@/lib/seo';
 
 function makeProfile(overrides: Record<string, unknown> = {}) {
   return {
@@ -58,6 +61,7 @@ describe('ServiceProviderProfilePage', () => {
   beforeEach(() => {
     mockProfileData.mockReset();
     mockSetLocation.mockReset();
+    vi.mocked(applySeo).mockClear();
     mockProfileData.mockReturnValue(makeProfile());
     window.history.pushState({}, '', '/services/provider/test-provider--123');
   });
@@ -89,27 +93,94 @@ describe('ServiceProviderProfilePage', () => {
 
     expect(screen.getByText('Test Provider Co')).toBeInTheDocument();
     expect(screen.getByText('Plumbing')).toBeInTheDocument();
-    expect(screen.getAllByText('Rondebosch, Cape Town, Western Cape')).toHaveLength(2);
+    expect(screen.getAllByText('Rondebosch, Cape Town, Western Cape')).toHaveLength(1);
   });
 
-  it('shows a provider website when one is published', () => {
-    mockProfileData.mockReturnValue(makeProfile({ websiteUrl: 'https://provider.example' }));
+  it('renders the business-site template without onboarding status or draft counts', () => {
+    const previewProfile = makeProfile({
+      acceptingRequests: true,
+      services: [
+        {
+          id: 1,
+          code: 'svc1',
+          displayName: 'Plumbing',
+          description: 'Fix pipes',
+          category: 'home_improvement',
+          minPrice: null,
+          maxPrice: null,
+        },
+        {
+          id: 2,
+          code: 'svc2',
+          displayName: 'Geyser repair',
+          description: 'Repair geysers',
+          category: 'home_improvement',
+          minPrice: null,
+          maxPrice: null,
+        },
+      ],
+    }) as unknown as ProviderWebsitePublicProfile;
+
+    render(
+      <ServiceProviderProfilePage previewProfile={previewProfile} />,
+    );
+
+    const heroHeading = screen.getByRole('heading', { level: 1 });
+    expect(heroHeading).toHaveTextContent('We do clear property work');
+    expect(heroHeading).toHaveClass('lg:text-[36px]');
+    expect(screen.getByText('Reliable. Experienced. Local.')).toBeInTheDocument();
+    expect(within(heroHeading.closest('section')!).queryByText('A published provider profile')).not.toBeInTheDocument();
+    expect(screen.queryByText('A published provider profile')).not.toBeInTheDocument();
+    expect(screen.queryByText('Private draft')).not.toBeInTheDocument();
+    expect(screen.queryByText('2 services in your draft')).not.toBeInTheDocument();
+    expect(screen.queryByText('0 areas in your draft')).not.toBeInTheDocument();
+    expect(screen.queryByText('Enquiries after approval')).not.toBeInTheDocument();
+    expect(screen.queryByText('Accepting requests')).not.toBeInTheDocument();
+    expect(screen.queryByText('2 published services')).not.toBeInTheDocument();
+    expect(screen.queryByText('Direct request')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Home' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: 'Projects' })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Get a Quote' })).toHaveLength(2);
+  });
+
+  it('uses the short business introduction as metadata only', async () => {
+    const description = 'A published provider profile';
+    mockProfileData.mockReturnValue(makeProfile({ bio: description }));
     render(<ServiceProviderProfilePage />);
-    expect(screen.getByRole('link', { name: /visit provider website/i })).toHaveAttribute(
-      'href',
-      'https://provider.example',
+
+    expect(screen.queryByText(description)).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(applySeo).toHaveBeenCalledWith(expect.objectContaining({ description }));
+    });
+  });
+
+  it('uses a service-business headline when the provider has not supplied one', () => {
+    mockProfileData.mockReturnValue(makeProfile({ headline: null }));
+    render(<ServiceProviderProfilePage />);
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
+      'Professional maintenance services for your property',
     );
   });
 
-  it('shows price on request when no range is published', () => {
+  it('shows multiple service chips linking to detailed pages, separate from the homepage hero', () => {
     mockProfileData.mockReturnValue(
       makeProfile({
+        headline: null,
         services: [
           {
-            id: 1,
-            code: 'svc1',
-            displayName: 'Plumbing',
-            description: '',
+            id: 4,
+            code: 'geyser_replacement',
+            displayName: 'Geyser replacement',
+            description: 'Replace a household geyser.',
+            category: 'home_improvement',
+            minPrice: null,
+            maxPrice: null,
+          },
+          {
+            id: 5,
+            code: 'drain_clearing',
+            displayName: 'Drain clearing',
+            description: 'Clear blocked drains.',
             category: 'home_improvement',
             minPrice: null,
             maxPrice: null,
@@ -118,27 +189,29 @@ describe('ServiceProviderProfilePage', () => {
       }),
     );
     render(<ServiceProviderProfilePage />);
-    expect(screen.getByText('Price on request')).toBeInTheDocument();
+
+    const hero = screen.getByRole('heading', { level: 1 }).closest('section');
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
+      'Professional maintenance services for your property',
+    );
+    expect(within(hero!).queryByText('Geyser replacement')).not.toBeInTheDocument();
+    expect(within(hero!).queryByText('Drain clearing')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Services' }));
+    const geyserChip = screen.getByRole('link', { name: 'Geyser replacement' });
+    const drainChip = screen.getByRole('link', { name: 'Drain clearing' });
+    expect(geyserChip).toHaveAttribute('href', expect.stringContaining('/service/geyser-replacement'));
+    expect(drainChip).toHaveAttribute('href', expect.stringContaining('/service/drain-clearing'));
   });
 
-  it('shows a formatted price range when the provider publishes one', () => {
-    mockProfileData.mockReturnValue(
-      makeProfile({
-        services: [
-          {
-            id: 1,
-            code: 'svc1',
-            displayName: 'Plumbing',
-            description: '',
-            category: 'home_improvement',
-            minPrice: 500,
-            maxPrice: 2000,
-          },
-        ],
-      }),
-    );
+  it('shows a provider website when one is published', () => {
+    mockProfileData.mockReturnValue(makeProfile({ websiteUrl: 'https://provider.example' }));
     render(<ServiceProviderProfilePage />);
-    expect(screen.getByText('R500 – R2000')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Contact' }));
+    expect(screen.getByRole('link', { name: /provider website/i })).toHaveAttribute(
+      'href',
+      'https://provider.example',
+    );
   });
 
   it('shows published feedback without adding a second trust badge', () => {
@@ -196,7 +269,7 @@ describe('ServiceProviderProfilePage', () => {
     );
 
     render(<ServiceProviderProfilePage />);
-    fireEvent.click(screen.getAllByRole('button', { name: /request service/i })[0]!);
+    fireEvent.click(screen.getAllByRole('button', { name: /get a quote/i })[0]!);
 
     const path = mockSetLocation.mock.calls.at(-1)?.[0] || '';
     expect(path).toContain('/services/request/home-improvement?');
@@ -236,7 +309,7 @@ describe('ServiceProviderProfilePage', () => {
     expect(screen.queryByText(/typical first response/i)).not.toBeInTheDocument();
   });
 
-  it('labels the computed first-response median with its measured basis', () => {
+  it('keeps response-performance metrics out of the provider website template', () => {
     mockProfileData.mockReturnValue(
       makeProfile({
         responsePerformance: {
@@ -248,9 +321,7 @@ describe('ServiceProviderProfilePage', () => {
       }),
     );
     render(<ServiceProviderProfilePage />);
-    expect(screen.getByText(/typical first response: within 2 hours/i)).toBeInTheDocument();
-    expect(
-      screen.getByText(/median measured across 5 requests in the last 90 days/i),
-    ).toBeInTheDocument();
+    expect(screen.queryByText(/typical first response/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/median measured across 5 requests/i)).not.toBeInTheDocument();
   });
 });

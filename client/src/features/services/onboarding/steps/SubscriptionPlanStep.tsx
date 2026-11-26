@@ -1,5 +1,6 @@
 import { CheckCircle2, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { primaryServiceCategoryFromState } from '../useOnboardingReducer';
 import { type OnboardingState } from '../useOnboardingReducer';
 import { formatCategoryLabel } from '@/features/services/catalog';
 
@@ -14,6 +15,7 @@ export function SubscriptionPlanStep({ state, onNext, onBack }: SubscriptionPlan
     service => service.isActive && service.displayName.trim().length > 0,
   );
   const hasCoverage = state.locations.some(location => Boolean(location.place?.canonicalPlaceId));
+  const primaryCategory = primaryServiceCategoryFromState(state);
   const canFinish = hasActiveService && hasCoverage;
 
   function finishSetup() {
@@ -52,7 +54,7 @@ export function SubscriptionPlanStep({ state, onNext, onBack }: SubscriptionPlan
           </p>
           <p className="mt-3 text-xs leading-5 text-slate-600">
             Primary service:{' '}
-            {state.primaryCategory ? formatCategoryLabel(state.primaryCategory) : 'Not selected'}
+            {primaryCategory ? formatCategoryLabel(primaryCategory) : 'Not selected'}
           </p>
         </div>
       </div>
