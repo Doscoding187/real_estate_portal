@@ -27,9 +27,20 @@ describe('isolated CI physical credential boundary', () => {
 
   it('builds explicit application and worker grants without control-table DML', () => {
     const plan = buildIsolatedCiGrantPlan();
-    expect(plan.applicationTables).toHaveLength(225);
+    expect(plan.applicationTables).toHaveLength(232);
     expect(plan.applicationTables).toContain('development_place_assignments');
     expect(plan.applicationTables).toContain('distribution_referrer_search_assessments');
+    expect(plan.applicationTables).toEqual(
+      expect.arrayContaining([
+        'sl_listing_authorities',
+        'sl_listing_authority_events',
+        'sl_listing_authority_evidence',
+        'sl_place_media',
+        'sl_place_specifications',
+        'sl_responsible_parties',
+        'sl_space_media',
+      ]),
+    );
     expect(
       plan.statementsByCredential.runtime.filter(statement =>
         /legal_releases|legal_active_release|user_legal_acceptances/.test(statement),

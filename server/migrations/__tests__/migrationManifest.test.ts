@@ -326,7 +326,7 @@ describe('canonical migration manifest', () => {
     expect(historicalCompatibilityApproved.map(entry => entry.statementCount)).toEqual([
       4, 15, 3, 3, 3, 4, 3, 3, 3, 3,
     ]);
-    expect(manifest.expectedHead.filename).toBe('0197_drop_seller_prospects_province.sql');
+    expect(manifest.expectedHead.filename).toBe('0210_sl_place_publication_lifecycle.sql');
   });
 
   it('plans the identity-and-custody migration chain from the integrated 0007 head', () => {
@@ -342,11 +342,11 @@ describe('canonical migration manifest', () => {
         checksum: item.checksum,
       })),
       acceptedOldHead: currentIntegratedHead.filename,
-      expectedNewHead: '0197_drop_seller_prospects_province.sql',
+      expectedNewHead: '0210_sl_place_publication_lifecycle.sql',
     });
 
     expect(plan.acceptedOldHead).toBe('0007_paid_launch_access_invoice_term.sql');
-    expect(plan.pending).toHaveLength(190);
+    expect(plan.pending).toHaveLength(203);
     expect(plan.pending.map(item => item.filename)).toEqual([
       '0008_developer_organisations.sql',
       '0009_developer_organisation_memberships.sql',
@@ -538,8 +538,21 @@ describe('canonical migration manifest', () => {
       '0195_drop_seller_prospects_suburb.sql',
       '0196_drop_seller_prospects_city.sql',
       '0197_drop_seller_prospects_province.sql',
+      '0198_sl_responsible_parties.sql',
+      '0199_sl_listing_authorities.sql',
+      '0200_sl_listing_authority_evidence.sql',
+      '0201_sl_listing_authority_events.sql',
+      '0202_sl_space_publication_lifecycle.sql',
+      '0203_sl_space_rent_basis.sql',
+      '0204_sl_space_lifecycle_backfill.sql',
+      '0205_sl_moderation_space_target.sql',
+      '0206_sl_place_media.sql',
+      '0207_sl_space_media.sql',
+      '0208_sl_place_specifications.sql',
+      '0209_sl_place_display_name.sql',
+      '0210_sl_place_publication_lifecycle.sql',
     ]);
-    expect(plan.expectedNewHead).toBe('0197_drop_seller_prospects_province.sql');
+    expect(plan.expectedNewHead).toBe('0210_sl_place_publication_lifecycle.sql');
   });
 
   it('accepts an isolated 0000 -> 0001 -> 0002 progression in ancestry order', () => {

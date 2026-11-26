@@ -399,6 +399,8 @@ router.get('/sitemap-static.xml', async (_req, res, next) => {
       { loc: toAbsoluteUrl('/property-for-sale', baseUrl), changefreq: 'daily', priority: 0.9 },
       { loc: toAbsoluteUrl('/property-to-rent', baseUrl), changefreq: 'daily', priority: 0.9 },
       { loc: toAbsoluteUrl('/new-developments', baseUrl), changefreq: 'daily', priority: 0.9 },
+      { loc: toAbsoluteUrl('/shared-living', baseUrl), changefreq: 'daily', priority: 0.8 },
+      { loc: toAbsoluteUrl('/student-accommodation', baseUrl), changefreq: 'weekly', priority: 0.7 },
       { loc: toAbsoluteUrl('/agents', baseUrl), changefreq: 'weekly', priority: 0.7 },
       { loc: toAbsoluteUrl('/developers', baseUrl), changefreq: 'weekly', priority: 0.8 },
       { loc: toAbsoluteUrl('/advertise', baseUrl), changefreq: 'monthly', priority: 0.5 },

@@ -52,7 +52,7 @@ async function requestStaticSitemap(): Promise<SendCapture> {
 describe('static sitemap held-journey omission', () => {
   it('holds the expected journeys', () => {
     expect([...LAUNCH_HELD_JOURNEYS].sort()).toEqual(
-      ['commercial', 'plot_land', 'services', 'shared_living'].sort(),
+      ['commercial', 'plot_land', 'services'].sort(),
     );
   });
 
@@ -61,7 +61,8 @@ describe('static sitemap held-journey omission', () => {
     const locs = [...body.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => new URL(m[1]).pathname);
 
     expect(locs.some(path => path === '/services' || path.startsWith('/services/'))).toBe(false);
-    expect(locs.some(path => path.startsWith('/shared-living'))).toBe(false);
+    expect(locs).toContain('/shared-living');
+    expect(locs).toContain('/student-accommodation');
     expect(locs.some(path => path.startsWith('/commercial'))).toBe(false);
     expect(locs.some(path => path.startsWith('/plots-and-land') || path.startsWith('/land'))).toBe(
       false,

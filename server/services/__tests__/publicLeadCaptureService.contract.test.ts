@@ -273,16 +273,30 @@ function entitledLaunchSubscription(
 }
 
 describe('publicLeadCaptureService contract', () => {
-  it('rejects retired Land, Commercial, and Shared Living targets before database access', async () => {
+  it('rejects retired Land and Commercial targets before database access', async () => {
     const retiredTargets = [
       { listingId: 701 },
       { listingId: 703, commercialAvailabilityId: 801 },
-      { slPlaceId: 18, slSpaceId: 21 },
     ];
     for (const target of retiredTargets) {
       mockGetDb.mockClear();
       await expect(capturePublicLead(baseInput(target))).rejects.toMatchObject({
         code: 'PRECONDITION_FAILED',
+      });
+      expect(mockGetDb).not.toHaveBeenCalled();
+    }
+  });
+
+  it('rejects incomplete or mixed Shared Living targets before database access', async () => {
+    const invalidTargets = [
+      { slPlaceId: 18 },
+      { slSpaceId: 21 },
+      { slPlaceId: 18, slSpaceId: 21, listingId: 701 },
+    ];
+    for (const target of invalidTargets) {
+      mockGetDb.mockClear();
+      await expect(capturePublicLead(baseInput(target))).rejects.toMatchObject({
+        code: 'BAD_REQUEST',
       });
       expect(mockGetDb).not.toHaveBeenCalled();
     }

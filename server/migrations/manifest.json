@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0197_drop_seller_prospects_province.sql",
+  "expectedHead": "0210_sl_place_publication_lifecycle.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -2082,6 +2082,136 @@
       "statementPolicy": "approved-exception",
       "requiredReferenceDataVersion": null,
       "approvalReference": "DBX-PLACE-CANONICAL-CUTOVER-2026-10-26-Edward"
+    },
+    {
+      "sequence": 198,
+      "filename": "0198_sl_responsible_parties.sql",
+      "checksum": "a06de0a886cb1a6fc633de7c6b357cc2f676681c41b639f63a49e612637d7050",
+      "parent": "0197_drop_seller_prospects_province.sql",
+      "parentChecksum": "a4882bef419ae95e3401ef5f619fcb32f3d6fecd544fd115d4c5ee0aa8568266",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 199,
+      "filename": "0199_sl_listing_authorities.sql",
+      "checksum": "ad1743a8d02ef07b387750ccad84d8668c0b34d5b53f3c668ed415fac177d5ca",
+      "parent": "0198_sl_responsible_parties.sql",
+      "parentChecksum": "a06de0a886cb1a6fc633de7c6b357cc2f676681c41b639f63a49e612637d7050",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 200,
+      "filename": "0200_sl_listing_authority_evidence.sql",
+      "checksum": "7f41c0cebed62c076bf461226a1bd5e03cfca7578baeb3891462e669e195449e",
+      "parent": "0199_sl_listing_authorities.sql",
+      "parentChecksum": "ad1743a8d02ef07b387750ccad84d8668c0b34d5b53f3c668ed415fac177d5ca",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 201,
+      "filename": "0201_sl_listing_authority_events.sql",
+      "checksum": "a4202a4219c6dfc6087d4946f9bb480ad3d7c414c3a0d0913be3d83f159d7e11",
+      "parent": "0200_sl_listing_authority_evidence.sql",
+      "parentChecksum": "7f41c0cebed62c076bf461226a1bd5e03cfca7578baeb3891462e669e195449e",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 202,
+      "filename": "0202_sl_space_publication_lifecycle.sql",
+      "checksum": "6fc542ff2762f838b18ac62094dc99b0d467047b21f442656a2e9af76eea061d",
+      "parent": "0201_sl_listing_authority_events.sql",
+      "parentChecksum": "a4202a4219c6dfc6087d4946f9bb480ad3d7c414c3a0d0913be3d83f159d7e11",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 203,
+      "filename": "0203_sl_space_rent_basis.sql",
+      "checksum": "8f9e1e1d6b7bdff9e6eee6923847d59b49329910155cf1b6d6431f98640e1722",
+      "parent": "0202_sl_space_publication_lifecycle.sql",
+      "parentChecksum": "6fc542ff2762f838b18ac62094dc99b0d467047b21f442656a2e9af76eea061d",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 204,
+      "filename": "0204_sl_space_lifecycle_backfill.sql",
+      "checksum": "90d1a323cf7db7d1e1212641c5553836e2deb432a1f4b03466f28f2787c07c65",
+      "parent": "0203_sl_space_rent_basis.sql",
+      "parentChecksum": "8f9e1e1d6b7bdff9e6eee6923847d59b49329910155cf1b6d6431f98640e1722",
+      "kind": "transactional-data",
+      "statementPolicy": "transactional-dml",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 205,
+      "filename": "0205_sl_moderation_space_target.sql",
+      "checksum": "95b9ee0c8d2da818a4bda88fee9b957bf92de9a1779773efd4bcbf007091372d",
+      "parent": "0204_sl_space_lifecycle_backfill.sql",
+      "parentChecksum": "90d1a323cf7db7d1e1212641c5553836e2deb432a1f4b03466f28f2787c07c65",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 206,
+      "filename": "0206_sl_place_media.sql",
+      "checksum": "1a4889bec14a6b74b3092adae3f76a3f30f24c564fb67afce76b71e473e48f32",
+      "parent": "0205_sl_moderation_space_target.sql",
+      "parentChecksum": "95b9ee0c8d2da818a4bda88fee9b957bf92de9a1779773efd4bcbf007091372d",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 207,
+      "filename": "0207_sl_space_media.sql",
+      "checksum": "2df6d8d2f449c26fd313e46e63f5ee8958400993931d71370043b3dee8568f4d",
+      "parent": "0206_sl_place_media.sql",
+      "parentChecksum": "1a4889bec14a6b74b3092adae3f76a3f30f24c564fb67afce76b71e473e48f32",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 208,
+      "filename": "0208_sl_place_specifications.sql",
+      "checksum": "f6ca104d7c07bec2985dc20cfd1fbf1b7e06d140c5ee846f01a6924d049862b4",
+      "parent": "0207_sl_space_media.sql",
+      "parentChecksum": "2df6d8d2f449c26fd313e46e63f5ee8958400993931d71370043b3dee8568f4d",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 209,
+      "filename": "0209_sl_place_display_name.sql",
+      "checksum": "f3e0f9c788926d4c75fff71310439207e929edba498893deb421834a002a150f",
+      "parent": "0208_sl_place_specifications.sql",
+      "parentChecksum": "f6ca104d7c07bec2985dc20cfd1fbf1b7e06d140c5ee846f01a6924d049862b4",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 210,
+      "filename": "0210_sl_place_publication_lifecycle.sql",
+      "checksum": "040d456f2da1c0a084ae7569023cd6530bce1993d2e2aded043493c4ff22b393",
+      "parent": "0209_sl_place_display_name.sql",
+      "parentChecksum": "f3e0f9c788926d4c75fff71310439207e929edba498893deb421834a002a150f",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
     }
   ]
 }

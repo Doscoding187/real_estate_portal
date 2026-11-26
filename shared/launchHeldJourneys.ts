@@ -4,7 +4,6 @@
  * Single source of truth for the client navigation and the server sitemap.
  */
 export const LAUNCH_HELD_JOURNEYS: readonly string[] = [
-  'shared_living',
   'plot_land',
   'commercial',
   'services',

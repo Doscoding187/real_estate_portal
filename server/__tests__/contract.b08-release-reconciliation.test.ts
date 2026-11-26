@@ -28,7 +28,8 @@ describe('B08 integration preserves established objects without granting rehears
     expect(registration.manifestDigest).toBe(
       '4995e36715e60856bb87d925dd0eff03bcdccfcc50e1180648684c3bd2787e41',
     );
-    expect(manifest.expectedHead).toBe(registration.expectedHead);
+    expect(manifest.expectedHead).toBe('0210_sl_place_publication_lifecycle.sql');
+    expect(manifest.migrations.some((entry: { filename: string }) => entry.filename === registration.expectedHead)).toBe(true);
     expect(registration.modelDigest).toBe(
       'a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9',
     );

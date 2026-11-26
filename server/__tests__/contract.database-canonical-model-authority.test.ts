@@ -102,9 +102,20 @@ describe('database canonical model authority', () => {
       match => String(match[1]),
     ).sort();
 
-    expect(inventory.tableCount).toBe(225);
-    expect(inventory.tables).toHaveLength(225);
-    expect(new Set(inventory.tables).size).toBe(225);
+    expect(inventory.tableCount).toBe(232);
+    expect(inventory.tables).toHaveLength(232);
+    expect(new Set(inventory.tables).size).toBe(232);
+    expect(inventory.tables).toEqual(
+      expect.arrayContaining([
+        'sl_listing_authorities',
+        'sl_listing_authority_events',
+        'sl_listing_authority_evidence',
+        'sl_place_media',
+        'sl_place_specifications',
+        'sl_responsible_parties',
+        'sl_space_media',
+      ]),
+    );
     expect([...inventory.tables].sort()).toEqual(inventory.tables);
     expect(modelTables).toEqual(inventory.tables);
 

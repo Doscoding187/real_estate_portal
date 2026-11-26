@@ -100,6 +100,7 @@ const FarmsAndSmallholdings = lazy(() => import('./pages/FarmsAndSmallholdings')
 const CommercialOffice = lazy(() => import('./pages/CommercialOffice'));
 const SharedLiving = lazy(() => import('./pages/SharedLiving'));
 const SharedLivingDetail = lazy(() => import('./pages/SharedLivingDetail'));
+const SharedLivingListingPreview = lazy(() => import('./pages/SharedLivingListingPreview'));
 const SharedLivingThread = lazy(() => import('./pages/SharedLivingThread'));
 const SharedLivingLister = lazy(() => import('./pages/SharedLivingLister'));
 const CommercialOfficeDetail = lazy(() => import('./pages/CommercialOfficeDetail'));
@@ -440,26 +441,27 @@ function Router() {
             </HeldJourneyGate>
           </Route>
           <Route path="/shared-living">
-            <HeldJourneyGate journey="shared_living">
-              <SharedLiving />
-            </HeldJourneyGate>
+            <SharedLiving />
+          </Route>
+          <Route path="/student-accommodation">
+            <SharedLiving studentMode />
+          </Route>
+          <Route path="/shared-living/listing-preview">
+            <SharedLivingListingPreview />
           </Route>
           <Route path="/shared-living/list">
-            <HeldJourneyGate journey="shared_living" detail>
-              <RequireRole role={['visitor', 'agent']} unauthenticatedAuthEntry="register">
-                <SharedLivingLister />
-              </RequireRole>
-            </HeldJourneyGate>
+            <RequireRole role="agent" unauthenticatedAuthEntry="signin">
+              <SharedLivingLister />
+            </RequireRole>
+          </Route>
+          <Route path="/shared-living/preview/:slug">
+            <SharedLivingDetail previewMode />
           </Route>
           <Route path="/shared-living/thread/:token">
-            <HeldJourneyGate journey="shared_living" detail>
-              <SharedLivingThread />
-            </HeldJourneyGate>
+            <SharedLivingThread />
           </Route>
           <Route path="/shared-living/:slug">
-            <HeldJourneyGate journey="shared_living" detail>
-              <SharedLivingDetail />
-            </HeldJourneyGate>
+            <SharedLivingDetail />
           </Route>
           <Route path="/commercial/:slug">
             <HeldJourneyGate journey="commercial" detail>

@@ -50,13 +50,12 @@ import { EmailService } from '../_core/emailService';
 import { isPaidMvpLaunchAccessSubscriptionEntitled } from './planAccessService';
 import { isCommercialActivationAvailable } from './commercialActivationPolicy';
 import { resolvePublicPropertyEligibility } from './publicPropertyEligibilityService';
-import { resolveSharedLivingLeadCustody, ensureLeadContextRow } from './sharedLivingEnquiryService';
+import { resolveSharedLivingLeadCustody } from './sharedLivingEnquiryService';
 import { PUBLIC_LEAD_INPUT_LIMITS } from './publicLeadInputContract';
 import {
   COMMERCIAL_CANONICAL_ASSIGNMENT_BLOCKER,
 } from '../../shared/commercial-domain';
 import { LAND_CANONICAL_ASSIGNMENT_BLOCKER } from '../../shared/land-domain';
-import { SHARED_LIVING_CANONICAL_ASSIGNMENT_BLOCKER } from '../../shared/sharedLivingDomain';
 import { safeErrorSummary } from '../_core/safeError';
 
 type LeadType = 'inquiry' | 'viewing_request' | 'offer' | 'callback';
@@ -134,7 +133,7 @@ export interface ResolvedLeadOwnership {
   sharedLivingContext?: {
     placeId: number;
     spaceId: number | null;
-    ownerUserId: number;
+    recipientUserId: number;
     spaceLabelSnapshot: string;
     spaceTypeSnapshot: string;
   };
@@ -268,14 +267,14 @@ function isDuplicateKeyError(error: unknown): boolean {
 }
 
 function getPublicTargetCount(input: PublicLeadCaptureInput): number {
-  return [
+  const ordinaryTargetCount = [
     input.listingId,
     input.propertyId,
     input.developmentId,
     input.cataloguePublisherId,
-    input.slPlaceId,
     input.agentId,
   ].filter(value => positiveId(value) !== undefined).length;
+  return ordinaryTargetCount + (positiveId(input.slPlaceId) || positiveId(input.slSpaceId) ? 1 : 0);
 }
 
 /**
@@ -284,11 +283,15 @@ function getPublicTargetCount(input: PublicLeadCaptureInput): number {
  * recipient target and then silently choose one of them.
  */
 function assertCanonicalLeadTarget(input: PublicLeadCaptureInput): void {
-  if (positiveId(input.slPlaceId) || positiveId(input.slSpaceId)) {
-    throw new TRPCError({
-      code: 'PRECONDITION_FAILED',
-      message: SHARED_LIVING_CANONICAL_ASSIGNMENT_BLOCKER,
-    });
+  const hasSharedLivingTarget = positiveId(input.slPlaceId) !== undefined || positiveId(input.slSpaceId) !== undefined;
+  if (hasSharedLivingTarget) {
+    if (positiveId(input.slPlaceId) === undefined || positiveId(input.slSpaceId) === undefined) {
+      throw new TRPCError({ code: 'BAD_REQUEST', message: 'A Shared Living enquiry must identify both its residence and accommodation space.' });
+    }
+    if ([input.listingId, input.propertyId, input.developmentId, input.cataloguePublisherId, input.agentId].some(value => positiveId(value) !== undefined)) {
+      throw new TRPCError({ code: 'BAD_REQUEST', message: 'A Shared Living enquiry cannot target another Property Listify lead destination.' });
+    }
+    return;
   }
 
   if (positiveId(input.listingId)) {
@@ -707,10 +710,10 @@ async function sendAgentLeadEmail(
 /** The authenticated Shared Living inbox is a durable delivery channel; this is its alert. */
 async function notifySharedLivingLister(
   database: NonNullable<Awaited<ReturnType<typeof getDb>>>,
-  input: { ownerUserId: number; leadId: number; placeId: number; spaceLabel: string },
+  input: { recipientUserId: number; leadId: number; placeId: number; spaceLabel: string },
 ): Promise<void> {
   await database.insert(notifications).values({
-    userId: input.ownerUserId,
+    userId: input.recipientUserId,
     type: 'lead_assigned',
     title: 'New Shared Living enquiry',
     content: `A new enquiry was received for ${input.spaceLabel}. Reply in your Shared Living inbox.`,
@@ -749,13 +752,13 @@ export async function resolveLeadOwnership(
       // The canonical `leads` model has no owner-user foreign key. The
       // durable Shared Living lead context plus this recipient identity is
       // the owner-scoped inbox delivery boundary.
-      recipientId: resolution.ownerUserId,
+      recipientId: resolution.recipientUserId,
       leadDeliveryMethod: 'manual',
       reason: null,
       sharedLivingContext: {
         placeId: resolution.placeId,
         spaceId: resolution.spaceId,
-        ownerUserId: resolution.ownerUserId,
+        recipientUserId: resolution.recipientUserId,
         spaceLabelSnapshot: resolution.spaceLabelSnapshot,
         spaceTypeSnapshot: resolution.spaceTypeSnapshot,
       },
@@ -1382,13 +1385,13 @@ function initialDeliveryStatus(resolved: ResolvedLeadOwnership): LeadDeliverySta
   if (resolved.leadCustody === 'verified_customer_recipient') return 'delivered';
   // A Shared Living context is atomically written beneath the canonical lead
   // and can only be read from the owning lister's authenticated inbox.
-  if (resolved.sharedLivingContext?.ownerUserId) return 'delivered';
+  if (resolved.sharedLivingContext?.recipientUserId) return 'delivered';
   return 'attention_required';
 }
 
 function deliveryKeyForOwnership(resolved: ResolvedLeadOwnership): string {
-  if (resolved.sharedLivingContext?.ownerUserId) {
-    return `shared-living:owner:${resolved.sharedLivingContext.ownerUserId}:place:${resolved.sharedLivingContext.placeId}`;
+  if (resolved.sharedLivingContext?.recipientUserId) {
+    return `shared-living:agent:${resolved.sharedLivingContext.recipientUserId}:place:${resolved.sharedLivingContext.placeId}`;
   }
   if (resolved.recipientType === 'agent' && resolved.agentId)
     return `direct:agent:${resolved.agentId}`;
@@ -1417,7 +1420,7 @@ function deliveryInputForResolved(
       | 'agency'
       | 'developer'
       | 'manual',
-    recipientUserId: resolved.sharedLivingContext?.ownerUserId ?? null,
+    recipientUserId: resolved.sharedLivingContext?.recipientUserId ?? null,
     recipientAgentId: resolved.recipientType === 'agent' ? resolved.agentId ?? null : null,
     recipientAgencyId: resolved.recipientType === 'agency' ? resolved.agencyId ?? null : null,
     recipientDeveloperOrganisationId:
@@ -1439,7 +1442,7 @@ function deliveryInputForResolved(
 }
 
 function messageForResolution(resolved: ResolvedLeadOwnership): string {
-  if (resolved.sharedLivingContext?.ownerUserId) {
+  if (resolved.sharedLivingContext?.recipientUserId) {
     return 'Your enquiry has been recorded in the responsible lister’s secure Shared Living inbox.';
   }
   if (resolved.leadCustody === 'verified_customer_recipient') {
@@ -1472,30 +1475,17 @@ async function recoverExistingLead(
 
   let durableLead = existing;
   if (positiveId(input.slPlaceId)) {
-    const resolvedSl = await resolveLeadOwnership(input);
-    if (!resolvedSl.sharedLivingContext)
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'Shared Living listing is not available for public enquiries.',
-      });
-    await ensureLeadContextRow({
-      leadId: existing.id,
-      placeId: resolvedSl.sharedLivingContext.placeId,
-      spaceId: resolvedSl.sharedLivingContext.spaceId,
-      spaceLabelSnapshot: resolvedSl.sharedLivingContext.spaceLabelSnapshot,
-      spaceTypeSnapshot: resolvedSl.sharedLivingContext.spaceTypeSnapshot,
-    });
-    const [message] = await database
-      .select({ id: slMessages.id })
-      .from(slMessages)
-      .where(eq(slMessages.leadId, existing.id))
+    const [context] = await database
+      .select({ placeId: slLeadContexts.placeId, spaceId: slLeadContexts.spaceId })
+      .from(slLeadContexts)
+      .where(eq(slLeadContexts.leadId, existing.id))
       .limit(1);
-    if (!message) {
-      await database.insert(slMessages).values({
-        leadId: existing.id,
-        authorKind: 'consumer',
-        body: input.message?.trim() || 'New Shared Living enquiry received.',
-      });
+    if (
+      !context ||
+      Number(context.placeId) !== positiveId(input.slPlaceId) ||
+      Number(context.spaceId) !== positiveId(input.slSpaceId)
+    ) {
+      throw new TRPCError({ code: 'CONFLICT', message: 'This request ID belongs to a different Shared Living space.' });
     }
   }
   if (positiveId(input.commercialAvailabilityId)) {
@@ -1516,6 +1506,9 @@ async function recoverExistingLead(
   }
   const existingDelivery = await getLeadDeliverySnapshot({ leadId: Number(existing.id), database });
   if (!existingDelivery.current) {
+    if (positiveId(input.slPlaceId)) {
+      throw new TRPCError({ code: 'SERVICE_UNAVAILABLE', message: 'This enquiry is already recorded and its delivery is being reconciled.' });
+    }
     const replayResolved = await resolveLeadOwnership(input);
     const replayStatus = initialDeliveryStatus(replayResolved);
     await database.transaction(async (tx: any) => {
@@ -1646,9 +1639,9 @@ export async function capturePublicLead(
           propertyId: resolved.propertyId ?? null,
         });
       }
-      if (resolved.sharedLivingContext?.ownerUserId) {
+      if (resolved.sharedLivingContext?.recipientUserId) {
         await notifySharedLivingLister(tx, {
-          ownerUserId: resolved.sharedLivingContext.ownerUserId,
+          recipientUserId: resolved.sharedLivingContext.recipientUserId,
           leadId: Number(insertResult.insertId),
           placeId: resolved.sharedLivingContext.placeId,
           spaceLabel: resolved.sharedLivingContext.spaceLabelSnapshot,

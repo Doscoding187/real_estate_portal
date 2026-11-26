@@ -22,9 +22,8 @@ vi.mock('@/layouts/HomeLayout', () => ({
 }));
 vi.mock('@/components/seo/MetaControl', () => ({ MetaControl: () => null }));
 
-describe('HeldJourneyGate (guards /shared-living/*, /commercial/*)', () => {
+describe('HeldJourneyGate (guards still-held journeys)', () => {
   it.each([
-    ['shared_living', 'Shared living rooms', 'No shared living rooms are listed yet.'],
     ['commercial', 'Commercial property to let', 'No commercial space is listed yet.'],
     ['plot_land', 'Plots and land for sale', 'No land is listed yet.'],
   ])(
@@ -54,14 +53,14 @@ describe('HeldJourneyGate (guards /shared-living/*, /commercial/*)', () => {
 
   it('renders a plain not-found state with a link back for detail routes', () => {
     render(
-      <HeldJourneyGate journey="shared_living" releaseContext={hosted} detail>
+      <HeldJourneyGate journey="commercial" releaseContext={hosted} detail>
         <p>real page</p>
       </HeldJourneyGate>,
     );
-    expect(screen.getByText('We could not find that room')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Back to shared living rooms/ })).toHaveAttribute(
+    expect(screen.getByText('We could not find that commercial listing')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Back to commercial property to let/ })).toHaveAttribute(
       'href',
-      '/shared-living',
+      '/commercial',
     );
     expect(screen.queryByTestId('section-empty-state')).not.toBeInTheDocument();
   });

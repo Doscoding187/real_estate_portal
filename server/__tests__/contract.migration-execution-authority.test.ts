@@ -573,8 +573,21 @@ describe('migration execution authority', () => {
       '0195_drop_seller_prospects_suburb.sql',
       '0196_drop_seller_prospects_city.sql',
       '0197_drop_seller_prospects_province.sql',
+      '0198_sl_responsible_parties.sql',
+      '0199_sl_listing_authorities.sql',
+      '0200_sl_listing_authority_evidence.sql',
+      '0201_sl_listing_authority_events.sql',
+      '0202_sl_space_publication_lifecycle.sql',
+      '0203_sl_space_rent_basis.sql',
+      '0204_sl_space_lifecycle_backfill.sql',
+      '0205_sl_moderation_space_target.sql',
+      '0206_sl_place_media.sql',
+      '0207_sl_space_media.sql',
+      '0208_sl_place_specifications.sql',
+      '0209_sl_place_display_name.sql',
+      '0210_sl_place_publication_lifecycle.sql',
     ]);
-    expect(executionManifest.expectedHead).toBe('0197_drop_seller_prospects_province.sql');
+    expect(executionManifest.expectedHead).toBe('0210_sl_place_publication_lifecycle.sql');
     expect(archivedSqlFiles.length).toBeGreaterThan(0);
     expect(activeSqlFiles.some(file => file.includes('_archived'))).toBe(false);
     expect(executionManifest.historyTable).toBe('sql_migration_history');

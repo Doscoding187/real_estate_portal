@@ -169,6 +169,7 @@ export default defineConfig({
   define: {
     __BUILD_GIT_SHA__: JSON.stringify(buildGitSha),
     __BUILD_TIME__: JSON.stringify(buildTime),
+    __VERCEL_ENV__: JSON.stringify(process.env.VERCEL_ENV || 'local'),
   },
   resolve: {
     alias: {

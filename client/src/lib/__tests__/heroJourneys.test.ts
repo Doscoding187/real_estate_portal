@@ -132,10 +132,10 @@ describe('hero journey authority', () => {
     expect(isLandPublicDiscoveryAvailable()).toBe(false);
     expect(isLandVerticalAvailable()).toBe(false);
 
-    // Shared Living and Commercial are held at launch even when the manifest lists them.
+    // Shared Living is available when explicitly included; Commercial remains held.
     expect(getPublicHeroJourney('shared_living', hostedRelease)).toMatchObject({
-      homepageVisible: false,
-      homepageEnabled: false,
+      homepageVisible: true,
+      homepageEnabled: true,
       destination: '/shared-living',
     });
     expect(getPublicHeroJourney('plot_land', hostedRelease)).toMatchObject({
