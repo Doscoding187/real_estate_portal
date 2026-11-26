@@ -1,4 +1,14 @@
-import { mkdtempSync, readFileSync, statSync, existsSync, rmSync } from 'node:fs';
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -11,8 +21,14 @@ const LOCAL = {
   APP_ENV: 'development',
   PROPERTY_LISTIFY_LOCAL_PARITY_PREVIEW: '1',
   PROPERTY_LISTIFY_LOCAL_PARITY_PILOT: '1',
-  DATABASE_URL: 'mysql://u:p@127.0.0.1:3307/db',
 } as const;
+
+const localTarget = () => ({
+  targetClass: 'disposable-worktree',
+  host: '127.0.0.1',
+  port: '3307',
+  local: true,
+});
 
 const entry = {
   kind: 'verification' as const,
@@ -21,20 +37,24 @@ const entry = {
   url: 'http://127.0.0.1:5070/api/auth/verify-email?token=abc',
 };
 
-const dirs: string[] = [];
+const bases: string[] = [];
+function freshBase() {
+  const base = mkdtempSync(join(tmpdir(), 'outbox-test-'));
+  bases.push(base);
+  return base;
+}
 function freshDir() {
-  const dir = join(mkdtempSync(join(tmpdir(), 'outbox-test-')), 'parity');
-  dirs.push(dir);
+  const dir = join(freshBase(), 'parity');
   return dir;
 }
 afterEach(() => {
-  for (const d of dirs.splice(0)) rmSync(join(d, '..'), { recursive: true, force: true });
+  for (const b of bases.splice(0)) rmSync(b, { recursive: true, force: true });
 });
 
 describe('local parity preview gate', () => {
-  it('is active only for the exact local development configuration', () => {
-    expect(isLocalParityPreviewActive(LOCAL)).toBe(true);
-    expect(isLocalParityPilotActive(LOCAL)).toBe(true);
+  it('is active only for the resolved local authority plus the opt-in', () => {
+    expect(isLocalParityPreviewActive(LOCAL, localTarget)).toBe(true);
+    expect(isLocalParityPilotActive(LOCAL, localTarget)).toBe(true);
   });
 
   it.each([
@@ -42,27 +62,52 @@ describe('local parity preview gate', () => {
     ['test', { NODE_ENV: 'test', APP_ENV: 'test' }],
     ['vitest runner', { VITEST: 'true' }],
     ['missing opt-in', { PROPERTY_LISTIFY_LOCAL_PARITY_PREVIEW: undefined }],
-    ['remote database', { DATABASE_URL: 'mysql://u:p@db.example.com:3306/db' }],
-    ['wrong port', { DATABASE_URL: 'mysql://u:p@127.0.0.1:3306/db' }],
-    ['no database url', { DATABASE_URL: undefined }],
-    ['hosted marker', { RAILWAY_ENVIRONMENT: 'production' }],
+    ['railway marker', { RAILWAY_ENVIRONMENT: 'production' }],
+    ['container app name', { CONTAINER_APP_NAME: 'api' }],
+    ['container app dns suffix', { CONTAINER_APP_ENV_DNS_SUFFIX: 'x.azurecontainerapps.io' }],
+    ['container app revision', { CONTAINER_APP_REVISION: 'api--1' }],
+    ['kubernetes', { KUBERNETES_SERVICE_HOST: '10.0.0.1' }],
   ])('is refused for %s', (_name, override) => {
     const env = { ...LOCAL, ...override };
-    expect(isLocalParityPreviewActive(env)).toBe(false);
-    expect(isLocalParityPilotActive(env)).toBe(false);
+    expect(isLocalParityPreviewActive(env, localTarget)).toBe(false);
+    expect(isLocalParityPilotActive(env, localTarget)).toBe(false);
+  });
+
+  it.each([
+    ['production target', { targetClass: 'production', host: '127.0.0.1', port: '3307', local: true }],
+    ['shared remote', { targetClass: 'shared-remote', host: 'db.example.com', port: '3306', local: false }],
+    ['wrong port', { targetClass: 'disposable-worktree', host: '127.0.0.1', port: '3306', local: true }],
+    ['test target', { targetClass: 'disposable-test', host: '127.0.0.1', port: '3307', local: true }],
+    ['unresolvable', null],
+  ])('is refused for authority target: %s', (_name, target) => {
+    expect(isLocalParityPreviewActive(LOCAL, () => target)).toBe(false);
+  });
+
+  it('never resolves the authority when a cheap condition already fails', () => {
+    let calls = 0;
+    const spy = () => {
+      calls += 1;
+      return localTarget();
+    };
+    isLocalParityPreviewActive({ ...LOCAL, NODE_ENV: 'production' }, spy);
+    isLocalParityPreviewActive({ ...LOCAL, PROPERTY_LISTIFY_LOCAL_PARITY_PREVIEW: undefined }, spy);
+    expect(calls).toBe(0);
   });
 
   it('pilot requires its own flag on top of the preview gate', () => {
     const env = { ...LOCAL, PROPERTY_LISTIFY_LOCAL_PARITY_PILOT: undefined };
-    expect(isLocalParityPreviewActive(env)).toBe(true);
-    expect(isLocalParityPilotActive(env)).toBe(false);
+    expect(isLocalParityPreviewActive(env, localTarget)).toBe(true);
+    expect(isLocalParityPilotActive(env, localTarget)).toBe(false);
   });
 });
 
 describe('local auth outbox', () => {
+  const write = (dir: string, env = LOCAL as NodeJS.ProcessEnv, now?: number, e = entry) =>
+    appendLocalAuthOutbox(e, env, dir, localTarget, now);
+
   it('writes a private JSONL entry when the gate holds', () => {
     const dir = freshDir();
-    expect(appendLocalAuthOutbox(entry, LOCAL as NodeJS.ProcessEnv, dir)).toBe(true);
+    expect(write(dir)).toBe(true);
     const file = join(dir, 'outbox.jsonl');
     expect(statSync(dir).mode & 0o777).toBe(0o700);
     expect(statSync(file).mode & 0o777).toBe(0o600);
@@ -77,7 +122,55 @@ describe('local auth outbox', () => {
     ['no opt-in', { ...LOCAL, PROPERTY_LISTIFY_LOCAL_PARITY_PREVIEW: undefined }],
   ])('writes nothing in %s', (_name, env) => {
     const dir = freshDir();
-    expect(appendLocalAuthOutbox(entry, env as NodeJS.ProcessEnv, dir)).toBe(false);
+    expect(write(dir, env as NodeJS.ProcessEnv)).toBe(false);
     expect(existsSync(dir)).toBe(false);
+  });
+
+  it('refuses a symlinked directory, a symlinked file and wrong modes without throwing', () => {
+    const base = freshBase();
+    const real = join(base, 'real');
+    mkdirSync(real, { mode: 0o700 });
+    const linkDir = join(base, 'linkdir');
+    symlinkSync(real, linkDir);
+    expect(write(linkDir)).toBe(false);
+    expect(existsSync(join(real, 'outbox.jsonl'))).toBe(false);
+
+    const dir = join(base, 'd');
+    mkdirSync(dir, { mode: 0o700 });
+    writeFileSync(join(base, 'target'), 'x');
+    symlinkSync(join(base, 'target'), join(dir, 'outbox.jsonl'));
+    expect(write(dir)).toBe(false);
+    expect(readFileSync(join(base, 'target'), 'utf8')).toBe('x');
+
+    const loose = join(base, 'loose');
+    mkdirSync(loose);
+    chmodSync(loose, 0o755);
+    expect(write(loose)).toBe(false);
+
+    const wideFile = join(base, 'wide');
+    mkdirSync(wideFile, { mode: 0o700 });
+    writeFileSync(join(wideFile, 'outbox.jsonl'), '');
+    chmodSync(join(wideFile, 'outbox.jsonl'), 0o644);
+    expect(write(wideFile)).toBe(false);
+  });
+
+  it('keeps the newest 20 entries and drops those older than 24 hours', () => {
+    const dir = freshDir();
+    const t0 = Date.parse('2026-01-01T00:00:00Z');
+    write(dir, LOCAL as NodeJS.ProcessEnv, t0, { ...entry, to: 'old@example.invalid' });
+    for (let i = 0; i < 25; i += 1) {
+      write(dir, LOCAL as NodeJS.ProcessEnv, t0 + 25 * 3600_000 + i, {
+        ...entry,
+        to: `u${i}@example.invalid`,
+      });
+    }
+    const rows = readFileSync(join(dir, 'outbox.jsonl'), 'utf8')
+      .trim()
+      .split('\n')
+      .map(l => JSON.parse(l));
+    expect(rows).toHaveLength(20);
+    expect(rows.some(r => r.to === 'old@example.invalid')).toBe(false);
+    expect(rows[19].to).toBe('u24@example.invalid');
+    expect(rows[0].to).toBe('u5@example.invalid');
   });
 });

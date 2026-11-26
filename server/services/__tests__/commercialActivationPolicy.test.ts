@@ -1,5 +1,16 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+const authorityMock = vi.hoisted(() => ({
+  target: null as null | { targetClass: string; host: string; port: string; local: boolean },
+}));
+vi.mock('../../_core/databaseAuthority/context', async importOriginal => ({
+  ...(await importOriginal<typeof import('../../_core/databaseAuthority/context')>()),
+  resolveDatabaseAuthority: () => {
+    if (!authorityMock.target) throw new Error('no target');
+    return { context: authorityMock.target };
+  },
+}));
+
 import {
   getCommercialActivationStatus,
   getCommercialActivationOperatorStatus,
@@ -471,13 +482,14 @@ describe('local preview pilot opt-in', () => {
     APP_ENV: 'development',
     PROPERTY_LISTIFY_LOCAL_PARITY_PREVIEW: '1',
     PROPERTY_LISTIFY_LOCAL_PARITY_PILOT: '1',
-    DATABASE_URL: 'mysql://u:p@127.0.0.1:3307/db',
     PAID_MVP_ENABLED_PRODUCT_KEYS: KEYS,
     PAID_MVP_RELEASE_ID: 'local-parity-pilot',
     PAID_MVP_APPROVAL_REF: 'local-parity-only',
   };
+  const local = { targetClass: 'disposable-worktree', host: '127.0.0.1', port: '3307', local: true };
 
   it('honours the PAID_MVP keys in the gated local development preview', () => {
+    authorityMock.target = local;
     expect(resolveCommercialActivationConfiguration(pilot)).toMatchObject({
       mode: 'paid_mvp_release',
       enabled: true,
@@ -488,11 +500,19 @@ describe('local preview pilot opt-in', () => {
   it('stays in preparation_only in development without the pilot opt-in or local target', () => {
     const noOptIn = { ...pilot, PROPERTY_LISTIFY_LOCAL_PARITY_PILOT: undefined };
     expect(resolveCommercialActivationConfiguration(noOptIn).mode).toBe('preparation_only');
-    const remote = { ...pilot, DATABASE_URL: 'mysql://u:p@db.example.com:3306/db' };
-    expect(resolveCommercialActivationConfiguration(remote).mode).toBe('preparation_only');
+    authorityMock.target = {
+      targetClass: 'shared-remote',
+      host: 'db.example.com',
+      port: '3306',
+      local: false,
+    };
+    expect(resolveCommercialActivationConfiguration(pilot).mode).toBe('preparation_only');
+    authorityMock.target = null;
+    expect(resolveCommercialActivationConfiguration(pilot).mode).toBe('preparation_only');
   });
 
   it('is refused in test: the opt-in grants nothing there', () => {
+    authorityMock.target = local;
     const config = resolveCommercialActivationConfiguration({
       ...pilot,
       NODE_ENV: 'test',
@@ -503,6 +523,7 @@ describe('local preview pilot opt-in', () => {
   });
 
   it('is refused in production: hosted rules still apply unchanged', () => {
+    authorityMock.target = local;
     const base = { ...pilot, NODE_ENV: 'production', APP_ENV: 'production' };
     expect(() =>
       resolveCommercialActivationConfiguration({ ...base, PAID_MVP_ENABLED_PRODUCT_KEYS: 'agent_launch_access' }),
