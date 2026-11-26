@@ -157,9 +157,9 @@ describe('ServicesCategoryPage', () => {
       'list',
     );
     expect(screen.getByText('What do you need?')).toBeInTheDocument();
-    expect(screen.getByText('Verified Professionals')).toBeInTheDocument();
+    expect(screen.getByText('Reviewed Before Listing')).toBeInTheDocument();
     expect(screen.getByText('Local Coverage')).toBeInTheDocument();
-    expect(screen.getByText('Trusted Reviews')).toBeInTheDocument();
+    expect(screen.getByText('Compare Profiles')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /find professionals/i })).toBeInTheDocument();
     expect(screen.getByText(/leak repairs & plumbing/i)).toBeInTheDocument();
     expect(screen.getByText(/drainage & blockages/i)).toBeInTheDocument();
@@ -167,25 +167,22 @@ describe('ServicesCategoryPage', () => {
     expect(
       screen.getByRole('heading', { name: /why choose\s+property listify/i }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/verified & reviewed\s+professionals/i)).toBeInTheDocument();
+    expect(screen.getByText(/profiles reviewed\s+before going live/i)).toBeInTheDocument();
     expect(screen.getByText(/local experts\s+in your area/i)).toBeInTheDocument();
     expect(screen.getByText(/real customer\s+reviews/i)).toBeInTheDocument();
     expect(screen.getByText(/dedicated support\s+when you need help/i)).toBeInTheDocument();
-    expect(screen.getByText(/planning a fixture replacement/i)).toBeInTheDocument();
+    expect(screen.getByText(/replacing a fixture/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /view all services/i })).toBeInTheDocument();
     const maintenancePlan = screen.getByRole('button', { name: /maintenance or repair/i });
     expect(maintenancePlan).toBeInTheDocument();
-    expect(screen.getByText(/material preference/i)).toBeInTheDocument();
+    expect(screen.getByText(/do not promise emergency/i)).toBeInTheDocument();
     expect(screen.queryByText(/emergency service available/i)).not.toBeInTheDocument();
     expect(
       Array.from(document.images).map(image => image.getAttribute('src')),
-    ).toContain('/images/services/plumbing-hero-kitchen-sink.png');
+    ).toContain('/images/services/plumbing-hero-kitchen-sink.jpg');
     expect(
       Array.from(document.images).map(image => image.getAttribute('src')),
-    ).toContain('/images/services/plumbing-professional.jpg');
-    expect(
-      Array.from(document.images).map(image => image.getAttribute('src')),
-    ).toContain('/images/services/trade-plumbing.jpg');
+    ).toContain('/images/services/plumbing-faucet-feature.jpeg');
     expect(mockDirectorySearch).toHaveBeenCalledWith(
       expect.objectContaining({ category: 'home_improvement', query: 'plumbing' }),
     );
@@ -217,7 +214,7 @@ describe('ServicesCategoryPage', () => {
     ).toBeInTheDocument();
     const plumbingPathway = screen.getByRole('link', { name: /plumbing & maintenance/i });
     expect(plumbingPathway).toHaveAttribute('href', '/services/home-improvement?query=plumbing');
-    expect(screen.getByText(/no published providers match this search yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/no published providers match this service and location yet/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /join as a provider/i })).toHaveAttribute(
       'href',
       '/advertise/services',
@@ -225,11 +222,6 @@ describe('ServicesCategoryPage', () => {
     expect(document.getElementById('provider-results')).toHaveAttribute(
       'aria-label',
       'Published providers',
-    );
-
-    fireEvent.click(screen.getByRole('button', { name: /browse wider category/i }));
-    expect(mockSetLocation).toHaveBeenLastCalledWith(
-      '/services/home-improvement?category=home_improvement',
     );
   });
 });

@@ -32,7 +32,7 @@ import {
 export const SERVICES_IMAGES = {
   hero: '/images/services/hero-services.jpg',
   ecosystem: '/images/services/ecosystem-property.jpg',
-  plumbingHero: '/images/services/plumbing-hero-kitchen-sink.png',
+  plumbingHero: '/images/services/plumbing-hero-kitchen-sink.jpg',
   plumbingProfessional: '/images/services/plumbing-professional.jpg',
   providerNetworkCta: '/images/services/provider-network-cta.jpg',
   categories: {

@@ -484,9 +484,9 @@ export default function ServicesCategoryPage() {
 
               <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-[11px] font-medium text-[#315663]">
                 {[
-                  'Verified Professionals',
+                  'Reviewed Before Listing',
                   'Local Coverage',
-                  'Trusted Reviews',
+                  'Compare Profiles',
                 ].map(item => (
                   <span key={item} className="inline-flex items-center gap-1.5">
                     <BadgeCheck className="h-3.5 w-3.5 text-[#21A66C]" aria-hidden="true" />
@@ -569,7 +569,7 @@ export default function ServicesCategoryPage() {
             {[
               {
                 icon: ShieldCheck,
-                title: 'Verified & Reviewed\nProfessionals',
+                title: 'Profiles Reviewed\nBefore Going Live',
               },
               {
                 icon: MapPin,

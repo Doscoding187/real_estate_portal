@@ -9,6 +9,8 @@ vi.mock('wouter', () => ({
   ),
 }));
 
+vi.mock('@/components/EnhancedNavbar', () => ({ EnhancedNavbar: () => null }));
+
 // Simulate a hosted build after the Services public release.
 vi.mock('@/lib/publicNavigation', async importOriginal => {
   const actual = await importOriginal<typeof import('@/lib/publicNavigation')>();
@@ -33,7 +35,7 @@ describe('consumer Services entry points after the public release', () => {
   it('keeps /advertise/services open and links to the directory', () => {
     const { container } = render(<AdvertiseServicesPage />);
     expect(
-      screen.getByText('Give your service business a professional home on Property Listify.'),
+      screen.getByText('More than a listing. A digital home for your service business.'),
     ).toBeInTheDocument();
     expect(servicesLinks(container)).toContain('/services');
   });

@@ -36,7 +36,7 @@ describe('service category landing content', () => {
       'From emergency repairs to installations, find trusted plumbing professionals in your area.',
     );
     expect(plumbing?.description).not.toMatch(/emergency service available/i);
-    expect(plumbing?.heroImage).toBe('/images/services/plumbing-hero-kitchen-sink.png');
+    expect(plumbing?.heroImage).toBe('/images/services/plumbing-hero-kitchen-sink.jpg');
     expect(plumbing?.guideImages).toHaveLength(3);
   });
 });
