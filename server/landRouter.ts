@@ -5,6 +5,7 @@ import { requireUser } from './_core/requireUser';
 import { LAND_PUBLIC_CLASSIFICATIONS } from '../shared/land-domain';
 import { PLACE_ID_REGEX } from '../shared/placeAuthority';
 import { requireLandVerticalAvailable } from '../shared/landLaunchPolicy';
+import './_core/landRuntime';
 import {
   accessPrivateLandEvidence,
   attachLandMarketingMedia,

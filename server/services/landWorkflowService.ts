@@ -29,6 +29,7 @@ import {
 } from '../../shared/land-domain';
 import { isCanonicalPlaceId } from '../../shared/placeAuthority';
 import { requireLandVerticalAvailable } from '../../shared/landLaunchPolicy';
+import '../_core/landRuntime';
 import { executePlace } from './placeDiscoveryService';
 import { buildLocalMediaUploadUrl, getMediaStorageAdapter, inspectLocalMediaObject } from '../_core/mediaStorage';
 import { createLandEvidenceDeliveryToken, createLandEvidenceUploadReservation, createPrivateEvidenceS3DeliveryUrl, createPrivateEvidenceS3UploadUrl, inspectPrivateEvidenceS3Object, verifyLandEvidenceUploadReservation } from './landEvidenceStorage';

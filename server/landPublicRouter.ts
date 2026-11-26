@@ -4,6 +4,7 @@ import { LAND_PUBLIC_CLASSIFICATIONS } from '../shared/land-domain';
 import { PLACE_ID_REGEX } from '../shared/placeAuthority';
 import { validateLandSearchGeography } from '../shared/landSearchGeography';
 import { isLandVerticalAvailable } from '../shared/landLaunchPolicy';
+import './_core/landRuntime';
 import {
   publicLandDetail,
   publicLandGuideAreas,
@@ -42,6 +43,7 @@ export const landPublicSearchInput = z
   });
 
 export const landPublicRouter = router({
+  status: publicProcedure.query(() => ({ enabled: isLandVerticalAvailable() })),
   search: publicProcedure.input(landPublicSearchInput).query(({ input }) => (isLandVerticalAvailable() ? searchPublicLand(input) : [])),
   guideAreas: publicProcedure
     .input(z.object({ canonicalPlaceId: z.string().trim().regex(PLACE_ID_REGEX) }).strict())

@@ -31,6 +31,12 @@ case "$LAUNCH_MODE" in
   pilot | reactivation) ;;
   *) echo "PARITY_LAUNCH_MODE must be pilot or reactivation" >&2; exit 2 ;;
 esac
+# Land is on in the local preview only (explicit opt-in for the API process).
+LAND_MODE="${PARITY_LAND:-on}"
+case "$LAND_MODE" in
+  on | off) ;;
+  *) echo "PARITY_LAND must be on or off" >&2; exit 2 ;;
+esac
 OUTBOX_FILE="$STATE_DIR/outbox.jsonl"
 
 alive() { [ -f "$1" ] && kill -0 "$(cat "$1")" 2>/dev/null; }
@@ -82,6 +88,7 @@ case "${1:-status}" in
         PAID_MVP_ENABLED_PRODUCT_KEYS=agent_launch_access,agency_launch_access,developer_launch_access
         PAID_MVP_RELEASE_ID=local-parity-pilot PAID_MVP_APPROVAL_REF=local-parity-only)
     fi
+    if [ "$LAND_MODE" = "on" ]; then MODE_ENV+=(PROPERTY_LISTIFY_LOCAL_PARITY_LAND=1); fi
     start_one api "$API_PID_FILE" "$API_PORT" \
       env NODE_ENV=development APP_ENV=development SKIP_FRONTEND=true PORT="$API_PORT" \
       APP_URL="$WEB_URL" FRONTEND_URL="$WEB_URL" "${MODE_ENV[@]}" \
@@ -117,6 +124,7 @@ case "${1:-status}" in
     done
     (cd "$ROOT" && pnpm exec tsx scripts/preview/parityLoginSecret.ts --status)
     echo "launch mode (for next start): $LAUNCH_MODE"
+    echo "land (for next start): $LAND_MODE"
     echo "API: $API_URL   WEB: $WEB_URL"
     ;;
   outbox)
