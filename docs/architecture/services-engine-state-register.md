@@ -178,6 +178,57 @@ project images use the generic public media URL path and may be directly
 retrievable if a URL is known before approval. Do not claim those image bytes
 are private. Credential files remain on the private signed-delivery path.
 
+**Task branch update (2026-11-21):**
+`feat/services-public-marketplace-readiness-20261120` removes only `services`
+from `LAUNCH_HELD_JOURNEYS`. It leaves the server-side eligibility conjunction,
+private-by-default onboarding and super-admin publication authority intact. The
+public marketplace and provider-acquisition information remain accessible
+during a confirmed API outage, but dynamic provider/profile/review/request
+content reports temporary unavailability and applications or requests are not
+accepted or represented as saved. The branch also adds the balanced nine-card
+homepage category presentation and deeper truthful discovery content. Its active
+Readiness-1 refinement removes the forced Plumbing hero default, keeps a selected
+popular-service query visible through the category directory and normal filters,
+and turns every supported category into a reusable destination: a category hero,
+service pathways, request-planning/detail prompts, practical enquiry guidance,
+truthful no-match alternatives and a controlled provider-application route. The
+configuration never creates provider supply, reviews, trends, emergency,
+same-day, material, scope or project-availability claims. This is unmerged
+review work, not advertising, provider publication, deployment or
+production-readiness evidence.
+
+**Verification update (2026-11-21):** the current branch passed its relevant
+Database-Authority test set (11 files / 66 tests): the static sitemap now
+includes `/services`, public entry points are released, the outage boundary
+refuses writable applications/requests, and homepage/category/request/profile/
+service-detail contracts remain intact. `pnpm check` passed and
+`pnpm run lint:check` exited 0 with zero errors (13,943 repository-wide
+warnings). The required final `pnpm test:authority` run reached the exact
+disposable target and exited 1 with 872 files passed, 5 failed, 12 skipped
+(6,420 tests passed, 24 failed, 100 skipped). No Services test failed. The
+remaining failures are separate shared legal-fixture / commercial S4 setup,
+founder-super-admin fixture, B07 role-fixture and hosted-readiness-monitor
+timing issues; they are not a database-startup failure or authority for more
+Services scope.
+
+**Readiness-1 verification update (2026-11-21):** the neutral hero choice,
+popular-service focus, reusable category-destination content and
+focus-preservation tests pass (`categoryLanding.test.ts`,
+`ServicesHomePage.integration.test.tsx` and `ServicesCategoryPage.test.tsx`:
+16 tests). `pnpm check` and `pnpm run lint:check` passed. A local browser smoke
+verified the broad Home Improvement route → Plumbing
+`/services/home-improvement?query=plumbing` destination, category pathways,
+provider-results anchor, controlled provider-application CTA and truthful
+no-match alternative. Desktop and 390px mobile Plumbing routes had no horizontal
+overflow or console errors. The full `pnpm test:authority` category-destination
+candidate completed with 872 files passed, 5 failed and 12 skipped (6,420
+passed, 24 failed, 100 skipped); none of its failures were in Services. A
+subsequent client-only anchor-scroll correction passed focused tests, typecheck,
+lint and a live local browser click-through. The failing suites are separate
+Commercial/Legal fixture, founder-super-admin, B07 role-fixture and
+hosted-readiness-monitor timing issues. This branch does not alter those
+engines.
+
 ## §2 Supersession ledger
 
 | # | Artifact | Status | Disposition |
@@ -210,6 +261,7 @@ Statuses: `Proposed` (awaiting founder/V3 approval) · `Approved, not started` �
 | DELTA-12 Provider acquisition and registration | Code + operations | **Shipped on `origin/main` #791; regression DB verification passed in this task branch** | Uses existing `service_provider` registration, legal acceptance and verification. External email delivery and current approved legal release remain separate release checks. |
 | DELTA-13 Provider-editable service descriptions | Code | **Shipped on `origin/main` #791; regression DB verification passed in this task branch** | Reuses `service_provider_services.description`; provider-scoped writes, persistence, validation, public projection and unpublished privacy are covered. Published edits remain immediate under V1; no edit-review state is implemented or claimed. |
 | DELTA-14 Guided website onboarding, readiness and generated template | Code + schema (Database Authority) | **Implemented on this task branch; focused DB verification passed; merge/release authority pending** | Five-step save/resume onboarding uses persisted readiness and presents one Professional Business (Corporate Brand) template. Preview and public profile reuse the same renderer; legacy stored template variants remain readable for existing records. Migrations 0198–0200 add onboarding fields plus optional project/credential authorities. Draft pages remain private; super-admin publication remains the public transition. Project image bytes use the generic public media path and are not private before approval. |
+| Readiness-1 Category destinations, public discovery focus and request planning | Code | **Implemented on `feat/services-public-marketplace-readiness-20261120`; conditionally review-ready with unrelated full-suite failures recorded** | The homepage still requires a deliberate service choice. Each canonical category now reads from one reusable content authority for its hero, pathways, request planning, practical guidance and truthful no-match/provider-acquisition states. Existing popular-service links preserve their server-backed `query` focus (for example, Plumbing) through normal directory refinement; pathways link into that same query authority. Guidance distinguishes prompt attention, planned maintenance, installation and larger-project intent without treating prompts as provider availability filters or claiming emergency/same-day availability. The authority suite reports no Services failure; the subsequent client-only results-anchor correction has focused tests, typecheck, lint and browser-smoke evidence. No server, schema, migration, data, publication or authorization change. |
 
 **Current direction:** V3 remains the approved growth contract. DELTA-1/3/4/7
 and DELTA-10's Place foundation are shipped. DELTA-12 and DELTA-13 are present

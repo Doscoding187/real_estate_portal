@@ -23,8 +23,16 @@ export function CompletionScreen({ state }: CompletionScreenProps) {
         <p className="max-w-xl text-slate-600">
           <span className="font-medium">{state.companyName || 'Your business'}</span> is saved with{' '}
           <span className="font-medium">{categoryLabel}</span> details. The Property Listify team
-          will review the profile before it appears in the public directory. The profile is ready
-          for manual review, but it is not publicly published yet.
+          can now review the profile. It remains private and will appear publicly only if an
+          authorised reviewer approves publication.
+        </p>
+      </div>
+
+      <div className="w-full max-w-xl rounded-2xl border border-blue-100 bg-blue-50 p-4 text-left">
+        <p className="text-sm font-semibold text-slate-900">What happens next</p>
+        <p className="mt-1 text-sm leading-6 text-slate-600">
+          Keep your services and coverage accurate. You can return to your profile to make updates;
+          those changes do not bypass the publication review.
         </p>
       </div>
 

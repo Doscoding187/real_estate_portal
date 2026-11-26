@@ -29,6 +29,7 @@ import { ServicesSiteFooter } from '@/components/services/ServicesSiteFooter';
 import { trpc, type RouterOutputs } from '@/lib/trpc';
 import { applySeo } from '@/lib/seo';
 import { useServicesLocation } from '@/features/services/useServicesLocation';
+import { useApiAvailability } from '@/components/ApiAvailabilityBoundary';
 
 type ProfileTab = 'overview' | 'projects' | 'services' | 'areas' | 'contact';
 export type ProviderWebsitePublicProfile = NonNullable<
@@ -51,6 +52,7 @@ export default function ServiceProviderProfilePage({
   const isPreview = Boolean(previewProfile);
   const [, params] = useRoute('/services/provider/:slug');
   const { search, setLocation } = useServicesLocation();
+  const { isUnavailable } = useApiAvailability();
   const slug = String(params?.slug || '');
   const providerId = previewProfile?.providerId || providerIdFromSlug(safeDecode(slug));
   const journeyContext = serviceJourneyContextFromSearch(search);
@@ -61,7 +63,7 @@ export default function ServiceProviderProfilePage({
   const [activeWebsiteNavigation, setActiveWebsiteNavigation] = useState('Home');
   const profileQuery = trpc.servicesEngine.getProviderPublicProfile.useQuery(
     { providerId: providerId || 0 },
-    { enabled: !isPreview && Boolean(providerId) },
+    { enabled: !isPreview && Boolean(providerId) && !isUnavailable },
   );
   const profile = previewProfile || profileQuery.data;
   const [selectedServiceCode, setSelectedServiceCode] = useState<string | null>(
@@ -141,6 +143,32 @@ export default function ServiceProviderProfilePage({
     );
   }
 
+  if (!isPreview && isUnavailable) {
+    return (
+      <>
+        <EnhancedNavbar />
+        <main className="min-h-screen bg-[#FDFDFD] px-4 py-8 md:px-6">
+          <div className={`${servicesUi.surface} mx-auto max-w-3xl p-8`} role="status">
+            <h1 className="font-sans text-2xl font-bold tracking-[-0.03em] text-[#0B1B2A]">
+              Provider profile temporarily unavailable
+            </h1>
+            <p className="mt-3 text-sm leading-6 text-[#4B5C6B]">
+              The application service is reconnecting. This does not confirm whether this provider
+              is published. Please return once availability is restored.
+            </p>
+            <button
+              type="button"
+              onClick={() => setLocation('/services')}
+              className={`${servicesUi.action} mt-6`}
+            >
+              Browse services
+            </button>
+          </div>
+        </main>
+      </>
+    );
+  }
+
   if (!isPreview && profileQuery.isLoading) {
     return (
       <>
@@ -155,7 +183,33 @@ export default function ServiceProviderProfilePage({
     );
   }
 
-  if (!isPreview && (profileQuery.error || !profile)) {
+  if (!isPreview && profileQuery.error) {
+    return (
+      <>
+        <EnhancedNavbar />
+        <main className="min-h-screen bg-[#FDFDFD] px-4 py-8 md:px-6">
+          <div className={`${servicesUi.surface} mx-auto max-w-3xl p-8`} role="status">
+            <h1 className="font-sans text-2xl font-bold tracking-[-0.03em] text-[#0B1B2A]">
+              Provider profile temporarily unavailable
+            </h1>
+            <p className="mt-3 text-sm leading-6 text-[#4B5C6B]">
+              We could not load this provider profile right now. This does not confirm whether the
+              provider is published. Please try again shortly.
+            </p>
+            <button
+              type="button"
+              onClick={() => setLocation('/services')}
+              className={`${servicesUi.action} mt-6`}
+            >
+              Browse services
+            </button>
+          </div>
+        </main>
+      </>
+    );
+  }
+
+  if (!isPreview && !profile) {
     return (
       <>
         <EnhancedNavbar />

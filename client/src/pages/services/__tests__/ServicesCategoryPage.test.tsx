@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 const routeState = { category: 'moving' };
 const mockDirectorySearch = vi.fn();
@@ -75,7 +75,9 @@ describe('ServicesCategoryPage', () => {
 
     render(<ServicesCategoryPage />);
 
-    expect(screen.getByRole('heading', { name: /services providers/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /home improvement services/i, level: 1 }),
+    ).toBeInTheDocument();
     await waitFor(() =>
       expect(mockSetLocation).toHaveBeenCalledWith(
         '/services/home-improvement?category=home_improvement&city=Pretoria',
@@ -89,7 +91,7 @@ describe('ServicesCategoryPage', () => {
 
     render(<ServicesCategoryPage />);
 
-    expect(screen.getByRole('heading', { name: /services providers/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /moving & storage services/i })).toBeInTheDocument();
     expect(mockSetLocation).not.toHaveBeenCalled();
   });
 
@@ -100,7 +102,9 @@ describe('ServicesCategoryPage', () => {
     render(<ServicesCategoryPage />);
 
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: /browse providers to request/i })).toBeInTheDocument(),
+      expect(
+        screen.getByRole('button', { name: /browse providers to request/i }),
+      ).toBeInTheDocument(),
     );
     expect(mockSetLocation).not.toHaveBeenCalled();
   });
@@ -129,5 +133,95 @@ describe('ServicesCategoryPage', () => {
       },
       { '@type': 'ListItem', position: 3, name: 'Moving Services' },
     ]);
+  });
+
+  it('turns a selected plumbing focus into a full category destination and preserves server filtering', () => {
+    routeState.category = 'home-improvement';
+    window.history.pushState({}, '', '/services/home-improvement?query=plumbing');
+
+    render(<ServicesCategoryPage />);
+
+    const heroHeading = screen.getByRole('heading', {
+      name: /plumbing & maintenance/i,
+      level: 1,
+    });
+    expect(heroHeading).toBeInTheDocument();
+    expect(heroHeading.tagName).toBe('H1');
+    expect(
+      screen.getByText(
+        'From emergency repairs to installations, find plumbing professionals in your area.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Choose your area')).toHaveAttribute(
+      'aria-autocomplete',
+      'list',
+    );
+    expect(screen.getByText('What do you need?')).toBeInTheDocument();
+    expect(screen.getByText('Reviewed Before Listing')).toBeInTheDocument();
+    expect(screen.getByText('Local Coverage')).toBeInTheDocument();
+    expect(screen.getByText('Compare Profiles')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /find professionals/i })).toBeInTheDocument();
+    expect(screen.getByText(/leak repairs & plumbing/i)).toBeInTheDocument();
+    expect(screen.getByText(/drainage & blockages/i)).toBeInTheDocument();
+    expect(screen.getByText(/geyser repairs & replacement/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /why choose\s+property listify/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/profiles reviewed\s+before going live/i)).toBeInTheDocument();
+    expect(screen.getByText(/local experts\s+in your area/i)).toBeInTheDocument();
+    expect(screen.getByText(/read reviews\s+before you choose/i)).toBeInTheDocument();
+    expect(screen.getByText(/dedicated support\s+when you need help/i)).toBeInTheDocument();
+    expect(screen.getByText(/replacing a fixture/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /view all services/i })).toBeInTheDocument();
+    const maintenancePlan = screen.getByRole('button', { name: /maintenance or repair/i });
+    expect(maintenancePlan).toBeInTheDocument();
+    expect(screen.getByText(/do not promise emergency/i)).toBeInTheDocument();
+    expect(screen.queryByText(/emergency service available/i)).not.toBeInTheDocument();
+    expect(
+      Array.from(document.images).map(image => image.getAttribute('src')),
+    ).toContain('/images/services/plumbing-hero-kitchen-sink.jpg');
+    expect(
+      Array.from(document.images).map(image => image.getAttribute('src')),
+    ).toContain('/images/services/plumbing-faucet-feature.jpeg');
+    expect(mockDirectorySearch).toHaveBeenCalledWith(
+      expect.objectContaining({ category: 'home_improvement', query: 'plumbing' }),
+    );
+
+    fireEvent.click(maintenancePlan);
+
+    expect(maintenancePlan).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText(/when you contact a provider/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /apply filters/i }));
+
+    expect(mockSetLocation).toHaveBeenCalledWith(
+      '/services/home-improvement?category=home_improvement&query=plumbing',
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /view all services/i }));
+
+    expect(mockSetLocation).toHaveBeenLastCalledWith('/services/home-improvement');
+  });
+
+  it('gives a broad category its own pathways and sends a service choice into the matching directory filter', () => {
+    routeState.category = 'home-improvement';
+    window.history.pushState({}, '', '/services/home-improvement');
+
+    render(<ServicesCategoryPage />);
+
+    expect(
+      screen.getByRole('heading', { name: /home improvement services/i, level: 1 }),
+    ).toBeInTheDocument();
+    const plumbingPathway = screen.getByRole('link', { name: /plumbing & maintenance/i });
+    expect(plumbingPathway).toHaveAttribute('href', '/services/home-improvement?query=plumbing');
+    expect(screen.getByText(/no published providers match this service and location yet/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /join as a provider/i })).toHaveAttribute(
+      'href',
+      '/advertise/services',
+    );
+    expect(document.getElementById('provider-results')).toHaveAttribute(
+      'aria-label',
+      'Published providers',
+    );
   });
 });

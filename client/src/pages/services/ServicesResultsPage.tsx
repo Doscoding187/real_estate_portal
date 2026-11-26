@@ -13,6 +13,7 @@ import {
 } from '@/features/services/catalog';
 import { applySeo } from '@/lib/seo';
 import { useServicesLocation } from '@/features/services/useServicesLocation';
+import { useApiAvailability } from '@/components/ApiAvailabilityBoundary';
 
 function parsePositiveInteger(value: string | null | undefined) {
   if (!value || !/^\d+$/.test(value)) return 0;
@@ -27,8 +28,12 @@ function readableStatus(status: string) {
 export default function ServicesResultsPage() {
   const [, params] = useRoute('/services/results/:leadId');
   const { setLocation } = useServicesLocation();
+  const { isUnavailable } = useApiAvailability();
   const leadId = parsePositiveInteger(params?.leadId);
-  const leadQuery = trpc.servicesEngine.getLead.useQuery({ leadId }, { enabled: leadId > 0 });
+  const leadQuery = trpc.servicesEngine.getLead.useQuery(
+    { leadId },
+    { enabled: leadId > 0 && !isUnavailable },
+  );
   const lead = leadQuery.data;
   const categoryParam = String(lead?.serviceCategory || '').toLowerCase();
   const category = isServiceCategory(categoryParam)
@@ -65,6 +70,27 @@ export default function ServicesResultsPage() {
             <h1 className="text-2xl font-semibold text-slate-950">Request unavailable</h1>
             <p className="mt-3 text-sm leading-6 text-slate-600">
               This request link is not valid. Start a new request from the Services directory.
+            </p>
+            <Button className="mt-6" onClick={() => setLocation('/services')}>
+              Browse services
+            </Button>
+          </CardContent>
+        </Card>
+      </main>
+    );
+  }
+
+  if (isUnavailable) {
+    return (
+      <main className="min-h-screen bg-[#f7f4ec] px-4 py-12 md:px-6">
+        <Card className="mx-auto max-w-3xl border-amber-200 bg-white shadow-sm">
+          <CardContent className="p-8" role="status">
+            <h1 className="text-2xl font-semibold text-slate-950">
+              Request status temporarily unavailable
+            </h1>
+            <p className="mt-3 text-sm leading-6 text-slate-600">
+              The application service is reconnecting. We cannot confirm the status of this
+              request right now, and no request details are being shown.
             </p>
             <Button className="mt-6" onClick={() => setLocation('/services')}>
               Browse services

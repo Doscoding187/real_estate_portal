@@ -1,7 +1,11 @@
 import { act, render, screen } from '@testing-library/react';
 import { HelmetProvider } from 'react-helmet-async';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ApiAvailabilityBoundary } from './ApiAvailabilityBoundary';
+import {
+  ApiAvailabilityBoundary,
+  ApiAvailabilityGate,
+  isServicesOutageResilientPath,
+} from './ApiAvailabilityBoundary';
 
 afterEach(() => {
   vi.useRealTimers();
@@ -17,13 +21,23 @@ function readyResponse() {
 }
 
 describe('ApiAvailabilityBoundary', () => {
+  it('keeps only the intended Services public paths resilient during an API outage', () => {
+    expect(isServicesOutageResilientPath('/services')).toBe(true);
+    expect(isServicesOutageResilientPath('/services/home-improvement')).toBe(true);
+    expect(isServicesOutageResilientPath('/advertise/services')).toBe(true);
+    expect(isServicesOutageResilientPath('/service/profile')).toBe(false);
+    expect(isServicesOutageResilientPath('/property-for-sale')).toBe(false);
+  });
+
   it('keeps the site visible when the API is healthy', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(readyResponse()));
 
     render(
       <HelmetProvider>
         <ApiAvailabilityBoundary enabled apiBaseUrl="https://api.example.test">
-          <div>Property search</div>
+          <ApiAvailabilityGate pathname="/property-for-sale">
+            <div>Property search</div>
+          </ApiAvailabilityGate>
         </ApiAvailabilityBoundary>
       </HelmetProvider>,
     );
@@ -42,7 +56,9 @@ describe('ApiAvailabilityBoundary', () => {
     render(
       <HelmetProvider>
         <ApiAvailabilityBoundary apiBaseUrl="https://api.example.test">
-          <div>Property search</div>
+          <ApiAvailabilityGate pathname="/property-for-sale">
+            <div>Property search</div>
+          </ApiAvailabilityGate>
         </ApiAvailabilityBoundary>
       </HelmetProvider>,
     );
@@ -62,7 +78,9 @@ describe('ApiAvailabilityBoundary', () => {
     render(
       <HelmetProvider>
         <ApiAvailabilityBoundary apiBaseUrl="https://api.example.test">
-          <div>Property search</div>
+          <ApiAvailabilityGate pathname="/property-for-sale">
+            <div>Property search</div>
+          </ApiAvailabilityGate>
         </ApiAvailabilityBoundary>
       </HelmetProvider>,
     );
@@ -85,7 +103,9 @@ describe('ApiAvailabilityBoundary', () => {
     render(
       <HelmetProvider>
         <ApiAvailabilityBoundary enabled apiBaseUrl="https://api.example.test">
-          <div>Property search</div>
+          <ApiAvailabilityGate pathname="/property-for-sale">
+            <div>Property search</div>
+          </ApiAvailabilityGate>
         </ApiAvailabilityBoundary>
       </HelmetProvider>,
     );
@@ -121,7 +141,9 @@ describe('ApiAvailabilityBoundary', () => {
     render(
       <HelmetProvider>
         <ApiAvailabilityBoundary enabled apiBaseUrl="https://api.example.test">
-          <div>Property search</div>
+          <ApiAvailabilityGate pathname="/property-for-sale">
+            <div>Property search</div>
+          </ApiAvailabilityGate>
         </ApiAvailabilityBoundary>
       </HelmetProvider>,
     );
@@ -148,7 +170,9 @@ describe('ApiAvailabilityBoundary', () => {
     render(
       <HelmetProvider>
         <ApiAvailabilityBoundary enabled apiBaseUrl="https://api.example.test">
-          <div>Property search</div>
+          <ApiAvailabilityGate pathname="/property-for-sale">
+            <div>Property search</div>
+          </ApiAvailabilityGate>
         </ApiAvailabilityBoundary>
       </HelmetProvider>,
     );
@@ -162,6 +186,27 @@ describe('ApiAvailabilityBoundary', () => {
     });
 
     expect(screen.getByText('Property search')).toBeInTheDocument();
+    expect(screen.queryByText('We’re upgrading Property Listify')).not.toBeInTheDocument();
+  });
+
+  it('keeps the Services public shell visible after confirmed API unavailability', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 503 })));
+
+    render(
+      <HelmetProvider>
+        <ApiAvailabilityBoundary enabled apiBaseUrl="https://api.example.test">
+          <ApiAvailabilityGate pathname="/services">
+            <div>Services public shell</div>
+          </ApiAvailabilityGate>
+        </ApiAvailabilityBoundary>
+      </HelmetProvider>,
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5600);
+    });
+
+    expect(screen.getByText('Services public shell')).toBeInTheDocument();
     expect(screen.queryByText('We’re upgrading Property Listify')).not.toBeInTheDocument();
   });
 });

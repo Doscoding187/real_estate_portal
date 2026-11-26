@@ -12,12 +12,14 @@ import React from 'react';
 export type WizardProgressIndicatorProps = {
   currentStep: number; // 1-based
   totalSteps: number;
+  stepLabel?: string;
   encouragingCopy?: string;
 };
 
 export function WizardProgressIndicator({
   currentStep,
   totalSteps,
+  stepLabel,
   encouragingCopy,
 }: WizardProgressIndicatorProps) {
   const progressPercentage = (currentStep / totalSteps) * 100;
@@ -29,6 +31,7 @@ export function WizardProgressIndicator({
         <div className="flex items-center justify-between gap-4">
           <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">
             Step {currentStep} of {totalSteps}
+            {stepLabel && <span className="ml-1 text-foreground">· {stepLabel}</span>}
           </span>
           <div
             role="progressbar"

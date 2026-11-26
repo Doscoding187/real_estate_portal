@@ -2,17 +2,25 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowRight,
   BadgeCheck,
+  Camera,
   Check,
+  ClipboardCheck,
   ClipboardList,
+  Hammer,
   Home,
   MapPin,
   MessageSquare,
+  Scale,
   Search,
   ShieldCheck,
+  Truck,
   UserCheck,
+  type LucideIcon,
 } from 'lucide-react';
+import { Link } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import {
+  SERVICE_CATEGORIES,
   buildProviderProfilePath,
   buildServiceCategoryPath,
   serviceJourneyContextFromSearch,
@@ -41,48 +49,112 @@ import {
 } from '@/components/location/CanonicalPlaceSelector';
 import { canonicalPlaceSelectionFromResolved } from '@/lib/canonicalPlaceSelection';
 import { isCanonicalPlaceId } from '@shared/placeAuthority';
+import { useApiAvailability } from '@/components/ApiAvailabilityBoundary';
 
 const DIRECTORY_SCAN_LIMIT = 50;
-const RAIL_SIZE = 8;
+const RAIL_SIZE = 9;
 
-const HOW_IT_WORKS = [
+const CATEGORY_ICONS: Record<ServiceCategory, LucideIcon> = {
+  home_improvement: Hammer,
+  finance_legal: Scale,
+  moving: Truck,
+  inspection_compliance: ClipboardCheck,
+  insurance: ShieldCheck,
+  media_marketing: Camera,
+};
+
+const PROJECT_STARTS: Array<{
+  title: string;
+  description: string;
+  category: ServiceCategory;
+  query?: string;
+  image: string;
+  icon: LucideIcon;
+}> = [
   {
-    title: 'Search & explore',
-    description: 'Choose a service category and add your location.',
-    icon: Search,
+    title: 'Repair or improve a home',
+    description: 'Browse home improvement services, from maintenance to renovations.',
+    category: 'home_improvement',
+    image: SERVICES_IMAGES.categories.home_improvement,
+    icon: Hammer,
   },
   {
-    title: 'Compare providers',
-    description: 'Browse verified professionals in your area.',
+    title: 'Plan a move',
+    description: 'Find moving and storage providers, then check the places they list.',
+    category: 'moving',
+    query: 'moving',
+    image: SERVICES_IMAGES.categories.moving,
+    icon: Truck,
+  },
+  {
+    title: 'Check a property',
+    description: 'Explore inspection and compliance services for your property needs.',
+    category: 'inspection_compliance',
+    query: 'inspection',
+    image: SERVICES_IMAGES.categories.inspection_compliance,
+    icon: ClipboardCheck,
+  },
+];
+
+const CHOICE_GUIDANCE = [
+  {
+    title: 'Check the listed coverage',
+    description:
+      'Make sure the provider has listed the place where you need the service. Coverage is shown by the provider.',
+    icon: MapPin,
+  },
+  {
+    title: 'Read the service details',
+    description:
+      'Compare what each provider says they do. Prices appear when the provider has supplied them.',
     icon: ClipboardList,
   },
   {
-    title: 'Send an enquiry',
-    description: 'Get in touch directly with the provider you choose.',
+    title: 'Choose who receives your request',
+    description:
+      'An enquiry goes to the provider you select. It does not book a service or guarantee a response.',
+    icon: MessageSquare,
+  },
+];
+
+const HOW_IT_WORKS = [
+  {
+    title: 'Choose a service',
+    description: 'Browse by service and select a place that matches your project.',
+    icon: Search,
+  },
+  {
+    title: 'Review provider details',
+    description: 'Check the provider’s listed services, coverage, and available trust signals.',
+    icon: ClipboardList,
+  },
+  {
+    title: 'Send one enquiry',
+    description: 'Share your request with the provider you choose.',
     icon: MessageSquare,
   },
   {
-    title: 'Get it done',
-    description: 'The provider will contact you to discuss your needs.',
+    title: 'Discuss next steps',
+    description: 'The provider can follow up with you directly about the request.',
     icon: UserCheck,
   },
 ];
 
 const TRUST_POINTS = [
   {
-    title: 'Verified professionals',
-    description: 'All providers are platform verified for your peace of mind.',
+    title: 'Reviewed for publication',
+    description: 'A provider profile must be approved before it appears in the public directory.',
     icon: BadgeCheck,
   },
   {
-    title: 'Local & trusted',
-    description: 'Real professionals in your area, ready to help.',
-    icon: ShieldCheck,
+    title: 'Listed service coverage',
+    description: 'See the places a provider has listed for the services they offer.',
+    icon: MapPin,
   },
   {
-    title: 'Easy enquiries',
-    description: 'Get in touch directly with the right provider, fast and simple.',
-    icon: MessageSquare,
+    title: 'Reviews when available',
+    description: 'Read eligible published customer reviews where a provider has them.',
+    icon: ShieldCheck,
   },
 ];
 
@@ -93,39 +165,44 @@ function providerCategory(provider: ProviderDirectoryItem): ServiceCategory {
 
 export default function ServicesHomePage() {
   const { search, setLocation } = useServicesLocation();
+  const { isUnavailable } = useApiAvailability();
   const journeyContext = serviceJourneyContextFromSearch(search);
   const rawPlaceId = new URLSearchParams(search).get('canonicalPlaceId');
   const initialPlaceId = isCanonicalPlaceId(rawPlaceId) ? rawPlaceId : '';
   const resolvedPlaceQuery = trpc.placeAuthority.resolveSearchPlace.useQuery(
     { placeId: initialPlaceId },
-    { enabled: Boolean(initialPlaceId), refetchOnWindowFocus: false },
+    { enabled: Boolean(initialPlaceId) && !isUnavailable, refetchOnWindowFocus: false },
   );
   const resolvedPlace = useMemo(
     () => canonicalPlaceSelectionFromResolved(resolvedPlaceQuery.data),
     [resolvedPlaceQuery.data],
   );
-  const [selectedServiceKey, setSelectedServiceKey] = useState('plumbing');
+  const [selectedServiceKey, setSelectedServiceKey] = useState('');
   const [selectedPlace, setSelectedPlace] = useState<CanonicalPlaceSelection | null | undefined>(
     undefined,
   );
   const activePlace = selectedPlace === undefined ? resolvedPlace : selectedPlace;
 
-  const directoryQuery = trpc.servicesEngine.directorySearch.useQuery({
-    limit: DIRECTORY_SCAN_LIMIT,
-    sort: 'rating',
-  });
-  const providers = useMemo(
-    () => (directoryQuery.data || []) as ProviderDirectoryItem[],
-    [directoryQuery.data],
+  const directoryQuery = trpc.servicesEngine.directorySearch.useQuery(
+    {
+      limit: DIRECTORY_SCAN_LIMIT,
+      sort: 'rating',
+    },
+    { enabled: !isUnavailable },
   );
-  const isLoading = directoryQuery.isLoading;
+  const providers = useMemo(
+    () => (isUnavailable ? [] : directoryQuery.data || []) as ProviderDirectoryItem[],
+    [directoryQuery.data, isUnavailable],
+  );
+  const isLoading = !isUnavailable && directoryQuery.isLoading;
   const hasError = Boolean(directoryQuery.error);
+  const directoryUnavailable = isUnavailable || hasError;
 
   const rankedServices = useMemo(() => rankPopularServiceGroups(providers), [providers]);
   const railServices = rankedServices.slice(0, RAIL_SIZE);
   const moreServices = rankedServices.slice(RAIL_SIZE);
   const selectedService =
-    rankedServices.find(service => service.key === selectedServiceKey) || rankedServices[0] || null;
+    rankedServices.find(service => service.key === selectedServiceKey) || null;
 
   const featuredProviders = useMemo(() => {
     return [...providers]
@@ -195,15 +272,15 @@ export default function ServicesHomePage() {
               Services
             </p>
             <h1 className="mt-4 max-w-3xl font-['Sora'] text-[34px] font-bold leading-[1.08] tracking-[-0.04em] text-white md:text-[52px]">
-              Trusted Local Service Providers for Your Property &amp; Home
+              Property services for every step of your journey
             </h1>
             <p className="mt-5 max-w-2xl text-[15px] leading-7 text-slate-200 md:text-lg">
-              Find verified professionals across 6 service categories. From home repairs to
-              renovations, connect with the right experts in your area.
+              Explore six service categories. Published provider availability is shown for your
+              selected area, and enquiries go only to the provider you choose.
             </p>
 
             <div className="mt-10 rounded-2xl border border-white/20 bg-white p-3 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)] md:mt-14 md:p-4">
-              <div className="grid gap-3 md:grid-cols-[1.1fr_1fr_auto] md:items-end">
+              <div className="grid gap-3 md:grid-cols-[1.1fr_1fr_auto] md:items-start">
                 <label className="block text-left">
                   <span className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-[#4B5C6B]">
                     Select a service category
@@ -214,6 +291,9 @@ export default function ServicesHomePage() {
                     onChange={event => setSelectedServiceKey(event.target.value)}
                     className="mt-2 h-12 w-full rounded-xl border border-[#E3EBF0] bg-[#FDFDFD] px-4 text-sm text-[#0B1B2A] outline-none transition focus:border-[#168363]"
                   >
+                    <option value="" disabled>
+                      Choose a service
+                    </option>
                     {rankedServices.map(service => (
                       <option key={service.key} value={service.key}>
                         {service.label}
@@ -228,9 +308,17 @@ export default function ServicesHomePage() {
                   label="Location"
                   purpose="search"
                   placeholder="Choose an approved Place"
+                  labelClassName="block text-[11px] font-semibold uppercase tracking-[0.14em] text-[#4B5C6B]"
+                  inputClassName="h-12 rounded-xl border-[#E3EBF0] bg-[#FDFDFD] px-4"
+                  statusClassName="text-xs leading-5 text-[#6B7B88]"
                 />
 
-                <button type="button" onClick={submitSearch} className={servicesUi.action}>
+                <button
+                  type="button"
+                  onClick={submitSearch}
+                  disabled={!selectedService}
+                  className={`${servicesUi.action} h-12 md:mt-6 disabled:cursor-not-allowed disabled:opacity-50`}
+                >
                   <Search className="h-4 w-4" aria-hidden="true" />
                   Search
                 </button>
@@ -239,10 +327,27 @@ export default function ServicesHomePage() {
           </div>
         </section>
 
+        {isUnavailable && (
+          <div className="border-b border-amber-200 bg-amber-50 px-4 py-3 md:px-6" role="status">
+            <p className="mx-auto max-w-7xl text-sm leading-6 text-amber-900">
+              Live provider availability is temporarily unavailable while the application service
+              reconnects. You can continue exploring service categories, but no provider or request
+              information has been confirmed.
+            </p>
+          </div>
+        )}
+
         {/* ── Ranked service rail ────────────────────────────────────────── */}
         <section className="border-b border-[#E3EBF0] bg-white">
           <div className="mx-auto w-full max-w-7xl px-4 py-9 md:px-6 md:py-10">
-            <div className="flex gap-6 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="mb-6">
+              <p className={servicesUi.eyebrow}>Start with a service</p>
+              <h2 className={`mt-2 ${servicesUi.heading}`}>What do you need help with?</h2>
+              <p className="mt-2 max-w-2xl text-sm text-[#4B5C6B]">
+                Choose a service to browse providers and their listed coverage.
+              </p>
+            </div>
+            <div className="grid grid-cols-3 gap-x-3 gap-y-6 sm:grid-cols-5 lg:grid-cols-9">
               {railServices.map(service => (
                 <PopularServiceIconWell
                   key={service.key}
@@ -255,16 +360,16 @@ export default function ServicesHomePage() {
           </div>
         </section>
 
-        {/* ── Remaining services ─────────────────────────────────────────── */}
+        {/* ── Additional service shortcuts ───────────────────────────────── */}
         <section className="bg-[#F7FAFB] px-4 py-14 md:px-6 md:py-16">
           <div className="mx-auto w-full max-w-7xl">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
-                <p className={servicesUi.eyebrow}>More property services</p>
-                <h2 className={`mt-2 ${servicesUi.heading}`}>The rest of the directory</h2>
+                <p className={servicesUi.eyebrow}>More ways to get started</p>
+                <h2 className={`mt-2 ${servicesUi.heading}`}>Explore more services</h2>
                 <p className="mt-2 max-w-2xl text-sm text-[#8A99A6]">
-                  The most-requested services are ranked in the rail above. Every other service
-                  group follows here, with no duplicate cards.
+                  Browse additional property service types and choose the category that best fits
+                  what you need done.
                 </p>
               </div>
               <button
@@ -299,13 +404,143 @@ export default function ServicesHomePage() {
           </div>
         </section>
 
-        {/* ── Featured providers ─────────────────────────────────────────── */}
+        {/* ── Canonical service categories ───────────────────────────────── */}
+        <section className="bg-white px-4 py-14 md:px-6 md:py-16">
+          <div className="mx-auto w-full max-w-7xl">
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <p className={servicesUi.eyebrow}>Browse the directory</p>
+                <h2 className={`mt-2 ${servicesUi.heading}`}>Services for your property</h2>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-[#4B5C6B]">
+                  Explore the six service categories and choose the one that best fits your need.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setLocation('/services')}
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#168363]"
+              >
+                Browse all services
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
+
+            <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {SERVICE_CATEGORIES.map(category => {
+                const Icon = CATEGORY_ICONS[category.value];
+                return (
+                  <Link
+                    key={category.value}
+                    href={buildServiceCategoryPath(category.value, journeyContext)}
+                    className="group flex min-h-[188px] overflow-hidden rounded-2xl border border-[#E3EBF0] bg-white transition hover:-translate-y-0.5 hover:border-[#168363]/40 hover:shadow-[0_18px_40px_-28px_rgba(2,17,30,0.45)]"
+                  >
+                    <div className="relative hidden w-2/5 shrink-0 overflow-hidden bg-[#E9F0F4] sm:block">
+                      <img
+                        src={SERVICES_IMAGES.categories[category.value]}
+                        alt=""
+                        className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
+                        loading="lazy"
+                      />
+                      <span
+                        className="absolute inset-0 bg-gradient-to-t from-[#02111E]/60 to-transparent"
+                        aria-hidden="true"
+                      />
+                      <span className="absolute bottom-3 left-3 flex h-10 w-10 items-center justify-center rounded-xl bg-white text-[#168363] shadow-sm">
+                        <Icon className="h-5 w-5" aria-hidden="true" />
+                      </span>
+                    </div>
+                    <div className="flex min-w-0 flex-1 flex-col justify-center p-5">
+                      <span className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-[#EDF8F6] text-[#168363] sm:hidden">
+                        <Icon className="h-5 w-5" aria-hidden="true" />
+                      </span>
+                      <h3 className="text-[16px] font-bold leading-snug text-[#0B1B2A]">
+                        {category.label}
+                      </h3>
+                      <p className="mt-2 text-[13px] leading-5 text-[#4B5C6B]">
+                        {category.subtitle}
+                      </p>
+                      <span className="mt-4 inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#168363]">
+                        Browse category
+                        <ArrowRight
+                          className="h-3.5 w-3.5 transition group-hover:translate-x-0.5"
+                          aria-hidden="true"
+                        />
+                      </span>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* ── Project-based entry points ────────────────────────────────── */}
+        <section className="bg-[#F7FAFB] px-4 py-14 md:px-6 md:py-16">
+          <div className="mx-auto w-full max-w-7xl">
+            <p className={servicesUi.eyebrow}>Start with the task</p>
+            <h2 className={`mt-2 ${servicesUi.heading}`}>Where would you like to begin?</h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-[#4B5C6B]">
+              These starting points take you to the relevant service directory. You can review each
+              provider’s details before sending an enquiry.
+            </p>
+
+            <div className="mt-8 grid gap-5 md:grid-cols-3">
+              {PROJECT_STARTS.map(start => {
+                const Icon = start.icon;
+                const categoryPath = buildServiceCategoryPath(start.category, journeyContext);
+                const href = start.query
+                  ? `${categoryPath}${categoryPath.includes('?') ? '&' : '?'}query=${encodeURIComponent(start.query)}`
+                  : categoryPath;
+                return (
+                  <Link
+                    key={start.title}
+                    href={href}
+                    className="group relative flex min-h-[300px] flex-col justify-end overflow-hidden rounded-3xl bg-[#071829] p-6 text-white md:p-7"
+                  >
+                    <img
+                      src={start.image}
+                      alt=""
+                      className="absolute inset-0 h-full w-full object-cover opacity-70 transition duration-500 group-hover:scale-[1.04]"
+                      loading="lazy"
+                    />
+                    <span
+                      className="absolute inset-0 bg-gradient-to-t from-[#02111E] via-[#02111E]/65 to-[#02111E]/10"
+                      aria-hidden="true"
+                    />
+                    <span className="relative mb-auto flex h-11 w-11 items-center justify-center rounded-xl bg-white/95 text-[#168363]">
+                      <Icon className="h-5 w-5" aria-hidden="true" />
+                    </span>
+                    <div className="relative mt-12">
+                      <h3 className="font-['Sora'] text-xl font-bold tracking-[-0.02em] md:text-2xl">
+                        {start.title}
+                      </h3>
+                      <p className="mt-2 max-w-sm text-sm leading-6 text-slate-200">
+                        {start.description}
+                      </p>
+                      <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[#8CE0C1]">
+                        Explore services
+                        <ArrowRight
+                          className="h-4 w-4 transition group-hover:translate-x-0.5"
+                          aria-hidden="true"
+                        />
+                      </span>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* ── Published providers ────────────────────────────────────────── */}
         <section className="bg-white px-4 py-14 md:px-6 md:py-16">
           <div className="mx-auto w-full max-w-7xl">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
-                <p className={servicesUi.eyebrow}>Featured service providers</p>
-                <h2 className={`mt-2 ${servicesUi.heading}`}>Published and platform verified</h2>
+                <p className={servicesUi.eyebrow}>Provider directory</p>
+                <h2 className={`mt-2 ${servicesUi.heading}`}>
+                  Published providers, when available
+                </h2>
               </div>
               <button
                 type="button"
@@ -334,13 +569,15 @@ export default function ServicesHomePage() {
               </div>
             )}
 
-            {!isLoading && hasError && (
+            {!isLoading && directoryUnavailable && (
               <div className="mt-8 rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-800">
-                We could not load the provider directory. Please try again.
+                {isUnavailable
+                  ? 'Live provider availability is temporarily unavailable. No provider information is being shown until the application service reconnects.'
+                  : 'We could not load the provider directory. Please try again.'}
               </div>
             )}
 
-            {!isLoading && !hasError && featuredProviders.length > 0 && (
+            {!isLoading && !directoryUnavailable && featuredProviders.length > 0 && (
               <div className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
                 {featuredProviders.map(provider => (
                   <ProviderShowcaseCard
@@ -352,7 +589,7 @@ export default function ServicesHomePage() {
               </div>
             )}
 
-            {!isLoading && !hasError && featuredProviders.length === 0 && (
+            {!isLoading && !directoryUnavailable && featuredProviders.length === 0 && (
               <div className="mt-8 rounded-2xl border border-dashed border-[#CBD8E0] bg-white p-8 text-sm leading-6 text-[#4B5C6B]">
                 No published providers are available yet. The Services directory opens as providers
                 complete review and publication.
@@ -380,7 +617,7 @@ export default function ServicesHomePage() {
                 </div>
                 <div className="p-7 md:p-9">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#5FD3AC]">
-                    Featured provider
+                    Provider spotlight
                   </p>
                   <h2 className="mt-3 font-['Sora'] text-2xl font-bold tracking-[-0.03em] text-white md:text-[26px]">
                     {spotlightProvider.companyName}
@@ -463,6 +700,46 @@ export default function ServicesHomePage() {
           </section>
         )}
 
+        {/* ── Provider choice guide ──────────────────────────────────────── */}
+        <section className="bg-white px-4 py-14 md:px-6 md:py-16">
+          <div className="mx-auto w-full max-w-7xl">
+            <div className="max-w-2xl">
+              <p className={servicesUi.eyebrow}>Choose with clarity</p>
+              <h2 className={`mt-2 ${servicesUi.heading}`}>
+                A few things to check before you enquire
+              </h2>
+              <p className="mt-3 text-sm leading-6 text-[#4B5C6B]">
+                Compare the information providers have published, and make sure it fits the work you
+                need done.
+              </p>
+            </div>
+
+            <div className="mt-8 grid gap-4 md:grid-cols-3">
+              {CHOICE_GUIDANCE.map(item => {
+                const Icon = item.icon;
+                return (
+                  <article
+                    key={item.title}
+                    className="rounded-2xl border border-[#E3EBF0] bg-[#FDFDFD] p-6"
+                  >
+                    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#EDF8F6] text-[#168363]">
+                      <Icon className="h-5 w-5" aria-hidden="true" />
+                    </span>
+                    <h3 className="mt-5 text-[15px] font-bold text-[#0B1B2A]">{item.title}</h3>
+                    <p className="mt-2 text-sm leading-6 text-[#4B5C6B]">{item.description}</p>
+                  </article>
+                );
+              })}
+            </div>
+
+            <p className="mt-5 max-w-4xl text-xs leading-5 text-[#6B7B88]">
+              Platform review controls which provider profiles can appear in the directory. It is
+              not a certification of every trade qualification, and Property Listify does not
+              guarantee that a provider will accept or complete a request.
+            </p>
+          </div>
+        </section>
+
         {/* ── How it works ───────────────────────────────────────────────── */}
         <section className="bg-white px-4 py-14 md:px-6 md:py-16">
           <div className="mx-auto grid w-full max-w-7xl gap-8 lg:grid-cols-[1.7fr_1fr] lg:items-start">
@@ -505,10 +782,14 @@ export default function ServicesHomePage() {
                 <Home className="h-5 w-5 text-[#168363]" aria-hidden="true" />
               </span>
               <h3 className="mt-5 font-['Sora'] text-xl font-bold tracking-[-0.02em] text-[#0B1B2A]">
-                Need help with a property or home service?
+                An enquiry is a first step
               </h3>
               <p className="mt-3 text-sm leading-7 text-[#4B5C6B]">
-                Our team is here to assist you in finding the right professional.
+                Your request goes to the provider you choose. It is not a booking, quote or payment,
+                and the provider decides whether to follow up.
+              </p>
+              <p className="mt-3 text-sm leading-6 text-[#4B5C6B]">
+                Need platform assistance? Our support team can help with the site.
               </p>
               <button
                 type="button"
@@ -518,6 +799,42 @@ export default function ServicesHomePage() {
                 Contact support
                 <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </button>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Service provider acquisition ──────────────────────────────── */}
+        <section className="bg-white px-4 pb-14 md:px-6 md:pb-16">
+          <div className="mx-auto w-full max-w-7xl">
+            <div className="relative overflow-hidden rounded-3xl bg-[#02111E] px-7 py-10 md:px-12 md:py-12">
+              <div
+                className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(22,131,99,0.36),transparent_55%)]"
+                aria-hidden="true"
+              />
+              <div className="relative flex flex-col gap-7 lg:flex-row lg:items-center lg:justify-between">
+                <div className="max-w-2xl">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#8CE0C1]">
+                    For service businesses
+                  </p>
+                  <h2 className="mt-3 font-['Sora'] text-2xl font-bold tracking-[-0.03em] text-white md:text-[32px]">
+                    Your business deserves more than a listing.
+                  </h2>
+                  <p className="mt-3 text-sm leading-7 text-slate-200">
+                    Present your business, describe the services you offer and show where you work.
+                    Approved providers get a shareable Property Listify business profile.
+                  </p>
+                  <p className="mt-3 text-xs leading-5 text-slate-300">
+                    New profiles stay private until an authorized reviewer approves publication.
+                  </p>
+                </div>
+                <Link
+                  href="/advertise/services"
+                  className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-[#02111E] transition hover:bg-[#EDF8F6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                >
+                  Apply as a service provider
+                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </Link>
+              </div>
             </div>
           </div>
         </section>

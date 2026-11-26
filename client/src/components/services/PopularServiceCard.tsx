@@ -66,7 +66,7 @@ export function PopularServiceIconWell({
     <Link
       href={href}
       aria-current={isActive ? 'true' : undefined}
-      className="group flex w-[104px] shrink-0 flex-col items-center gap-2 text-center md:w-[112px]"
+      className="group flex w-full flex-col items-center gap-2 text-center"
     >
       <span
         className={`flex h-16 w-16 items-center justify-center rounded-full transition ${

@@ -1,5 +1,6 @@
 import { useEffect, useId, useState } from 'react';
 import { trpc } from '@/lib/trpc';
+import { cn } from '@/lib/utils';
 import {
   isCanonicalPlaceId,
   normalizePlaceQuery,
@@ -97,6 +98,9 @@ export function CanonicalPlaceSelectorView({
   placeholder,
   hint,
   compact = false,
+  labelClassName,
+  inputClassName,
+  statusClassName,
 }: {
   value: CanonicalPlaceSelection | null;
   onChange: (value: CanonicalPlaceSelection | null) => void;
@@ -111,6 +115,9 @@ export function CanonicalPlaceSelectorView({
   placeholder?: string;
   hint?: string;
   compact?: boolean;
+  labelClassName?: string;
+  inputClassName?: string;
+  statusClassName?: string;
 }) {
   const generatedId = useId();
   const inputId = suppliedInputId ?? generatedId;
@@ -174,7 +181,10 @@ export function CanonicalPlaceSelectorView({
     <div className={compact ? 'space-y-1' : 'space-y-2'}>
       <label
         htmlFor={inputId}
-        className={compact ? 'text-[11px] font-medium text-slate-600' : 'text-sm font-medium'}
+        className={cn(
+          compact ? 'text-[11px] font-medium text-slate-600' : 'text-sm font-medium',
+          labelClassName,
+        )}
       >
         {label}
       </label>
@@ -192,7 +202,11 @@ export function CanonicalPlaceSelectorView({
         maxLength={200}
         autoComplete="off"
         placeholder={placeholder}
-        className={`flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ${compact ? 'h-9 pr-8' : 'h-10'}`}
+        className={cn(
+          'flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm',
+          compact ? 'h-9 pr-8' : 'h-10',
+          inputClassName,
+        )}
         onChange={event => {
           onChange(null);
           onQueryChange(event.target.value);
@@ -237,13 +251,14 @@ export function CanonicalPlaceSelectorView({
       <p
         id={statusId}
         role="status"
-        className={
+        className={cn(
           compact
             ? value
               ? 'sr-only'
               : 'text-xs leading-4 text-muted-foreground'
-            : 'text-sm text-muted-foreground'
-        }
+            : 'text-sm text-muted-foreground',
+          statusClassName,
+        )}
       >
         {status}
       </p>
@@ -305,6 +320,9 @@ export function CanonicalPlaceSelector({
   hint,
   compact,
   initialQuery,
+  labelClassName,
+  inputClassName,
+  statusClassName,
 }: {
   value: CanonicalPlaceSelection | null;
   onChange: (value: CanonicalPlaceSelection | null) => void;
@@ -315,6 +333,9 @@ export function CanonicalPlaceSelector({
   hint?: string;
   compact?: boolean;
   initialQuery?: string;
+  labelClassName?: string;
+  inputClassName?: string;
+  statusClassName?: string;
 }) {
   const [query, setQuery] = useState(value?.label ?? initialQuery ?? '');
   const [debounced, setDebounced] = useState(query);
@@ -345,6 +366,9 @@ export function CanonicalPlaceSelector({
       placeholder={placeholder}
       hint={hint}
       compact={compact}
+      labelClassName={labelClassName}
+      inputClassName={inputClassName}
+      statusClassName={statusClassName}
       query={query}
       onQueryChange={setQuery}
       discovery={lookup.data}

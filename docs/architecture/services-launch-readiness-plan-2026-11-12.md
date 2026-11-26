@@ -2,6 +2,15 @@
 
 **Status:** Proposed delivery plan. This document is not a launch GO, provider-admission approval, database operation approval, or deployment authorization.
 
+> **Status update — 2026-11-21:** This is a dated plan and its 2026-11-12
+> observations remain historical evidence. `origin/main` now includes #766
+> provider-editable service descriptions and #768 private-by-default provider
+> applications. The current public-marketplace readiness branch removes the
+> blanket consumer Services hold while preserving server-side publication and
+> eligibility rules, and presents zero-supply or confirmed-outage states
+> honestly. This update does not authorize a deployment, production database
+> operation, provider publication, consumer advertising, or an Azure change.
+
 **Companion audit:** [`services-current-state-commercial-audit-2026-11-12.md`](services-current-state-commercial-audit-2026-11-12.md) records the V1/V2/V3 reconciliation, provider application/publication distinction, monetization status, and commercial discovery recommendation.
 
 - **Assessment date:** 2026-11-12
