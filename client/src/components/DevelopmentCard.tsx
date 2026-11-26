@@ -1,4 +1,5 @@
-import { BadgeCheck, FileText, Heart, Star, MapPin } from 'lucide-react';
+import { BadgeCheck, Heart, Star, MapPin } from 'lucide-react';
+import { formatDevelopmentCardPrice } from '@/lib/developmentPriceLabel';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { useLocation } from 'wouter';
@@ -20,6 +21,8 @@ export interface DevelopmentCardProps {
   rating?: number;
   location: string;
   description: string | null;
+  /** The publisher's one-line tagline, shown on the card instead of the long description. */
+  tagline?: string | null;
   image: string;
   unitTypes: DevelopmentCardUnitType[];
   highlights?: string[];
@@ -51,6 +54,7 @@ export function DevelopmentCard({
   rating,
   location,
   description,
+  tagline,
   image,
   unitTypes = [],
   highlights = [],
@@ -85,13 +89,7 @@ export function DevelopmentCard({
     return left.label.localeCompare(right.label, undefined, { numeric: true, sensitivity: 'base' });
   });
 
-  const formatPrice = (price: number) => {
-    const compactPrice = new Intl.NumberFormat('en-US', {
-      notation: 'compact',
-      maximumFractionDigits: 3,
-    }).format(price);
-    return `R${compactPrice.toLowerCase()}`;
-  };
+  const formatPrice = formatDevelopmentCardPrice;
 
   return (
     <article className="group relative mx-auto flex h-auto w-full flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-shadow duration-200 hover:shadow-md lg:min-h-[286px] lg:flex-row">
@@ -177,23 +175,26 @@ export function DevelopmentCard({
                     </span>
                   )}
                 </h3>
-                {publisherTrustLabel && (
+                {publisherTrustLabel === 'Direct developer' && (
                   <span
                     role="img"
                     aria-label={publisherTrustLabel}
                     title={publisherTrustLabel}
                     className="inline-flex shrink-0 items-center justify-center"
                   >
-                    {publisherTrustLabel === 'Direct developer' ? (
-                      <BadgeCheck className="h-5 w-5 fill-blue-600 text-white" aria-hidden="true" />
-                    ) : (
-                      <FileText className="h-5 w-5 text-slate-500" aria-hidden="true" />
-                    )}
+                    {/* Only the verified-developer tick sits by the name; a document icon
+                        read as "has a brochure", so source labels are written out below. */}
+                    <BadgeCheck className="h-5 w-5 fill-blue-600 text-white" aria-hidden="true" />
                   </span>
                 )}
               </div>
 
               <div className="flex flex-wrap gap-1.5">
+                {publisherTrustLabel && publisherTrustLabel !== 'Direct developer' && (
+                  <Badge variant="outline" className="border-slate-200 text-slate-600 bg-slate-50">
+                    {publisherTrustLabel}
+                  </Badge>
+                )}
                 {/* Nature Badge */}
                 {nature === 'phase' && (
                   <Badge variant="outline" className="border-blue-200 text-blue-700 bg-blue-50">
@@ -328,9 +329,12 @@ export function DevelopmentCard({
           )}
 
           <div>
-            {/* Description */}
-            <p className="line-clamp-3 text-xs leading-5 text-slate-600">
-              {description || 'Description not provided.'}
+            {/* The publisher's tagline; the long description only when there is none */}
+            <p
+              data-testid="development-card-tagline"
+              className="line-clamp-3 text-xs leading-5 text-slate-600"
+            >
+              {tagline || description || 'Description not provided.'}
             </p>
 
             {/* Highlights */}
@@ -338,7 +342,7 @@ export function DevelopmentCard({
               <div className="mt-2.5">
                 <ResponsiveHighlights
                   items={highlights}
-                  maxVisible={2}
+                  maxVisible={3}
                   singleLine
                   onClick={() => setLocation(developmentRoute)}
                   actionLabel={`View ${title} development details from highlights`}

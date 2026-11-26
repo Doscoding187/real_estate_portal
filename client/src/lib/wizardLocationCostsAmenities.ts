@@ -1,0 +1,526 @@
+/**
+ * Pure rules for the wizard's "Location", "Monthly costs" and "Amenities"
+ * steps (highlights live at the end of Amenities). No React here so the rules
+ * are easy to test.
+ *
+ * STORAGE (no migration; every answer lands in something that already exists)
+ *   Location       stepData.location.address / postalCode / latitude / longitude   (existing columns)
+ *                  stepData.location.suburbPlaceId / suburbLabel   the suburb, chosen from OUR
+ *                  canonical geography (never from Google). Carried in estateSpecs
+ *                  (suburbPlaceId / suburbLabel); for a curated listing it is recorded after the
+ *                  development is published, in the same transaction, by the server
+ *                  (recordCuratedSuburbInTransaction: the accepted "site" assignment).
+ *   Monthly costs  stepData.governance_finances.rightsAndTaxes {min,max}  -> ratesFrom / ratesTo
+ *                  stepData.governance_finances.levyRange {min,max}        -> monthlyLevyFrom / To
+ *                  stepData.governance_finances.hasGoverningBody + governanceType
+ *                  ("hoa" | "body_corporate") -> estateSpecs.hasHOA / governanceType
+ *                  One estimated amount is saved as min = max.
+ *   Amenities      stepData.amenities_features.amenities   registry keys + custom labels (as before)
+ *                  stepData.amenities_features.customGroups  which group a custom label was added to
+ *   Highlights     stepData.marketing_summary.keySellingPoints -> developments.highlights (as before)
+ */
+
+import {
+  AMENITY_REGISTRY,
+  getAmenityByKey,
+  type AmenityCategory,
+} from '@/config/amenityRegistry';
+import {
+  DEFAULT_ESTATE_TYPE,
+  ESTATE_TYPE_OPTIONS,
+  HIGHLIGHTS_MAX,
+  HIGHLIGHTS_MIN,
+  HIGHLIGHT_MAX_LENGTH,
+  ownershipTagLabel,
+  type StepIssue,
+} from '@/lib/wizardBasicsAbout';
+
+// -----------------------------------------------------------------------------
+// Location
+// -----------------------------------------------------------------------------
+
+const parseCoordinate = (value: unknown): number | null => {
+  const text = String(value ?? '').trim();
+  if (!text) return null;
+  const n = Number(text);
+  return Number.isFinite(n) ? n : Number.NaN;
+};
+
+/**
+ * The submit payload's address: the typed street address, or "" when the
+ * publisher ticked "No street address yet" (flag `noOfficialStreet`, kept in the
+ * location data and in estateSpecs.noStreetAddress). The pin then carries the
+ * location and the server accepts it. Never a made-up string.
+ */
+export function submitAddress(location: Record<string, any> | null | undefined): string | undefined {
+  const address = String(location?.address ?? '').trim();
+  if (address) return address;
+  return location?.noOfficialStreet === true ? '' : undefined;
+}
+
+/**
+ * Address (unless "No street address yet" is ticked) and the map pin
+ * (latitude + longitude) are required: the server's
+ * readiness check (developmentSubmissionReadiness.ts) blocks submission without
+ * either, so the wizard blocks Continue on the same two things. The suburb buyers
+ * see is derived from the pin, which is why the pin is not optional.
+ */
+export function validateLocationStep(location: Record<string, any> | null | undefined): StepIssue[] {
+  const loc = location ?? {};
+  const errors: StepIssue[] = [];
+
+  if (!String(loc.address ?? '').trim() && loc.noOfficialStreet !== true) {
+    errors.push({
+      field: 'address',
+      message: 'Street address is required (or tick “No street address yet” and drop the pin)',
+    });
+  }
+
+  if (
+    !String(loc.suburbPlaceId ?? '').trim() ||
+    isInformalSettlementName(String(loc.suburbLabel ?? ''))
+  ) {
+    errors.push({ field: 'suburbPlaceId', message: 'Choose the suburb from the list' });
+  }
+
+  const lat = parseCoordinate(loc.latitude);
+  const lng = parseCoordinate(loc.longitude);
+  if (lat === 0 && lng === 0) {
+    errors.push({ field: 'latitude', message: 'Place the pin on the development' });
+    return errors;
+  }
+  if (lat === null || Number.isNaN(lat) || lat < -90 || lat > 90) {
+    errors.push({
+      field: 'latitude',
+      message: 'Latitude is required: drop the map pin or type a number between -90 and 90',
+    });
+  }
+  if (lng === null || Number.isNaN(lng) || lng < -180 || lng > 180) {
+    errors.push({
+      field: 'longitude',
+      message: 'Longitude is required: drop the map pin or type a number between -180 and 180',
+    });
+  }
+  return errors;
+}
+
+/** Informal settlements are never offered as a suburb. */
+export const isInformalSettlementName = (value: string | null | undefined): boolean =>
+  /informal[\s-]*settlement/i.test(String(value ?? ''));
+
+/** Great-circle distance in kilometres. */
+export function distanceKm(
+  a: { lat: number; lng: number },
+  b: { lat: number; lng: number },
+): number {
+  const rad = (d: number) => (d * Math.PI) / 180;
+  const dLat = rad(b.lat - a.lat);
+  const dLng = rad(b.lng - a.lng);
+  const h =
+    Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * 6371.0088 * Math.asin(Math.sqrt(h));
+}
+
+export const PIN_FAR_FROM_SUBURB_KM = 5;
+
+/**
+ * A warning (never blocking) when the pin is more than 5 km from the centre of
+ * the chosen suburb. No centre in our data, or no pin yet, means no warning.
+ */
+export function pinDistanceWarning(
+  pin: { lat: number; lng: number } | null,
+  centre: { lat: number; lng: number } | null | undefined,
+  suburbLabel: string,
+): string | null {
+  if (!pin || !centre) return null;
+  const km = distanceKm(pin, centre);
+  if (km <= PIN_FAR_FROM_SUBURB_KM) return null;
+  return `This pin is ${Math.round(km)} km from ${suburbLabel || 'the chosen suburb'} — check the address or the pin.`;
+}
+
+// -----------------------------------------------------------------------------
+// Monthly costs
+// -----------------------------------------------------------------------------
+
+export type LevyChoice = 'hoa' | 'body_corporate' | 'none';
+
+export const LEVY_OPTIONS: Array<{ value: LevyChoice; label: string }> = [
+  { value: 'hoa', label: 'HOA levy' },
+  { value: 'body_corporate', label: 'Body corporate levy' },
+  { value: 'none', label: 'No levy' },
+];
+
+export const MAX_MONTHLY_AMOUNT = 10_000_000;
+
+/** Digits only: "R 1 250" -> 1250. Empty or invalid is 0 (nothing entered). */
+export function parseMonthlyAmount(text: string | number | null | undefined): number {
+  const digits = String(text ?? '').replace(/\D/g, '');
+  if (!digits) return 0;
+  return Math.min(Number(digits), MAX_MONTHLY_AMOUNT);
+}
+
+export interface MoneyRange {
+  min?: number | null;
+  max?: number | null;
+}
+
+/** One estimated amount from the saved range. A range saved by the older step shows its top end. */
+export function estimatedAmount(range: MoneyRange | null | undefined): number {
+  const min = Number(range?.min ?? 0) || 0;
+  const max = Number(range?.max ?? 0) || 0;
+  return Math.max(min, max);
+}
+
+/** True when an older saved range (from / to) differs, so the step can say so. */
+export function hasSavedRange(range: MoneyRange | null | undefined): boolean {
+  const min = Number(range?.min ?? 0) || 0;
+  const max = Number(range?.max ?? 0) || 0;
+  return min > 0 && max > 0 && min !== max;
+}
+
+/** One amount saved as min = max; nothing entered is null, never 0. */
+export function ratesPatch(amount: number): {
+  rightsAndTaxes: { min: number | null; max: number | null };
+} {
+  const value = amount > 0 ? amount : null;
+  return { rightsAndTaxes: { min: value, max: value } };
+}
+
+/** What the saved governance answers mean for the levy chips. null = not answered yet. */
+export function levyChoiceOf(governance: Record<string, any> | null | undefined): LevyChoice | null {
+  const g = governance ?? {};
+  if (g.hasGoverningBody === true) {
+    if (g.governanceType === 'hoa') return 'hoa';
+    if (g.governanceType === 'body_corporate') return 'body_corporate';
+    return null;
+  }
+  return g.hasGoverningBody === false ? 'none' : null;
+}
+
+/**
+ * Step data for a levy choice. "No levy" also zeroes the amount so a levy that
+ * is no longer asked about is never published. Architectural guidelines and
+ * any other stored governance values are never touched.
+ */
+export function levyPatch(choice: LevyChoice, amount: number): Record<string, unknown> {
+  if (choice === 'none') {
+    return {
+      hasGoverningBody: false,
+      governanceType: undefined,
+      levyRange: { min: null, max: null },
+    };
+  }
+  const value = amount > 0 ? amount : null;
+  return {
+    hasGoverningBody: true,
+    governanceType: choice,
+    levyRange: { min: value, max: value },
+  };
+}
+
+export function levyLabelFor(choice: LevyChoice | null): string {
+  return choice === 'body_corporate' ? 'Body corporate levy' : 'HOA levy';
+}
+
+// -----------------------------------------------------------------------------
+// Amenities
+// -----------------------------------------------------------------------------
+
+export type AmenityGroupId = 'security' | 'lifestyle' | 'home';
+
+export interface AmenityGroup {
+  id: AmenityGroupId;
+  title: string;
+  /** Registry keys offered as chips, in order. Known keys keep public amenity groups working. */
+  keys: string[];
+  placeholder: string;
+  addAria: string;
+}
+
+export const AMENITY_GROUPS: AmenityGroup[] = [
+  {
+    id: 'security',
+    title: 'Security',
+    keys: ['controlled_gate_access', '24_hour_security', 'electric_fencing', 'cctv_surveillance'],
+    placeholder: 'Add your own, e.g. Guard patrols',
+    addAria: 'Add your own security item',
+  },
+  {
+    id: 'lifestyle',
+    title: 'Lifestyle',
+    keys: [
+      'clubhouse',
+      'swimming_pool',
+      'tennis_courts',
+      'outdoor_gym',
+      'jogging_trails',
+      'childrens_play_area',
+      'pet_park',
+    ],
+    placeholder: 'Add your own, e.g. Dog park',
+    addAria: 'Add your own lifestyle item',
+  },
+  {
+    id: 'home',
+    title: 'In every home',
+    keys: ['backup_power', 'solar_power', 'fibre_ready'],
+    placeholder: 'Add your own, e.g. Built-in braai',
+    addAria: 'Add your own in-home item',
+  },
+];
+
+const CATEGORY_TO_GROUP: Record<AmenityCategory, AmenityGroupId> = {
+  security: 'security',
+  lifestyle: 'lifestyle',
+  family: 'lifestyle',
+  sustainability: 'home',
+  convenience: 'home',
+};
+
+export function amenityLabel(keyOrLabel: string): string {
+  return getAmenityByKey(keyOrLabel)?.label ?? keyOrLabel;
+}
+
+export const isRegistryAmenityKey = (value: string): boolean =>
+  AMENITY_REGISTRY.some(item => item.key === value);
+
+export type CustomAmenityGroups = Record<string, AmenityGroupId>;
+
+/**
+ * The chips shown in each group: the group's own keys, then anything else the
+ * publisher already ticked (registry keys go to the group of their category,
+ * custom labels to the group they were added in, or Lifestyle when unknown).
+ */
+export function amenityChipsByGroup(
+  selected: string[],
+  customGroups: CustomAmenityGroups | null | undefined,
+): Record<AmenityGroupId, string[]> {
+  const result: Record<AmenityGroupId, string[]> = { security: [], lifestyle: [], home: [] };
+  const offered = new Set<string>();
+  for (const group of AMENITY_GROUPS) {
+    for (const key of group.keys) {
+      result[group.id].push(key);
+      offered.add(key);
+    }
+  }
+  for (const item of selected) {
+    if (offered.has(item)) continue;
+    const registry = getAmenityByKey(item);
+    const groupId: AmenityGroupId = registry
+      ? CATEGORY_TO_GROUP[registry.category]
+      : (customGroups?.[item] ?? 'lifestyle');
+    result[groupId].push(item);
+    offered.add(item);
+  }
+  return result;
+}
+
+export function toggleAmenity(
+  selected: string[],
+  customGroups: CustomAmenityGroups | null | undefined,
+  item: string,
+): { amenities: string[]; customGroups: CustomAmenityGroups } {
+  const groups = { ...(customGroups ?? {}) };
+  if (selected.includes(item)) {
+    delete groups[item];
+    return { amenities: selected.filter(key => key !== item), customGroups: groups };
+  }
+  return { amenities: [...selected, item], customGroups: groups };
+}
+
+export type AddCustomAmenityResult =
+  | { status: 'added'; amenities: string[]; customGroups: CustomAmenityGroups }
+  | { status: 'known'; amenities: string[]; customGroups: CustomAmenityGroups; label: string }
+  | { status: 'duplicate' }
+  | { status: 'empty' };
+
+/**
+ * "Add your own". A label that matches a registry amenity ticks that amenity
+ * (so the public amenity groups keep working); anything else is stored as a
+ * custom label, remembered against the group it was added to.
+ */
+export function addCustomAmenity(
+  selected: string[],
+  customGroups: CustomAmenityGroups | null | undefined,
+  group: AmenityGroupId,
+  text: string,
+): AddCustomAmenityResult {
+  const label = text.trim().replace(/\s+/g, ' ');
+  if (!label) return { status: 'empty' };
+  const lower = label.toLowerCase();
+
+  const registry = AMENITY_REGISTRY.find(
+    item => item.label.toLowerCase() === lower || item.key === lower,
+  );
+  if (registry) {
+    if (selected.includes(registry.key)) return { status: 'duplicate' };
+    return {
+      status: 'known',
+      amenities: [...selected, registry.key],
+      customGroups: { ...(customGroups ?? {}) },
+      label: registry.label,
+    };
+  }
+  if (selected.some(item => amenityLabel(item).toLowerCase() === lower)) {
+    return { status: 'duplicate' };
+  }
+  return {
+    status: 'added',
+    amenities: [...selected, label],
+    customGroups: { ...(customGroups ?? {}), [label]: group },
+  };
+}
+
+// -----------------------------------------------------------------------------
+// Highlights (card chips)
+// -----------------------------------------------------------------------------
+
+/** Short card wording for amenities a publisher can tick. */
+const AMENITY_HIGHLIGHT_LABELS: Record<string, string> = {
+  controlled_gate_access: 'Controlled access',
+  access_control: 'Controlled access',
+  '24_hour_security': '24-hour security',
+  security_patrols: 'Security patrols',
+  electric_fencing: 'Electric fencing',
+  cctv_surveillance: 'CCTV',
+  clubhouse: 'Clubhouse',
+  swimming_pool: 'Swimming pool',
+  gym: 'Gym',
+  outdoor_gym: 'Outdoor gym',
+  tennis_courts: 'Tennis courts',
+  jogging_trails: 'Jogging trails',
+  childrens_play_area: 'Kids play area',
+  pet_park: 'Pet park',
+  golf_course: 'Golf course',
+  equestrian_facilities: 'Equestrian facilities',
+  backup_power: 'Backup power',
+  backup_water: 'Backup water',
+  solar_power: 'Solar power',
+  fibre_ready: 'Fibre ready',
+};
+
+/** Trimmed, single-spaced and cut to the 24-character limit. */
+export function normalizeHighlight(text: string): string {
+  return String(text ?? '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .slice(0, HIGHLIGHT_MAX_LENGTH);
+}
+
+const sameText = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
+
+export interface HighlightFacts {
+  setting?: string | null;
+  estateType?: string | null;
+  ownershipTypes?: unknown;
+  amenities?: string[] | null;
+}
+
+/**
+ * Suggested highlights. They come ONLY from what the publisher entered: the
+ * setting / kind of estate, the ownership, and the amenities they ticked
+ * (custom ones included, when short enough). Nothing generic or unverifiable.
+ */
+export function highlightSuggestions(facts: HighlightFacts): string[] {
+  const out: string[] = [];
+  const add = (label: string | null | undefined) => {
+    const text = normalizeHighlight(label ?? '');
+    if (text && !out.some(existing => sameText(existing, text))) out.push(text);
+  };
+
+  if (facts.setting === 'estate') {
+    const type = facts.estateType || DEFAULT_ESTATE_TYPE;
+    if (type === DEFAULT_ESTATE_TYPE) add('Security estate');
+    else {
+      const option = ESTATE_TYPE_OPTIONS.find(o => o.value === type);
+      add(option ? option.label.replace(' or wildlife', '') : 'Security estate');
+    }
+  } else if (facts.setting === 'gated') {
+    add('Gated community');
+  }
+
+  const ownership = Array.isArray(facts.ownershipTypes)
+    ? facts.ownershipTypes[0]
+    : facts.ownershipTypes;
+  add(ownershipTagLabel(typeof ownership === 'string' ? ownership : null));
+
+  for (const item of facts.amenities ?? []) {
+    const known = AMENITY_HIGHLIGHT_LABELS[item];
+    if (known) add(known);
+    else if (!isRegistryAmenityKey(item) && item.trim().length <= HIGHLIGHT_MAX_LENGTH) add(item);
+  }
+  return out;
+}
+
+/** Suggestions first, then any chosen highlight that is not a suggestion (so it can be un-chosen). */
+export function highlightChoices(suggestions: string[], chosen: string[]): string[] {
+  const out = [...suggestions];
+  for (const item of chosen) {
+    if (!out.some(existing => sameText(existing, item))) out.push(item);
+  }
+  return out;
+}
+
+/** Tap to choose, tap again to un-choose. At the maximum, choosing more does nothing. */
+export function toggleHighlight(chosen: string[], text: string): string[] {
+  const value = normalizeHighlight(text);
+  if (!value) return chosen;
+  if (chosen.some(item => sameText(item, value))) {
+    return chosen.filter(item => !sameText(item, value));
+  }
+  if (chosen.length >= HIGHLIGHTS_MAX) return chosen;
+  return [...chosen, value];
+}
+
+export type AddHighlightResult =
+  | { status: 'added'; highlights: string[] }
+  | { status: 'duplicate' }
+  | { status: 'full' }
+  | { status: 'empty' };
+
+export function addHighlight(chosen: string[], text: string): AddHighlightResult {
+  const value = normalizeHighlight(text);
+  if (!value) return { status: 'empty' };
+  if (chosen.some(item => sameText(item, value))) return { status: 'duplicate' };
+  if (chosen.length >= HIGHLIGHTS_MAX) return { status: 'full' };
+  return { status: 'added', highlights: [...chosen, value] };
+}
+
+/** At least three highlights to publish (the server's readiness rule is the same). */
+export function validateAmenitiesStep(data: Record<string, any> | null | undefined): StepIssue[] {
+  const d = data ?? {};
+  const raw: unknown[] = Array.isArray(d.highlights)
+    ? d.highlights
+    : Array.isArray(d.keySellingPoints)
+      ? d.keySellingPoints
+      : [];
+  return validateHighlightList(raw);
+}
+
+/** Trimmed non-empty entries only: 3 to 8, each at most 24 characters (the server's rule too). */
+export function validateHighlightList(raw: unknown[]): StepIssue[] {
+  const items = raw.map(item => String(item ?? '').trim()).filter(Boolean);
+  if (items.length < HIGHLIGHTS_MIN) {
+    return [{ field: 'highlights', message: `Add at least ${HIGHLIGHTS_MIN} highlights` }];
+  }
+  if (items.length > HIGHLIGHTS_MAX) {
+    return [{ field: 'highlights', message: `Choose at most ${HIGHLIGHTS_MAX} highlights` }];
+  }
+  if (items.some(item => item.length > HIGHLIGHT_MAX_LENGTH)) {
+    return [
+      {
+        field: 'highlights',
+        message: `Each highlight must be ${HIGHLIGHT_MAX_LENGTH} characters or fewer`,
+      },
+    ];
+  }
+  return [];
+}
+
+/** First three highlights show on the search card; the rest are "+N more". */
+export function cardHighlightSplit(highlights: string[], visible = 3) {
+  return {
+    shown: highlights.slice(0, visible),
+    more: Math.max(0, highlights.length - visible),
+  };
+}

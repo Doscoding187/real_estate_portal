@@ -374,16 +374,6 @@ export function validateAboutStep(data: Record<string, any>): StepIssue[] {
       message: `Description must be at least ${DESCRIPTION_MIN_LENGTH} characters`,
     });
   }
-  const highlights: unknown[] = Array.isArray(data.highlights)
-    ? data.highlights
-    : Array.isArray(data.keySellingPoints)
-      ? data.keySellingPoints
-      : [];
-  if (highlights.filter(item => String(item ?? '').trim()).length < HIGHLIGHTS_MIN) {
-    errors.push({
-      field: 'highlights',
-      message: `Add at least ${HIGHLIGHTS_MIN} highlights`,
-    });
-  }
+  // Highlights are chosen at the end of the Amenities step (validateAmenitiesStep).
   return errors;
 }

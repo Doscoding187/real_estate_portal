@@ -189,7 +189,8 @@ describe('Developer Engine S0 containment contracts', () => {
     expect(distributionPolicy).toContain('projection.campaign.visible === true');
     expect(distributionPolicy).not.toContain('evaluatePublicDevelopmentEligibility');
     expect(sitemap).toContain("router.get('/sitemap-developments.xml'");
-    expect(sitemap).toContain('sendXml(res, buildUrlSet([]));');
+    // Published developments are listed by the shared public eligibility authority.
+    expect(sitemap).toContain('.where(publicDevelopmentEligibilityConditions())');
     expect(guard).toContain(
       'Auction developments are not part of the supported public MVP contract',
     );

@@ -59,7 +59,6 @@ describe.each([
       'status',
       'ownershipTypes',
       'description',
-      'highlights',
     ]);
   });
 });

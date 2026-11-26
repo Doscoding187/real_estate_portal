@@ -256,30 +256,40 @@ export function normalizePropertyForUI(raw: any): PropertyCardProps | null {
     hasVirtualTour,
     hasPublicDocuments,
     highlights: (() => {
-      const source =
-        raw.highlights ||
-        details.propertyHighlights ||
-        details.amenitiesFeatures ||
-        raw.amenities ||
-        raw.features;
-
-      const formatHighlight = (s: string) => {
-        if (!s || typeof s !== 'string') return s;
-        // Parse snake_case or kebab-case
-        return s
-          .split(/[_-\s]+/)
-          .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-          .join(' ');
-      };
+      // Only highlights the publisher actually entered (development highlights, or a
+      // property's own highlight list). Amenities and features are NEVER turned into
+      // highlights. Text written normally is shown as written; machine keys such as
+      // "24_hour_security" are made readable.
+      const source = raw.highlights || raw.propertyHighlights || details.propertyHighlights;
+      const readable = (text: string) =>
+        /^[a-z0-9]+([_-][a-z0-9]+)+$/i.test(text)
+          ? text
+              .split(/[_-]+/)
+              .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+              .join(' ')
+          : text;
+      const clean = (list: unknown[]): string[] =>
+        list
+          .map(item => {
+            if (typeof item === 'string') return item;
+            if (item && typeof item === 'object') {
+              const candidate = item as { label?: unknown; name?: unknown; title?: unknown };
+              return String(candidate.label || candidate.name || candidate.title || '');
+            }
+            return '';
+          })
+          .map(item => item.trim())
+          .filter(Boolean)
+          .map(readable);
 
       if (Array.isArray(source)) {
-        return source.map(formatHighlight);
+        return source.length ? clean(source) : undefined;
       }
 
       if (typeof source === 'string') {
         try {
           const parsed = JSON.parse(source);
-          return Array.isArray(parsed) ? parsed.map(formatHighlight) : undefined;
+          return Array.isArray(parsed) && parsed.length ? clean(parsed) : undefined;
         } catch (e) {
           return undefined;
         }
