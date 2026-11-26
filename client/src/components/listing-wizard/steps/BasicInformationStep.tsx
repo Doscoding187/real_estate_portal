@@ -16,6 +16,7 @@ import {
 import { InlineError } from '@/components/ui/InlineError';
 import { useFieldValidation } from '@/hooks/useFieldValidation';
 import type { ListingAction, PropertyType } from '@/../../shared/listing-types';
+import { useFocusSafeText } from '@/hooks/useFocusSafeText';
 import { LISTING_TITLE_MAX_LENGTH } from '@/lib/listingTitleLimit';
 import {
   FARM_LAND_AREA_UNITS,
@@ -100,6 +101,8 @@ const BasicInformationStep: React.FC = () => {
   const core = readCorePropertyInformation(propertyType, propertyDetails, basicInfo);
   const coreFieldDefinitions = getCorePropertyFieldDefinitions(propertyType, core);
   const definition = getPropertyTypeDefinition(propertyType);
+  const titleField = useFocusSafeText(title, next => store.setTitle(next));
+  const descriptionField = useFocusSafeText(description, next => store.setDescription(next));
   const [numericDrafts, setNumericDrafts] = React.useState<Record<string, string>>({});
 
   React.useEffect(() => {
@@ -254,12 +257,16 @@ const BasicInformationStep: React.FC = () => {
             </Label>
             <Input
               id="title"
-              value={title}
+              value={titleField.value}
               onChange={e => {
-                store.setTitle(e.target.value);
+                titleField.onChange(e);
                 titleValidation.clearError();
               }}
-              onBlur={titleValidation.onBlur}
+              onFocus={titleField.onFocus}
+              onBlur={() => {
+                titleField.onBlur();
+                titleValidation.onBlur();
+              }}
               placeholder="e.g., 2-Bed Apartment in Sandton"
               className="mt-1"
               maxLength={LISTING_TITLE_MAX_LENGTH}
@@ -278,12 +285,16 @@ const BasicInformationStep: React.FC = () => {
             </Label>
             <Textarea
               id="description"
-              value={description}
+              value={descriptionField.value}
               onChange={e => {
-                store.setDescription(e.target.value);
+                descriptionField.onChange(e);
                 descriptionValidation.clearError();
               }}
-              onBlur={descriptionValidation.onBlur}
+              onFocus={descriptionField.onFocus}
+              onBlur={() => {
+                descriptionField.onBlur();
+                descriptionValidation.onBlur();
+              }}
               placeholder="Describe the property (50 characters to continue; 100+ to submit)"
               className="mt-1 min-h-[120px]"
               maxLength={5000}
