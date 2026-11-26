@@ -561,6 +561,68 @@ describe('publicLeadCaptureService contract', () => {
     );
   });
 
+  describe('self-enquiry', () => {
+    const custody = {
+      supplyOrigin: 'customer_managed',
+      leadCustody: 'verified_customer_recipient',
+      recipientType: 'agent',
+      recipientId: 33,
+      agentId: 33,
+      agencyId: 44,
+      developerId: null,
+      leadDeliveryMethod: 'crm_export',
+      brandLeadStatus: null,
+      reason: null,
+    };
+    const ownInput = () =>
+      baseInput({ propertyId: 505, source: 'property_detail', authenticatedUserId: 701 });
+
+    it('refuses an enquiry from the listing agent on their own listing', async () => {
+      mockResolvePublicPropertyEligibility.mockResolvedValueOnce({
+        publicAuthority: 'public_property_eligibility',
+        property: { id: 505, developmentId: null, cataloguePublisherId: null },
+        custody,
+      });
+      const database = makeFakeDatabase({
+        selectResults: [[], [{ id: 33, userId: 701, agencyId: 44 }]],
+      });
+      mockGetDb.mockResolvedValue(database);
+
+      await expect(capturePublicLead(ownInput())).rejects.toThrow(/your own listing/);
+      expect(database.insertValues).not.toHaveBeenCalled();
+    });
+
+    it('refuses an enquiry from another member of the listing agency', async () => {
+      mockResolvePublicPropertyEligibility.mockResolvedValueOnce({
+        publicAuthority: 'public_property_eligibility',
+        property: { id: 505, developmentId: null, cataloguePublisherId: null },
+        custody,
+      });
+      const database = makeFakeDatabase({
+        selectResults: [[], [{ id: 34, userId: 701, agencyId: 44 }]],
+      });
+      mockGetDb.mockResolvedValue(database);
+
+      await expect(capturePublicLead(ownInput())).rejects.toThrow(/your own listing/);
+      expect(database.insertValues).not.toHaveBeenCalled();
+    });
+
+    it('lets an agent at a different agency enquire', async () => {
+      mockResolvePublicPropertyEligibility.mockResolvedValueOnce({
+        publicAuthority: 'public_property_eligibility',
+        property: { id: 505, developmentId: null, cataloguePublisherId: null },
+        custody,
+      });
+      const database = makeFakeDatabase({
+        selectResults: [[], [{ id: 35, userId: 701, agencyId: 99 }]],
+        insertId: 920,
+      });
+      mockGetDb.mockResolvedValue(database);
+
+      await expect(capturePublicLead(ownInput())).resolves.toBeDefined();
+    });
+  });
+
   it('fails closed when signed-in journey ownership cannot be persisted transactionally', async () => {
     const database = makeFakeDatabase({ selectResults: [[]] });
     delete (database as { transaction?: unknown }).transaction;

@@ -1531,6 +1531,36 @@ async function recoverExistingLead(
   return resultForExistingLead(database, durableLead);
 }
 
+export const OWN_LISTING_ENQUIRY_MESSAGE =
+  'This is your own listing, so you cannot send yourself an enquiry. Use a different account to try the buyer journey.';
+
+/** A signed-in agent, or a member of the listing's agency, cannot enquire on their own listing. */
+async function assertNotOwnListingEnquiry(
+  database: any,
+  authenticatedUserId: number | undefined,
+  resolved: ResolvedLeadOwnership,
+): Promise<void> {
+  const userId = positiveId(authenticatedUserId);
+  const listingAgentId = positiveId(resolved.agentId);
+  const listingAgencyId = positiveId(resolved.agencyId);
+  if (!userId || (!listingAgentId && !listingAgencyId)) return;
+
+  const rows = (await database
+    .select({ id: agents.id, userId: agents.userId, agencyId: agents.agencyId })
+    .from(agents)
+    .where(eq(agents.userId, userId))
+    .limit(5)) as Array<{ id: number; userId: number | null; agencyId: number | null }>;
+  const isOwn = (rows || []).some(
+    row =>
+      Number(row.userId) === userId &&
+      ((listingAgentId && Number(row.id) === listingAgentId) ||
+        (listingAgencyId && Number(row.agencyId) === listingAgencyId)),
+  );
+  if (isOwn) {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: OWN_LISTING_ENQUIRY_MESSAGE });
+  }
+}
+
 export async function capturePublicLead(
   input: PublicLeadCaptureInput,
 ): Promise<PublicLeadCaptureResult> {
@@ -1553,6 +1583,7 @@ export async function capturePublicLead(
   }
 
   const resolved = await resolveLeadOwnership(input);
+  await assertNotOwnListingEnquiry(database, input.authenticatedUserId, resolved);
   const leadType = coerceLeadType(input.leadType);
   const deliveryStatus = initialDeliveryStatus(resolved);
   const route: PublicLeadCaptureResult['route'] =
