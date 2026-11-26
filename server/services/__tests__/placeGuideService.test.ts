@@ -39,6 +39,8 @@ import {
   type PlaceCentroidEntry,
 } from '../placeCentroidService';
 import {
+  countNewDevelopmentHomes,
+  NEW_DEVELOPMENT_HOMES_BOUND,
   orderNeighbourhoods,
   percentDelta,
   pickNearbyMarkets,
@@ -557,5 +559,47 @@ describe('placeAuthority.getPlaceGuide input', () => {
         canonicalPlaceId: 'pl-place-01-dee61758ef3bda7cd1a258ad',
       }),
     ).resolves.toBeNull();
+  });
+});
+
+describe('countNewDevelopmentHomes bound', () => {
+  const dev = (id: number) => ({
+    id,
+    name: `Dev ${id}`,
+    slug: `dev-${id}`,
+    canonicalRoute: `/development/dev-${id}`,
+    images: [],
+    canonicalPlaceId: SELF,
+    locationLabels: ['Self'],
+    developmentType: 'residential',
+    transactionType: 'for_sale',
+    status: 'selling',
+    publisher: { id: 1, name: 'Dev Co', logoUrl: null, authorityKind: 'developer_first_party' },
+    unitTypes: [
+      {
+        id: `u${id}`, label: 'Unit', bedrooms: 1, bathrooms: 1, priceFrom: 5, priceTo: 5,
+        availableUnits: 1, totalUnits: 1, availabilityState: 'available',
+      },
+    ],
+  });
+
+  it('is exact below the bound and reads every page', async () => {
+    mockSearchDevelopments.mockImplementation(async (input: { page: number }) => ({
+      items: input.page === 0 ? Array.from({ length: 50 }, (_, i) => dev(i + 1)) : [dev(1000)],
+      hasMore: input.page === 0,
+    }));
+    expect(await countNewDevelopmentHomes(SELF)).toEqual({ sale: 51, rent: 0 });
+  });
+
+  it('reports a capped minimum when the bound is hit', async () => {
+    mockSearchDevelopments.mockImplementation(async (input: { page: number }) => ({
+      items: Array.from({ length: 50 }, (_, i) => dev(input.page * 50 + i + 1)),
+      hasMore: true,
+    }));
+    expect(await countNewDevelopmentHomes(SELF)).toEqual({
+      sale: NEW_DEVELOPMENT_HOMES_BOUND,
+      rent: 0,
+      capped: true,
+    });
   });
 });

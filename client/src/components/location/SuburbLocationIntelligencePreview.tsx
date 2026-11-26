@@ -143,6 +143,8 @@ export function SuburbLocationIntelligencePreview({
   // Development unit types are a separate line: never part of the listing counts or medians.
   const newDevelopmentSale = stats.newDevelopmentHomes?.sale ?? 0;
   const newDevelopmentRent = stats.newDevelopmentHomes?.rent ?? 0;
+  // A count that stopped at its bound is a minimum, shown as "N+".
+  const newDevelopmentPlus = stats.newDevelopmentHomes?.capped ? '+' : '';
   const saleMedian = stats.saleMedian;
   const rentMedian = stats.rentMedian;
   const priceSampleMinimum = stats.minimumSample;
@@ -490,7 +492,7 @@ export function SuburbLocationIntelligencePreview({
                 <small>
                   Current published supply
                   {newDevelopmentSale > 0
-                    ? ` + ${newDevelopmentSale.toLocaleString('en-ZA')} new-development ${newDevelopmentSale === 1 ? 'home' : 'homes'}`
+                    ? ` + ${newDevelopmentSale.toLocaleString('en-ZA')}${newDevelopmentPlus} new-development ${newDevelopmentSale === 1 ? 'home' : 'homes'}`
                     : ''}
                 </small>
               </article>
@@ -503,7 +505,7 @@ export function SuburbLocationIntelligencePreview({
                 <small>
                   Current published supply
                   {newDevelopmentRent > 0
-                    ? ` + ${newDevelopmentRent.toLocaleString('en-ZA')} new-development ${newDevelopmentRent === 1 ? 'home' : 'homes'}`
+                    ? ` + ${newDevelopmentRent.toLocaleString('en-ZA')}${newDevelopmentPlus} new-development ${newDevelopmentRent === 1 ? 'home' : 'homes'}`
                     : ''}
                 </small>
               </article>
