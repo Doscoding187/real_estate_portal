@@ -14,6 +14,7 @@ import { resolveDatabaseAuthority } from '../context';
 import {
   assertRehearsalResource,
   assertRehearsalSourceBinding,
+  calculateSourceDigest,
   REHEARSAL,
   REHEARSAL_FINGERPRINT,
   REHEARSAL_RESOURCE_ID,
@@ -26,6 +27,13 @@ import { buildMysqlConnectionSecurityConfig } from '../../databaseTls';
 import type { DatabaseOperation } from '../types';
 
 const roots: string[] = [];
+// The 2026-11-05 registration binds the guarded files as of the 0197 release
+// (commit 6938b9292). The live tree has moved on, so its digest is validated
+// against this frozen byte-exact copy with the unchanged algorithm.
+const FROZEN_SOURCE_ROOT = join(
+  process.cwd(),
+  'docs/database-authority/evidence/rehearsal-source-20261105',
+);
 const url = `mysql://fixture:fixture@${REHEARSAL.hostname}/${REHEARSAL.database}`;
 const rehearsal = { resourceId: REHEARSAL_RESOURCE_ID, purpose: REHEARSAL.purpose };
 
@@ -100,7 +108,34 @@ describe('disposable rehearsal schema release authority', () => {
         'development',
       ).ssl,
     ).toMatchObject({ rejectUnauthorized: true, verifyIdentity: true });
-    expect(() => assertRehearsalSourceBinding()).not.toThrow();
+    expect(() => assertRehearsalSourceBinding(FROZEN_SOURCE_ROOT)).not.toThrow();
+  });
+
+  it('frozen 0197-release fixture digest equals the sha256 recorded in the 2026-11-05 registration', () => {
+    const recorded = JSON.parse(
+      readFileSync(
+        join(process.cwd(), 'docs/database-authority/disposable-rehearsal-authorization-20261105.json'),
+        'utf8',
+      ),
+    ).sourceBinding.sha256;
+    expect(recorded).toBe('82cf494573d07bd2679b0ad1c34543a9fa0d426d8d9f2551bd3b9735f261aa24');
+    expect(REHEARSAL_SOURCE_DIGEST).toBe(recorded);
+    expect(calculateSourceDigest(FROZEN_SOURCE_ROOT)).toBe(recorded);
+    // The frozen registration copy is byte-identical to the committed one.
+    expect(
+      readFileSync(
+        join(
+          FROZEN_SOURCE_ROOT,
+          'docs/database-authority/disposable-rehearsal-authorization-20261105.json',
+        ),
+        'utf8',
+      ),
+    ).toBe(
+      readFileSync(
+        join(process.cwd(), 'docs/database-authority/disposable-rehearsal-authorization-20261105.json'),
+        'utf8',
+      ),
+    );
   });
 
   it.each(['?ssl=false', '?sslaccept=insecure', '?rejectUnauthorized=false'])(
@@ -325,7 +360,7 @@ describe('disposable rehearsal schema release authority', () => {
   it('refuses a source digest mismatch when any guarded file changes', () => {
     const root = mkdtempSync(join(tmpdir(), 'listify-rehearsal-source-'));
     roots.push(root);
-    const repositoryRoot = process.cwd();
+    const repositoryRoot = FROZEN_SOURCE_ROOT;
     for (const relativePath of REHEARSAL_SOURCE_FILES) {
       const destination = join(root, relativePath);
       mkdirSync(dirname(destination), { recursive: true });

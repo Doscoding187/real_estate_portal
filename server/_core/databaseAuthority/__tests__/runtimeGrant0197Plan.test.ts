@@ -1,3 +1,6 @@
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   RUNTIME_GRANT_0197_TABLES,
@@ -34,6 +37,39 @@ describe('0197 runtime grant plan', () => {
     expect(plan.revokes.every(statement => !statement.includes('GRANT OPTION'))).toBe(true);
     expect(plan.broadGrantNote).toMatch(/Re-derive/);
     expect(plan.planDigest).toMatch(/^[a-f0-9]{64}$/);
+  });
+
+  it('keeps the approved 0197 planDigest bit-identical now that the tree head is 0200', () => {
+    // Baseline computed from the module at commit 6938b9292 (tree head 0197).
+    expect(runtimeGrant0197Plan().planDigest).toBe(
+      '9cf929641b0f0c4a4b7441e1319656a520c4cc9a37913f85759ea0617e29e3ca',
+    );
+  });
+
+  it('refuses when the 0197 table inventory is altered', () => {
+    const root = mkdtempSync(join(tmpdir(), 'listify-0197-plan-'));
+    try {
+      cpSync(join(process.cwd(), 'server/migrations'), join(root, 'server/migrations'), {
+        recursive: true,
+      });
+      mkdirSync(join(root, 'drizzle/schema'), { recursive: true });
+      const inventory = JSON.parse(
+        readFileSync(join(process.cwd(), 'drizzle/schema/canonical-model-inventory.json'), 'utf8'),
+      );
+      writeFileSync(
+        join(root, 'drizzle/schema/canonical-model-inventory.json'),
+        JSON.stringify({
+          ...inventory,
+          tables: inventory.tables.slice(1),
+          tableCount: inventory.tables.length - 1,
+        }),
+      );
+      expect(() => runtimeGrant0197Plan(root)).toThrow(
+        'migration lineage or table inventory changed',
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
   it('documents an evidenced call site or an explicit no-call-site finding for every table', () => {

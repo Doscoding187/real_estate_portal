@@ -124,8 +124,12 @@ describe('0197 runtime grant apply plan', () => {
     );
   });
 
-  it('is bound to the model digest produced by the drizzle schema', () => {
-    expect(normalizedDesiredSchema(schema).digest).toBe(plan.expectedModelDigest);
+  it('is bound to the 0197 model digest; the live drizzle schema has since moved on', () => {
+    expect(plan.expectedModelDigest).toBe(
+      '869f441f3131b0f1bf4b56d416d049292bb48204918f8172d3699625c3208da7',
+    );
+    // The live schema now also holds the 0199/0200 tables, so its digest differs.
+    expect(normalizedDesiredSchema(schema).digest).not.toBe(plan.expectedModelDigest);
   });
 });
 

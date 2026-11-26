@@ -116,6 +116,8 @@ function workingTreePaths(): string[] {
     .split('\0')
     .filter(Boolean)
     .filter(path => existsSync(join(ROOT, path)))
+    // Frozen byte-exact evidence copies (never executed) of historical guarded sources.
+    .filter(path => !path.startsWith('docs/database-authority/evidence/rehearsal-source-'))
     .sort();
 }
 
