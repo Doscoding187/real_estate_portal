@@ -765,7 +765,11 @@ export default function Login() {
                     ) : null}
                   </div>
                 ) : (
-                  <div role="status" className="space-y-2 text-sm">
+                  <div
+                    role={legalLoading ? 'status' : 'alert'}
+                    data-testid="registration-closed-notice"
+                    className="space-y-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-950 dark:border-amber-400/60 dark:bg-amber-950/60 dark:text-amber-50"
+                  >
                     <p>
                       {legalLoading
                         ? 'Loading account documents…'
@@ -774,7 +778,7 @@ export default function Login() {
                     {!legalLoading ? (
                       <button
                         type="button"
-                        className="underline"
+                        className="font-semibold underline"
                         onClick={() => setLegalRefresh(value => value + 1)}
                       >
                         Check again

@@ -1,5 +1,21 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+const authorityMock = vi.hoisted(() => ({
+  target: null as null | { targetClass: string; host: string; port: string; local: boolean },
+}));
+vi.mock('../../_core/databaseAuthority/context', async importOriginal => {
+  const original = await importOriginal<typeof import('../../_core/databaseAuthority/context')>();
+  return {
+    ...original,
+    // Only the explicit pilot-gate tests set a target; everything else (for
+    // example db-connection in CI) uses the real resolver unchanged.
+    resolveDatabaseAuthority: ((...args: Parameters<typeof original.resolveDatabaseAuthority>) =>
+      authorityMock.target
+        ? { context: authorityMock.target }
+        : original.resolveDatabaseAuthority(...args)) as typeof original.resolveDatabaseAuthority,
+  };
+});
+
 import {
   getCommercialActivationStatus,
   getCommercialActivationOperatorStatus,
@@ -461,5 +477,70 @@ describe('commercial activation containment', () => {
       eligible: false,
       reason: 'commercial_activation_unavailable',
     });
+  });
+});
+
+describe('local preview pilot opt-in', () => {
+  const KEYS = 'agent_launch_access,agency_launch_access,developer_launch_access';
+  const pilot = {
+    NODE_ENV: 'development',
+    APP_ENV: 'development',
+    PROPERTY_LISTIFY_LOCAL_PARITY_PREVIEW: '1',
+    PROPERTY_LISTIFY_LOCAL_PARITY_PILOT: '1',
+    PAID_MVP_ENABLED_PRODUCT_KEYS: KEYS,
+    PAID_MVP_RELEASE_ID: 'local-parity-pilot',
+    PAID_MVP_APPROVAL_REF: 'local-parity-only',
+  };
+  afterEach(() => {
+    authorityMock.target = null;
+  });
+  const local = { targetClass: 'disposable-worktree', host: '127.0.0.1', port: '3307', local: true };
+
+  it('honours the PAID_MVP keys in the gated local development preview', () => {
+    authorityMock.target = local;
+    expect(resolveCommercialActivationConfiguration(pilot)).toMatchObject({
+      mode: 'paid_mvp_release',
+      enabled: true,
+      releaseId: 'local-parity-pilot',
+    });
+  });
+
+  it('stays in preparation_only in development without the pilot opt-in or local target', () => {
+    const noOptIn = { ...pilot, PROPERTY_LISTIFY_LOCAL_PARITY_PILOT: undefined };
+    expect(resolveCommercialActivationConfiguration(noOptIn).mode).toBe('preparation_only');
+    authorityMock.target = {
+      targetClass: 'shared-remote',
+      host: 'db.example.com',
+      port: '3306',
+      local: false,
+    };
+    expect(resolveCommercialActivationConfiguration(pilot).mode).toBe('preparation_only');
+    // Unresolvable-target refusal is covered with an injected resolver in
+    // server/_core/__tests__/localAuthOutbox.test.ts.
+  });
+
+  it('is refused in test: the opt-in grants nothing there', () => {
+    authorityMock.target = local;
+    const config = resolveCommercialActivationConfiguration({
+      ...pilot,
+      NODE_ENV: 'test',
+      APP_ENV: 'test',
+    });
+    expect(config.mode).toBe('preparation_only');
+    expect(config.enabled).toBe(false);
+  });
+
+  it('is refused in production: hosted rules still apply unchanged', () => {
+    authorityMock.target = local;
+    const base = { ...pilot, NODE_ENV: 'production', APP_ENV: 'production' };
+    expect(() =>
+      resolveCommercialActivationConfiguration({ ...base, PAID_MVP_ENABLED_PRODUCT_KEYS: 'agent_launch_access' }),
+    ).toThrow(/exactly the three approved/);
+    expect(resolveCommercialActivationConfiguration({
+      NODE_ENV: 'production',
+      APP_ENV: 'production',
+      PROPERTY_LISTIFY_LOCAL_PARITY_PREVIEW: '1',
+      PROPERTY_LISTIFY_LOCAL_PARITY_PILOT: '1',
+    }).mode).toBe('preparation_only');
   });
 });
