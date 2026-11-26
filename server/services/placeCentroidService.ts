@@ -12,6 +12,8 @@ export type PlaceCentroidEntry = {
   lat: number | null;
   lng: number | null;
   matchMethod: string;
+  /** 'coarse' = whole arc-minute grid point; callers must not use it for tight distance warnings. */
+  precision?: 'coarse' | 'normal';
 };
 
 export type PlaceCentroidIndex = {
