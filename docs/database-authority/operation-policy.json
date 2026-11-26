@@ -98,6 +98,14 @@
       "acknowledgement": "exact-target",
       "evidence": "exact-0197-runtime-fifteen-table-grant-plan-and-before-after-proof"
     },
+    "runtime-0200-grant": {
+      "allowedTargetClasses": ["production"],
+      "credentialClasses": ["bootstrap-admin"],
+      "ownership": "none",
+      "approval": "protected-target",
+      "acknowledgement": "exact-target",
+      "evidence": "exact-0200-runtime-two-table-grant-plan-and-before-after-proof"
+    },
     "b08-behavior-verify": {
       "allowedTargetClasses": ["production"],
       "credentialClasses": ["migration"],
