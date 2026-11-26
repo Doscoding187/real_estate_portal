@@ -3,13 +3,18 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 const authorityMock = vi.hoisted(() => ({
   target: null as null | { targetClass: string; host: string; port: string; local: boolean },
 }));
-vi.mock('../../_core/databaseAuthority/context', async importOriginal => ({
-  ...(await importOriginal<typeof import('../../_core/databaseAuthority/context')>()),
-  resolveDatabaseAuthority: () => {
-    if (!authorityMock.target) throw new Error('no target');
-    return { context: authorityMock.target };
-  },
-}));
+vi.mock('../../_core/databaseAuthority/context', async importOriginal => {
+  const original = await importOriginal<typeof import('../../_core/databaseAuthority/context')>();
+  return {
+    ...original,
+    // Only the explicit pilot-gate tests set a target; everything else (for
+    // example db-connection in CI) uses the real resolver unchanged.
+    resolveDatabaseAuthority: ((...args: Parameters<typeof original.resolveDatabaseAuthority>) =>
+      authorityMock.target
+        ? { context: authorityMock.target }
+        : original.resolveDatabaseAuthority(...args)) as typeof original.resolveDatabaseAuthority,
+  };
+});
 
 import {
   getCommercialActivationStatus,
@@ -486,6 +491,9 @@ describe('local preview pilot opt-in', () => {
     PAID_MVP_RELEASE_ID: 'local-parity-pilot',
     PAID_MVP_APPROVAL_REF: 'local-parity-only',
   };
+  afterEach(() => {
+    authorityMock.target = null;
+  });
   const local = { targetClass: 'disposable-worktree', host: '127.0.0.1', port: '3307', local: true };
 
   it('honours the PAID_MVP keys in the gated local development preview', () => {
@@ -507,8 +515,8 @@ describe('local preview pilot opt-in', () => {
       local: false,
     };
     expect(resolveCommercialActivationConfiguration(pilot).mode).toBe('preparation_only');
-    authorityMock.target = null;
-    expect(resolveCommercialActivationConfiguration(pilot).mode).toBe('preparation_only');
+    // Unresolvable-target refusal is covered with an injected resolver in
+    // server/_core/__tests__/localAuthOutbox.test.ts.
   });
 
   it('is refused in test: the opt-in grants nothing there', () => {
