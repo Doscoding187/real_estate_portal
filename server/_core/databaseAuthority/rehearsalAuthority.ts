@@ -26,7 +26,7 @@ type RehearsalRegistration = {
 };
 
 const DEFAULT_REGISTRATION_RELATIVE =
-  'docs/database-authority/disposable-rehearsal-authorization.json';
+  'docs/database-authority/disposable-rehearsal-authorization-20261126.json';
 
 const repositoryRootForSelection = fileURLToPath(new URL('../../../', import.meta.url));
 const registrationSelection = process.env.PROPERTYLISTIFY_REHEARSAL_REGISTRATION?.trim();
@@ -67,7 +67,28 @@ export const REHEARSAL_SOURCE_FILES = Object.freeze([
   'server/migrations/runSqlMigrations.ts',
 ]);
 
-const repositoryRoot = fileURLToPath(new URL('../../../', import.meta.url));
+// Source root for the digest. Defaults to the live repository. A historical
+// window may select its frozen evidence copy, but only a directory under
+// docs/database-authority/evidence/rehearsal-source-* inside this repository.
+// Test-only: if the variable is set at all outside a vitest run it is a hard
+// error (fail closed), never silently ignored.
+export function resolveFrozenSourceRoot(
+  env: NodeJS.ProcessEnv,
+  repoRoot: string,
+): string | undefined {
+  const selection = env.PROPERTYLISTIFY_REHEARSAL_SOURCE_ROOT?.trim();
+  if (!selection) return undefined;
+  if (env.NODE_ENV !== 'test' || !env.VITEST) {
+    throw new Error('Rehearsal source root refused: only permitted inside a test run.');
+  }
+  const root = resolve(selection);
+  if (!root.startsWith(join(repoRoot, 'docs/database-authority/evidence/rehearsal-source-'))) {
+    throw new Error('Rehearsal source root refused: not a frozen evidence directory.');
+  }
+  return root;
+}
+const frozenSourceRoot = resolveFrozenSourceRoot(process.env, repositoryRootForSelection);
+const repositoryRoot = frozenSourceRoot ?? repositoryRootForSelection;
 const recordPath = registrationAbsolutePath;
 
 function registrationContentForHash(root: string): string {
@@ -80,7 +101,7 @@ function registrationContentForHash(root: string): string {
   return `${JSON.stringify(current, null, 2)}\n`;
 }
 
-function calculateSourceDigest(root: string): string {
+export function calculateSourceDigest(root: string): string {
   const hash = createHash('sha256');
   for (const relativePath of REHEARSAL_SOURCE_FILES) {
     const content =

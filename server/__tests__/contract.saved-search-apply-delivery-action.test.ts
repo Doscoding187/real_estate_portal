@@ -32,6 +32,7 @@ import { appRouter } from '../routers';
 
 describe('savedSearch.applyDeliveryActionByToken contract', () => {
   beforeEach(() => {
+    vi.stubEnv('SAVED_SEARCH_ACTION_TOKEN_SECRET', 'test-only-saved-search-secret-0123456789');
     vi.clearAllMocks();
 
     mockSelect.mockReturnValue({ from: mockFrom });

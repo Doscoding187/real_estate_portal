@@ -10,6 +10,7 @@ export const DATABASE_OPERATIONS = [
   'runtime-place-grant',
   'runtime-legal-grant',
   'runtime-0197-grant',
+  'runtime-0200-grant',
   'b08-behavior-verify',
   'migration-plan',
   'migration-apply',

@@ -118,6 +118,7 @@ function getTextUrl(text: string, label: string): URL {
 
 describe('savedSearchNotificationEngine', () => {
   beforeEach(() => {
+    vi.stubEnv('SAVED_SEARCH_ACTION_TOKEN_SECRET', 'test-only-saved-search-secret-0123456789');
     vi.clearAllMocks();
 
     mockDbSelect

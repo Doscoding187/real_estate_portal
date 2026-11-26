@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   createLandEvidenceDeliveryToken,
   createLandEvidenceUploadReservation,
@@ -7,6 +7,13 @@ import {
 } from '../landEvidenceStorage';
 
 describe('private Land evidence storage authority', () => {
+  beforeEach(() => {
+    vi.stubEnv('MEDIA_UPLOAD_TOKEN_SECRET', 'test-only-land-evidence-secret-value-0123456789');
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it('creates a server-controlled private Land key', () => {
     const result = createLandEvidenceUploadReservation({ landAssetId: 41, userId: 7, fileName: 'title deed.pdf', contentType: 'application/pdf' });
     expect(result.payload.key).toMatch(/^private\/land\/41\//);
@@ -29,5 +36,12 @@ describe('private Land evidence storage authority', () => {
     const result = verifyLandEvidenceDeliveryToken(token);
     expect(result.evidenceDocumentId).toBe(9);
     expect(result.exp - result.iat).toBe(300);
+  });
+
+  it('fails closed in every environment when no token secret is configured', () => {
+    vi.stubEnv('MEDIA_UPLOAD_TOKEN_SECRET', '');
+    vi.stubEnv('JWT_SECRET', '');
+    vi.stubEnv('NODE_ENV', 'test');
+    expect(() => createLandEvidenceDeliveryToken({ evidenceDocumentId: 9, actorUserId: 7, key: 'private/land/41/a.pdf' })).toThrow(/not configured/i);
   });
 });

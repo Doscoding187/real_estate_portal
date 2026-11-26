@@ -5,7 +5,6 @@ import { ENV } from '../_core/env';
 
 const TTL_SECONDS = 10 * 60;
 const DELIVERY_TTL_SECONDS = 5 * 60;
-const DEVELOPMENT_SECRET = 'land-evidence-storage-dev-only';
 
 export type LandEvidenceUploadReservation = {
   v: 1;
@@ -32,8 +31,7 @@ type DeliveryReservation = {
 function secret() {
   const configured = process.env.MEDIA_UPLOAD_TOKEN_SECRET ?? process.env.JWT_SECRET;
   if (configured?.trim()) return configured.trim();
-  if (process.env.NODE_ENV === 'production') throw new Error('Private evidence token secret is not configured.');
-  return DEVELOPMENT_SECRET;
+  throw new Error('Private evidence token secret is not configured.');
 }
 
 function encode(value: unknown) { return Buffer.from(JSON.stringify(value), 'utf8').toString('base64url'); }

@@ -343,7 +343,18 @@ describe('bounded Database Authority data adapters', () => {
     ]);
     expect(plan.products.every(product => product.state === 'missing')).toBe(true);
     expect(plan.pending.filter(item => item.action === 'insert_plan')).toHaveLength(3);
-    expect(plan.migrationHead).toBe('0197_drop_seller_prospects_province.sql');
+    expect(plan.migrationHead).toBe('0200_services_provider_credentials.sql');
+  });
+
+  it('keeps the Fordsburg retirement plan digest bound to its reviewed 0197 head', () => {
+    // The adapter was reviewed and executed in the 0197 window; its planDigest
+    // must keep binding that literal head, not the moving manifest head.
+    const source = readFileSync(
+      join(process.cwd(), 'server/_core/databaseAuthority/dataAdapters/fordsburgPlaceRetirement.ts'),
+      'utf8',
+    );
+    expect(source).toContain("expectedHead: '0197_drop_seller_prospects_province.sql',");
+    expect(source).not.toMatch(/expectedHead:\s*manifest/);
   });
 
   it('fails closed when a protected commercial row conflicts with canonical authority', async () => {

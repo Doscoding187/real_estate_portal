@@ -5,7 +5,6 @@ import { isStrongRuntimeSecret } from '../_core/securityRuntimeConfiguration';
 import { resolveAppRuntimeEnv } from '../_core/runtimeBootstrap';
 
 const TOKEN_TTL_SECONDS = 60 * 60;
-const DEVELOPMENT_SECRET = 'listing-media-upload-dev-only';
 
 export type ListingMediaUploadTokenPayload = {
   v: 1;
@@ -35,7 +34,7 @@ function getSecret(secret?: string | null): string {
 
   const configured = secret ?? process.env.MEDIA_UPLOAD_TOKEN_SECRET ?? process.env.JWT_SECRET;
   if (configured && configured.trim()) return configured.trim();
-  return DEVELOPMENT_SECRET;
+  throw new Error('Listing media upload token secret is not configured.');
 }
 
 function encode(value: string): string {

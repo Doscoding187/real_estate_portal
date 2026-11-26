@@ -6,11 +6,9 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { trpc } from '@/lib/trpc';
+import { z } from 'zod';
 import { type OnboardingState, type OnboardingAction } from '../useOnboardingReducer';
-
-const HEADLINE_MAX = 180;
 
 function isValidWebsiteUrl(value: string) {
   if (!value.trim()) return true;
@@ -22,6 +20,11 @@ function isValidWebsiteUrl(value: string) {
   }
 }
 
+function isValidContactEmail(value: string) {
+  if (!value.trim()) return true;
+  return z.string().trim().email().max(320).safeParse(value).success;
+}
+
 type ProfileDetailsStepProps = {
   state: OnboardingState;
   dispatch: React.Dispatch<OnboardingAction>;
@@ -30,13 +33,18 @@ type ProfileDetailsStepProps = {
 };
 
 export function ProfileDetailsStep({ state, dispatch, onNext, onBack }: ProfileDetailsStepProps) {
+  const utils = trpc.useUtils();
   const isPending = state.pendingStep === 2;
   const error = state.errors[2];
-  const headlineRemaining = HEADLINE_MAX - state.headline.length;
 
   const upsertProfile = trpc.servicesEngine.upsertProviderProfile.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
+      await Promise.all([
+        utils.servicesEngine.myProviderProfile.invalidate(),
+        utils.servicesEngine.myOnboardingStatus.invalidate(),
+      ]);
       dispatch({ type: 'CLEAR_ERROR', step: 2 });
+      dispatch({ type: 'MARK_STEP_SAVED', step: 2 });
       dispatch({ type: 'SET_PENDING', step: null });
       onNext();
     },
@@ -52,19 +60,11 @@ export function ProfileDetailsStep({ state, dispatch, onNext, onBack }: ProfileD
 
   function handleContinue() {
     if (isPending) return;
-    if (!state.headline.trim() || !state.bio.trim()) {
+    if (!isValidContactEmail(state.contactEmail)) {
       dispatch({
         type: 'SET_ERROR',
         step: 2,
-        message: 'Add a headline and a short business description before continuing.',
-      });
-      return;
-    }
-    if (!state.contactEmail.trim() && !state.contactPhone.trim()) {
-      dispatch({
-        type: 'SET_ERROR',
-        step: 2,
-        message: 'Add an email address or phone number before continuing.',
+        message: 'Enter a valid contact email address, or clear it if you are using your phone number.',
       });
       return;
     }
@@ -76,69 +76,49 @@ export function ProfileDetailsStep({ state, dispatch, onNext, onBack }: ProfileD
       });
       return;
     }
+    if (state.businessYearsInOperation.trim()) {
+      const years = Number(state.businessYearsInOperation);
+      if (!Number.isInteger(years) || years < 0 || years > 150) {
+        dispatch({ type: 'SET_ERROR', step: 2, message: 'Years in operation must be a whole number from 0 to 150.' });
+        return;
+      }
+    }
+    if (Object.values(state.socialLinks).some(value => !isValidWebsiteUrl(value))) {
+      dispatch({ type: 'SET_ERROR', step: 2, message: 'Enter social links using a valid http or https URL.' });
+      return;
+    }
     dispatch({ type: 'SET_PENDING', step: 2 });
 
     dispatch({ type: 'CLEAR_ERROR', step: 2 });
     upsertProfile.mutate({
-      headline: state.headline.trim() || undefined,
-      bio: state.bio.trim() || undefined,
-      contactEmail: state.contactEmail.trim() || undefined,
-      contactPhone: state.contactPhone.trim() || undefined,
-      websiteUrl: state.websiteUrl.trim() || undefined,
+      contactEmail: state.contactEmail.trim() || null,
+      contactPhone: state.contactPhone.trim() || null,
+      websiteUrl: state.websiteUrl.trim() || null,
+      businessYearsInOperation: state.businessYearsInOperation.trim()
+        ? Number(state.businessYearsInOperation)
+        : null,
+      operatingHours: state.operatingHours.trim() || null,
+      socialLinks: {
+        facebook: state.socialLinks.facebook.trim() || null,
+        instagram: state.socialLinks.instagram.trim() || null,
+        linkedin: state.socialLinks.linkedin.trim() || null,
+      },
     });
   }
 
   return (
     <div className="space-y-6">
       <div className="space-y-1">
-        <h2 className="text-xl font-semibold text-slate-900">Introduce your business</h2>
-        <p className="text-sm leading-6 text-slate-600">
-          Add the details that help customers understand your experience and decide whether your
-          business is a good fit.
+        <h2 className="text-xl font-semibold text-slate-900">Tell customers how to reach you</h2>
+        <p className="text-sm text-slate-500">
+          Add contact preferences and helpful business details. Your introduction is collected once in the previous step.
         </p>
       </div>
 
       <div className="space-y-4">
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="headline">Headline</Label>
-            <span
-              className={`text-xs ${headlineRemaining < 20 ? 'text-amber-600' : 'text-slate-400'}`}
-            >
-              {headlineRemaining}/{HEADLINE_MAX}
-            </span>
-          </div>
-          <Input
-            id="headline"
-            value={state.headline}
-            onChange={e =>
-              dispatch({
-                type: 'SET_FIELD',
-                field: 'headline',
-                value: e.target.value.slice(0, HEADLINE_MAX),
-              })
-            }
-            placeholder="e.g. Trusted plumber serving Cape Town for 10+ years"
-            maxLength={HEADLINE_MAX}
-            disabled={isPending}
-          />
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="profileBio">About your business</Label>
-          <Textarea
-            id="profileBio"
-            value={state.bio}
-            onChange={e => dispatch({ type: 'SET_FIELD', field: 'bio', value: e.target.value })}
-            placeholder="Describe your experience, specialisations, and what makes you stand out"
-            rows={4}
-            disabled={isPending}
-          />
-        </div>
-
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label htmlFor="contactEmail">Contact email</Label>
+            <Label htmlFor="contactEmail">Contact email (optional)</Label>
             <Input
               id="contactEmail"
               type="email"
@@ -149,6 +129,9 @@ export function ProfileDetailsStep({ state, dispatch, onNext, onBack }: ProfileD
               placeholder="hello@yourcompany.co.za"
               disabled={isPending}
             />
+            <p className="text-xs text-slate-500">
+              Enter a valid email if you want customers to contact you by email. You can use your phone number instead.
+            </p>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="contactPhone">Contact phone</Label>
@@ -166,7 +149,7 @@ export function ProfileDetailsStep({ state, dispatch, onNext, onBack }: ProfileD
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="websiteUrl">Website URL</Label>
+          <Label htmlFor="websiteUrl">Existing business website (optional)</Label>
           <Input
             id="websiteUrl"
             type="url"
@@ -177,7 +160,36 @@ export function ProfileDetailsStep({ state, dispatch, onNext, onBack }: ProfileD
             placeholder="https://yourcompany.co.za"
             disabled={isPending}
           />
+          <p className="text-xs text-slate-500">
+            If your business already has a website, add its link. Leave this blank if it does not.
+          </p>
         </div>
+
+        <details className="rounded-xl border p-4">
+          <summary className="cursor-pointer text-sm font-semibold text-slate-800">Business details for your website <span className="font-normal text-slate-500">(optional)</span></summary>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="businessYears">Years in operation</Label>
+              <Input id="businessYears" type="number" min={0} max={150} value={state.businessYearsInOperation} onChange={event => dispatch({ type: 'SET_FIELD', field: 'businessYearsInOperation', value: event.target.value })} placeholder="e.g. 8" disabled={isPending} />
+              <p className="text-xs text-slate-500">This is shown as information supplied by your business, not an independent verification.</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="operatingHours">Operating hours</Label>
+              <Input id="operatingHours" maxLength={500} value={state.operatingHours} onChange={event => dispatch({ type: 'SET_FIELD', field: 'operatingHours', value: event.target.value })} placeholder="e.g. Mon–Fri, 08:00–17:00" disabled={isPending} />
+            </div>
+            <p className="sm:col-span-2 text-xs text-slate-500">
+              Add links for the social channels your business uses. You can leave these blank.
+            </p>
+            {(['facebook', 'instagram', 'linkedin'] as const).map(network => (
+              <div key={network} className="space-y-1.5">
+                <Label htmlFor={`social-${network}`}>
+                  {network[0]?.toUpperCase()}{network.slice(1)} URL (optional)
+                </Label>
+                <Input id={`social-${network}`} type="url" value={state.socialLinks[network]} onChange={event => dispatch({ type: 'SET_FIELD', field: 'socialLinks', value: { ...state.socialLinks, [network]: event.target.value } })} placeholder={`https://${network}.com/your-business`} disabled={isPending} />
+              </div>
+            ))}
+          </div>
+        </details>
       </div>
 
       {error && (
@@ -194,7 +206,7 @@ export function ProfileDetailsStep({ state, dispatch, onNext, onBack }: ProfileD
           Back
         </Button>
         <Button onClick={handleContinue} disabled={isPending}>
-          {isPending ? 'Saving…' : 'Continue'}
+          {isPending ? 'Saving…' : 'Save contact details and continue'}
         </Button>
       </div>
     </div>
