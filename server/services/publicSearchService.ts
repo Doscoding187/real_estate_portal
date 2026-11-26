@@ -427,10 +427,13 @@ export class PublicSearchService {
         selected.map(item => manualSearchPlaceIds(item.execution!, placeProjection!)),
       );
       placeSetRolledUp = memberSets.some(item => item.rolledUp);
-      placeMemberIds = [...new Set(memberSets.flatMap(item => item.placeIds))].slice(
-        0,
-        ROLLUP_MAX_PLACE_IDS,
-      );
+      const unionIds = [...new Set(memberSets.flatMap(item => item.placeIds))];
+      if (unionIds.length > ROLLUP_MAX_PLACE_IDS) {
+        console.warn(
+          `[publicSearch] ${multiPlaceIds.length} searched places roll up to ${unionIds.length}; cut to ${ROLLUP_MAX_PLACE_IDS}`,
+        );
+      }
+      placeMemberIds = unionIds.slice(0, ROLLUP_MAX_PLACE_IDS);
       canonicalPlaceContexts = selected.map(item => ({
         ...item.label!,
         scopePolicy: PLACE_INVENTORY_SCOPE_POLICY,

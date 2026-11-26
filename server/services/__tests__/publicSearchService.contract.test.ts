@@ -173,6 +173,27 @@ describe('publicSearchService canonical Place contract', () => {
     expect(options.placeProjection).toBeUndefined();
   });
 
+  it('warns when a multi-place city rollup is cut at the cap', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const OTHER = 'pl-place-01-000000000000000000000003';
+    const many = Array.from(
+      { length: 3001 },
+      (_, i) => `pl-place-01-${String(i).padStart(24, '0')}`,
+    );
+    mockRollup.mockResolvedValueOnce(many).mockResolvedValueOnce([OTHER]);
+    const proj = projection('metro_city');
+    proj.executions.set(OTHER, { ...proj.executions.get(PLACE_ID)!, placeId: OTHER });
+    proj.labels.set(OTHER, { ...proj.labels.get(PLACE_ID)!, canonicalPlaceId: OTHER });
+    mockLoadPlaceProjection.mockResolvedValueOnce(proj);
+    await publicSearchService.searchInventory({
+      canonicalPlaceIds: [PLACE_ID, OTHER],
+      listingType: 'sale',
+    });
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('cut to 3000'));
+    expect(mockSearchProperties.mock.calls[0][0].canonicalPlaceIds).toHaveLength(3000);
+    warn.mockRestore();
+  });
+
   it('keeps a suburb search exact and does not pull in an unrelated city', async () => {
     mockLoadPlaceProjection.mockResolvedValueOnce(projection('locality'));
     await publicSearchService.searchInventory({ canonicalPlaceId: PLACE_ID, listingType: 'sale' });

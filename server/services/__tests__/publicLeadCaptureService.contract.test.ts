@@ -607,6 +607,54 @@ describe('publicLeadCaptureService contract', () => {
       expect(database.insertValues).not.toHaveBeenCalled();
     });
 
+    it('refuses an agent whose canonical active membership is the listing agency', async () => {
+      mockResolvePublicPropertyEligibility.mockResolvedValueOnce({
+        publicAuthority: 'public_property_eligibility',
+        property: { id: 505, developmentId: null, cataloguePublisherId: null },
+        custody,
+      });
+      const database = makeFakeDatabase({
+        selectResults: [
+          [],
+          [{ id: 36, userId: 701, agencyId: null }],
+          [{ agentId: 36, agencyId: 44, status: 'active', effectiveFrom: null, effectiveTo: null }],
+        ],
+      });
+      mockGetDb.mockResolvedValue(database);
+
+      await expect(capturePublicLead(ownInput())).rejects.toThrow(/your own listing/);
+      expect(database.insertValues).not.toHaveBeenCalled();
+    });
+
+    it('refuses an admin of the listing agency who has no agent profile', async () => {
+      mockResolvePublicPropertyEligibility.mockResolvedValueOnce({
+        publicAuthority: 'public_property_eligibility',
+        property: { id: 505, developmentId: null, cataloguePublisherId: null },
+        custody,
+      });
+      const database = makeFakeDatabase({
+        selectResults: [[], [], [{ role: 'agency_admin', agencyId: 44 }]],
+      });
+      mockGetDb.mockResolvedValue(database);
+
+      await expect(capturePublicLead(ownInput())).rejects.toThrow(/your own listing/);
+      expect(database.insertValues).not.toHaveBeenCalled();
+    });
+
+    it('lets a guest (no signed-in user) enquire without any ownership lookup', async () => {
+      mockResolvePublicPropertyEligibility.mockResolvedValueOnce({
+        publicAuthority: 'public_property_eligibility',
+        property: { id: 505, developmentId: null, cataloguePublisherId: null },
+        custody,
+      });
+      const database = makeFakeDatabase({ selectResults: [[]], insertId: 921 });
+      mockGetDb.mockResolvedValue(database);
+
+      await expect(
+        capturePublicLead(baseInput({ propertyId: 505, source: 'property_detail' })),
+      ).resolves.toBeDefined();
+    });
+
     it('lets an agent at a different agency enquire', async () => {
       mockResolvePublicPropertyEligibility.mockResolvedValueOnce({
         publicAuthority: 'public_property_eligibility',
