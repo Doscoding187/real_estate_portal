@@ -52,6 +52,9 @@ const testState = vi.hoisted(() => {
     useDevelopmentWizardMock,
     wizardState,
     getDevelopmentQueryResult: { current: null as unknown },
+    draftQueryResult: { current: null as unknown },
+    autoSaveOptions: { current: null as any },
+    persistManual: vi.fn(),
     editRefetch: vi.fn(),
     searchParams: { current: '' },
   };
@@ -61,24 +64,41 @@ vi.mock('@/hooks/useDevelopmentWizard', () => ({
   useDevelopmentWizard: testState.useDevelopmentWizardMock,
   DEVELOPMENT_WIZARD_STORAGE_KEY: 'development-wizard',
   PUBLISHER_DEVELOPMENT_WIZARD_STORAGE_KEY: 'publisher-development-wizard',
-  persistManualDevelopmentDraft: vi.fn(),
+  persistManualDevelopmentDraft: (...args: unknown[]) => testState.persistManual(...args),
 }));
 
 vi.mock('@/hooks/useAutoSave', () => ({
-  useAutoSave: () => ({
-    lastSaved: null,
-    isSaving: false,
-    error: null,
-    saveNow: testState.saveNow,
-  }),
+  useAutoSave: (_data: unknown, options: unknown) => {
+    testState.autoSaveOptions.current = options;
+    return {
+      lastSaved: null,
+      isSaving: false,
+      error: null,
+      saveNow: testState.saveNow,
+    };
+  },
 }));
 
 vi.mock('@/components/wizard/DraftManager', () => ({
-  DraftManager: () => null,
+  DraftManager: ({ open, onResume, onStartFresh, draftData }: any) =>
+    open ? (
+      <div>
+        <span data-testid="draft-data">
+          {JSON.stringify({
+            name: draftData?.developmentName,
+            lastModified: draftData?.lastModified
+              ? new Date(draftData.lastModified).toISOString()
+              : null,
+          })}
+        </span>
+        <button onClick={onResume}>Resume draft</button>
+        <button onClick={onStartFresh}>Start new</button>
+      </div>
+    ) : null,
 }));
 
-vi.mock('@/components/development-wizard/phases/DevelopmentTypePhase', () => ({
-  DevelopmentTypePhase: () => <div>Development type setup</div>,
+vi.mock('@/components/development-wizard/phases/BasicsPhase', () => ({
+  BasicsPhase: () => <div>Basics step body</div>,
 }));
 
 vi.mock('@/_core/hooks/useAuth', () => ({
@@ -103,7 +123,13 @@ vi.mock('@/lib/trpc', () => ({
     }),
     developer: {
       saveDraft: { useMutation: () => ({ isPending: false, mutateAsync: testState.mutateAsync }) },
-      getDraft: { useQuery: () => ({ data: null, error: null, isLoading: false }) },
+      getDraft: {
+        useQuery: () =>
+          typeof testState.draftQueryResult.current === 'object' &&
+          testState.draftQueryResult.current !== null
+            ? (testState.draftQueryResult.current as Record<string, unknown>)
+            : { data: null, error: null, isLoading: false },
+      },
       getDevelopment: {
         useQuery: () =>
           typeof testState.getDevelopmentQueryResult.current === 'object' &&
@@ -156,10 +182,10 @@ describe('DevelopmentWizard publisher context initialization', () => {
     render(<DevelopmentWizard />);
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Project Setup' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Start a new development' })).toBeInTheDocument();
     });
 
-    expect(screen.getByText('Development type setup')).toBeInTheDocument();
+    expect(screen.getByText('What are you listing?')).toBeInTheDocument();
     expect(testState.setListingIdentity).toHaveBeenCalledWith({
       identityType: 'brand',
       cataloguePublisherId: 1109,
@@ -173,10 +199,10 @@ describe('DevelopmentWizard publisher context initialization', () => {
     render(<DevelopmentWizard />);
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Project Setup' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Start a new development' })).toBeInTheDocument();
     });
 
-    expect(screen.getByText('Development type setup')).toBeInTheDocument();
+    expect(screen.getByText('What are you listing?')).toBeInTheDocument();
     expect(testState.setListingIdentity).not.toHaveBeenCalled();
   });
 
@@ -297,12 +323,182 @@ describe('DevelopmentWizard edit-mode lifecycle truth', () => {
         screen.getByRole('heading', { name: 'Unable to open this development' }),
       ).toBeInTheDocument();
     });
-    expect(screen.queryByRole('heading', { name: 'Project Setup' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Start a new development' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(testState.editRefetch).toHaveBeenCalledOnce();
 
     fireEvent.click(screen.getByRole('button', { name: 'Back to developments' }));
     expect(testState.setLocation).toHaveBeenCalledWith('/developer/developments');
+  });
+});
+
+describe('DevelopmentWizard draft safety and autosave', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    testState.authUser = { id: 2, role: 'property_developer' };
+    testState.authLoading = false;
+    testState.publisherContext = null;
+    testState.wizardState.currentPhase = 0;
+    testState.wizardState.developmentType = null;
+    testState.wizardState.developmentData = { name: '', transactionType: null };
+    testState.wizardState.workflowId = null;
+    testState.wizardState.currentStepId = null;
+    testState.wizardState.unitTypes = [];
+    testState.getDevelopmentQueryResult.current = null;
+    testState.draftQueryResult.current = null;
+    testState.autoSaveOptions.current = null;
+    window.history.replaceState({}, '', '/developer/create-development');
+  });
+
+  afterEach(() => {
+    testState.draftQueryResult.current = null;
+    window.history.replaceState({}, '', '/developer/create-development');
+  });
+
+  it('starts clean (reset) only when there is no local work', async () => {
+    render(<DevelopmentWizard />);
+    // One reset is the account-key switch (writes muted, then rehydrated); the second is the clean start.
+    await waitFor(() => expect(testState.wizardState.reset).toHaveBeenCalledTimes(2));
+    expect(screen.queryByRole('button', { name: 'Resume draft' })).not.toBeInTheDocument();
+  });
+
+  it('does NOT wipe an existing local draft in create mode: offers Resume / Start new instead', async () => {
+    testState.wizardState.developmentData = { name: 'Baltimore Lifestyle Estate', transactionType: 'for_sale' };
+    testState.wizardState.workflowId = 'residential_sale' as any;
+
+    render(<DevelopmentWizard />);
+
+    expect(await screen.findByRole('button', { name: 'Resume draft' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Start new' })).toBeInTheDocument();
+    // Only the account-key switch reset (muted, then rehydrated) runs; the
+    // create-mode reset that used to wipe progress must not.
+    expect(testState.wizardState.reset).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Resume draft' }));
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'Resume draft' })).not.toBeInTheDocument(),
+    );
+    expect(testState.wizardState.reset).toHaveBeenCalledTimes(1);
+    // A resumed local copy has never been confirmed on the server, so autosave is armed.
+    await waitFor(() => expect(testState.autoSaveOptions.current?.enabled).toBe(true));
+  });
+
+  it('Start new clears the local draft only after the publisher chooses it', async () => {
+    testState.wizardState.developmentData = { name: 'Baltimore', transactionType: 'for_sale' };
+    render(<DevelopmentWizard />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Start new' }));
+    await waitFor(() => expect(testState.wizardState.reset).toHaveBeenCalledTimes(2));
+  });
+
+  it('resumes a server draft from ?draftId without resetting the store', async () => {
+    window.history.replaceState({}, '', '/developer/create-development?draftId=42');
+    testState.draftQueryResult.current = {
+      data: { draftData: { workflowId: 'residential_sale', developmentData: { name: 'Saved one' } } },
+      error: null,
+      isLoading: false,
+    };
+
+    render(<DevelopmentWizard />);
+
+    await waitFor(() =>
+      expect(testState.wizardState.hydrateDevelopment).toHaveBeenCalledWith({
+        workflowId: 'residential_sale',
+        developmentData: { name: 'Saved one' },
+      }),
+    );
+    expect(testState.wizardState.reset).toHaveBeenCalledTimes(1); // account-key switch only
+    expect(screen.queryByRole('button', { name: 'Resume draft' })).not.toBeInTheDocument();
+  });
+
+  it('after a reload with ?draftId the save badge says "Saved {time}" from the server draft, not "Not saved yet"', async () => {
+    window.history.replaceState({}, '', '/developer/create-development?draftId=42');
+    // The server stores "YYYY-MM-DD HH:mm:ss" in UTC.
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000)
+      .toISOString()
+      .replace('T', ' ')
+      .slice(0, 19);
+    testState.draftQueryResult.current = {
+      data: {
+        lastModified: fiveMinutesAgo,
+        draftData: { workflowId: 'residential_sale', developmentData: { name: 'Saved one' } },
+      },
+      error: null,
+      isLoading: false,
+    };
+
+    render(<DevelopmentWizard />);
+
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(/^Saved 5 min ago/));
+    expect(screen.queryByText('Not saved yet')).not.toBeInTheDocument();
+  });
+
+  it('shows "Not saved yet" for a brand-new wizard that has never been saved', async () => {
+    render(<DevelopmentWizard />);
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Not saved yet'));
+  });
+
+  it('the Resume dialog gets the draft name (or Untitled) and the last saved time', async () => {
+    const savedAt = Date.now() - 10 * 60 * 1000;
+    testState.wizardState.developmentData = { name: '', transactionType: 'for_sale' };
+    testState.wizardState.workflowId = 'residential_sale' as any;
+    (testState.wizardState as any).draftSavedAt = savedAt;
+
+    const view = render(<DevelopmentWizard />);
+    const untitled = JSON.parse((await screen.findByTestId('draft-data')).textContent ?? '{}');
+    expect(untitled.name).toBe('Untitled');
+    expect(untitled.lastModified).toBe(new Date(savedAt).toISOString());
+    view.unmount();
+
+    testState.wizardState.developmentData = { name: 'Baltimore Lifestyle Estate', transactionType: 'for_sale' };
+    render(<DevelopmentWizard />);
+    const named = JSON.parse((await screen.findByTestId('draft-data')).textContent ?? '{}');
+    expect(named.name).toBe('Baltimore Lifestyle Estate');
+    (testState.wizardState as any).draftSavedAt = undefined;
+  });
+
+  it('arms real autosave (debounced, developer path) once the wizard is ready', async () => {
+    render(<DevelopmentWizard />);
+    await waitFor(() => expect(testState.autoSaveOptions.current?.enabled).toBe(true));
+    expect(testState.autoSaveOptions.current.schedule).toBe(true);
+    expect(testState.autoSaveOptions.current.debounceMs).toBe(2000);
+    // Nothing worth saving yet: no empty drafts are created.
+    expect(testState.autoSaveOptions.current.shouldSkipSave()).toBe(true);
+  });
+
+  it('never auto-saves a live development in edit mode (explicit save only)', async () => {
+    window.history.replaceState({}, '', '/developer/create-development?id=77');
+    testState.getDevelopmentQueryResult.current = {
+      data: { approvalStatus: 'draft', isPublished: 0, rejectionNote: null },
+      error: null,
+      isLoading: false,
+    };
+    render(<DevelopmentWizard />);
+    await waitFor(() => expect(testState.autoSaveOptions.current?.enabled).toBe(true));
+    expect(testState.autoSaveOptions.current.schedule).toBe(false);
+  });
+
+  it('puts the new draft id in the URL after the first confirmed save so a reload resumes', async () => {
+    testState.persistManual.mockResolvedValue({ success: true, id: 42 });
+    testState.wizardState.developmentData = { name: 'Baltimore', transactionType: 'for_sale' };
+    testState.wizardState.workflowId = 'residential_sale' as any;
+    render(<DevelopmentWizard />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Resume draft' }));
+    await waitFor(() => expect(testState.autoSaveOptions.current?.enabled).toBe(true));
+
+    await testState.autoSaveOptions.current.onSave({});
+
+    expect(testState.persistManual).toHaveBeenCalledOnce();
+    expect(window.location.search).toContain('draftId=42');
+  });
+
+  it('does not report a save when the server write fails (error propagates)', async () => {
+    testState.persistManual.mockRejectedValue(new Error('Draft save failed'));
+    render(<DevelopmentWizard />);
+    await waitFor(() => expect(testState.autoSaveOptions.current?.enabled).toBe(true));
+
+    await expect(testState.autoSaveOptions.current.onSave({})).rejects.toThrow('Draft save failed');
+    expect(window.location.search).not.toContain('draftId');
   });
 });

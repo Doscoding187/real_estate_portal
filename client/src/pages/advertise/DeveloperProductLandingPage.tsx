@@ -37,7 +37,7 @@ import {
 import { DeveloperWorkspacePreview } from './DeveloperWorkspacePreview';
 import { COMMERCIAL_HERO_CLASS } from './commercialHero';
 import { isHomepageHeroJourneyEnabled } from '@/lib/publicNavigation';
-import { NotOpenYetCta } from '@/components/advertise/NotOpenYetCta';
+import { RegisterRoleCta } from '@/components/advertise/RegisterRoleCta';
 import { useCommercialProductAvailability } from '@/hooks/useCommercialProductAvailability';
 import { SalesPauseNotice } from '@/components/commercial/SalesPauseNotice';
 
@@ -459,7 +459,7 @@ function DeveloperLaunchAccessCard({ product }: { product?: CommercialProduct })
   const term = getCommercialTermPresentation(product);
   const action = getCommercialActionPresentation(product);
   const limits = getCommercialPresentationLimits(product);
-  // Developer accounts are not open yet, so the card never leads into a sign-up.
+  // Developer accounts are open; publishing and paid access are still preparation-only.
   const actionHref = '/contact';
   const portfolioEntitled = product.limits.unlimited_development_portfolio === true;
 
@@ -1080,7 +1080,7 @@ function DeveloperPreparationLandingPage({
     <div className="min-h-screen bg-[var(--surface)] text-slate-950">
       <SEOHead
         title="Developer accounts | Property Listify"
-        description="Developer accounts on Property Listify are not open yet. See how developer set-up will work and get in touch."
+        description="Create a Developer account on Property Listify. See how developer set-up works and get in touch."
         canonicalUrl="/advertise/sell/developers"
       />
       <EnhancedNavbar />
@@ -1109,11 +1109,12 @@ function DeveloperPreparationLandingPage({
                   Establish your Developer organisation and prepare private projects.
                 </h1>
                 <p className="mt-7 max-w-2xl text-lg leading-8 text-slate-300 sm:text-xl sm:leading-9">
-                  Developer accounts are not open yet. Below is how developer set-up will work.
-                  Contact us to talk it through or to ask about early access.
+                  Create the owner account now, then set up your company and private projects.
+                  Publishing and paid access open later, after review and approval. Contact us to
+                  talk it through.
                 </p>
                 <div className="mt-9 flex flex-wrap gap-3">
-                  <NotOpenYetCta tone="dark" />
+                  <RegisterRoleCta role="property_developer" tone="dark" />
                   <a
                     href="/contact"
                     className="inline-flex items-center gap-2 rounded-2xl border border-white/35 bg-white/10 px-5 py-3.5 text-sm font-bold text-white shadow-sm transition hover:border-white/60 hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
@@ -1212,7 +1213,7 @@ function DeveloperPreparationLandingPage({
                 and each project to be reviewed and approved.
               </p>
               <div className="mt-7">
-                <NotOpenYetCta tone="light" />
+                <RegisterRoleCta role="property_developer" tone="light" />
                 <div>
                   <a
                     href="/contact"

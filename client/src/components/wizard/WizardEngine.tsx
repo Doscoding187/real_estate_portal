@@ -1,10 +1,8 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { StartScreen, type StartTransaction } from './StartScreen';
 import { useDevelopmentWizard } from '@/hooks/useDevelopmentWizard';
-import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { DevelopmentTypePhase } from '../development-wizard/phases/DevelopmentTypePhase';
-import { ResidentialConfigPhase } from '../development-wizard/phases/ResidentialConfigPhase';
-import { IdentityPhase } from '../development-wizard/phases/IdentityPhase';
+import { BasicsPhase } from '../development-wizard/phases/BasicsPhase';
+import { AboutPhase } from '../development-wizard/phases/AboutPhase';
 import { LocationPhase } from '../development-wizard/phases/LocationPhase';
 import { EstateProfilePhase } from '../development-wizard/phases/EstateProfilePhase';
 import { AmenitiesPhase } from '../development-wizard/phases/AmenitiesPhase';
@@ -14,168 +12,272 @@ import { UnitTypesPhase } from '../development-wizard/phases/UnitTypesPhase';
 import { FinalisationPhase } from '../development-wizard/phases/FinalisationPhase';
 import { WORKFLOWS, getVisibleSteps } from '@/lib/workflows';
 import { WizardData } from '@/lib/types/wizard-workflows';
-import { WizardHeader } from './WizardHeader';
+import { computeWizardProgress } from '@/lib/wizardProgress';
+import { WizardShell, type WizardSaveInput, type WizardShellStep } from './WizardShell';
+import { buildPreviewModel } from './previewModel';
+import { stepStatus } from '@/lib/wizardStepStatus';
 
+/**
+ * The eight residential steps, in order: Basics, About, Location, Monthly
+ * costs, Amenities, Media, House types, Review & publish. Steps that have not
+ * been rebuilt yet still render their existing screens.
+ */
 const STEP_COMPONENTS: Record<string, React.ComponentType<any>> = {
-  ConfigurationStep: ResidentialConfigPhase,
-  IdentityMarketStep: IdentityPhase,
+  ConfigurationStep: BasicsPhase,
+  IdentityMarketStep: AboutPhase,
   LocationStep: LocationPhase,
   GovernanceStep: EstateProfilePhase,
   AmenitiesStep: AmenitiesPhase,
+  // Only the auction workflow still has a separate marketing step.
   MarketingStep: OverviewPhase,
   MediaStep: MediaPhase,
   UnitTypesStep: UnitTypesPhase,
   ReviewStep: FinalisationPhase,
 };
 
+/** Residential sale is the starting point until the publisher says "for rent" in Basics. */
+const DEFAULT_WORKFLOW = WORKFLOWS.residential_sale;
+
 interface WizardEngineProps {
   onExit?: () => void;
   onSaveDraft?: () => Promise<void> | void;
   isSavingDraft?: boolean;
-  saveStatus?: 'saved' | 'saving' | 'error';
-  lastSavedAt?: Date;
+  save?: WizardSaveInput;
+  onRetrySave?: () => void;
+  publisherName?: string | null;
+  changePublisherHref?: string;
+  draftsHref?: string;
+  draftsLabel?: string;
 }
 
 export function WizardEngine({
   onExit,
   onSaveDraft,
   isSavingDraft,
-  saveStatus,
-  lastSavedAt,
+  save = { isSaving: false, hasError: false, lastSavedAt: null },
+  onRetrySave,
+  publisherName,
+  changePublisherHref,
+  draftsHref,
+  draftsLabel,
 }: WizardEngineProps) {
   const {
     workflowId,
     currentStepId,
+    completedSteps,
     goWorkflowNext,
     goWorkflowBack,
+    ensureResidentialWorkflow,
+    switchResidentialTransaction,
+    transactionType,
+    stepData,
     stepErrors,
     developmentData,
     developmentType,
     listingIdentity,
     setWorkflowStep,
+    unitTypes,
+    getWizardData,
   } = useDevelopmentWizard();
 
-  // Compute workflow data early (needed for useEffect)
-  const workflow = workflowId ? WORKFLOWS[workflowId] : null;
-  const wizardData = { ...developmentData, developmentType, listingIdentity } as WizardData;
-  const visibleSteps = workflow ? getVisibleSteps(workflow, wizardData) : [];
-  const currentStepIndex = visibleSteps.findIndex(s => s.id === currentStepId);
+  // The unnumbered start screen shows for a brand-new wizard (no workflow yet),
+  // and again when the publisher goes Back from step 1. A resumed draft or a
+  // development being edited already has its answers, so it skips the screen.
+  const [showStart, setShowStart] = useState(false);
+  const [pendingTx, setPendingTx] = useState<StartTransaction | null>(null);
+  const [warnChange, setWarnChange] = useState(false);
+  const onStartScreen = !workflowId || showStart;
+  const storedTx: StartTransaction | null =
+    (transactionType ?? developmentData?.transactionType) === 'for_rent'
+      ? 'for_rent'
+      : (transactionType ?? developmentData?.transactionType) === 'for_sale'
+        ? 'for_sale'
+        : null;
+  const selectedTx = pendingTx ?? (workflowId ? storedTx : null);
 
-  // Auto-correct if on invalid step (MUST be before any conditional returns)
+  const workflow = (workflowId ? WORKFLOWS[workflowId] : null) ?? DEFAULT_WORKFLOW;
+  const activeStepId = workflowId ? currentStepId : null;
+  const wizardData = { ...developmentData, developmentType, listingIdentity } as WizardData;
+  const visibleSteps = getVisibleSteps(workflow, wizardData);
+  const currentStepIndex = visibleSteps.findIndex(s => s.id === activeStepId);
+
+  // Auto-correct if on a step this wizard no longer has (for example a draft
+  // saved on the old "Marketing Summary" step).
   useEffect(() => {
-    if (workflow && currentStepIndex === -1 && visibleSteps.length > 0) {
+    if (workflowId && currentStepIndex === -1 && visibleSteps.length > 0) {
       setWorkflowStep(visibleSteps[0].id);
     }
-  }, [workflow, currentStepIndex, visibleSteps, setWorkflowStep]);
+  }, [workflowId, currentStepIndex, visibleSteps, setWorkflowStep]);
 
-  // Handle Initial State (No Workflow or Missing Config)
-  // We strictly require workflowId + developmentType + transactionType to render the engine
-  if (!workflowId || !developmentType || !developmentData.transactionType) {
+  // The store re-renders this component on every change, so the preview is
+  // rebuilt from the live canonical wizard data each time (cheap, pure).
+  const baseData = (getWizardData?.() ?? developmentData) as Record<string, any>;
+  const previewModel = buildPreviewModel(
+    onStartScreen && selectedTx ? { ...baseData, transactionType: selectedTx } : baseData,
+    unitTypes,
+  );
+
+  const currentStep = onStartScreen ? undefined : visibleSteps[currentStepIndex];
+
+  const maxVisitedIndex = Math.max(
+    currentStepIndex,
+    ...visibleSteps.map((step, index) => (completedSteps?.includes(step.id) ? index : -1)),
+  );
+  // Nothing is numbered until Start.
+  const shellSteps: WizardShellStep[] = onStartScreen
+    ? []
+    : visibleSteps.map((step, index) => ({
+        id: step.id,
+        title: step.title,
+        ...stepStatus({
+          visited: Boolean(completedSteps?.includes(step.id)),
+          valid: step.validate ? step.validate(baseData as WizardData).valid : true,
+        }),
+        visited: index <= maxVisitedIndex,
+      }));
+
+  const progress = onStartScreen
+    ? { position: 0, total: 0, percent: 0 }
+    : computeWizardProgress({
+        visibleStepIds: visibleSteps.map(step => step.id),
+        currentStepId: activeStepId,
+      });
+
+  const hasEnteredAnswers = Boolean(stepData && Object.keys(stepData).length > 0);
+
+  const pickTransaction = (value: StartTransaction) => {
+    setPendingTx(value);
+    setWarnChange(false);
+  };
+
+  const start = () => {
+    if (!selectedTx) return;
+    if (!workflowId) {
+      ensureResidentialWorkflow(selectedTx);
+    } else if (selectedTx !== storedTx) {
+      if (hasEnteredAnswers && !warnChange) {
+        setWarnChange(true);
+        return;
+      }
+      switchResidentialTransaction(selectedTx);
+    }
+    setShowStart(false);
+    setPendingTx(null);
+    setWarnChange(false);
+  };
+
+  const backToStart = () => {
+    setPendingTx(null);
+    setWarnChange(false);
+    setShowStart(true);
+  };
+
+  const selectStep = (stepId: string) => {
+    ensureResidentialWorkflow();
+    setWorkflowStep(stepId as any);
+  };
+
+  const goNext = () => {
+    ensureResidentialWorkflow();
+    goWorkflowNext(activeStepId ?? undefined);
+  };
+
+  if (onStartScreen) {
     return (
-      <div className="flex flex-col min-h-screen bg-slate-50/50">
-        <WizardHeader
-          title="Project Setup"
-          description="Define the core structure of your development. These choices determine the workflow."
-          progressPercent={0}
-          onExit={onExit}
-          showExit={!!onExit}
-          saveStatus={saveStatus}
-          lastSavedAt={lastSavedAt}
+      <WizardShell
+        steps={[]}
+        currentIndex={-1}
+        onSelectStep={() => undefined}
+        progress={progress}
+        save={save}
+        onRetrySave={onRetrySave}
+        onSaveAndExit={onExit}
+        publisherName={publisherName}
+        changePublisherHref={changePublisherHref}
+        draftsHref={draftsHref}
+        draftsLabel={draftsLabel}
+        previewModel={previewModel}
+        heading="Start a new development"
+        hideBack
+        canGoBack={false}
+        onBack={() => undefined}
+      >
+        <StartScreen
+          transaction={selectedTx}
+          onTransaction={pickTransaction}
+          onStart={start}
+          startLabel={warnChange ? 'Change anyway' : workflowId ? 'Continue' : 'Start'}
+          warning={
+            warnChange
+              ? 'Some of the answers you have already entered may not apply to this kind of listing. They are kept, but please review each step.'
+              : null
+          }
         />
-        <main className="flex-1 py-8 px-4">
-          <div className="max-w-5xl mx-auto">
-            <DevelopmentTypePhase />
-          </div>
-        </main>
-      </div>
+      </WizardShell>
     );
   }
 
-  if (!workflow) return <div>Invalid Workflow</div>;
-
-  const currentStep = visibleSteps[currentStepIndex];
   if (!currentStep) return <div>Loading step...</div>;
 
   const StepComponent = STEP_COMPONENTS[currentStep.componentKey];
-  const progress = ((currentStepIndex + 1) / visibleSteps.length) * 100;
 
   // Validation Display
-  const currentErrors = currentStepId ? stepErrors[currentStepId] : [];
+  const currentErrors = activeStepId ? stepErrors[activeStepId] : [];
+
+  const notice =
+    currentErrors && currentErrors.length > 0 ? (
+      <div className="rounded-lg border border-red-200 bg-red-50 p-4 animate-in fade-in slide-in-from-top-2">
+        <h4 className="mb-2 flex items-center gap-2 font-semibold text-red-800">
+          Please check the following:
+        </h4>
+        <ul className="ml-1 list-inside list-disc space-y-1 text-sm text-red-700">
+          {currentErrors.map((err: any, idx: number) => (
+            <li key={idx}>{typeof err === 'string' ? err : err.message}</li>
+          ))}
+        </ul>
+      </div>
+    ) : null;
+
+  const isLastStep = currentStepIndex >= visibleSteps.length - 1;
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50/50">
-      <WizardHeader
-        title={currentStep.title}
+    <>
+      <WizardShell
+        steps={shellSteps}
+        currentIndex={currentStepIndex}
+        onSelectStep={selectStep}
+        progress={progress}
+        save={save}
+        onRetrySave={onRetrySave}
+        onSaveAndExit={onExit}
+        publisherName={publisherName}
+        changePublisherHref={changePublisherHref}
+        draftsHref={draftsHref}
+        draftsLabel={draftsLabel}
+        previewModel={previewModel}
         description={currentStep.description}
-        progressPercent={progress}
-        onExit={onExit}
-        showExit={!!onExit}
-        saveStatus={saveStatus}
-        lastSavedAt={lastSavedAt}
-      />
-
-      <main className="flex-1 py-8 px-4">
-        <div className="max-w-5xl mx-auto">
-          {/* Validation Errors for Current Step */}
-          {currentErrors && currentErrors.length > 0 && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg animate-in fade-in slide-in-from-top-2">
-              <h4 className="text-red-800 font-semibold mb-2 flex items-center gap-2">
-                Please check the following:
-              </h4>
-              <ul className="list-disc list-inside text-red-700 text-sm space-y-1 ml-1">
-                {currentErrors.map((err: any, idx: number) => (
-                  <li key={idx}>{typeof err === 'string' ? err : err.message}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* Step Content */}
-          <div className="mb-20">
-            {' '}
-            {/* Add bottom margin for fixed footer if we had one, or just spacing */}
-            {StepComponent ? (
-              <StepComponent onSaveDraft={onSaveDraft} isSavingDraft={isSavingDraft} />
-            ) : (
-              <div className="text-center p-12 bg-slate-50 border border-dashed rounded-lg">
-                Component {currentStep.componentKey} not found
-              </div>
-            )}
+        canGoBack
+        // Back from step 1 returns to the start screen.
+        onBack={currentStepIndex === 0 ? backToStart : goWorkflowBack}
+        onNext={isLastStep ? undefined : goNext}
+        notice={notice}
+      >
+        {StepComponent ? (
+          <StepComponent onSaveDraft={onSaveDraft} isSavingDraft={isSavingDraft} />
+        ) : (
+          <div className="rounded-lg border border-dashed bg-slate-50 p-12 text-center">
+            Component {currentStep.componentKey} not found
           </div>
-
-          {/* Navigation Footer */}
-          <div className="flex justify-between pt-6 border-t border-slate-200 mt-8">
-            <Button
-              variant="outline"
-              onClick={goWorkflowBack}
-              disabled={currentStepIndex === 0}
-              className="px-6 h-12 text-slate-600"
-            >
-              <ChevronLeft className="w-4 h-4 mr-2" />
-              Back
-            </Button>
-
-            {currentStepIndex < visibleSteps.length - 1 && (
-              <Button
-                onClick={goWorkflowNext}
-                size="lg"
-                className="px-8 h-12 bg-blue-600 hover:bg-blue-700 shadow-sm transition-all"
-              >
-                Next
-                <ChevronRight className="w-4 h-4 ml-2" />
-              </Button>
-            )}
-          </div>
-        </div>
-      </main>
+        )}
+      </WizardShell>
 
       {/* Dev Debug Info (Hidden in Prod) */}
       {process.env.NODE_ENV === 'development' && (
-        <div className="fixed bottom-2 right-2 p-2 bg-slate-900/80 text-white rounded text-[10px] font-mono opacity-50 hover:opacity-100 z-50">
+        <div className="fixed bottom-2 right-2 z-50 rounded bg-slate-900/80 p-2 font-mono text-[10px] text-white opacity-50 hover:opacity-100">
           <p>Workflow: {workflowId}</p>
           <p>Step: {currentStepId}</p>
         </div>
       )}
-    </div>
+    </>
   );
 }

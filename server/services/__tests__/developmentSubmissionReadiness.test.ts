@@ -12,6 +12,9 @@ const validDevelopment = {
   name: 'Harbour Heights',
   canonicalPlaceId: 'pl-place-01-000000000000000000000001',
   address: '1 Harbour Road',
+  latitude: '-33.9',
+  longitude: '18.4',
+  estateSpecs: JSON.stringify({ suburbPlaceId: 'pl-place-01-000000000000000000000001' }),
   description:
     'A valid persisted description that contains more than fifty characters for submission.',
   ownershipType: 'sectional-title',
@@ -45,6 +48,102 @@ describe('development persisted submission readiness', () => {
     expect(
       validatePersistedSubmissionReadiness(validDevelopment as never, [validUnit] as never),
     ).toEqual([]);
+  });
+
+  it('blocks a development without a map pin, the same rule as the wizard Location step', () => {
+    for (const pin of [{ latitude: null }, { longitude: '' }, { latitude: 'abc' }, { latitude: '120' }]) {
+      expect(
+        validatePersistedSubmissionReadiness(
+          { ...validDevelopment, ...pin } as never,
+          [validUnit] as never,
+        ).map(e => e.field),
+      ).toEqual(['location']);
+    }
+  });
+
+  it('accepts no street address only with the estateSpecs flag AND a valid pin', () => {
+    const noStreet = {
+      ...validDevelopment,
+      address: '',
+      estateSpecs: JSON.stringify({ noStreetAddress: true, suburbPlaceId: 'pl-place-01-000000000000000000000001' }),
+    };
+    expect(validatePersistedSubmissionReadiness(noStreet as never, [validUnit] as never)).toEqual([]);
+    expect(
+      validatePersistedSubmissionReadiness({ ...validDevelopment, address: '' } as never, [validUnit] as never).map(e => e.field),
+    ).toEqual(['address']);
+    expect(
+      validatePersistedSubmissionReadiness({ ...noStreet, latitude: null } as never, [validUnit] as never).map(e => e.field),
+    ).toEqual(['address', 'location']);
+  });
+
+  it('requires the suburb chosen from our geography (carried in estateSpecs)', () => {
+    for (const estateSpecs of [null, JSON.stringify({}), JSON.stringify({ suburbPlaceId: ' ' })]) {
+      expect(
+        validatePersistedSubmissionReadiness(
+          { ...validDevelopment, estateSpecs } as never,
+          [validUnit] as never,
+        ).map(e => e.field),
+      ).toEqual(['suburb']);
+    }
+  });
+
+  it('rejects a 0,0 pin with a clear message', () => {
+    const errors = validatePersistedSubmissionReadiness(
+      { ...validDevelopment, latitude: '0', longitude: '0' } as never,
+      [validUnit] as never,
+    );
+    expect(errors).toEqual([
+      expect.objectContaining({ field: 'location', message: expect.stringContaining('Place the pin') }),
+    ]);
+  });
+
+  it('counts trimmed highlights and enforces at most 8 and 24 characters each', () => {
+    const run = (highlights: string[]) =>
+      validatePersistedSubmissionReadiness(
+        { ...validDevelopment, highlights: JSON.stringify(highlights) } as never,
+        [validUnit] as never,
+      ).map(e => e.field);
+    expect(run(['One', '  ', 'Two', ''])).toEqual(['highlights']);
+    expect(run(['One', ' Two ', 'Three'])).toEqual([]);
+    expect(run(Array.from({ length: 9 }, (_, i) => `Tag ${i}`))).toEqual(['highlights']);
+    expect(run(['One', 'Two', 'x'.repeat(25)])).toEqual(['highlights']);
+    expect(run(['One', 'Two', 'x'.repeat(24)])).toEqual([]);
+  });
+
+  it.each(['full-title', 'sectional-title', 'life-rights', 'leasehold', 'share-block', 'varies'])(
+    'accepts "%s": every ownership answer the wizard offers is publishable',
+    ownershipType => {
+      expect(
+        validatePersistedSubmissionReadiness(
+          { ...validDevelopment, ownershipType } as never,
+          [validUnit] as never,
+        ),
+      ).toEqual([]);
+    },
+  );
+
+  it('still blocks an ownership value the wizard does not offer, and a missing one', () => {
+    for (const ownershipType of ['freehold-ish', '', null]) {
+      expect(
+        validatePersistedSubmissionReadiness(
+          { ...validDevelopment, ownershipType } as never,
+          [validUnit] as never,
+        ),
+      ).toEqual([
+        { field: 'ownershipType', message: 'A supported ownership type is required.' },
+      ]);
+    }
+  });
+
+  it('asks for nothing about setting, estate type, phase, tagline or dates (the wizard treats them as optional)', () => {
+    const fields = validatePersistedSubmissionReadiness(
+      {
+        ...validDevelopment,
+        // No tagline/subtitle, phase, launch or completion dates on the row.
+      } as never,
+      [validUnit] as never,
+    ).map(error => error.field);
+    expect(fields).toEqual([]);
   });
 
   it('returns the exact persisted submission blocker for invalid data', () => {
@@ -109,8 +208,8 @@ describe('development persisted submission readiness', () => {
 
     expect(service).toContain("from './developmentSubmissionReadiness'");
     expect(router).toContain("from './services/developmentSubmissionReadiness'");
-    expect(service).toContain(
-      'validatePersistedSubmissionReadiness(ownedDevelopment, persistedUnits)',
+    expect(service).toMatch(
+      /validatePersistedSubmissionReadiness\(\s*ownedDevelopment,\s*persistedUnits,/,
     );
     expect(router).toContain('validatePersistedSubmissionReadiness(');
   });

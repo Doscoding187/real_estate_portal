@@ -11,6 +11,9 @@ const validDevelopment = {
   canonicalPlaceId: 'pl-place-01-000000000000000000000001',
   slug: 'harbour-heights',
   address: '1 Harbour Road',
+  latitude: '-33.9',
+  longitude: '18.4',
+  estateSpecs: JSON.stringify({ suburbPlaceId: 'pl-place-01-000000000000000000000001' }),
   transactionType: 'for_sale',
   approvalStatus: 'approved',
   isPublished: 1,
@@ -95,6 +98,38 @@ const portfolioLeadSummary = {
 };
 
 describe('developer operating home', () => {
+  describe('one suburb readiness rule', () => {
+    const legacy = { ...validDevelopment, estateSpecs: null };
+    const summaryFor = (development: unknown, geography: { canonicalPlaceId: string | null; locationLabels: string[] }) =>
+      buildDevelopmentOperatingSummary({
+        development: development as any,
+        geography,
+        persistedUnitTypes: [validUnitType] as any,
+        reviewRows: [],
+        leadSummary,
+      });
+    const hasSuburbBlocker = (summary: any) =>
+      JSON.stringify(summary).includes('Choose the suburb from the list');
+
+    it('a legacy development with an accepted site assignment shows no suburb blocker', () => {
+      const summary = summaryFor(legacy, {
+        canonicalPlaceId: 'pl-place-01-000000000000000000000001',
+        locationLabels: ['North Riding'],
+      });
+      expect(hasSuburbBlocker(summary)).toBe(false);
+    });
+
+    it('one with neither a chosen suburb nor an accepted assignment shows it', () => {
+      expect(hasSuburbBlocker(summaryFor(legacy, { canonicalPlaceId: null, locationLabels: [] }))).toBe(true);
+    });
+
+    it('a chosen suburb in estateSpecs shows no blocker', () => {
+      expect(
+        hasSuburbBlocker(summaryFor(validDevelopment, { canonicalPlaceId: null, locationLabels: [] })),
+      ).toBe(false);
+    });
+  });
+
   it('keeps a blank changes-requested review authoritative', () => {
     const summary = buildDevelopmentOperatingSummary({
       development: { ...validDevelopment, approvalStatus: 'draft', isPublished: 0 } as any,

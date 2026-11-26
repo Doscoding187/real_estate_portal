@@ -46,6 +46,7 @@ describe('useDevelopmentWizard Validation Logic', () => {
       expect(invalid.isValid).toBe(false);
       expect(invalid.errors).toContain('Location is required');
       expect(invalid.errors).toContain('Verified development entrance coordinates are required');
+      expect(invalid.errors).toContain('Choose the suburb from the list');
 
       act(() => {
         result.current.setIdentity({
@@ -55,6 +56,10 @@ describe('useDevelopmentWizard Validation Logic', () => {
             longitude: '18.4',
           },
         });
+        result.current.saveWorkflowStepData('location', {
+          suburbPlaceId: 'pl-place-01-000000000000000000000001',
+          suburbLabel: 'Sea Point',
+        } as any);
       });
 
       const valid = result.current.validatePhase(5);
@@ -150,6 +155,10 @@ describe('useDevelopmentWizard Validation Logic', () => {
           description:
             'A completed development description with enough detail to satisfy the required minimum length.',
         });
+        result.current.saveWorkflowStepData('location', {
+          suburbPlaceId: 'pl-place-01-000000000000000000000001',
+          suburbLabel: 'Sea Point',
+        } as any);
         result.current.setClassification({ type: 'land' });
         result.current.addMedia({
           type: 'image',

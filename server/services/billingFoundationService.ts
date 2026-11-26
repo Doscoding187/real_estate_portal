@@ -3582,7 +3582,8 @@ export async function updateSubscriptionLifecycle(input: {
     const lockedAgencyState =
       subscriptionLookup.ownerType === 'agency'
         ? await lockAgencyBillingState(tx, subscriptionLookup.ownerId)
-        : null;
+        : (await lockOwnerBillingState(tx, subscriptionLookup.ownerType, subscriptionLookup.ownerId),
+          null);
     const [subscription] = await tx
       .select()
       .from(subscriptions)
@@ -3607,6 +3608,17 @@ export async function updateSubscriptionLifecycle(input: {
       plan,
       toBillingOwnerType(subscription.ownerType),
     );
+
+    if (
+      (input.status === 'active' || input.status === 'grace_period') &&
+      parseJsonRecord(subscription.metadata).access_revoked_at
+    ) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message:
+          'This access was revoked by an admin. Reactivate it only through a new approved purchase.',
+      });
+    }
 
     const updateSet: Partial<typeof subscriptions.$inferInsert> = {
       status: input.status,
@@ -3752,6 +3764,13 @@ export async function restoreAgencySubscription(user: BillingUser) {
     const [plan] = await tx.select().from(plans).where(eq(plans.id, subscription.planId)).limit(1);
     requireSubscriptionCommercialActivation('Subscription lifecycle changes', plan, 'agency');
 
+    if (parseJsonRecord(subscription.metadata).access_revoked_at) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'Access was ended by an administrator. Contact support.',
+      });
+    }
+
     const restoredStatus: CanonicalSubscriptionStatus =
       subscription.status === 'cancelled' && subscription.currentPeriodEnd
         ? 'active'
@@ -3790,6 +3809,309 @@ export async function restoreAgencySubscription(user: BillingUser) {
     });
 
     return { success: true, cancelAtPeriodEnd: false };
+  });
+}
+
+/** Locks the owner row and subscription with the same path reviewManualPayment uses. */
+async function lockOwnerBillingState(tx: BillingTx, ownerType: string, ownerId: number) {
+  if (!isLaunchBillingOwnerType(ownerType)) return null;
+  return lockLaunchBillingState(tx, { ownerType, ownerId, displayName: '' });
+}
+
+/**
+ * Ends launch access now. Entitlements are derived from subscriptions.status
+ * (only active/grace_period are entitled), so moving to `cancelled` closes every
+ * publication/visibility gate. Idempotent: a subscription already revoked returns
+ * without a second write or audit row. Also rejects the owner's still-pending
+ * payments so a later approval cannot silently reactivate access. Runs inside the
+ * caller's transaction.
+ */
+async function revokeSubscriptionAccessInTx(
+  tx: BillingTx,
+  input: {
+    subscription: SubscriptionRow;
+    actorUserId: number;
+    reason: string;
+    paymentId?: number | null;
+    cause: 'revoke' | 'refund';
+  },
+): Promise<{ alreadyRevoked: boolean }> {
+  const { subscription } = input;
+  const existingMeta = parseJsonRecord(subscription.metadata);
+  if (subscription.status === 'cancelled' && existingMeta.access_revoked_at) {
+    return { alreadyRevoked: true };
+  }
+
+  const revokedAt = nowDb();
+  const updateSet: Partial<typeof subscriptions.$inferInsert> = {
+    status: 'cancelled',
+    cancelledAt: revokedAt,
+    cancelAtPeriodEnd: 0,
+    currentPeriodEnd: revokedAt,
+    graceEndsAt: null,
+    updatedBy: input.actorUserId,
+    metadata: {
+      ...existingMeta,
+      access_revoked_at: revokedAt,
+      access_revoked_by: input.actorUserId,
+      access_revoked_reason: input.reason,
+      access_revoked_cause: input.cause,
+    },
+  };
+  await tx.update(subscriptions).set(updateSet).where(eq(subscriptions.id, subscription.id));
+
+  if (subscription.ownerType === 'agency') {
+    await syncAgencyBillingShadow(tx, {
+      agencyId: subscription.ownerId,
+      planId: subscription.planId,
+      status: 'cancelled',
+      periodEnd: revokedAt,
+    });
+  }
+
+  await logBillingEvent(tx, {
+    ownerType: toBillingOwnerType(subscription.ownerType),
+    ownerId: subscription.ownerId,
+    subscriptionId: subscription.id,
+    paymentId: input.paymentId ?? null,
+    actorUserId: input.actorUserId,
+    eventType: 'launch_access_revoked',
+    message: input.reason,
+    beforeData: subscription,
+    afterData: updateSet,
+  });
+
+  const pending = await tx
+    .select()
+    .from(billingPayments)
+    .where(
+      and(
+        eq(billingPayments.ownerType, subscription.ownerType),
+        eq(billingPayments.ownerId, subscription.ownerId),
+        inArray(billingPayments.state, ['submitted', 'under_review']),
+      ),
+    );
+  for (const payment of pending as PaymentRow[]) {
+    await tx
+      .update(billingPayments)
+      .set({
+        state: 'rejected',
+        reviewedBy: input.actorUserId,
+        reviewedAt: revokedAt,
+        rejectionReason: 'access revoked by admin',
+        reviewNote: 'access revoked by admin',
+      })
+      .where(eq(billingPayments.id, payment.id));
+    await tx
+      .update(billingInvoices)
+      .set({ status: 'issued', updatedBy: input.actorUserId })
+      .where(and(eq(billingInvoices.id, payment.invoiceId), eq(billingInvoices.status, 'submitted')));
+    await logBillingEvent(tx, {
+      ownerType: toBillingOwnerType(subscription.ownerType),
+      ownerId: subscription.ownerId,
+      subscriptionId: subscription.id,
+      invoiceId: payment.invoiceId,
+      paymentId: payment.id,
+      actorUserId: input.actorUserId,
+      eventType: 'payment_rejected_access_revoked',
+      message: 'access revoked by admin',
+      beforeData: { state: payment.state },
+      afterData: { state: 'rejected' },
+    });
+  }
+  return { alreadyRevoked: false };
+}
+
+export async function revokeLaunchAccess(input: {
+  actorUser: BillingUser;
+  subscriptionId: number;
+  reason: string;
+}) {
+  // Deliberately not gated on commercial activation: closing access is always safe.
+  const db = await getDb();
+  if (!db)
+    throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+  if (!isBillingFinanceAdmin(input.actorUser)) {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'Finance admin privileges required.' });
+  }
+  const reason = input.reason.trim();
+  if (!reason) throw new TRPCError({ code: 'BAD_REQUEST', message: 'A reason is required.' });
+
+  const [lookup] = await db
+    .select({ ownerType: subscriptions.ownerType, ownerId: subscriptions.ownerId })
+    .from(subscriptions)
+    .where(eq(subscriptions.id, input.subscriptionId))
+    .limit(1);
+  if (!lookup) throw new TRPCError({ code: 'NOT_FOUND', message: 'Subscription not found.' });
+
+  return db.transaction(async tx => {
+    await lockOwnerBillingState(tx, lookup.ownerType, lookup.ownerId);
+    const [subscription] = await tx
+      .select()
+      .from(subscriptions)
+      .where(eq(subscriptions.id, input.subscriptionId))
+      .limit(1);
+    if (!subscription) throw new TRPCError({ code: 'NOT_FOUND', message: 'Subscription not found.' });
+    const { alreadyRevoked } = await revokeSubscriptionAccessInTx(tx, {
+      subscription,
+      actorUserId: input.actorUser.id,
+      reason,
+      cause: 'revoke',
+    });
+    return { success: true, alreadyRevoked };
+  });
+}
+
+function isRealPastOrTodayDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = new Date(`${value}T00:00:00Z`);
+  if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== value) return false;
+  // Today in South Africa (UTC+2) so a same-day refund is never "future".
+  const today = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  return value <= today;
+}
+
+/**
+ * Records that Edward's bank refunded a verified manual-EFT payment (full amount only)
+ * and revokes the linked access in the same transaction, but only when that payment is
+ * the one that activated the subscription's current term. Never moves money or calls a
+ * provider.
+ */
+export async function recordEftRefund(input: {
+  actorUser: BillingUser;
+  paymentId: number;
+  amountMinor: number;
+  refundedOn: string;
+  note: string;
+}) {
+  const db = await getDb();
+  if (!db)
+    throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+  if (!isBillingFinanceAdmin(input.actorUser)) {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'Finance admin privileges required.' });
+  }
+  const note = input.note.trim();
+  if (!note) throw new TRPCError({ code: 'BAD_REQUEST', message: 'A reference note is required.' });
+  if (!Number.isSafeInteger(input.amountMinor) || input.amountMinor <= 0) {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'Refund amount must be positive.' });
+  }
+  if (!isRealPastOrTodayDate(input.refundedOn)) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Refund date must be a real calendar date, today or earlier.',
+    });
+  }
+
+  const [lookup] = await db
+    .select({ ownerType: billingInvoices.ownerType, ownerId: billingInvoices.ownerId })
+    .from(billingPayments)
+    .innerJoin(billingInvoices, eq(billingPayments.invoiceId, billingInvoices.id))
+    .where(eq(billingPayments.id, input.paymentId))
+    .limit(1);
+  if (!lookup) throw new TRPCError({ code: 'NOT_FOUND', message: 'Payment not found.' });
+
+  return db.transaction(async tx => {
+    await lockOwnerBillingState(tx, lookup.ownerType, lookup.ownerId);
+    await tx.execute(sql`SELECT id FROM billing_payments WHERE id = ${input.paymentId} FOR UPDATE`);
+    const [payment] = await tx
+      .select()
+      .from(billingPayments)
+      .where(eq(billingPayments.id, input.paymentId))
+      .limit(1);
+    if (!payment) throw new TRPCError({ code: 'NOT_FOUND', message: 'Payment not found.' });
+
+    if (payment.state === 'refunded') {
+      // True no-op for identical details; anything else is a conflicting second refund.
+      const prior = parseJsonRecord(parseJsonRecord(payment.metadata).refund);
+      if (
+        Number(prior.amount_minor) === input.amountMinor &&
+        prior.refunded_on === input.refundedOn &&
+        prior.note === note
+      ) {
+        return { success: true, alreadyRefunded: true, accessRevoked: false, alreadyRevoked: false };
+      }
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: 'This payment is already recorded as refunded with different details.',
+      });
+    }
+    if (payment.state !== 'verified') {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: 'Only a verified (approved) payment can be recorded as refunded.',
+      });
+    }
+    if (input.amountMinor !== Number(payment.amount)) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Refund amount must equal the full payment amount; partial refunds are not supported.',
+      });
+    }
+
+    let subscription: SubscriptionRow | null = null;
+    if (payment.subscriptionId) {
+      const [row] = await tx
+        .select()
+        .from(subscriptions)
+        .where(eq(subscriptions.id, payment.subscriptionId))
+        .limit(1);
+      subscription = row || null;
+    }
+    // Only the payment that activated the current term may end it; an older refunded
+    // payment must not close a newer paid term on the same subscription row.
+    const activatesCurrentTerm =
+      Boolean(subscription) &&
+      Number(parseJsonRecord(subscription!.metadata).verified_payment_id) === Number(payment.id);
+
+    const refundedAt = nowDb();
+    const reason = `EFT refund recorded: ${note}`;
+    const afterMeta = {
+      ...parseJsonRecord(payment.metadata),
+      refund: {
+        amount_minor: input.amountMinor,
+        refunded_on: input.refundedOn,
+        note,
+        recorded_by: input.actorUser.id,
+        recorded_at: refundedAt,
+      },
+    };
+    await tx
+      .update(billingPayments)
+      .set({ state: 'refunded', metadata: afterMeta })
+      .where(eq(billingPayments.id, payment.id));
+    await logBillingEvent(tx, {
+      ownerType: toBillingOwnerType(payment.ownerType),
+      ownerId: payment.ownerId,
+      subscriptionId: payment.subscriptionId,
+      invoiceId: payment.invoiceId,
+      paymentId: payment.id,
+      actorUserId: input.actorUser.id,
+      eventType: 'payment_refund_recorded',
+      message: reason,
+      beforeData: { state: payment.state },
+      afterData: {
+        state: 'refunded',
+        refund: afterMeta.refund,
+        access_revoked: activatesCurrentTerm,
+      },
+    });
+
+    let alreadyRevoked = false;
+    if (subscription && activatesCurrentTerm) {
+      ({ alreadyRevoked } = await revokeSubscriptionAccessInTx(tx, {
+        subscription,
+        actorUserId: input.actorUser.id,
+        reason,
+        paymentId: payment.id,
+        cause: 'refund',
+      }));
+    }
+    return {
+      success: true,
+      alreadyRefunded: false,
+      accessRevoked: activatesCurrentTerm,
+      alreadyRevoked,
+    };
   });
 }
 

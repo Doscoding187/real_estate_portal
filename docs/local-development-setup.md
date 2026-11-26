@@ -404,10 +404,15 @@ places are the digest-pinned admission packages loaded by
    Override the ports with `PARITY_API_PORT` and `PARITY_WEB_PORT`. The web app
    gets `VITE_API_URL` and `VITE_API_BASE_URL` pointing at the local API on the
    command line. Open `http://127.0.0.1:3020`.
-3. Local-only values: the script reads no env file. The API takes its database
-   target and JWT secret from the central local Database Authority environment
-   (`pnpm db:authority:status` shows which required names are configured; never
-   print the values). `REDIS_URL` is not needed, because the distributed
+3. Local-only values: the script does not parse any env file itself. On `start`
+   it runs `scripts/preview/parityLoginSecret.ts`, which validates the central
+   local Database Authority environment (same checks as
+   `pnpm db:authority:status`) and passes only `JWT_SECRET` to the API process
+   so login works; the value is never printed. If the central environment is
+   not ready or `JWT_SECRET` is missing, `start` refuses and points to
+   `pnpm db:authority:status`. `status` prints `login secret: available` or
+   `missing`. The API's database target still comes from the worktree's
+   `.env.local` (the link to the central environment). `REDIS_URL` is not needed, because the distributed
    rate-limit store is only required for production and staging. If a secret is
    missing, generate a dev-only one (see the JWT command earlier in this file)
    in your own local environment; never copy a value from another environment.
@@ -419,6 +424,33 @@ Port 3020 is in the local development CORS list in
 `server/_core/browserSecurity.ts`, and backend port 5070 (localhost and
 127.0.0.1) is in the development-only allowed backends in
 `client/src/lib/env.contract.ts`; production and staging rules are unchanged.
+
+## Seed packs
+
+A seed pack is a reviewable, text-only description of one launch development
+(`data/seed-packs/<publisher-slug>/<development-slug>/pack.json`, format in
+`shared/developmentSeedPack.ts`). Asset files are not committed; they sit in an
+asset folder next to the pack. Facts that are not known stay absent.
+
+1. Enter the development by hand in the admin wizard in this worktree, then
+   export it (read-only; run from the worktree that owns the database):
+
+   `pnpm run db:seed-pack:export -- --development-slug=<slug> --out=data/seed-packs/<publisher>/<slug>/pack.json`
+
+   Locally stored media is copied to `assets/` beside the pack
+   (`--assets-out=<dir>` to change). Remote-only files are listed, never
+   fetched. The report shows the skipped fields and whether the pack validates.
+2. Review and edit `pack.json` (provenance, `reviewedBy`/`reviewedAt`,
+   `publish: true` only when the development should go public).
+3. Load into a disposable worktree database (for example the local mirror):
+
+   `pnpm run db:seed-pack:prepare -- --pack=<pack.json> --asset-root=<assets dir> --reviewer-email=<existing user email>`
+
+   then `pnpm run db:seed-pack:verify -- --pack=<pack.json>`. Loading is
+   idempotent and writes media through the same local media storage the wizard
+   uses. Packs publish under a platform catalogue publisher, so they are
+   visible while paid access is off. Production targets are refused; loading
+   there is a launch-day step that needs the owner's GO.
 
 ## Running The App Locally
 

@@ -40,11 +40,20 @@ import {
   cataloguePublishers,
   developerOrganisations,
   developmentApprovalQueue,
+  billingPayments,
+  leads,
 } from '../drizzle/schema';
 import { eq, desc, asc, and, or, like, sql, type SQL, gte, lte, inArray } from 'drizzle-orm';
 import { logAudit, AuditActions } from './_core/auditLog';
 import { nowAsDbTimestamp } from './utils/dbTypeUtils';
 import { developmentService } from './services/developmentService';
+import { buildUserListConditions, toSafeAdminUser } from './services/adminUserView';
+import {
+  loadAdminInbox,
+  loadAuditLogs,
+  loadRecentAdminActivity,
+  loadWeeklyGrowth,
+} from './services/adminInboxService';
 import {
   listDevelopmentPlaceGeography,
   recordReviewedDevelopmentPlaceAssignment,
@@ -491,6 +500,79 @@ export const adminRouter = router({
   ),
 
   /**
+   * Super Admin: launch dashboard figures (read-only, real data only).
+   * Money comes from billing payments (minor units), never the commissions table.
+   */
+  getLaunchDashboardStats: superAdminProcedure.query(
+    async (): Promise<{
+      eftAwaitingReview: number;
+      approvedThisMonthCount: number;
+      approvedThisMonthRand: number;
+      newLeads30d: number;
+    }> => {
+      const dbConn = await getDb();
+      if (!dbConn) {
+        throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'Database not available' });
+      }
+      const now = new Date();
+      const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const [awaiting] = await dbConn
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(billingPayments)
+        .where(inArray(billingPayments.state, ['submitted', 'under_review']));
+      const [approved] = await dbConn
+        .select({
+          count: sql<number>`COUNT(*)`,
+          total: sql<number>`COALESCE(SUM(${billingPayments.amount}), 0)`,
+        })
+        .from(billingPayments)
+        .where(
+          and(
+            eq(billingPayments.state, 'verified'),
+            eq(billingPayments.currency, 'ZAR'),
+            gte(billingPayments.reviewedAt, monthStart.toISOString().slice(0, 19).replace('T', ' ')),
+          ),
+        );
+      const [newLeads] = await dbConn
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(leads)
+        .where(gte(leads.createdAt, thirtyDaysAgo.toISOString().slice(0, 19).replace('T', ' ')));
+      return {
+        eftAwaitingReview: Number(awaiting?.count || 0),
+        approvedThisMonthCount: Number(approved?.count || 0),
+        approvedThisMonthRand: Number(approved?.total || 0) / 100,
+        newLeads30d: Number(newLeads?.count || 0),
+      };
+    },
+  ),
+
+  /** Super Admin: "Needs you today" inbox, merged real pending work (read-only). */
+  getDailyInbox: superAdminProcedure.query(async () => loadAdminInbox()),
+
+  /** Super Admin: most recent audit log entries (read-only). */
+  getRecentAdminActivity: superAdminProcedure.query(async () => loadRecentAdminActivity(8)),
+
+  /** Super Admin: every action name the audit log can record, for the filter (read-only). */
+  getAuditActionOptions: superAdminProcedure.query(() =>
+    Object.values(AuditActions).sort((a, b) => a.localeCompare(b)),
+  ),
+
+  /** Super Admin: audit trail, newest first, cursor-paged (read-only). */
+  getAuditLogs: superAdminProcedure
+    .input(
+      z.object({
+        limit: z.number().int().min(1).max(100).default(50),
+        action: z.string().min(1).max(100).optional(),
+        beforeId: z.number().int().positive().optional(),
+      }),
+    )
+    .query(async ({ input }) => loadAuditLogs(input)),
+
+  /** Super Admin: weekly sign-ups, verified payments and enquiries, last 8 weeks (read-only). */
+  getWeeklyGrowth: superAdminProcedure.query(async () => loadWeeklyGrowth()),
+
+  /**
    * Super Admin: Get Ecosystem Overview Stats
    */
   getEcosystemStats: superAdminProcedure.query(
@@ -505,9 +587,18 @@ export const adminRouter = router({
   listUsers: superAdminProcedure
     .input(
       z.object({
-        page: z.number().default(1),
-        limit: z.number().default(50),
-        role: z.enum(['visitor', 'agent', 'agency_admin', 'super_admin']).optional(),
+        page: z.number().int().min(1).default(1),
+        limit: z.number().int().min(1).max(100).default(50),
+        role: z
+          .enum([
+            'visitor',
+            'agent',
+            'agency_admin',
+            'property_developer',
+            'service_provider',
+            'super_admin',
+          ])
+          .optional(),
         agencyId: z.number().optional(),
         search: z.string().optional(),
       }),
@@ -533,23 +624,9 @@ export const adminRouter = router({
 
         const offset = (input.page - 1) * input.limit;
 
-        // Build where conditions
-        // This is the generic Listing oversight surface. The deferred Land
-        // vertical has its own specialist authority and must not reappear as
-        // a generic moderation candidate through an older direct route.
-        const conditions: SQL[] = [excludeLandFromGenericListingWorkflow()];
-        if (input.role) conditions.push(eq(users.role, input.role));
-        if (input.agencyId) conditions.push(eq(users.agencyId, input.agencyId));
-        const search = input.search?.trim();
-        if (search) {
-          conditions.push(
-            or(
-              like(users.email, `%${search}%`),
-              like(users.firstName, `%${search}%`),
-              like(users.lastName, `%${search}%`),
-            )!,
-          );
-        }
+        // Build where conditions. (A listings-only Land filter used to sit here by mistake;
+        // it referenced the listings table inside a users query and could not be valid SQL.)
+        const conditions = buildUserListConditions(input);
 
         const where = conditions.length > 0 ? and(...conditions) : undefined;
 
@@ -570,10 +647,8 @@ export const adminRouter = router({
         const total = Number(totalResult[0]?.count || 0);
 
         return {
-          users: usersList.map(u => ({
-            ...u,
-            passwordHash: undefined, // Never expose password hash
-          })),
+          // Explicit allow-list: tokens, hashes and session data never leave the server.
+          users: usersList.map(toSafeAdminUser),
           pagination: {
             page: input.page,
             limit: input.limit,
@@ -711,10 +786,7 @@ export const adminRouter = router({
       .where(and(eq(users.isSubaccount, 1), agencyId ? eq(users.agencyId, agencyId) : undefined))
       .orderBy(desc(users.createdAt));
 
-    return subaccounts.map(u => ({
-      ...u,
-      passwordHash: undefined,
-    }));
+    return subaccounts.map(toSafeAdminUser);
   }),
 
   /**
@@ -1224,7 +1296,7 @@ export const adminRouter = router({
         agents: Number(totalAgents[0]?.count || 0),
       },
       recentActivity: {
-        users: recentUsers,
+        users: recentUsers.map(toSafeAdminUser),
         listings: recentListings,
       },
     };

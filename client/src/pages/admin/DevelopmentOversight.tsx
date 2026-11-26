@@ -2,6 +2,7 @@
 import { useState, useMemo } from 'react';
 import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
+import { ADMIN_PAGE_CLASS } from '@/components/admin/adminPageLayout';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { isSuperAdminRole } from '@/_core/roles';
 import { Button } from '@/components/ui/button';
@@ -45,6 +46,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useInvalidateAdminQueues } from './dashboard/useInvalidateAdminQueues';
 import {
   CanonicalPlaceSelector,
   type CanonicalPlaceSelection,
@@ -77,6 +79,8 @@ export default function DevelopmentOversight() {
     return `${hours}h`;
   };
 
+  const invalidateQueues = useInvalidateAdminQueues();
+
   // Mutations
   const approveMutation = trpc.admin.adminApproveDevelopment.useMutation({
     onSuccess: result => {
@@ -88,6 +92,7 @@ export default function DevelopmentOversight() {
         );
       }
       refetch();
+      invalidateQueues();
       closeDialog();
     },
     onError: error => {
@@ -99,6 +104,7 @@ export default function DevelopmentOversight() {
     onSuccess: () => {
       toast.success('Development rejected successfully');
       refetch();
+      invalidateQueues();
       closeDialog();
     },
     onError: error => {
@@ -110,6 +116,7 @@ export default function DevelopmentOversight() {
     onSuccess: () => {
       toast.success('Feedback sent to developer');
       refetch();
+      invalidateQueues();
       closeDialog();
     },
     onError: error => {
@@ -183,13 +190,13 @@ export default function DevelopmentOversight() {
           Based on Plan, this will be a route inside SuperAdminDashboard layout.
       */}
 
-      <div className="container mx-auto px-4 py-8">
+      <div className={ADMIN_PAGE_CLASS}>
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
             <Building2 className="h-8 w-8 text-primary" />
             <div>
-              <h1 className="text-3xl font-bold text-slate-800">Development Management</h1>
+              <h2 className="text-xl font-bold text-slate-800">Development Management</h2>
               <p className="text-muted-foreground">Review and moderate development applications</p>
             </div>
           </div>
@@ -383,6 +390,20 @@ function DevelopmentReviewContent({
   });
   const [showHistory, setShowHistory] = useState(false);
   const [assignmentPlace, setAssignmentPlace] = useState<CanonicalPlaceSelection | null>(null);
+  // The suburb the publisher chose in the wizard is only a suggestion: the reviewer
+  // confirms it (and records the assignment) here.
+  const suggestedSuburb = (() => {
+    let specs: any = development?.estateSpecs;
+    if (typeof specs === 'string') {
+      try {
+        specs = JSON.parse(specs);
+      } catch {
+        specs = null;
+      }
+    }
+    const placeId = String(specs?.suburbPlaceId ?? '').trim();
+    return placeId ? { placeId, label: String(specs?.suburbLabel ?? placeId) } : null;
+  })();
   const [assignmentPhaseId, setAssignmentPhaseId] = useState('');
   const [assignmentEvidenceReference, setAssignmentEvidenceReference] = useState('');
   const [assignmentWithdrawalNotes, setAssignmentWithdrawalNotes] = useState<Record<number, string>>({});
@@ -658,6 +679,27 @@ function DevelopmentReviewContent({
             </select>
           </label>
           <div>
+            {suggestedSuburb && !assignmentPlace ? (
+              <p className="mb-2 text-sm text-slate-700" data-testid="suggested-suburb">
+                Suggested by the publisher: <b>{suggestedSuburb.label}</b>.{' '}
+                <button
+                  type="button"
+                  className="font-medium text-blue-700 underline"
+                  onClick={() =>
+                    setAssignmentPlace({
+                      canonicalPlaceId: suggestedSuburb.placeId,
+                      label: suggestedSuburb.label,
+                      placeType: 'suburb',
+                      scope: 'locality',
+                      administrativeContext: null,
+                    })
+                  }
+                >
+                  Use this suggestion
+                </button>{' '}
+                (you still record the review below).
+              </p>
+            ) : null}
             <CanonicalPlaceSelector
               value={assignmentPlace}
               onChange={setAssignmentPlace}

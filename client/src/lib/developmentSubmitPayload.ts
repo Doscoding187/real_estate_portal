@@ -8,11 +8,15 @@ import {
   getCanonicalDevelopmentConfiguration,
   getCanonicalDevelopmentUnitTypes,
 } from '../../../shared/developmentCanonicalSelectors';
+import { communityTypesForSetting } from './wizardBasicsAbout';
+import { SERVER_UNIT_OWNERSHIP_VALUES } from './wizardHouseTypes';
+import { submitAddress } from './wizardLocationCostsAmenities';
 import {
   CANONICAL_PARTIAL_UPDATE_MODE,
   CANONICAL_UPDATE_MODE_FIELD,
   isDevelopmentInventoryOwningStepId,
   PARTIAL_UPDATE_ALWAYS_ALLOWED_PAYLOAD_FIELDS,
+  PARTIAL_UPDATE_LINKED_STEP_SLICES,
   PARTIAL_UPDATE_STEP_OWNED_PAYLOAD_FIELDS,
 } from '../../../shared/developmentPayloadOwnership';
 
@@ -48,6 +52,7 @@ export type SubmitUnitType = {
   availabilityNotProvided?: boolean;
   isActive?: boolean;
   structuralType?: string;
+  ownershipType?: string;
   unitCategory?: 'house' | 'apartment';
   unitSubType?: string;
   specifications?: Record<string, any>;
@@ -222,7 +227,7 @@ export function extractSubmitDocumentUrls(wizardData: Record<string, any>): stri
     .filter(Boolean) as string[];
 }
 
-function extractConfirmedMediaItems(value: unknown): Array<string | Record<string, unknown>> {
+export function extractConfirmedMediaItems(value: unknown): Array<string | Record<string, unknown>> {
   if (!Array.isArray(value)) return [];
   return value
     .map(item => {
@@ -232,9 +237,22 @@ function extractConfirmedMediaItems(value: unknown): Array<string | Record<strin
       const hasAuthority = ['uploadReceipt', 'mediaReceipt', 'storageKey', 'key'].some(
         field => source[field] !== undefined,
       );
-      if (!hasAuthority) return source.url as string;
+      // Which buyer document this is (brochure, site plan, ...) must survive save and reopen.
+      const documentFields = ['documentType', 'title', 'label'].filter(
+        field => typeof source[field] === 'string' && source[field] !== '',
+      );
+      if (!hasAuthority && documentFields.length === 0) return source.url as string;
       const result: Record<string, unknown> = { url: source.url };
-      for (const field of ['uploadReceipt', 'mediaReceipt', 'storageKey', 'key', 'fileName', 'fileSize', 'type']) {
+      for (const field of [
+        'uploadReceipt',
+        'mediaReceipt',
+        'storageKey',
+        'key',
+        'fileName',
+        'fileSize',
+        'type',
+        ...documentFields,
+      ]) {
         if (source[field] !== undefined) result[field] = source[field];
       }
       return result;
@@ -430,6 +448,12 @@ export function normalizeSubmitUnitTypes(
       availabilityNotProvided: unit?.availabilityNotProvided === true,
       isActive: typeof unit?.isActive === 'boolean' ? unit.isActive : undefined,
       structuralType: unit?.structuralType,
+      // Per-house-type ownership (only asked when the development says "Varies by house type").
+      ownershipType: (SERVER_UNIT_OWNERSHIP_VALUES as readonly string[]).includes(
+        unit?.ownershipType,
+      )
+        ? unit.ownershipType
+        : undefined,
       unitCategory,
       unitSubType,
       specifications,
@@ -458,9 +482,14 @@ function buildFeatureTags(input: DevelopmentSubmitPayloadInput): string[] {
   if (residentialConfig?.residentialType) {
     features.push(`cfg:res_type:${residentialConfig.residentialType}`);
   }
-  residentialConfig?.communityTypes?.forEach((type: string) =>
-    features.push(`cfg:comm_type:${type}`),
-  );
+  const { setting, estateType } = getCanonicalDevelopmentConfiguration(wizardData);
+  // Basics saves the setting; the older community types are derived from it
+  // when the wizard has not stored them (for example after opening a saved
+  // development for editing).
+  const communityTypes: string[] = residentialConfig?.communityTypes?.length
+    ? residentialConfig.communityTypes
+    : communityTypesForSetting(setting, estateType);
+  communityTypes.forEach((type: string) => features.push(`cfg:comm_type:${type}`));
   residentialConfig?.securityFeatures?.forEach((feature: string) =>
     features.push(`cfg:sec_feat:${feature}`),
   );
@@ -475,6 +504,10 @@ function buildFeatureTags(input: DevelopmentSubmitPayloadInput): string[] {
   commercialConfig?.features?.forEach((feature: string) =>
     features.push(`cfg:comm_feat:${feature}`),
   );
+  if (typeof setting === 'string' && setting) {
+    features.push(`cfg:setting:${setting}`);
+    if (setting === 'estate') features.push(`cfg:estate_type:${estateType || 'standard'}`);
+  }
   if (wizardData.hasGoverningBody !== undefined) {
     features.push(`cfg:hoa:${wizardData.hasGoverningBody}`);
   }
@@ -483,6 +516,43 @@ function buildFeatureTags(input: DevelopmentSubmitPayloadInput): string[] {
   }
 
   return features;
+}
+
+/**
+ * What the Basics and About steps save besides real columns. There is no
+ * column for them, so they live in the existing estateSpecs JSON:
+ *   setting, estateType      Basics: "standalone" | "gated" | "estate", and the kind of estate
+ *   salesStage               About: "off_plan" | "ready" (both are status "selling")
+ *   phaseLabel               About: optional "Phase 2" (nature becomes "phase")
+ *   handoverInPhases,
+ *   firstHandoverDate        About: phased handovers (final completion is completionDate)
+ */
+function buildBasicsAboutEstateSpecs(canonical: Record<string, any>): Record<string, unknown> {
+  const setting =
+    typeof canonical.setting === 'string' && canonical.setting ? canonical.setting : undefined;
+  const phaseLabel =
+    typeof canonical.phaseLabel === 'string' && canonical.phaseLabel.trim()
+      ? canonical.phaseLabel.trim()
+      : undefined;
+  const salesStage =
+    canonical.status === 'selling' &&
+    (canonical.salesStage === 'off_plan' || canonical.salesStage === 'ready')
+      ? canonical.salesStage
+      : undefined;
+  const phased =
+    canonical.handoverDuringConstruction === true && salesStage !== 'ready' ? true : undefined;
+  const facts: Record<string, unknown> = {
+    setting,
+    estateType: setting === 'estate' ? canonical.estateType || 'standard' : undefined,
+    salesStage,
+    phaseLabel,
+    handoverInPhases: phased,
+    firstHandoverDate: phased ? asOptionalString(canonical.expectedFirstHandoverDate) : undefined,
+    noStreetAddress: canonical.location?.noOfficialStreet === true ? true : undefined,
+    suburbPlaceId: asOptionalString(canonical.location?.suburbPlaceId),
+    suburbLabel: asOptionalString(canonical.location?.suburbLabel),
+  };
+  return Object.fromEntries(Object.entries(facts).filter(([, value]) => value !== undefined));
 }
 
 function getInventory(units: SubmitUnitType[], isLand: boolean) {
@@ -657,6 +727,40 @@ export function buildDevelopmentSubmitPayload(input: DevelopmentSubmitPayloadInp
       ? canonicalDevelopmentData.ownershipTypes
       : (canonicalDevelopmentData.ownershipType ?? input.fallbackOwnershipType);
 
+  const hasGovernanceSpecs =
+    submitSource.hasGoverningBody !== undefined || Boolean(submitSource.governanceType);
+  const basicsAboutSpecs = buildBasicsAboutEstateSpecs(canonicalDevelopmentData);
+  const estateSpecsPayload =
+    hasGovernanceSpecs || Object.keys(basicsAboutSpecs).length > 0
+      ? {
+          ...(hasGovernanceSpecs
+            ? {
+                hasHOA: submitSource.hasGoverningBody,
+                // Explicit levy answer, so "No levy" is only ever published when it was chosen.
+                ...(submitSource.hasGoverningBody === false
+                  ? { levyChoice: 'none' }
+                  : submitSource.hasGoverningBody === true &&
+                      (submitSource.governanceType === 'hoa' ||
+                        submitSource.governanceType === 'body_corporate')
+                    ? { levyChoice: submitSource.governanceType }
+                    : {}),
+                governanceType: submitSource.governanceType,
+                architecturalGuidelines: submitSource.architecturalGuidelines,
+                guidelinesSummary: submitSource.guidelinesSummary,
+                levyRange: {
+                  min: canonicalDevelopmentData.monthlyLevyFrom ?? null,
+                  max: canonicalDevelopmentData.monthlyLevyTo ?? null,
+                },
+                rightsAndTaxes: {
+                  min: canonicalDevelopmentData.ratesFrom ?? null,
+                  max: canonicalDevelopmentData.ratesTo ?? null,
+                },
+              }
+            : {}),
+          ...basicsAboutSpecs,
+        }
+      : undefined;
+
   const financialPayload = buildDevelopmentFinancialPayload({
     transactionType,
     priceFrom: saleRange.priceFrom ?? canonicalDevelopmentData.priceFrom,
@@ -721,7 +825,10 @@ export function buildDevelopmentSubmitPayload(input: DevelopmentSubmitPayloadInp
     developmentType,
     transactionType,
     ownershipType: normalizeSubmitOwnershipType(ownershipSource),
-    address: canonicalDevelopmentData.location?.address,
+    address: submitAddress({
+      ...canonicalDevelopmentData.location,
+      noOfficialStreet: (submitSource.location as any)?.noOfficialStreet,
+    }),
     postalCode: canonicalDevelopmentData.location?.postalCode,
     latitude: canonicalDevelopmentData.location?.latitude,
     longitude: canonicalDevelopmentData.location?.longitude,
@@ -734,6 +841,9 @@ export function buildDevelopmentSubmitPayload(input: DevelopmentSubmitPayloadInp
     completionDate: asOptionalString(canonicalDevelopmentData.completionDate),
     launchDate: asOptionalString(canonicalDevelopmentData.launchDate),
     status: canonicalDevelopmentData.status,
+    ...(typeof canonicalDevelopmentData.nature === 'string' && canonicalDevelopmentData.nature
+      ? { nature: canonicalDevelopmentData.nature }
+      : {}),
     totalUnits: inventory.totalUnits ?? submitSource.totalUnits,
     availableUnits: inventory.availableUnits ?? submitSource.availableUnits,
     totalDevelopmentArea: submitSource.totalDevelopmentArea,
@@ -757,23 +867,7 @@ export function buildDevelopmentSubmitPayload(input: DevelopmentSubmitPayloadInp
     features,
     highlights: canonicalDevelopmentData.highlights ?? [],
     unitTypes,
-    estateSpecs:
-      submitSource.hasGoverningBody !== undefined || submitSource.governanceType
-        ? {
-            hasHOA: submitSource.hasGoverningBody,
-            governanceType: submitSource.governanceType,
-            architecturalGuidelines: submitSource.architecturalGuidelines,
-            guidelinesSummary: submitSource.guidelinesSummary,
-            levyRange: {
-              min: canonicalDevelopmentData.monthlyLevyFrom ?? 0,
-              max: canonicalDevelopmentData.monthlyLevyTo ?? 0,
-            },
-            rightsAndTaxes: {
-              min: canonicalDevelopmentData.ratesFrom ?? 0,
-              max: canonicalDevelopmentData.ratesTo ?? 0,
-            },
-          }
-        : undefined,
+    estateSpecs: estateSpecsPayload,
     residentialConfig,
     landConfig,
     commercialConfig,
@@ -867,10 +961,12 @@ export function buildDevelopmentPartialUpdatePayload(
   }
 
   if (payload.stepData && typeof payload.stepData === 'object' && currentStepId) {
-    partialPayload.stepData =
-      payload.stepData[currentStepId] !== undefined
-        ? { [currentStepId]: payload.stepData[currentStepId] }
-        : {};
+    const slices = [currentStepId, ...(PARTIAL_UPDATE_LINKED_STEP_SLICES[currentStepId] ?? [])];
+    partialPayload.stepData = Object.fromEntries(
+      slices
+        .filter(sliceId => payload.stepData[sliceId] !== undefined)
+        .map(sliceId => [sliceId, payload.stepData[sliceId]]),
+    );
   }
 
   if (currentStepId === 'amenities_features') {

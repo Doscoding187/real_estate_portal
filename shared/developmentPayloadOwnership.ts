@@ -72,9 +72,24 @@ export const PARTIAL_UPDATE_ALWAYS_ALLOWED_PAYLOAD_FIELDS = [
   ...CANONICAL_FLATTENED_PAYLOAD_FIELD_OWNERSHIP.canonicalMirrors,
 ] as const;
 
+/**
+ * Facts the Basics and About steps save inside estateSpecs: setting, estate
+ * type, sales stage, phase label and the handover timeline.
+ */
+export const WIZARD_BASICS_ABOUT_ESTATE_SPECS_FIELD = 'estateSpecs' as const;
+
 export const PARTIAL_UPDATE_STEP_OWNED_PAYLOAD_FIELDS = {
-  configuration: CANONICAL_FLATTENED_PAYLOAD_FIELD_OWNERSHIP.configuration,
-  identity_market: CANONICAL_FLATTENED_PAYLOAD_FIELD_OWNERSHIP.identityMarket,
+  configuration: [
+    ...CANONICAL_FLATTENED_PAYLOAD_FIELD_OWNERSHIP.configuration,
+    WIZARD_BASICS_ABOUT_ESTATE_SPECS_FIELD,
+  ],
+  // "About the development" is Identity & Market merged with the old Marketing
+  // Summary, so it owns the tagline, description and highlights as well.
+  identity_market: [
+    ...CANONICAL_FLATTENED_PAYLOAD_FIELD_OWNERSHIP.identityMarket,
+    ...CANONICAL_FLATTENED_PAYLOAD_FIELD_OWNERSHIP.marketingSummary,
+    WIZARD_BASICS_ABOUT_ESTATE_SPECS_FIELD,
+  ],
   location: CANONICAL_FLATTENED_PAYLOAD_FIELD_OWNERSHIP.location,
   amenities_features: CANONICAL_FLATTENED_PAYLOAD_FIELD_OWNERSHIP.amenitiesFeatures,
   marketing_summary: CANONICAL_FLATTENED_PAYLOAD_FIELD_OWNERSHIP.marketingSummary,
@@ -88,6 +103,11 @@ export const PARTIAL_UPDATE_STEP_OWNED_PAYLOAD_FIELDS = {
     ...DEVELOPMENT_INVENTORY_OWNED_PAYLOAD_FIELDS,
   ],
 } as const;
+
+/** Step slices that a step also writes, so a partial save must carry them together. */
+export const PARTIAL_UPDATE_LINKED_STEP_SLICES: Record<string, readonly string[]> = {
+  identity_market: ['marketing_summary'],
+};
 
 export function isDevelopmentInventoryOwningStepId(stepId: unknown): boolean {
   return (

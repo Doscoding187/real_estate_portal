@@ -79,6 +79,9 @@ const plugins = [
   react(),
   tailwindcss(),
 ];
+// Dev-server proxy target only (not used by production builds). The parity
+// preview sets DEV_API_PROXY_TARGET to its own API port.
+const devApiProxyTarget = process.env.DEV_API_PROXY_TARGET || 'http://localhost:5000';
 const buildGitSha =
   process.env.BUILD_SHA ||
   process.env.VERCEL_GIT_COMMIT_SHA ||
@@ -211,12 +214,12 @@ export default defineConfig({
     },
     proxy: {
       '/api/trpc': {
-        target: 'http://localhost:5000',
+        target: devApiProxyTarget,
         changeOrigin: true,
         secure: false,
       },
       '/api': {
-        target: 'http://localhost:5000',
+        target: devApiProxyTarget,
         changeOrigin: true,
         secure: false,
       },

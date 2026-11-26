@@ -49,6 +49,8 @@ import { HouseMeasureIcon } from '@/components/icons/HouseMeasureIcon';
 import { formatPriceCompact } from '@/lib/formatPrice';
 import { calculateAffordablePrice, calculateMonthlyRepayment, formatSARandShort, SA_PRIME_RATE, SA_PRIME_RATE_LABEL } from '@/lib/bond-calculator';
 import type { ImageMedia } from '@/lib/media-logic';
+import { uniqueHouseTypeLabels } from '@/lib/houseTypes';
+import type { PublishedFacts } from '@/lib/publicDevelopmentFacts';
 import { agentProfilePhoneError } from '@shared/agentProfilePhone';
 
 type PreviewUnit = {
@@ -106,6 +108,8 @@ type DevelopmentDetailPageProps = {
   location: string;
   description?: string | null;
   heroSubtitle?: string | null;
+  /** What the publisher entered in the wizard (estate type, phase, handover, highlights, monthly costs). */
+  publishedFacts?: PublishedFacts | null;
   heroImage?: string | null;
   priceFrom?: number | null;
   priceLabel: string;
@@ -143,6 +147,7 @@ type DevelopmentDetailPageProps = {
 const IMAGE_CATEGORY_LABELS: Record<string, string> = {
   featured: 'Development',
   general: 'Development overview',
+  interior: 'Interior',
   amenities: 'Lifestyle & amenities',
   outdoors: 'Exteriors & outdoors',
   photo: 'Location & views',
@@ -624,6 +629,8 @@ function BuyabilityAssessment({
         ),
     [units],
   );
+  // One short label per house type, never two identical chips.
+  const unitLabels = uniqueHouseTypeLabels(units);
   const [selectedUnitId, setSelectedUnitId] = useState<string>(() =>
     pricedUnits[0] ? String(pricedUnits[0].id) : 'development',
   );
@@ -774,7 +781,7 @@ function BuyabilityAssessment({
               <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="Select a home type">
                 {pricedUnits.map(unit => {
                   const selected = String(unit.id) === String(selectedUnit?.id);
-                  const label = formatArea(unit.floorSize) || unit.name;
+                  const label = unitLabels.get(String(unit.id)) ?? unit.name;
                   return (
                     <button
                       key={unit.id}
@@ -850,9 +857,12 @@ function BuyabilityAssessment({
 function DevelopmentCostBreakdown({
   units,
   buyability,
+  costs,
 }: {
   units: PreviewUnit[];
   buyability: BuyabilityEstimate;
+  /** What the publisher gave: shown instead of "pending". */
+  costs?: PublishedFacts['amounts'] | null;
 }) {
   const pricedUnits = useMemo(
     () =>
@@ -864,6 +874,7 @@ function DevelopmentCostBreakdown({
         ),
     [units],
   );
+  const unitLabels = uniqueHouseTypeLabels(units);
   const [selectedUnitId, setSelectedUnitId] = useState<string>(() =>
     pricedUnits[0] ? String(pricedUnits[0].id) : '',
   );
@@ -901,7 +912,7 @@ function DevelopmentCostBreakdown({
               <div className="grid grid-cols-2 gap-1.5 md:grid-cols-4">
                 {pricedUnits.map(unit => {
                   const selected = String(unit.id) === String(selectedUnit?.id);
-                  const homeLabel = formatArea(unit.floorSize) || unit.name;
+                  const homeLabel = unitLabels.get(String(unit.id)) ?? unit.name;
                   const bedrooms = getBedroomCount(unit.publicFacts?.bedrooms);
                   const bedroomLabel =
                     bedrooms === null ? null : bedrooms === 0 ? 'Studio' : `${bedrooms} bed`;
@@ -942,17 +953,42 @@ function DevelopmentCostBreakdown({
                   </span>
                 </div>
                 <div className="flex min-h-10 flex-wrap items-center justify-between gap-x-3 gap-y-1 py-2 text-xs">
-                  <span className="text-slate-600">Levy</span>
-                  <Badge variant="outline" className="border-dashed border-slate-400 bg-white/70 text-[9px] font-semibold text-slate-600">Monthly levy pending</Badge>
+                  <span className="text-slate-600">{costs?.levyLabel ?? 'Levy'}</span>
+                  {costs?.noLevy ? (
+                    <span className="text-right font-bold text-slate-900">No levy</span>
+                  ) : costs?.levyAmount ? (
+                    <span data-testid="cost-levy" className="text-right font-bold text-slate-900">
+                      {formatExactPrice(costs.levyAmount)} (estimate)
+                    </span>
+                  ) : (
+                    <Badge variant="outline" className="border-dashed border-slate-400 bg-white/70 text-[9px] font-semibold text-slate-600">Monthly levy pending</Badge>
+                  )}
                 </div>
                 <div className="flex min-h-10 flex-wrap items-center justify-between gap-x-3 gap-y-1 py-2 text-xs">
                   <span className="text-slate-600">Rates &amp; taxes</span>
-                  <Badge variant="outline" className="border-dashed border-slate-400 bg-white/70 text-[9px] font-semibold text-slate-600">Municipal rates pending</Badge>
+                  {costs?.ratesAmount ? (
+                    <span data-testid="cost-rates" className="text-right font-bold text-slate-900">
+                      {formatExactPrice(costs.ratesAmount)} (estimate)
+                    </span>
+                  ) : (
+                    <Badge variant="outline" className="border-dashed border-slate-400 bg-white/70 text-[9px] font-semibold text-slate-600">Municipal rates pending</Badge>
+                  )}
                 </div>
                 <div className="mt-2 flex min-h-10 flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-lg bg-white/80 px-2.5 py-2 text-xs font-extrabold text-slate-900">
                   <span>Total monthly</span>
-                  <span className="text-right">
-                    {monthlyBond === null ? 'Pending' : `${formatExactPrice(monthlyBond)} + levy & rates`}
+                  <span data-testid="cost-total" className="text-right">
+                    {monthlyBond === null
+                      ? 'Pending'
+                      : (() => {
+                          const known = monthlyBond + (costs?.levyAmount ?? 0) + (costs?.ratesAmount ?? 0);
+                          const missing = [
+                            !costs?.noLevy && !costs?.levyAmount ? 'levy' : null,
+                            !costs?.ratesAmount ? 'rates' : null,
+                          ].filter(Boolean);
+                          return missing.length
+                            ? `${formatExactPrice(known)} + ${missing.join(' & ')}`
+                            : formatExactPrice(known);
+                        })()}
                   </span>
                 </div>
               </div>
@@ -966,7 +1002,7 @@ function DevelopmentCostBreakdown({
               <div className="divide-y divide-amber-100">
                 <div className="flex min-h-10 flex-wrap items-center justify-between gap-x-3 gap-y-1 py-2 text-xs">
                   <span className="text-slate-600">Deposit</span>
-                  <span className="text-right font-bold text-slate-900">R 0 (assumed)</span>
+                  <span className="text-right font-bold text-slate-900">No deposit assumed</span>
                 </div>
                 <div className="flex min-h-10 flex-wrap items-center justify-between gap-x-3 gap-y-1 py-2 text-xs">
                   <span className="text-slate-600">Bond registration &amp; attorney fees</span>
@@ -1196,45 +1232,10 @@ function DevelopmentEnquiryCard({
     });
   };
 
-  const getDetailedOptionLabel = (unit: PreviewUnit) => {
-    const area = formatArea(unit.floorSize);
-    const matchingAreaCount = area
-      ? unitOptions.filter(option => formatArea(option.floorSize) === area).length
-      : 0;
-    if (area && matchingAreaCount < 2) return area;
-
-    const nameDetail = area
-      ? unit.name
-          .replace(area, '')
-          .replace(/^\s*(?:house|home)\s*[-–:]?\s*/i, '')
-          .trim()
-      : '';
-    const bedrooms = getBedroomCount(unit.publicFacts?.bedrooms);
-    const bathrooms = getPositiveNumber(unit.publicFacts?.bathrooms);
-    const details = nameDetail ||
-      [
-        bedrooms === null ? null : `${bedrooms} bed`,
-        bathrooms === null ? null : `${bathrooms} bath`,
-      ]
-        .filter(Boolean)
-        .join(' · ');
-
-    return [area, details || unit.name].filter(Boolean).join(' · ');
-  };
-
-  const optionLabel = (unit: PreviewUnit, index: number) => {
-    const label = getDetailedOptionLabel(unit);
-    const duplicateCount = unitOptions.filter(
-      option => getDetailedOptionLabel(option) === label,
-    ).length;
-    if (duplicateCount < 2) return label;
-
-    const duplicateIndex =
-      unitOptions
-        .slice(0, index)
-        .filter(option => getDetailedOptionLabel(option) === label).length + 1;
-    return `${label} · Option ${duplicateIndex}`;
-  };
+  // One short label per house type; two options never read the same.
+  const optionLabels = uniqueHouseTypeLabels(unitOptions);
+  const optionLabel = (unit: PreviewUnit, _index?: number) =>
+    optionLabels.get(String(unit.id)) ?? unit.name;
 
   return (
     <Card className="rounded-2xl border-slate-200 bg-white shadow-sm">
@@ -1575,6 +1576,7 @@ export function DevelopmentDetailPage({
   onRequestFullAssessment,
   onRequestUpdates,
   onEnquire,
+  publishedFacts,
 }: DevelopmentDetailPageProps) {
   const [activeSection, setActiveSection] = useState('overview');
   const [buyabilityEstimate, setBuyabilityEstimate] = useState<BuyabilityEstimate>({
@@ -1628,6 +1630,9 @@ export function DevelopmentDetailPage({
     { label: 'Ownership', value: ownership, icon: ShieldCheck },
     { label: 'Home configurations', value: bedroomRangeLabel, icon: BedDouble },
     { label: 'Development stage', value: status, icon: Sparkles },
+    ...(publishedFacts?.estateLabel
+      ? [{ label: 'Setting', value: publishedFacts.estateLabel, icon: Building2 }]
+      : []),
   ];
   const visibleAmenities = amenities.slice(0, 6);
   const faqItems = [
@@ -1701,6 +1706,7 @@ export function DevelopmentDetailPage({
                 {heroStatus ? (
                   <Badge className="border-0 bg-emerald-500 text-white hover:bg-emerald-500">
                     {heroStatus}
+                    {publishedFacts?.phaseLabel ? ` · ${publishedFacts.phaseLabel}` : ''}
                   </Badge>
                 ) : null}
               </div>
@@ -1714,6 +1720,11 @@ export function DevelopmentDetailPage({
               {heroSubtitle ? (
                 <p className="mt-3 max-w-2xl text-sm leading-relaxed text-white/95 sm:text-base">
                   {heroSubtitle}
+                </p>
+              ) : null}
+              {publishedFacts?.timelineLine ? (
+                <p data-testid="hero-timeline" className="mt-1.5 text-xs font-semibold text-white/90 sm:text-sm">
+                  {publishedFacts.timelineLine}
                 </p>
               ) : null}
               <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-3 text-xs font-semibold text-white sm:text-sm">
@@ -1967,7 +1978,11 @@ export function DevelopmentDetailPage({
               </section>
 
               {units.length > 0 ? (
-                <DevelopmentCostBreakdown units={units} buyability={buyabilityEstimate} />
+                <DevelopmentCostBreakdown
+                  units={units}
+                  buyability={buyabilityEstimate}
+                  costs={publishedFacts?.amounts ?? null}
+                />
               ) : null}
 
               {videoCount > 0 ? (
@@ -2023,6 +2038,26 @@ export function DevelopmentDetailPage({
                         </button>
                       </div>
                     </div>
+                  </Card>
+                </section>
+              ) : null}
+
+              {publishedFacts && publishedFacts.highlights.length > 0 ? (
+                <section id="highlights" data-testid="development-highlights" className="scroll-mt-32">
+                  <Card className="overflow-hidden rounded-2xl border-slate-200 shadow-sm">
+                    <CardContent className="p-4 sm:p-5">
+                      <h2 className="text-lg font-extrabold tracking-tight text-blue-950">Highlights</h2>
+                      <ul className="mt-3 flex flex-wrap gap-2">
+                        {publishedFacts.highlights.map(label => (
+                          <li
+                            key={label}
+                            className="rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-800"
+                          >
+                            {label}
+                          </li>
+                        ))}
+                      </ul>
+                    </CardContent>
                   </Card>
                 </section>
               ) : null}

@@ -163,8 +163,7 @@ const roles: RoleCard[] = [
       'Create the owner account first. Company registration and office setup happen after verification.',
     tag: 'Business setup',
     cta: 'Continue to agency setup',
-    // Held at launch: buyers and agents only. Set true to release.
-    available: false,
+    available: true,
     Icon: Building2,
     iconWrap: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300',
     tagClass: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300',
@@ -183,8 +182,7 @@ const roles: RoleCard[] = [
       'Register your development account first. Project and unit setup continue in the onboarding flow.',
     tag: 'Company onboarding',
     cta: 'Continue to company onboarding',
-    // Held at launch: buyers and agents only. Set true to release.
-    available: false,
+    available: true,
     Icon: HardHat,
     iconWrap: 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300',
     tagClass: 'bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300',
@@ -487,7 +485,7 @@ export default function Login() {
             Choose your <span className="text-indigo-600 dark:text-indigo-400">role</span>
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-slate-600 dark:text-slate-400 sm:text-lg">
-            One platform for buyers, agents and service providers. Start with the path that fits you.
+            One platform for buyers, agents, agencies, developers and service providers. Start with the path that fits you.
           </p>
         </div>
 
@@ -497,8 +495,7 @@ export default function Login() {
             data-testid="unavailable-role-notice"
             className="mb-6 w-full max-w-5xl rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
           >
-            Agency and developer registrations are not open yet. Buyers, agents and service
-            providers can register now.
+            That account type is not open yet. Choose one of the account types below.
           </p>
         ) : null}
         <div className="grid w-full max-w-5xl grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">

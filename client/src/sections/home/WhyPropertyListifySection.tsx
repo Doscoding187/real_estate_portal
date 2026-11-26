@@ -127,13 +127,13 @@ const WHY_AUDIENCES: readonly Audience[] = [
     tab: 'Agencies',
     tabIcon: UsersRound,
     headline: 'One home for your agency, your team and your listings.',
-    summary: 'Agency accounts are not open yet. See how it will work and get in touch.',
+    summary: 'Create your agency owner account and set up your agency. Publishing opens later, after approval.',
     benefits: [
       { title: 'Agency listings', text: 'Keep the agency’s listings together.', icon: Layers },
       { title: 'Your team', text: 'Bring your agents under one agency.', icon: Users },
       { title: 'Lead routing', text: 'Route enquiries to the right person.', icon: Network },
     ],
-    today: 'Read the agency details and contact us. Accounts open soon.',
+    today: 'Create your owner account and set up your agency now.',
     cta: { label: 'See agency details', href: '/advertise/sell/agencies' },
     secondary: [{ label: 'Contact us', href: '/contact?area=agency_operations' }],
   },
@@ -142,7 +142,7 @@ const WHY_AUDIENCES: readonly Audience[] = [
     tab: 'Developers',
     tabIcon: Building2,
     headline: 'Present your developments and receive enquiries.',
-    summary: 'Developer accounts are not open yet. See how it will work and get in touch.',
+    summary: 'Create your developer account and set up your company. Publishing opens later, after review.',
     benefits: [
       {
         title: 'Your developments',
@@ -160,7 +160,7 @@ const WHY_AUDIENCES: readonly Audience[] = [
         icon: BellRing,
       },
     ],
-    today: 'Read the developer details and contact us. Accounts open soon.',
+    today: 'Create your owner account and set up your company now.',
     cta: { label: 'See developer details', href: '/advertise/sell/developers' },
     secondary: [{ label: 'Contact us', href: '/contact?area=developer_operations' }],
   },

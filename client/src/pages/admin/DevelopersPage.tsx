@@ -1,6 +1,7 @@
 // @ts-nocheck
 import React, { useState } from 'react';
 import { trpc } from '@/lib/trpc';
+import { ADMIN_PAGE_CLASS } from '@/components/admin/adminPageLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -181,9 +182,9 @@ export default function DevelopersPage() {
                   size="sm"
                   className="bg-green-600 hover:bg-green-700"
                   onClick={() => handleApprove(developer.id)}
-                  disabled={approveMutation.isLoading}
+                  disabled={approveMutation.isPending}
                 >
-                  {approveMutation.isLoading ? (
+                  {approveMutation.isPending ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
                     'Approve'
@@ -206,7 +207,7 @@ export default function DevelopersPage() {
                   onCheckedChange={checked =>
                     setTrustedMutation.mutate({ developerId: developer.id, isTrusted: checked })
                   }
-                  disabled={setTrustedMutation.isLoading}
+                  disabled={setTrustedMutation.isPending}
                   className="scale-75 origin-right"
                 />
               </div>
@@ -222,7 +223,7 @@ export default function DevelopersPage() {
   );
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className={ADMIN_PAGE_CLASS}>
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Developers</h1>
@@ -322,9 +323,9 @@ export default function DevelopersPage() {
             <Button
               variant="destructive"
               onClick={handleReject}
-              disabled={rejectMutation.isLoading || !rejectionReason.trim()}
+              disabled={rejectMutation.isPending || !rejectionReason.trim()}
             >
-              {rejectMutation.isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              {rejectMutation.isPending ?<Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
               Reject Application
             </Button>
           </DialogFooter>

@@ -21,6 +21,41 @@
       "naturalKey": "gauteng/parkhurst",
       "canonicalPath": "/gauteng/randburg/parkhurst",
       "reason": "Only Gauteng URL entry with slug and name Parkhurst (locality); source row has no city parent."
+    },
+    {
+      "naturalKey": "gauteng/alberton/eden-park",
+      "canonicalPath": "/gauteng/ekurhuleni/edenpark",
+      "reason": "Alberton is an Ekurhuleni town; Edenpark is the only Ekurhuleni URL entry for this name and no other source row maps to it (name differs only by spacing)."
+    },
+    {
+      "naturalKey": "gauteng/benoni/westdene",
+      "canonicalPath": "/gauteng/ekurhuleni/westdene",
+      "reason": "Benoni is an Ekurhuleni town; the Johannesburg Westdene row is already matched to the Johannesburg URL entry, leaving the Ekurhuleni entry for this row."
+    },
+    {
+      "naturalKey": "gauteng/boksburg/boksburg-noord",
+      "canonicalPath": "/gauteng/ekurhuleni/boksburg-noord--dfca09eb",
+      "reason": "Boksburg is an Ekurhuleni town and the entry name Boksburg-Noord equals the source row name exactly; the duplicate spelling Boksburg Noord stays unresolved."
+    },
+    {
+      "naturalKey": "gauteng/johannesburg/claremont",
+      "canonicalPath": "/gauteng/randburg/claremont",
+      "reason": "Source row coordinates are in Randburg, Johannesburg; the Pretoria Claremont row is matched to the Tshwane URL entry, leaving the Randburg entry."
+    },
+    {
+      "naturalKey": "gauteng/johannesburg/newlands",
+      "canonicalPath": "/gauteng/randburg/newlands",
+      "reason": "Source row coordinates are in Randburg, Johannesburg; the Pretoria Newlands row is matched to the Tshwane URL entry, leaving the Randburg entry."
+    },
+    {
+      "naturalKey": "gauteng/johannesburg/roodekrans",
+      "canonicalPath": "/gauteng/roodepoort/roodekrans",
+      "reason": "Source row coordinates are in Roodepoort, Johannesburg; the Pretoria Roodekrans row is matched to the Tshwane URL entry, leaving the Roodepoort entry."
+    },
+    {
+      "naturalKey": "gauteng/pretoria/val-de-grace",
+      "canonicalPath": "/gauteng/city-of-tshwane/val-de-grace--a9f4d2f0",
+      "reason": "Entry name Val De Grace equals the source row name exactly; the accented duplicate Val-de-Grace stays unresolved."
     }
   ]
 }

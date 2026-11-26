@@ -1,52 +1,35 @@
 import { WizardWorkflow, WizardStep, type FieldError } from '../types/wizard-workflows';
+import { validateLocationStep, validateAmenitiesStep } from '../wizardLocationCostsAmenities';
+import { validateAboutStep } from '../wizardBasicsAbout';
+import { validateDevelopmentMedia } from '../wizardMedia';
+import { needsUnitOwnership } from '../wizardHouseTypes';
 
+// Eight steps, in this order: Basics, About, Location, Monthly costs,
+// Amenities, Media, House types, Review & publish. The step ids are the same
+// ones drafts and published developments already use, so nothing saved before
+// is lost: only titles and screens changed.
 const residentialSaleSteps: WizardStep[] = [
   {
     id: 'configuration',
-    title: 'Configuration',
+    title: 'Basics',
     componentKey: 'ConfigurationStep',
     required: true,
-    description:
-      'Set up pricing, unit mix, and basic configuration for your residential development.',
-    validate: data => ({ valid: true }), // Minimal validation for config
+    description: 'The setting of the development: standalone, gated community or security estate.',
+    validate: data => {
+      const errors: FieldError[] = [];
+      const setting = (data as any).setting;
+      if (!setting) errors.push({ field: 'setting', message: 'Choose the setting' });
+      return { valid: errors.length === 0, errors };
+    },
   },
   {
     id: 'identity_market',
-    title: 'Identity & Market',
+    title: 'About',
     componentKey: 'IdentityMarketStep',
     required: true,
-    description: 'Define the brand identity and market positioning of your development.',
+    description: 'Name, sales status, ownership and description: everything buyers read first.',
     validate: data => {
-      const errors: FieldError[] = [];
-
-      // 1. Name is required and must be significant
-      if (!data.name || data.name.trim().length < 2) {
-        errors.push({ field: 'name', message: 'Development name is required' });
-      }
-
-      // 2. Status is required
-      if (!data.status) {
-        errors.push({ field: 'status', message: 'Development status is required' });
-      }
-
-      // 3. Ownership Validation (For Sale Context)
-      const isForSale = ['for_sale', 'sale', 'auction'].includes(data.transactionType || '');
-
-      if (isForSale) {
-        if (!data.ownershipTypes || data.ownershipTypes.length === 0) {
-          errors.push({
-            field: 'ownershipTypes',
-            message: 'At least one ownership type is required',
-          });
-        }
-      }
-
-      // 4. Transaction Type Sanity Check (Soft)
-      if (data.transactionType && !isForSale && data.transactionType !== 'for_rent') {
-        // In Phase 2B, we acknowledge that transactionType comes from Step 1
-        // We don't block, but this would be an invalid state for this workflow
-      }
-
+      const errors: FieldError[] = validateAboutStep(data);
       return { valid: errors.length === 0, errors };
     },
   },
@@ -57,64 +40,27 @@ const residentialSaleSteps: WizardStep[] = [
     required: true,
     description: 'Pinpoint the exact location and address details.',
     validate: data => {
-      const errors: FieldError[] = [];
-      // Check nested location object where the data actually lives
-      const loc = data.location || {};
-
-      if (!loc.latitude || !loc.longitude) {
-        errors.push({ field: 'location', message: 'Map location pin is required' });
-      }
+      // The server requires an address, not coordinates; the wizard agrees.
+      const errors: FieldError[] = validateLocationStep(data.location);
       return { valid: errors.length === 0, errors };
     },
   },
   {
     id: 'governance_finances',
-    title: 'Governance & Finances',
+    title: 'Monthly costs',
     componentKey: 'GovernanceStep',
     required: false,
-    description: 'Configure levies, rates, and HOA details.',
-    validate: data => {
-      const errors: FieldError[] = [];
-      // Data is merged into root by buildWizardData, but also available in specific fields
-      // Since we spread ...governance into root in buildWizardData, we can check root fields
-      // OR rely on our convention. Let's check both to be safe, or just root properties as standard.
-      // We defined hasGoverningBody in the step data.
-
-      if (data.hasGoverningBody) {
-        if (!data.governanceType) {
-          errors.push({ field: 'governanceType', message: 'Select a governing body type' });
-        }
-      }
-      return { valid: errors.length === 0, errors };
-    },
+    description: 'Rates and taxes, and the levy if there is one.',
+    validate: () => ({ valid: true }),
   },
   {
     id: 'amenities_features',
-    title: 'Amenities & Features',
+    title: 'Amenities',
     componentKey: 'AmenitiesStep',
     required: false,
-    description: 'Highlight the lifestyle amenities and key features.',
-    validate: data => ({ valid: true }),
-  },
-  {
-    id: 'marketing_summary',
-    title: 'Marketing Summary',
-    componentKey: 'MarketingStep',
-    required: true,
-    description: 'Create the marketing copy and key selling points.',
+    description: 'Tap what the development really has, then pick the highlights for the search card.',
     validate: data => {
-      const errors: FieldError[] = [];
-      const d = data as any;
-      if (!d.description || d.description.length < 50) {
-        errors.push({
-          field: 'description',
-          message: 'Description must be at least 50 characters',
-        });
-      }
-      const points = d.keySellingPoints || d.highlights || [];
-      if (points.length < 3) {
-        errors.push({ field: 'highlights', message: 'At least 3 key selling points are required' });
-      }
+      const errors: FieldError[] = validateAmenitiesStep(data);
       return { valid: errors.length === 0, errors };
     },
   },
@@ -123,23 +69,16 @@ const residentialSaleSteps: WizardStep[] = [
     title: 'Media',
     componentKey: 'MediaStep',
     required: true,
-    description: 'Upload high-quality images, documents, and videos.',
+    description: 'Photos, video and documents about the development as a whole.',
     validate: data => {
-      const errors: FieldError[] = [];
-      const d = data as any;
-      // Check for at least one photo (Hero Candidate)
-      const media = d.media || {};
-      const photos = media.photos || [];
-
-      if (photos.length === 0) {
-        errors.push({ field: 'media', message: 'At least one photo (Hero Image) is required' });
-      }
+      // A cover photo is required (matches the server's "persisted image" readiness).
+      const errors: FieldError[] = validateDevelopmentMedia((data as any).media || {});
       return { valid: errors.length === 0, errors };
     },
   },
   {
     id: 'unit_types',
-    title: 'Unit Types',
+    title: 'House types',
     componentKey: 'UnitTypesStep',
     required: true,
     description: 'Define the different unit configurations available.',
@@ -174,6 +113,12 @@ const residentialSaleSteps: WizardStep[] = [
                 field: `unitTypes.${id}.priceFrom`,
                 message: `${label} is missing a base price`,
               });
+            // Ownership is asked per house type only when the development says "Varies by house type".
+            if (needsUnitOwnership((data as any).ownershipTypes) && !u.ownershipType)
+              errors.push({
+                field: `unitTypes.${id}.ownershipType`,
+                message: `${label} is missing its ownership`,
+              });
           });
         }
       }
@@ -182,7 +127,7 @@ const residentialSaleSteps: WizardStep[] = [
   },
   {
     id: 'review_publish',
-    title: 'Review & Publish',
+    title: 'Review & publish',
     componentKey: 'ReviewStep',
     required: true,
     description: 'Review all details before publishing your listing.',

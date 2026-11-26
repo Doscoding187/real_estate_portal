@@ -7,6 +7,10 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn(), info: vi.f
 vi.mock('@/components/admin/RecordPaymentByReferenceCard', () => ({
   RecordPaymentByReferenceCard: () => null,
 }));
+vi.mock('@/components/admin/LaunchAccessRevokeRefund', () => ({
+  ApprovedPaymentsRefundCard: () => null,
+  RevokeAccessButton: () => null,
+}));
 vi.mock('@/hooks/useCommercialProductAvailability', () => ({
   useCommercialActivationAvailability: () => ({
     isProductAvailable: () => true,

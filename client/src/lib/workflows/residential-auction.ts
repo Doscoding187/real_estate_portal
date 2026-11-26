@@ -1,4 +1,5 @@
 import { WizardWorkflow, WizardStep, type FieldError } from '../types/wizard-workflows';
+import { validateLocationStep } from '../wizardLocationCostsAmenities';
 
 const residentialAuctionSteps: WizardStep[] = [
   {
@@ -51,12 +52,8 @@ const residentialAuctionSteps: WizardStep[] = [
     required: true,
     description: 'Pinpoint the exact location and address details.',
     validate: data => {
-      const errors: FieldError[] = [];
-      const loc = data.location || {};
-
-      if (!loc.latitude || !loc.longitude) {
-        errors.push({ field: 'location', message: 'Map location pin is required' });
-      }
+      // The server requires an address, not coordinates; the wizard agrees.
+      const errors: FieldError[] = validateLocationStep(data.location);
       return { valid: errors.length === 0, errors };
     },
   },

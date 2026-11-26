@@ -25,6 +25,7 @@ import {
 } from './developmentInventorySummary';
 import {
   listDevelopmentPlaceGeography,
+  suburbReadinessContextFromGeography,
   type DevelopmentPlaceGeography,
 } from './developmentPlaceAssignmentService';
 import {
@@ -166,6 +167,9 @@ type DevelopmentOperatingRow = Pick<
   | 'name'
   | 'slug'
   | 'address'
+  | 'latitude'
+  | 'longitude'
+  | 'estateSpecs'
   | 'transactionType'
   | 'approvalStatus'
   | 'isPublished'
@@ -343,6 +347,7 @@ export function buildDevelopmentOperatingSummary(input: {
   const blockers: DevelopmentHomeReadinessBlocker[] = validatePersistedSubmissionReadiness(
     input.development,
     input.persistedUnitTypes,
+    suburbReadinessContextFromGeography(input.development, input.geography),
   ).map(blocker => ({ ...blocker, severity: 'critical' as const }));
   const inventory = buildDevelopmentHomeInventory(
     input.development,
@@ -582,6 +587,9 @@ async function loadDevelopmentRows(
     name: developments.name,
     slug: developments.slug,
     address: developments.address,
+    latitude: developments.latitude,
+    longitude: developments.longitude,
+    estateSpecs: developments.estateSpecs,
     transactionType: developments.transactionType,
     approvalStatus: developments.approvalStatus,
     isPublished: developments.isPublished,

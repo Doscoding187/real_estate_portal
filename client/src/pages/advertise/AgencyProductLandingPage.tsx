@@ -37,7 +37,7 @@ import {
   getCommercialPresentationLimits,
   getCommercialTermPresentation,
 } from '@/lib/commercialCatalog';
-import { NotOpenYetCta } from '@/components/advertise/NotOpenYetCta';
+import { RegisterRoleCta } from '@/components/advertise/RegisterRoleCta';
 import { AgencyWorkspacePreview } from './AgencyWorkspacePreview';
 import { COMMERCIAL_HERO_CLASS } from './commercialHero';
 
@@ -830,7 +830,7 @@ export function AgencyCommercialLandingPage({ preview = false }: { preview?: boo
                   — with clearer ownership, follow-up and business visibility when interest arrives.
                 </p>
                 <div className="mt-9 flex flex-wrap gap-3">
-                  <NotOpenYetCta tone="dark" />
+                  <RegisterRoleCta role="agency_admin" tone="dark" />
                   <a
                     href="/contact"
                     className="inline-flex items-center gap-2 rounded-2xl border border-white/35 bg-white/10 px-5 py-3.5 text-sm font-bold text-white shadow-sm transition hover:border-white/60 hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
@@ -1250,7 +1250,7 @@ export function AgencyCommercialLandingPage({ preview = false }: { preview?: boo
               finance-verified EFT handoff.
             </p>
             <div className="mt-7 flex flex-wrap justify-center gap-3">
-              <NotOpenYetCta tone="light" />
+              <RegisterRoleCta role="agency_admin" tone="light" />
               <a
                 href="/contact"
                 className="inline-flex items-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 py-3.5 text-sm font-bold text-slate-950 transition hover:border-slate-950"
@@ -1291,7 +1291,7 @@ function AgencyPreparationLandingPage({
     <div className="min-h-screen bg-[var(--surface)] text-slate-950">
       <SEOHead
         title="Agency accounts | Property Listify"
-        description="Agency accounts on Property Listify are not open yet. See how agency set-up will work and get in touch."
+        description="Create an Agency owner account on Property Listify. See how agency set-up works and get in touch."
         canonicalUrl="/advertise/sell/agencies"
       />
       <EnhancedNavbar />
@@ -1317,14 +1317,14 @@ function AgencyPreparationLandingPage({
                   For property agencies
                 </p>
                 <h1 className="mt-6 font-serif text-5xl font-semibold leading-[1.03] tracking-[-0.05em] text-white sm:text-6xl lg:text-7xl">
-                  Agency accounts are coming. See how set-up will work.
+                  Create your Agency account and set up your business.
                 </h1>
                 <p className="mt-7 max-w-2xl text-lg leading-8 text-slate-300 sm:text-xl sm:leading-9">
-                  Agency accounts are not open yet. Below is how agency set-up will work. Contact us
-                  to talk it through or to ask about early access.
+                  Create the owner account now, then set up your agency. Publishing and paid access
+                  open later, after approval. Contact us to talk it through.
                 </p>
                 <div className="mt-9 flex flex-wrap gap-3">
-                  <NotOpenYetCta tone="dark" />
+                  <RegisterRoleCta role="agency_admin" tone="dark" />
                   <a
                     href="/contact"
                     className="inline-flex items-center gap-2 rounded-2xl border border-white/35 bg-white/10 px-5 py-3.5 text-sm font-bold text-white shadow-sm transition hover:border-white/60 hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
@@ -1408,7 +1408,7 @@ function AgencyPreparationLandingPage({
                 need approval when they are.
               </p>
               <div className="mt-7">
-                <NotOpenYetCta tone="light" />
+                <RegisterRoleCta role="agency_admin" tone="light" />
                 <div>
                   <a
                     href="/contact"

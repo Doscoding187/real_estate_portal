@@ -744,6 +744,7 @@ export default function DevelopmentsDemo() {
                         rating={development.rating ?? undefined}
                         location={developmentLocation}
                         description={development.description}
+                        tagline={development.tagline}
                         image={developmentImage}
                         publisherTrustLabel={publisherTrustLabel}
                         classificationLabel={classificationLabel}

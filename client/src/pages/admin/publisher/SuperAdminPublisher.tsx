@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { EditCataloguePublisherDialog } from '@/components/admin/publisher/EditCataloguePublisherDialog';
 import { trpc } from '@/lib/trpc';
+import { ADMIN_PAGE_CLASS } from '@/components/admin/adminPageLayout';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { publisherTheme, animations, cardElevation, glassEffect } from '@/lib/publisherTheme';
@@ -217,7 +218,7 @@ export const SuperAdminPublisher: React.FC = () => {
   return (
     <DeveloperContextProvider>
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20">
-        <div className="container mx-auto py-8 max-w-7xl">
+        <div className={ADMIN_PAGE_CLASS}>
           {/* Enhanced Header with Gradient Background */}
           <div className="relative mb-8 rounded-2xl overflow-hidden shadow-xl bg-white border border-slate-200">
             {/* Clean Background */}
@@ -249,9 +250,9 @@ export const SuperAdminPublisher: React.FC = () => {
                     </div>
                   </div>
                   <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
-                    <div className="text-xs text-slate-500 mb-1">Active Developments</div>
+                    <div className="text-xs text-slate-500 mb-1">Developments</div>
                     <div className="text-2xl font-bold text-slate-900">
-                      {globalMetrics?.totalDevelopments || 0}
+                      {globalMetrics ? globalMetrics.totalDevelopments || 0 : '...'}
                     </div>
                   </div>
                 </div>

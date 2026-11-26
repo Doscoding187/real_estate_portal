@@ -1,298 +1,301 @@
-import React from 'react';
-import {
-  Users,
-  Home,
-  CreditCard,
-  DollarSign,
-  TrendingUp,
-  AlertTriangle,
-  CheckCircle,
-  ArrowRight,
-  Activity,
-  UserPlus,
-  Sparkles,
-} from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import React, { useState } from 'react';
+import { CheckCircle, Plus, Receipt, Users } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
+import { ADMIN_PAGE_CLASS } from '@/components/admin/adminPageLayout';
 import { useLocation } from 'wouter';
-import { Badge } from '@/components/ui/badge';
+import GrowthChart from './dashboard/GrowthChart';
+import {
+  ageTag,
+  INBOX_SOURCE_PAGES,
+  buildInboxTabs,
+  cappedSources,
+  filterInbox,
+  overdueCount,
+  sortInboxItems,
+  type AgeLevel,
+  type InboxItem,
+  type InboxTabId,
+  type InboxTotals,
+} from './dashboard/inboxModel';
+
+const card = 'bg-white border border-slate-200 rounded-lg';
+const focus = 'focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600';
+
+const AGE_CLASS: Record<AgeLevel, string> = {
+  ok: 'bg-slate-100 text-slate-700',
+  warn: 'bg-amber-100 text-amber-900',
+  late: 'bg-red-100 text-red-900',
+};
+
+const Skeleton: React.FC<{ className?: string }> = ({ className = 'h-12' }) => (
+  <div data-testid="skeleton" className={`animate-pulse rounded bg-slate-100 ${className}`} />
+);
+
+const ErrorRetry: React.FC<{ what: string; onRetry: () => void }> = ({ what, onRetry }) => (
+  <div role="alert" className="flex items-center justify-between gap-3 p-4 text-sm text-red-800">
+    <span>Could not load {what}.</span>
+    <button
+      type="button"
+      onClick={onRetry}
+      className={`min-h-[36px] px-3 rounded-md border border-red-300 bg-white font-semibold ${focus}`}
+    >
+      Retry
+    </button>
+  </div>
+);
 
 const OverviewPage: React.FC = () => {
   const [, setLocation] = useLocation();
-  const { data: analytics, isLoading: analyticsLoading } = trpc.admin.getAnalytics.useQuery();
-  const { data: actions, isLoading: actionsLoading } = trpc.admin.getAdminActionItems.useQuery(
-    undefined,
-    {
-      refetchInterval: 30000, // Poll every 30s
-    },
-  );
-  // Fetch Quality Stats
-  const { data: propStats } = trpc.admin.getPropertiesStats.useQuery();
+  const [tab, setTab] = useState<InboxTabId>('all');
+  const analytics = trpc.admin.getAnalytics.useQuery();
+  const launch = trpc.admin.getLaunchDashboardStats.useQuery();
+  const inbox = trpc.admin.getDailyInbox.useQuery(undefined, { refetchInterval: 30000 });
+  const activity = trpc.admin.getRecentAdminActivity.useQuery();
+  const growth = trpc.admin.getWeeklyGrowth.useQuery();
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-ZA', {
+  const now = new Date();
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat('en-ZA', {
       style: 'currency',
       currency: 'ZAR',
       minimumFractionDigits: 0,
     }).format(amount);
-  };
-
   const formatNumber = (num: number) => new Intl.NumberFormat('en-ZA').format(num);
 
-  // SECTION 1: EXECUTIVE PULSE
-  const pulseMetrics = [
+  const pulseValue = (
+    q: { isLoading: boolean; isError: boolean },
+    value: number | undefined,
+    format: (n: number) => string = formatNumber,
+  ) => (q.isLoading ? '...' : q.isError || value === undefined ? 'Unavailable' : format(value));
+
+  const pulse = [
+    { label: 'EFT proofs waiting', value: pulseValue(launch, launch.data?.eftAwaitingReview) },
+    { label: 'Verified payments', value: pulseValue(launch, launch.data?.approvedThisMonthCount) },
     {
-      label: 'Revenue (30d)',
-      value: analyticsLoading ? '...' : formatCurrency(analytics?.monthlyRevenue || 0),
-      trend: '+12%', // Mock trend for now
-      color: 'text-blue-600',
+      label: 'Approved amount',
+      value: pulseValue(launch, launch.data?.approvedThisMonthRand, formatCurrency),
     },
     {
-      label: 'Active Users',
-      value: analyticsLoading ? '...' : formatNumber(analytics?.totalUsers || 0),
-      trend: `+${analytics?.userGrowth || 0}`,
-      color: 'text-emerald-600',
+      label: 'Active subscriptions',
+      value: pulseValue(analytics, analytics.data?.paidSubscriptions),
     },
-    {
-      label: 'Active Listings',
-      value: analyticsLoading ? '...' : formatNumber(analytics?.activeProperties || 0),
-      trend: `+${analytics?.propertyGrowth || 0}`,
-      color: 'text-purple-600',
-    },
+    { label: 'New users, 30 days', value: pulseValue(analytics, analytics.data?.userGrowth) },
+    { label: 'Leads, 30 days', value: pulseValue(launch, launch.data?.newLeads30d) },
   ];
 
-  // SECTION 2: ACTION REQUIRED
-  const totalActionItems =
-    (actions?.pendingAgentApprovals || 0) +
-    (actions?.pendingListingApprovals || 0) +
-    (actions?.pendingDevelopmentApprovals || 0);
+  const items: InboxItem[] = sortInboxItems((inbox.data?.items ?? []) as InboxItem[]);
+  const totals = inbox.data?.totals as InboxTotals | undefined;
+  const tabs = buildInboxTabs(items, totals);
+  const totalWaiting = tabs[0].count;
+  const visible = filterInbox(items, tab);
+  const overdue = overdueCount(items, now);
+  const capped = cappedSources(items, totals, tab);
 
-  const hasActions = totalActionItems > 0;
+  const quick = [
+    { label: 'New curated development', icon: Plus, href: '/admin/publisher/developments/new' },
+    { label: 'Review EFT proofs', icon: Receipt, href: '/admin/finance' },
+    { label: 'Approvals', icon: CheckCircle, href: '/admin/approvals' },
+    { label: 'View pilot users', icon: Users, href: '/admin/users' },
+  ];
+
+  const activityText = (a: NonNullable<typeof activity.data>[number]) => {
+    const what = a.action.replace(/[._]/g, ' ');
+    const target = a.targetType ? ` (${a.targetType}${a.targetId ? ` #${a.targetId}` : ''})` : '';
+    return `${a.actorName || 'A user'}: ${what}${target}`;
+  };
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto py-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900">Dashboard</h1>
-        <p className="text-slate-500 mt-1">Daily decision support center.</p>
-      </div>
-
-      {/* SECTION 1: EXECUTIVE PULSE (Compact) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {pulseMetrics.map((metric, i) => (
-          <Card
-            key={i}
-            className="py-6 px-6 flex items-center justify-between border-slate-200 shadow-sm bg-white"
-          >
-            <div>
-              <p className="text-sm font-medium text-slate-500 uppercase tracking-wider">
-                {metric.label}
-              </p>
-              <h3 className="text-2xl font-bold text-slate-900 mt-2">{metric.value}</h3>
-            </div>
-            <Badge variant="secondary" className="bg-slate-100 text-slate-600 hover:bg-slate-100">
-              {metric.trend}
-            </Badge>
-          </Card>
-        ))}
-      </div>
-
-      {/* SECTION 2: ACTION REQUIRED (Hero) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <Card className="lg:col-span-2 border-l-4 border-l-amber-500 shadow-sm relative overflow-hidden bg-white">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div
-                className={
-                  hasActions
-                    ? 'p-2 bg-amber-50 rounded-lg text-amber-600'
-                    : 'p-2 bg-emerald-50 rounded-lg text-emerald-600'
-                }
-              >
-                {hasActions ? (
-                  <AlertTriangle className="h-6 w-6" />
-                ) : (
-                  <CheckCircle className="h-6 w-6" />
-                )}
-              </div>
-              <div>
-                <CardTitle className="text-xl font-semibold text-slate-900">
-                  {hasActions ? 'Action Required' : 'All Clear'}
-                </CardTitle>
-                <p className="text-slate-500 text-sm mt-1">
-                  {hasActions
-                    ? `You have ${totalActionItems} items requiring attention.`
-                    : 'No pending approvals or reviews.'}
-                </p>
-              </div>
-            </div>
-          </CardHeader>
-
-          <CardContent className="space-y-3 pt-2">
-            {actionsLoading ? (
-              <div className="text-sm text-slate-500">Loading action items...</div>
-            ) : hasActions ? (
-              <>
-                {(actions?.pendingAgentApprovals || 0) > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setLocation('/admin/approvals?tab=agents')}
-                    className="w-full text-left flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-100 hover:bg-slate-100 cursor-pointer transition-all group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="h-2 w-2 rounded-full bg-amber-500" />
-                      <span className="font-medium text-slate-700">
-                        {actions?.pendingAgentApprovals} Agent approvals pending
-                      </span>
-                    </div>
-                    <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-amber-600 transition-colors" />
-                  </button>
-                )}
-                {(actions?.pendingListingApprovals || 0) > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setLocation('/admin/approvals?tab=listings')}
-                    className="w-full text-left flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-100 hover:bg-slate-100 cursor-pointer transition-all group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="h-2 w-2 rounded-full bg-amber-500" />
-                      <span className="font-medium text-slate-700">
-                        {actions?.pendingListingApprovals} Listings awaiting review
-                      </span>
-                    </div>
-                    <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-amber-600 transition-colors" />
-                  </button>
-                )}
-                {(actions?.pendingDevelopmentApprovals || 0) > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setLocation('/admin/approvals?tab=developments')}
-                    className="w-full text-left flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-100 hover:bg-slate-100 cursor-pointer transition-all group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="h-2 w-2 rounded-full bg-amber-500" />
-                      <span className="font-medium text-slate-700">
-                        {actions?.pendingDevelopmentApprovals} Developments pending review
-                      </span>
-                    </div>
-                    <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-amber-600 transition-colors" />
-                  </button>
-                )}
-              </>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-6 text-center">
-                <p className="text-slate-500 mb-4 text-sm">Great job! You've cleared the queue.</p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setLocation('/admin/properties')}
-                >
-                  Manage Existing Listings
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* SECTION 3: GROWTH SNAPSHOT */}
-        <div className="lg:col-span-1 space-y-6">
-          <Card className="h-full bg-white border-slate-200 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold flex items-center gap-2 text-slate-900">
-                <TrendingUp className="h-5 w-5 text-slate-400" />
-                Growth Snapshot
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-slate-700">New Users</p>
-                  <p className="text-xs text-slate-500">Last 30 days</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-bold text-slate-900">+{analytics?.userGrowth || 0}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-slate-700">New Listings</p>
-                  <p className="text-xs text-slate-500">Last 30 days</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-bold text-slate-900">+{analytics?.propertyGrowth || 0}</p>
-                </div>
-              </div>
-
-              {/* Quality Score (Phase 6) */}
-              <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <Sparkles className="h-4 w-4 text-amber-500" />
-                    <p className="text-sm font-medium text-slate-700">Avg Quality</p>
-                  </div>
-                  <p className="text-xs text-slate-500">
-                    {(propStats as any)?.qualityMetrics?.featuredCount || 0} Featured Listings
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="font-bold text-slate-900 text-lg">
-                    {Math.round((propStats as any)?.qualityMetrics?.averageScore || 0)}
-                  </p>
-                </div>
-              </div>
-
-              <div className="pt-4 border-t border-slate-100">
-                <Button
-                  variant="ghost"
-                  className="w-full text-xs text-slate-500 hover:text-slate-900 justify-start px-0"
-                  onClick={() => setLocation('/admin/analytics')}
-                >
-                  View Full Analytics <ArrowRight className="h-3 w-3 ml-1" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+    <div className={`${ADMIN_PAGE_CLASS} flex flex-wrap gap-6 items-start`}>
+      <section className="flex-[999_1_520px] min-w-0 flex flex-col gap-5">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">Dashboard</h1>
+          <p className="text-slate-600 mt-1">
+            {inbox.isLoading
+              ? 'Checking what needs you...'
+              : inbox.isError
+                ? 'Could not check what needs you.'
+                : totalWaiting === 0
+                  ? 'Nothing is waiting on you right now.'
+                  : `${totalWaiting} ${totalWaiting === 1 ? 'thing needs' : 'things need'} you today${
+                      overdue ? `, ${overdue} waiting more than a day.` : '.'
+                    }`}
+          </p>
         </div>
-      </div>
 
-      {/* SECTION 4: MONETIZATION SNAPSHOT */}
-      <div>
-        <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">
-          Monetization
-        </h3>
-        <Card className="p-0 overflow-hidden bg-white border-slate-200 shadow-sm">
-          <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-100">
-            <div className="p-6 flex items-center justify-between hover:bg-slate-50 transition-colors">
-              <div className="flex items-center gap-3">
-                <CreditCard className="h-5 w-5 text-slate-400" />
-                <span className="text-slate-700 font-medium">Active Subscriptions</span>
-              </div>
-              <span className="font-bold text-slate-900">{analytics?.paidSubscriptions || 0}</span>
-            </div>
-            <div className="p-6 flex items-center justify-between hover:bg-slate-50 transition-colors">
-              <div className="flex items-center gap-3">
-                <DollarSign className="h-5 w-5 text-slate-400" />
-                <span className="text-slate-700 font-medium">Revenue (MoM)</span>
-              </div>
-              <span className="font-bold text-emerald-600">+12%</span>
-            </div>
-            <div
-              className="p-6 flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer group"
-              onClick={() => setLocation('/admin/revenue')}
-            >
-              <div className="flex items-center gap-3">
-                <Activity className="h-5 w-5 text-slate-400" />
-                <span className="text-slate-700 font-medium group-hover:text-blue-600 transition-colors">
-                  Revenue Center
-                </span>
-              </div>
-              <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-blue-600 transition-colors" />
+        <div className={`${card} overflow-hidden`}>
+          <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-slate-200">
+            <h2 className="text-lg font-semibold text-slate-900">Needs you today</h2>
+            <div className="flex flex-wrap gap-2" role="tablist" aria-label="Inbox filter">
+              {tabs.map(t => (
+                <button
+                  key={t.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === t.id}
+                  onClick={() => setTab(t.id)}
+                  className={`min-h-[36px] px-3 rounded-md border text-sm ${focus} ${
+                    tab === t.id
+                      ? 'bg-slate-900 border-slate-900 text-white font-semibold'
+                      : 'bg-white border-slate-300 text-slate-700'
+                  }`}
+                >
+                  {t.label} <span className="text-xs font-bold opacity-80">{t.count}</span>
+                </button>
+              ))}
             </div>
           </div>
-        </Card>
-      </div>
+
+          {inbox.isLoading ? (
+            <div className="p-5 space-y-3">
+              <Skeleton />
+              <Skeleton />
+              <Skeleton />
+            </div>
+          ) : inbox.isError ? (
+            <ErrorRetry what="the inbox" onRetry={() => inbox.refetch()} />
+          ) : visible.length === 0 ? (
+            <div className="px-5 py-10 text-center">
+              <p className="font-semibold text-slate-900">Nothing waiting. All clear.</p>
+              <p className="text-sm text-slate-600 mt-1">New items appear as they arrive.</p>
+            </div>
+          ) : (
+            <ul>
+              {visible.map(item => {
+                const age = ageTag(item.waitingSince, now);
+                return (
+                  <li
+                    key={item.id}
+                    className="flex flex-wrap items-center gap-3 px-5 py-4 border-b border-slate-100 hover:bg-slate-50"
+                  >
+                    <div className="flex-[1_1_260px] min-w-0">
+                      <div className="font-semibold text-slate-900">{item.title}</div>
+                      <div className="text-sm text-slate-600 mt-0.5">{item.subtitle}</div>
+                    </div>
+                    <span
+                      className={`whitespace-nowrap rounded px-2.5 h-6 inline-flex items-center text-xs font-semibold ${AGE_CLASS[age.level]}`}
+                    >
+                      {age.label}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setLocation(item.href)}
+                      className={`min-h-[40px] px-4 rounded-md bg-blue-700 text-white text-sm font-semibold hover:bg-blue-800 ${focus}`}
+                    >
+                      Open
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          {capped.map(c => (
+            <p
+              key={c.kind}
+              className="px-5 py-2 text-sm text-amber-900 bg-amber-50 border-t border-amber-100"
+            >
+              Showing {c.shown} of {c.total} &mdash;{' '}
+              <button
+                type="button"
+                onClick={() => setLocation(INBOX_SOURCE_PAGES[c.kind].href)}
+                className={`underline font-semibold ${focus}`}
+              >
+                open {INBOX_SOURCE_PAGES[c.kind].label} for all
+              </button>
+            </p>
+          ))}
+          <p className="px-5 py-3 text-sm text-slate-600 bg-slate-50">
+            Buyer enquiries for a development or listing are not here: they sit in that
+            development&rsquo;s or publisher&rsquo;s Leads tab. Support requests and applications
+            are not listed because there is no queue for them yet.
+          </p>
+        </div>
+
+        <div className={`${card} px-5 py-4`}>
+          <h2 className="text-lg font-semibold text-slate-900 mb-2">Recent activity</h2>
+          {activity.isLoading ? (
+            <Skeleton className="h-20" />
+          ) : activity.isError ? (
+            <ErrorRetry what="recent activity" onRetry={() => activity.refetch()} />
+          ) : !activity.data || activity.data.length === 0 ? (
+            <p className="text-sm text-slate-600">No recorded admin activity yet.</p>
+          ) : (
+            <ul>
+              {activity.data.map(a => (
+                <li
+                  key={a.id}
+                  className="flex gap-3 items-start py-2.5 border-b border-slate-100 text-sm"
+                >
+                  <span className="flex-1">{activityText(a)}</span>
+                  <time className="text-xs text-slate-600 whitespace-nowrap" dateTime={a.createdAt}>
+                    {ageTag(a.createdAt, now).label}
+                  </time>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </section>
+
+      <aside className="flex-[1_1_360px] max-w-[420px] flex flex-col gap-5">
+        <div className={`${card} p-5`}>
+          <h2 className="text-sm font-semibold text-slate-900">Pilot pulse</h2>
+          <div className="grid grid-cols-2 gap-2.5 mt-3">
+            {pulse.map(p => (
+              <div key={p.label} className="border border-slate-100 rounded-md p-3 min-w-0">
+                <div className="text-[11px] text-slate-600 whitespace-nowrap overflow-hidden text-ellipsis">
+                  {p.label}
+                </div>
+                <div className="text-lg font-bold text-slate-900 mt-1.5 whitespace-nowrap">
+                  {p.value}
+                </div>
+              </div>
+            ))}
+          </div>
+          {launch.isError || analytics.isError ? (
+            <button
+              type="button"
+              onClick={() => {
+                launch.refetch();
+                analytics.refetch();
+              }}
+              className={`mt-3 min-h-[36px] px-3 rounded-md border border-slate-300 text-sm ${focus}`}
+            >
+              Retry
+            </button>
+          ) : null}
+        </div>
+
+        <div className={`${card} p-5`}>
+          <h2 className="text-sm font-semibold text-slate-900 mb-3">Quick actions</h2>
+          <div className="grid grid-cols-2 gap-2.5">
+            {quick.map(q => (
+              <button
+                key={q.label}
+                type="button"
+                onClick={() => setLocation(q.href)}
+                className={`flex flex-col items-start gap-2 p-3 min-h-[44px] rounded-lg border border-slate-200 bg-white text-left hover:shadow-md transition-shadow ${focus}`}
+              >
+                <q.icon aria-hidden="true" className="h-5 w-5 text-blue-700" />
+                <span className="text-xs font-semibold text-slate-900">{q.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className={`${card} p-5`}>
+          <h2 className="text-sm font-semibold text-slate-900">Are we growing?</h2>
+          <p className="text-xs text-slate-600 mt-1 mb-3">
+            Per week, last 8 weeks. Verified payments are counted per payment, not per account.
+          </p>
+          {growth.isLoading ? (
+            <Skeleton className="h-48" />
+          ) : growth.isError ? (
+            <ErrorRetry what="the growth chart" onRetry={() => growth.refetch()} />
+          ) : (
+            <GrowthChart points={growth.data ?? []} />
+          )}
+        </div>
+      </aside>
     </div>
   );
 };

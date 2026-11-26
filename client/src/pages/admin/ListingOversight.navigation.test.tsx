@@ -13,6 +13,13 @@ vi.mock('@/_core/hooks/useAuth', () => ({
 }));
 vi.mock('@/lib/trpc', () => ({
   trpc: {
+    useUtils: () => ({
+      admin: {
+        getAdminActionItems: { invalidate: vi.fn() },
+        getLaunchDashboardStats: { invalidate: vi.fn() },
+        getDailyInbox: { invalidate: vi.fn() },
+      },
+    }),
     listing: {
       getApprovalQueue: {
         useQuery: (input: unknown) => {

@@ -15,6 +15,9 @@
 
 import { z } from 'zod';
 import { normalizeDateTimeForDb } from './developmentDateUtils';
+import { DEVELOPMENT_OWNERSHIP_TYPES } from '../../shared/db-enums';
+
+type DevelopmentOwnershipType = (typeof DEVELOPMENT_OWNERSHIP_TYPES)[number];
 
 // ============================================================================
 // TYPES
@@ -120,7 +123,7 @@ export interface NormalizedDevelopmentPayload {
 
   constructionPhase?: 'planning' | 'under_construction' | 'completed' | 'phase_completed' | null;
   nature?: 'new' | 'phase' | 'extension' | 'redevelopment' | null;
-  ownershipType?: 'full-title' | 'sectional-title' | 'leasehold' | 'life-rights' | null;
+  ownershipType?: DevelopmentOwnershipType | null;
   structuralType?:
     | 'apartment'
     | 'freestanding-house'
@@ -362,7 +365,7 @@ function mapStatusEnum(value: any): 'launching-soon' | 'selling' | 'sold-out' {
  */
 function normalizeOwnershipType(
   value: any,
-): 'full-title' | 'sectional-title' | 'leasehold' | 'life-rights' | null {
+): DevelopmentOwnershipType | null {
   if (!value) return null;
 
   // If array, take first value
@@ -370,7 +373,7 @@ function normalizeOwnershipType(
     value = value[0];
   }
 
-  return mapEnum(value, ['full-title', 'sectional-title', 'leasehold', 'life-rights'] as const);
+  return mapEnum(value, DEVELOPMENT_OWNERSHIP_TYPES);
 }
 
 // ============================================================================

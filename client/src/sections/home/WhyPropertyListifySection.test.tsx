@@ -71,12 +71,12 @@ describe('WhyPropertyListifySection', () => {
     );
   });
 
-  it('is honest that agency and developer accounts are not open and avoids jargon', () => {
+  it('says agency and developer accounts can be created and avoids jargon', () => {
     const { container } = render(<WhyPropertyListifySection />);
     fireEvent.click(screen.getByRole('tab', { name: 'Agencies' }));
-    expect(screen.getByText(/agency accounts are not open yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/create your agency owner account/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('tab', { name: 'Developers' }));
-    expect(screen.getByText(/developer accounts are not open yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/create your developer account/i)).toBeInTheDocument();
     expect(container.textContent ?? '').not.toMatch(/preparation|activation|canonical/i);
   });
 

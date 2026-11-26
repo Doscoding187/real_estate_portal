@@ -20,6 +20,13 @@ export const OWNERSHIP_TYPES = [
   'life-rights',
 ] as const;
 
+/**
+ * Development-level ownership. The development column is a plain varchar, so
+ * the wizard can also store "share-block" and "varies" (ownership differs by
+ * house type and is asked per house type). Unit types keep OWNERSHIP_TYPES.
+ */
+export const DEVELOPMENT_OWNERSHIP_TYPES = [...OWNERSHIP_TYPES, 'share-block', 'varies'] as const;
+
 export const STRUCTURAL_TYPES = [
   'apartment',
   'freestanding-house',
