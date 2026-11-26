@@ -70,16 +70,24 @@ export const REHEARSAL_SOURCE_FILES = Object.freeze([
 // Source root for the digest. Defaults to the live repository. A historical
 // window may select its frozen evidence copy, but only a directory under
 // docs/database-authority/evidence/rehearsal-source-* inside this repository.
-const frozenSourceSelection = process.env.PROPERTYLISTIFY_REHEARSAL_SOURCE_ROOT?.trim();
-const frozenSourceRoot = frozenSourceSelection ? resolve(frozenSourceSelection) : undefined;
-if (
-  frozenSourceRoot !== undefined &&
-  !frozenSourceRoot.startsWith(
-    join(repositoryRootForSelection, 'docs/database-authority/evidence/rehearsal-source-'),
-  )
-) {
-  throw new Error('Rehearsal source root refused: not a frozen evidence directory.');
+// Test-only: if the variable is set at all outside a vitest run it is a hard
+// error (fail closed), never silently ignored.
+export function resolveFrozenSourceRoot(
+  env: NodeJS.ProcessEnv,
+  repoRoot: string,
+): string | undefined {
+  const selection = env.PROPERTYLISTIFY_REHEARSAL_SOURCE_ROOT?.trim();
+  if (!selection) return undefined;
+  if (env.NODE_ENV !== 'test' || !env.VITEST) {
+    throw new Error('Rehearsal source root refused: only permitted inside a test run.');
+  }
+  const root = resolve(selection);
+  if (!root.startsWith(join(repoRoot, 'docs/database-authority/evidence/rehearsal-source-'))) {
+    throw new Error('Rehearsal source root refused: not a frozen evidence directory.');
+  }
+  return root;
 }
+const frozenSourceRoot = resolveFrozenSourceRoot(process.env, repositoryRootForSelection);
 const repositoryRoot = frozenSourceRoot ?? repositoryRootForSelection;
 const recordPath = registrationAbsolutePath;
 

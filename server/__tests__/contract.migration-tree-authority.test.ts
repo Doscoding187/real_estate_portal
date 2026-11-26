@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -108,7 +109,43 @@ function read(path: string): string {
   return readFileSync(join(ROOT, path), 'utf8');
 }
 
-function workingTreePaths(): string[] {
+// Frozen byte-exact evidence copies (never executed) of the guarded sources as of
+// the 0197 release (commit 6938b9292). Exact allowlist: path -> git blob hash.
+const FROZEN_FIXTURE_PREFIX = 'docs/database-authority/evidence/rehearsal-source-';
+const FZ = 'docs/database-authority/evidence/rehearsal-source-20261105/';
+const FROZEN_FIXTURE_BLOBS: Readonly<Record<string, string>> = {
+  [`${FZ}README.txt`]: 'f81320cf77d521ba27b7bfde8078a8e5ebadf8d0',
+  [`${FZ}docs/database-authority/disposable-rehearsal-authorization-20261105.json`]:
+    'fd67e77c35e4c2ab2351dd04340447969386c2da',
+  [`${FZ}docs/database-authority/operation-policy.json`]:
+    'c91ce631833379858373ce0bd059128a2805251a',
+  [`${FZ}server/_core/databaseAuthority/authorization.ts`]:
+    '4fc87cca46ea836d4097aef2ed208404966c39c5',
+  [`${FZ}server/_core/databaseAuthority/connectionAuthority.ts`]:
+    'a47545cfbb787c4d3a6fb82f5b3e947f64a77bac',
+  [`${FZ}server/_core/databaseAuthority/context.ts`]: '3349927ede155d5be44654413c037cbd45adfda2',
+  [`${FZ}server/_core/databaseAuthority/credentialVault.ts`]:
+    'b7c46aa9be802fe4ffddbd91d5c735b0540c6c63',
+  [`${FZ}server/_core/databaseAuthority/environment.ts`]:
+    '99431fe0adb78a9525451fc86df787a6054a025e',
+  [`${FZ}server/_core/databaseAuthority/rehearsalAuthority.ts`]:
+    '2c746ca7215b1a575815505b39c0b3221bf531b2',
+  [`${FZ}server/_core/databaseAuthority/types.ts`]: '29bb4c2c9a28e5cff9632c2c878b28e754f92abe',
+  [`${FZ}server/_core/databaseTls.ts`]: 'b33c09b7ddef41fa42fea5ba6fd6287ca38e8207',
+  [`${FZ}server/migrations/manifest.json`]: '5a7142b1aa7c1acee50560e3646b1b91398ce227',
+  [`${FZ}server/migrations/migrationManifest.ts`]: 'ec554b3927f403a273f2899f247b709b89765b97',
+  [`${FZ}server/migrations/runSqlMigrations.ts`]: '1407bc835fc6ad044ba37bcb01ef7e3668cdfc70',
+};
+
+function gitBlobHash(path: string): string {
+  const content = readFileSync(join(ROOT, path));
+  return createHash('sha1')
+    .update(`blob ${content.length}\0`)
+    .update(content)
+    .digest('hex');
+}
+
+function rawWorkingTreePaths(): string[] {
   return execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', '-z'], {
     cwd: ROOT,
     encoding: 'utf8',
@@ -116,9 +153,13 @@ function workingTreePaths(): string[] {
     .split('\0')
     .filter(Boolean)
     .filter(path => existsSync(join(ROOT, path)))
-    // Frozen byte-exact evidence copies (never executed) of historical guarded sources.
-    .filter(path => !path.startsWith('docs/database-authority/evidence/rehearsal-source-'))
     .sort();
+}
+
+function workingTreePaths(): string[] {
+  // Only the exact allowlisted frozen files are skipped; anything else under
+  // rehearsal-source-* is still scanned and fails the fixture test below.
+  return rawWorkingTreePaths().filter(path => !(path in FROZEN_FIXTURE_BLOBS));
 }
 
 function readManifest(): AuthorityManifest {
@@ -326,6 +367,14 @@ function isHistoricalManualDocumentation(path: string, manual: ManualUtilityAuth
 }
 
 describe('migration tree authority', () => {
+  it('allows exactly the frozen 0197-release evidence files, byte-identical', () => {
+    const underPrefix = rawWorkingTreePaths().filter(path => path.startsWith(FROZEN_FIXTURE_PREFIX));
+    expect(underPrefix).toEqual(Object.keys(FROZEN_FIXTURE_BLOBS).sort());
+    for (const path of underPrefix) {
+      expect(gitBlobHash(path), `Frozen fixture changed: ${path}`).toBe(FROZEN_FIXTURE_BLOBS[path]);
+    }
+  });
+
   it('classifies every tracked or untracked SQL surface and prohibits retired trees', () => {
     const manifest = readManifest();
     const paths = workingTreePaths();

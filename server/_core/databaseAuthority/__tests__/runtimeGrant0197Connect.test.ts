@@ -95,4 +95,13 @@ describe('0197 runtime grant connect failure', () => {
       }),
     ).rejects.toThrow('accepted schema source changed');
   });
+
+  it('still catches live schema drift: the live model digest equals the current 0200 pin', async () => {
+    const actual = await vi.importActual<typeof import('../schemaCongruency')>('../schemaCongruency');
+    const schema = await import('../../../../drizzle/schema');
+    const { runtimeGrant0200Plan } = await import('../runtimeGrant0200Plan');
+    const live = actual.normalizedDesiredSchema(schema).digest;
+    expect(live).toBe(runtimeGrant0200Plan().expectedModelDigest);
+    expect(live).not.toBe(MODEL_DIGEST_0197);
+  });
 });

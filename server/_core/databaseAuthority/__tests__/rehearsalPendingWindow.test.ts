@@ -1,3 +1,4 @@
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import * as canonicalSchema from '../../../../drizzle/schema';
 import { loadAndValidateMigrationManifest } from '../../../migrations/migrationManifest';
@@ -10,8 +11,57 @@ import {
   REHEARSAL,
   REHEARSAL_FINGERPRINT,
   REHEARSAL_RESOURCE_ID,
+  calculateSourceDigest,
+  resolveFrozenSourceRoot,
 } from '../rehearsalAuthority';
 import { normalizedDesiredSchema } from '../schemaCongruency';
+
+const FROZEN_DIGEST_20261105 = '82cf494573d07bd2679b0ad1c34543a9fa0d426d8d9f2551bd3b9735f261aa24';
+const FROZEN_DIR = join(
+  process.cwd(),
+  'docs/database-authority/evidence/rehearsal-source-20261105',
+);
+
+describe('frozen source root selection is test-only and fails closed', () => {
+  const base = { PROPERTYLISTIFY_REHEARSAL_SOURCE_ROOT: FROZEN_DIR };
+  it('is absent by default and honoured only under NODE_ENV=test with VITEST set', () => {
+    expect(resolveFrozenSourceRoot({}, process.cwd())).toBeUndefined();
+    expect(
+      resolveFrozenSourceRoot({ ...base, NODE_ENV: 'test', VITEST: 'true' }, process.cwd()),
+    ).toBe(FROZEN_DIR);
+  });
+  it('throws (never ignores) when set outside a test run', () => {
+    for (const env of [
+      { ...base },
+      { ...base, NODE_ENV: 'production', VITEST: 'true' },
+      { ...base, NODE_ENV: 'development', VITEST: 'true' },
+      { ...base, NODE_ENV: 'test' },
+      { ...base, NODE_ENV: 'production' },
+    ]) {
+      expect(() => resolveFrozenSourceRoot(env, process.cwd())).toThrow('only permitted inside a test run');
+    }
+  });
+  it('refuses a directory that is not a frozen evidence copy', () => {
+    expect(() =>
+      resolveFrozenSourceRoot(
+        { PROPERTYLISTIFY_REHEARSAL_SOURCE_ROOT: process.cwd(), NODE_ENV: 'test', VITEST: 'true' },
+        process.cwd(),
+      ),
+    ).toThrow('not a frozen evidence directory');
+  });
+});
+
+describe('live tree is not bound by the 2026-11-26 placeholder or the frozen digest', () => {
+  it('refuses the live source binding; the live digest differs from placeholder and frozen digests', () => {
+    const live = calculateSourceDigest(process.cwd());
+    expect(live).toMatch(/^[a-f0-9]{64}$/);
+    expect(live).not.toBe(REHEARSAL.sourceBinding.sha256);
+    expect(live).not.toBe(FROZEN_DIGEST_20261105);
+    expect(() => assertRehearsalSourceBinding()).toThrow('guarded source digest');
+    // A positive live binding only becomes possible once the live window is
+    // registered (registration-only commit that records the recomputed digest).
+  });
+});
 
 // No useRehearsal import: this is the committed default registration.
 describe('pending 0197-to-0200 rehearsal registration (default) fails closed', () => {

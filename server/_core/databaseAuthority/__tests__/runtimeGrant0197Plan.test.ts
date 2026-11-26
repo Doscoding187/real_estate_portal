@@ -2,6 +2,8 @@ import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } f
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import * as schema from '../../../../drizzle/schema';
+import { normalizedDesiredSchema } from '../schemaCongruency';
 import {
   RUNTIME_GRANT_0197_TABLES,
   runtimeGrant0197Plan,
@@ -44,6 +46,30 @@ describe('0197 runtime grant plan', () => {
     expect(runtimeGrant0197Plan().planDigest).toBe(
       '9cf929641b0f0c4a4b7441e1319656a520c4cc9a37913f85759ea0617e29e3ca',
     );
+  });
+
+  it('refuses when a granted table definition differs from its 0197 structure', () => {
+    const live = normalizedDesiredSchema(schema).tables as Array<{
+      name: string;
+      columns: Array<{ name: string; type: string }>;
+    }>;
+    const granted = RUNTIME_GRANT_0197_TABLES[1].table;
+    expect(() => runtimeGrant0197Plan(process.cwd(), { desiredTables: live })).not.toThrow();
+    const tampered = live.map(table =>
+      table.name === granted
+        ? { ...table, columns: [...table.columns, { name: 'extra', type: 'int' }] }
+        : table,
+    );
+    expect(() => runtimeGrant0197Plan(process.cwd(), { desiredTables: tampered })).toThrow(
+      'migration lineage or table inventory changed',
+    );
+    // Unrelated tables (e.g. the 0198 column additions) do not matter.
+    const unrelated = live.map(table =>
+      table.name === 'service_provider_profiles'
+        ? { ...table, columns: [...table.columns, { name: 'extra', type: 'int' }] }
+        : table,
+    );
+    expect(() => runtimeGrant0197Plan(process.cwd(), { desiredTables: unrelated })).not.toThrow();
   });
 
   it('refuses when the 0197 table inventory is altered', () => {

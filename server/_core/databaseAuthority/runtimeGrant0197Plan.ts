@@ -1,7 +1,9 @@
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import * as schema from '../../../drizzle/schema';
 import { loadAndValidateMigrationManifest } from '../../migrations/migrationManifest';
+import { normalizedDesiredSchema } from './schemaCongruency';
 
 export const RUNTIME_GRANT_0197_TABLES = [
   {
@@ -122,6 +124,11 @@ const EXPECTED_PREFIX_DIGEST =
 const EXPECTED_TABLE_LIST_DIGEST =
   'a0c9c6362479492a794faed8e086c1342a88aab7f1918358db755f62aa8101a2';
 
+// sha256(JSON of the normalized definitions of the 15 granted tables, sorted by
+// name). Unchanged since 0197: later windows add only unrelated tables/columns.
+const EXPECTED_GRANTED_TABLES_DIGEST =
+  'e05e16cde6b4be3996564144583bbb7f604c2c68f1de2021039eeaaf8e52bd05';
+
 const sha256 = (value: unknown) =>
   createHash('sha256').update(JSON.stringify(value)).digest('hex');
 
@@ -130,7 +137,10 @@ const sha256 = (value: unknown) =>
  * covered by the 0094/0111/0115 grant plans. It never opens a connection and
  * deliberately exposes no apply operation.
  */
-export function runtimeGrant0197Plan(root = process.cwd()) {
+export function runtimeGrant0197Plan(
+  root = process.cwd(),
+  options: { desiredTables?: ReadonlyArray<{ name: string }> } = {},
+) {
   const inventory = JSON.parse(
     readFileSync(resolve(root, 'drizzle/schema/canonical-model-inventory.json'), 'utf8'),
   ) as { tableCount: number; structuralDigest: string; tables: string[] };
@@ -155,6 +165,7 @@ export function runtimeGrant0197Plan(root = process.cwd()) {
   const laterTables = new Set<string>(LATER_ADDITIVE_TABLES);
   const originalTables = inventory.tables.filter(table => !laterTables.has(table)).sort();
   const successorOfHead =
+    !exactAtHead &&
     ordered.length > EXPECTED_MIGRATION_COUNT &&
     ordered[EXPECTED_MIGRATION_COUNT - 1].filename === EXPECTED_HEAD &&
     sha256(
@@ -166,7 +177,14 @@ export function runtimeGrant0197Plan(root = process.cwd()) {
     inventory.tableCount === inventory.tables.length &&
     new Set(inventory.tables).size === inventory.tables.length &&
     originalTables.length === EXPECTED_TABLE_COUNT &&
-    sha256(originalTables) === EXPECTED_TABLE_LIST_DIGEST;
+    sha256(originalTables) === EXPECTED_TABLE_LIST_DIGEST &&
+    // The 15 granted tables must still have their 0197 structure (later windows
+    // only add tables or columns elsewhere).
+    sha256(
+      (options.desiredTables ?? normalizedDesiredSchema(schema).tables)
+        .filter(table => (names as string[]).includes(table.name))
+        .sort((left, right) => left.name.localeCompare(right.name)),
+    ) === EXPECTED_GRANTED_TABLES_DIGEST;
   if (
     !(exactAtHead || successorOfHead) ||
     names.length !== 15 ||

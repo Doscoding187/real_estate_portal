@@ -15,6 +15,7 @@ import {
   Runtime0197GrantFailure,
 } from '../runtimeGrant0197Apply';
 import { RUNTIME_GRANT_0197_TABLES } from '../runtimeGrant0197Plan';
+import { runtimeGrant0200Plan } from '../runtimeGrant0200Plan';
 import { normalizedDesiredSchema } from '../schemaCongruency';
 import { deriveGitWorktreeIdentity } from '../worktreeIdentity';
 
@@ -130,6 +131,10 @@ describe('0197 runtime grant apply plan', () => {
     );
     // The live schema now also holds the 0199/0200 tables, so its digest differs.
     expect(normalizedDesiredSchema(schema).digest).not.toBe(plan.expectedModelDigest);
+    // Live drift is still caught: the live schema must equal the current (0200) pin.
+    expect(normalizedDesiredSchema(schema).digest).toBe(
+      runtimeGrant0200Plan().expectedModelDigest,
+    );
   });
 });
 
