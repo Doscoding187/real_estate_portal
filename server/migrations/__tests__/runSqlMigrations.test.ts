@@ -376,7 +376,7 @@ describe('migration connection security', () => {
 });
 
 describe('disposable rehearsal release authority', () => {
-  it('accepts only the registered 0111-to-0197 release scope and current manifest digest', () => {
+  it('accepts only the registered 0197-to-0200 release scope and current manifest digest', () => {
     const exact = {
       targetClass: 'disposable-rehearsal',
       operation: 'release-plan',
@@ -391,7 +391,7 @@ describe('disposable rehearsal release authority', () => {
       { ...exact, manifestDigest: '0'.repeat(64) },
       { ...exact, operation: 'migration-apply' },
     ]) {
-      expect(() => assertRehearsalReleaseScope(changed)).toThrow('0111-to-0197');
+      expect(() => assertRehearsalReleaseScope(changed)).toThrow('0197-to-0200');
     }
   });
 

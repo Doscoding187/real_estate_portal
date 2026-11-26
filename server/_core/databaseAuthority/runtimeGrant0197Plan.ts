@@ -1,7 +1,9 @@
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import * as schema from '../../../drizzle/schema';
 import { loadAndValidateMigrationManifest } from '../../migrations/migrationManifest';
+import { normalizedDesiredSchema } from './schemaCongruency';
 
 export const RUNTIME_GRANT_0197_TABLES = [
   {
@@ -112,6 +114,21 @@ const EXPECTED_MANIFEST_DIGEST =
 const EXPECTED_MODEL_DIGEST =
   '869f441f3131b0f1bf4b56d416d049292bb48204918f8172d3699625c3208da7';
 
+// Tables added by migrations after 0197 (0199, 0200). Set aside when checking
+// that the 0197 table inventory is intact in a later-head tree.
+const LATER_ADDITIVE_TABLES = ['service_provider_projects', 'service_provider_credentials'] as const;
+// sha256(JSON of [filename, checksum] for the first 198 migrations, 0000-0197).
+const EXPECTED_PREFIX_DIGEST =
+  '6b7f1da01c6bb2281e4eb5a0363b1d8480428830ec7f944773fca41b18efaf50';
+// sha256(JSON of the sorted 225-table inventory at 0197).
+const EXPECTED_TABLE_LIST_DIGEST =
+  'a0c9c6362479492a794faed8e086c1342a88aab7f1918358db755f62aa8101a2';
+
+// sha256(JSON of the normalized definitions of the 15 granted tables, sorted by
+// name). Unchanged since 0197: later windows add only unrelated tables/columns.
+const EXPECTED_GRANTED_TABLES_DIGEST =
+  'e05e16cde6b4be3996564144583bbb7f604c2c68f1de2021039eeaaf8e52bd05';
+
 const sha256 = (value: unknown) =>
   createHash('sha256').update(JSON.stringify(value)).digest('hex');
 
@@ -120,7 +137,10 @@ const sha256 = (value: unknown) =>
  * covered by the 0094/0111/0115 grant plans. It never opens a connection and
  * deliberately exposes no apply operation.
  */
-export function runtimeGrant0197Plan(root = process.cwd()) {
+export function runtimeGrant0197Plan(
+  root = process.cwd(),
+  options: { desiredTables?: ReadonlyArray<{ name: string }> } = {},
+) {
   const inventory = JSON.parse(
     readFileSync(resolve(root, 'drizzle/schema/canonical-model-inventory.json'), 'utf8'),
   ) as { tableCount: number; structuralDigest: string; tables: string[] };
@@ -128,14 +148,45 @@ export function runtimeGrant0197Plan(root = process.cwd()) {
     migrationsDirectory: resolve(root, 'server/migrations'),
   });
   const names = RUNTIME_GRANT_0197_TABLES.map(item => item.table);
+  // Closed-release check at the 0197 head: the whole tree is the 0197 tree.
+  const exactAtHead =
+    inventory.tableCount === EXPECTED_TABLE_COUNT &&
+    inventory.tables.length === EXPECTED_TABLE_COUNT &&
+    new Set(inventory.tables).size === EXPECTED_TABLE_COUNT &&
+    inventory.structuralDigest === EXPECTED_MODEL_DIGEST &&
+    manifest.document.expectedHead === EXPECTED_HEAD &&
+    manifest.orderedMigrations.length === EXPECTED_MIGRATION_COUNT &&
+    manifest.manifestDigest === EXPECTED_MANIFEST_DIGEST;
+  // Lineage-prefix check once later additive windows (0198+) extend the tree:
+  // the first 198 migrations must be byte-identical (filename + checksum), the
+  // next migration must descend from the 0197 head, and the 0197 table set must
+  // be intact once the known later tables are set aside.
+  const ordered = manifest.orderedMigrations;
+  const laterTables = new Set<string>(LATER_ADDITIVE_TABLES);
+  const originalTables = inventory.tables.filter(table => !laterTables.has(table)).sort();
+  const successorOfHead =
+    !exactAtHead &&
+    ordered.length > EXPECTED_MIGRATION_COUNT &&
+    ordered[EXPECTED_MIGRATION_COUNT - 1].filename === EXPECTED_HEAD &&
+    sha256(
+      ordered.slice(0, EXPECTED_MIGRATION_COUNT).map(entry => [entry.filename, entry.checksum]),
+    ) === EXPECTED_PREFIX_DIGEST &&
+    ordered[EXPECTED_MIGRATION_COUNT].parent === EXPECTED_HEAD &&
+    ordered[EXPECTED_MIGRATION_COUNT].parentChecksum ===
+      ordered[EXPECTED_MIGRATION_COUNT - 1].checksum &&
+    inventory.tableCount === inventory.tables.length &&
+    new Set(inventory.tables).size === inventory.tables.length &&
+    originalTables.length === EXPECTED_TABLE_COUNT &&
+    sha256(originalTables) === EXPECTED_TABLE_LIST_DIGEST &&
+    // The 15 granted tables must still have their 0197 structure (later windows
+    // only add tables or columns elsewhere).
+    sha256(
+      (options.desiredTables ?? normalizedDesiredSchema(schema).tables)
+        .filter(table => (names as string[]).includes(table.name))
+        .sort((left, right) => left.name.localeCompare(right.name)),
+    ) === EXPECTED_GRANTED_TABLES_DIGEST;
   if (
-    inventory.tableCount !== EXPECTED_TABLE_COUNT ||
-    inventory.tables.length !== EXPECTED_TABLE_COUNT ||
-    new Set(inventory.tables).size !== EXPECTED_TABLE_COUNT ||
-    inventory.structuralDigest !== EXPECTED_MODEL_DIGEST ||
-    manifest.document.expectedHead !== EXPECTED_HEAD ||
-    manifest.orderedMigrations.length !== EXPECTED_MIGRATION_COUNT ||
-    manifest.manifestDigest !== EXPECTED_MANIFEST_DIGEST ||
+    !(exactAtHead || successorOfHead) ||
     names.length !== 15 ||
     new Set(names).size !== names.length ||
     names.some(name => !inventory.tables.includes(name))

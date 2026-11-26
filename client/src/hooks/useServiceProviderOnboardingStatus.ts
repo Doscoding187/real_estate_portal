@@ -10,6 +10,13 @@ export type ServiceProviderOnboardingStatus = {
   dashboardUnlocked: boolean;
   hasAssignedRequests: boolean;
   fullFeaturesUnlocked: boolean;
+  readiness?: {
+    completionPercent: number;
+    readyForSubmission: boolean;
+    blockers: string[];
+    items: Array<{ id: string; label: string; complete: boolean }>;
+    optionalEnrichment: string[];
+  };
   recommendedNextStep: string;
   provider: {
     providerId: number;

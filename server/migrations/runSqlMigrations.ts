@@ -298,7 +298,7 @@ export function assertRehearsalReleaseScope(input: {
     input.manifestDigest !== REHEARSAL.manifestDigest
   ) {
     throw new Error(
-      'Rehearsal release refused: only the registered 0111-to-0197 migration scope is allowed.',
+      `Rehearsal release refused: only the registered ${REHEARSAL.acceptedOldHead.slice(0, 4)}-to-${REHEARSAL.expectedHead.slice(0, 4)} migration scope is allowed.`,
     );
   }
 }

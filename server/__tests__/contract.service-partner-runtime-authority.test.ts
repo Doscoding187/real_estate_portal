@@ -182,7 +182,7 @@ describe('canonical Service Partner publication authority', () => {
     expect(service).toContain('reviewProviderPublication');
     expect(service).toContain('Provider is not ready for publication');
     expect(service).toMatch(
-      /update\(partners\)\s*\.set\(\{ verificationStatus: 'verified' \}\)[\s\S]{0,400}update\(serviceProviderProfiles\)\s*\.set\(\{ directoryActive: 1 \}\)/,
+      /return db\.transaction\(async tx => \{[\s\S]{0,4000}update\(partners\)\s*\.set\(\{ verificationStatus: 'verified' \}\)[\s\S]{0,400}update\(serviceProviderProfiles\)\s*\.set\(\{[\s\S]{0,200}directoryActive: 1,[\s\S]{0,100}submissionStatus: 'approved'/,
     );
     expect(service).toContain('publicationDriftDetected');
   });

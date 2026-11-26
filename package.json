@@ -348,6 +348,11 @@
     "db:runtime-grants:0197:apply-plan": "tsx scripts/runtimeGrant0197ApplyCli.ts plan",
     "db:runtime-grants:0197:apply": "tsx scripts/runtimeGrant0197ApplyCli.ts apply",
     "db:runtime-grants:0197:rollback": "tsx scripts/runtimeGrant0197ApplyCli.ts rollback",
-    "db:runtime-grants:0197:probe": "tsx server/_core/databaseAuthority/runtimeGrant0197Probe.ts"
+    "db:runtime-grants:0197:probe": "tsx server/_core/databaseAuthority/runtimeGrant0197Probe.ts",
+    "db:runtime-grants:0200:plan": "tsx scripts/runtimeGrant0200PlanCli.ts",
+    "db:runtime-grants:0200:apply-plan": "tsx scripts/runtimeGrant0200ApplyCli.ts plan",
+    "db:runtime-grants:0200:apply": "tsx scripts/runtimeGrant0200ApplyCli.ts apply",
+    "db:runtime-grants:0200:rollback": "tsx scripts/runtimeGrant0200ApplyCli.ts rollback",
+    "db:runtime-grants:0200:probe": "tsx server/_core/databaseAuthority/runtimeGrant0200Probe.ts"
   }
 }
