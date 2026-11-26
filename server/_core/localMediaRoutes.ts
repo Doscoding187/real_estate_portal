@@ -1,6 +1,7 @@
 import type { Express, Request, Response } from 'express';
 
 import {
+  deleteLocalMediaObject,
   getLocalMediaMaxBytes,
   getLocalMediaObjectForDelivery,
   isLocalMediaStorage,
@@ -47,6 +48,7 @@ async function handleLocalMediaUpload(req: Request, res: Response): Promise<void
       contentType: string;
       mediaType: 'image' | 'video' | 'floorplan' | 'pdf';
       maxBytes?: number;
+      exactBytes?: number;
     };
     try {
       reservation = verifyListingMediaUploadToken(token, { requireConfirmed: false });
@@ -66,6 +68,7 @@ async function handleLocalMediaUpload(req: Request, res: Response): Promise<void
             ...credentialReservation,
             mediaType: credentialReservation.contentType === 'application/pdf' ? 'pdf' : 'image',
             maxBytes: SERVICE_PROVIDER_CREDENTIAL_MAX_BYTES,
+            exactBytes: credentialReservation.byteSize,
           };
         }
       }
@@ -95,6 +98,10 @@ async function handleLocalMediaUpload(req: Request, res: Response): Promise<void
       req,
       reservation.maxBytes ?? getLocalMediaMaxBytes(reservation.mediaType),
     );
+    if (reservation.exactBytes !== undefined && result.contentLength !== reservation.exactBytes) {
+      await deleteLocalMediaObject(reservation.key).catch(() => undefined);
+      throw new Error('Uploaded media size does not match its upload authority.');
+    }
     res.status(200).json({ key: reservation.key, contentLength: result.contentLength });
   } catch (error) {
     sendError(res, error, 'Unable to store local media.');

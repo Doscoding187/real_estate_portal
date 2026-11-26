@@ -49,6 +49,7 @@ import {
 import {
   buildLocalMediaUploadUrl,
   getMediaStorageAdapter,
+  deleteLocalMediaObject,
   inspectLocalMediaObject,
 } from '../_core/mediaStorage';
 
@@ -3070,6 +3071,12 @@ export class ServicesEngineService {
     const uploaded = getMediaStorageAdapter() === 'local'
       ? await inspectLocalMediaObject(reservation.key, reservation.contentType)
       : await inspectServiceProviderCredentialS3Object(reservation);
+    if (uploaded.contentLength !== reservation.byteSize) {
+      if (getMediaStorageAdapter() === 'local') {
+        await deleteLocalMediaObject(reservation.key).catch(() => undefined);
+      }
+      throw new Error('Uploaded credential did not satisfy its private storage authority.');
+    }
     if (uploaded.contentLength > SERVICE_PROVIDER_CREDENTIAL_MAX_BYTES) {
       throw new Error('Credential document exceeds the 25 MB limit');
     }

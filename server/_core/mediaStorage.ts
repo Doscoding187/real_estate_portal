@@ -278,6 +278,12 @@ export async function writeLocalMediaObject(
   }
 }
 
+export async function deleteLocalMediaObject(key: string): Promise<void> {
+  const { path: objectPath } = await resolveLocalMediaPath(key);
+  await unlink(objectPath).catch(() => undefined);
+  await unlink(`${objectPath}.meta.json`).catch(() => undefined);
+}
+
 async function inspectLocalMediaObjectInternal(
   key: string,
   expectedContentType?: string,
