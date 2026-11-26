@@ -1189,6 +1189,28 @@ export async function requestPaidLaunchAccessInvoice(input: {
         .where(eq(subscriptions.id, lockedSubscription.id));
     }
 
+    // One Launch Access order at a time: while finance is reviewing a submitted
+    // payment notice no second order may be created, and the subscription must
+    // not be rolled back from payment_under_review to pending_payment.
+    if (lockedSubscription) {
+      const [underReview] = await tx
+        .select({ id: billingInvoices.id, paymentReference: billingInvoices.paymentReference })
+        .from(billingInvoices)
+        .where(
+          and(
+            eq(billingInvoices.subscriptionId, lockedSubscription.id),
+            eq(billingInvoices.status, 'submitted'),
+          ),
+        )
+        .limit(1);
+      if (underReview) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: `Payment under review (ref ${underReview.paymentReference}). We will unlock access once finance confirms.`,
+        });
+      }
+    }
+
     const productKey = getCommercialProductKey(plan);
     const subscriptionResult = await upsertPendingSubscription(tx, {
       ownerType: owner.ownerType,
