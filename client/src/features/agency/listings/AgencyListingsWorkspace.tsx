@@ -36,6 +36,7 @@ import { EmptyPanel, ErrorPanel, SectionTitle } from '../workspace/WorkspacePrim
 import type { WorkspaceContentProps } from '../workspace/types';
 import { compactCurrency, formatAge, numberLabel } from '../workspace/utils';
 import { LISTING_SUBMISSION_READINESS_THRESHOLD } from '@shared/listing-workflow-types';
+import type { ListingLifecycleAction } from '@/components/agent/AgentListingInventoryCard';
 import {
   AgencyListingActions,
   AgencyListingIdentity,
@@ -51,6 +52,8 @@ type InventoryStatus =
   | 'approved'
   | 'published'
   | 'private_pending_edits'
+  | 'sold'
+  | 'rented'
   | 'archived';
 type AssignmentFilter = 'all' | 'unassigned' | 'inactive';
 type AttentionFilter =
@@ -77,6 +80,8 @@ const STATUS_OPTIONS: Array<{ value: InventoryStatus; label: string }> = [
   { value: 'approved', label: 'Approved' },
   { value: 'published', label: 'Published' },
   { value: 'private_pending_edits', label: 'Private edits' },
+  { value: 'sold', label: 'Sold' },
+  { value: 'rented', label: 'Let' },
   { value: 'archived', label: 'Archived' },
 ];
 
@@ -202,6 +207,15 @@ function reasonLabel(reason: string) {
     published_no_recent_enquiries: 'Published with no recent enquiries',
   };
   return labels[reason] || labelize(reason);
+}
+
+function lifecycleActionsFor(listing: any): ListingLifecycleAction[] {
+  const status = String(listing?.authoringStatus || '');
+  const rent = listing?.transactionType === 'rent';
+  if (status === 'published') return [rent ? 'let' : 'sold', 'unpublish'];
+  if (status === 'sold' || status === 'rented') return ['unpublish'];
+  if (status === 'archived') return ['republish'];
+  return [];
 }
 
 function actionSupported(listing: any, action: 'submit' | 'archive') {
@@ -349,6 +363,7 @@ function ListingActions({
   onSubmit,
   onArchive,
   onPublic,
+  onLifecycle,
 }: {
   listing: any;
   busy: boolean;
@@ -358,9 +373,12 @@ function ListingActions({
   onSubmit: () => void;
   onArchive: () => void;
   onPublic: () => void;
+  onLifecycle: (action: ListingLifecycleAction) => void;
 }) {
   return (
     <AgencyListingActions
+      lifecycleActions={lifecycleActionsFor(listing)}
+      onLifecycle={onLifecycle}
       title={listing.title || `Listing ${listing.id}`}
       busy={busy}
       canEdit={canEdit}
@@ -480,8 +498,27 @@ export function AgencyListingsWorkspace(props: WorkspaceContentProps) {
     onError: error => toast.error(error.message || 'Could not archive listing'),
   });
 
+  const lifecycleListing = trpc.listing.setLifecycle.useMutation({
+    onSuccess: async result => {
+      await refreshInventory();
+      toast.success(
+        result.status === 'pending_review'
+          ? 'Listing resubmitted for review'
+          : result.status === 'archived'
+            ? 'Listing unpublished'
+            : result.status === 'sold'
+              ? 'Listing marked as sold'
+              : 'Listing marked as let',
+      );
+    },
+    onError: error => toast.error(error.message || 'Could not change listing status'),
+  });
+
   const mutationBusy =
-    assignListing.isPending || submitListing.isPending || archiveListing.isPending;
+    assignListing.isPending ||
+    submitListing.isPending ||
+    archiveListing.isPending ||
+    lifecycleListing.isPending;
   const extraFilterCount =
     Number(assignment !== 'all') + Number(transactionType !== 'all') + Number(attention !== 'all');
 
@@ -817,6 +854,7 @@ export function AgencyListingsWorkspace(props: WorkspaceContentProps) {
                         onSubmit={() => submitListing.mutate({ listingId: listing.id })}
                         onArchive={() => archiveListing.mutate({ listingId: listing.id })}
                         onPublic={() => openPublic(listing)}
+                        onLifecycle={change => lifecycleListing.mutate({ id: listing.id, change })}
                       />
                     </div>
                   ))}
@@ -863,6 +901,7 @@ export function AgencyListingsWorkspace(props: WorkspaceContentProps) {
                         onSubmit={() => submitListing.mutate({ listingId: listing.id })}
                         onArchive={() => archiveListing.mutate({ listingId: listing.id })}
                         onPublic={() => openPublic(listing)}
+                        onLifecycle={change => lifecycleListing.mutate({ id: listing.id, change })}
                       />
                     </div>
                   </div>

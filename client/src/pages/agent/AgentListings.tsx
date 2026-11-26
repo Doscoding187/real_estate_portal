@@ -17,6 +17,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AgentListingInventoryCard } from '@/components/agent/AgentListingInventoryCard';
@@ -52,7 +53,7 @@ import {
 import { cn } from '@/lib/utils';
 import { readCorePropertyInformation } from '@shared/core-property-information';
 
-type ListingTab = 'active' | 'pending' | 'draft' | 'rejected' | 'sold' | 'archived';
+type ListingTab = 'active' | 'pending' | 'draft' | 'rejected' | 'sold' | 'let' | 'archived';
 const PAGE_SIZE = 12;
 type SortOrder = 'newest' | 'oldest' | 'title' | 'price_low' | 'price_high';
 
@@ -73,6 +74,7 @@ function listingTabFromLocation(location: string): ListingTab {
     requestedTab === 'draft' ||
     requestedTab === 'rejected' ||
     requestedTab === 'sold' ||
+    requestedTab === 'let' ||
     requestedTab === 'archived'
     ? requestedTab
     : 'active';
@@ -123,6 +125,8 @@ export default function AgentListings() {
         return ['available', 'published', 'active'].includes(normalized);
       case 'sold':
         return normalized === 'sold';
+      case 'let':
+        return normalized === 'rented';
       case 'archived':
         return normalized === 'archived';
       default:
@@ -184,6 +188,26 @@ export default function AgentListings() {
     onError: error => {
       console.error('Delete listing error:', error);
       alert('Failed to delete listing: ' + error.message);
+    },
+  });
+
+  // Lister-driven Sold / Let / Unpublish / Republish (public inventory rows).
+  const lifecycleMutation = trpc.listing.setLifecycle.useMutation({
+    onSuccess: result => {
+      utils.agent.getMyListings.invalidate();
+      utils.listing.myListings.invalidate();
+      toast.success(
+        result.status === 'pending_review'
+          ? 'Listing resubmitted for review.'
+          : result.status === 'archived'
+            ? 'Listing unpublished.'
+            : result.status === 'sold'
+              ? 'Listing marked as sold.'
+              : 'Listing marked as let.',
+      );
+    },
+    onError: error => {
+      toast.error(error.message || 'Could not change the listing status.');
     },
   });
 
@@ -470,8 +494,11 @@ export default function AgentListings() {
                 <TabsTrigger value="sold" className={agentPageStyles.tabTrigger}>
                   Sold
                 </TabsTrigger>
+                <TabsTrigger value="let" className={agentPageStyles.tabTrigger}>
+                  Let
+                </TabsTrigger>
                 <TabsTrigger value="archived" className={agentPageStyles.tabTrigger}>
-                  Archived
+                  Unpublished
                 </TabsTrigger>
               </TabsList>
 
@@ -596,6 +623,12 @@ export default function AgentListings() {
                                 : () => setLocation(`/listings/create?id=${editListingId}&edit=true`)
                           }
                           onDelete={deleteId == null ? undefined : () => handleDelete(deleteId)}
+                          onLifecycle={
+                            isDraftOrPending || editListingId == null || listingAccessLocked
+                              ? undefined
+                              : change =>
+                                  lifecycleMutation.mutate({ id: editListingId, change })
+                          }
                           onView={
                             publicPropertyId == null
                               ? undefined

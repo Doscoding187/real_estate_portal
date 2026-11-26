@@ -36,6 +36,11 @@ import { getDb } from '../db';
 import { AuditActions } from '../_core/auditLog';
 import { isCanonicalPlaceId } from '../../shared/placeAuthority';
 import { loadCanonicalPlaceSearchProjection } from './canonicalPlaceSearchService';
+import {
+  resolvePublicPropertyEligibilitiesBySourceListingIds,
+  resolvePublicPropertyEligibility,
+} from './publicPropertyEligibilityService';
+import { isServiceLeadLinkAllowed } from './serviceLeadPropertyLink';
 import { computeProviderWebsiteReadiness } from './providerWebsiteReadiness';
 import {
   createServiceProviderCredentialDeliveryToken,
@@ -3923,11 +3928,16 @@ export class ServicesEngineService {
         .from(properties)
         .where(eq(properties.id, propertyId))
         .limit(1);
-      const propertyAccessible =
-        property &&
-        (property.status === 'published' ||
-          property.status === 'available' ||
-          Number(property.ownerId || 0) === requesterUserId);
+      const propertyIsOwn = Number(property?.ownerId || 0) === requesterUserId;
+      const propertyAccessible = isServiceLeadLinkAllowed({
+        record: property,
+        requesterUserId,
+        kind: 'property',
+        publiclyEligible:
+          !!property && !propertyIsOwn
+            ? (await resolvePublicPropertyEligibility(propertyId)) !== null
+            : false,
+      });
       if (!propertyAccessible) throw new Error(contextUnavailable);
       if (listingId && Number(property.sourceListingId || 0) !== listingId) {
         throw new Error(contextUnavailable);
@@ -3943,9 +3953,18 @@ export class ServicesEngineService {
         .from(listings)
         .where(eq(listings.id, listingId))
         .limit(1);
-      const listingAccessible =
-        listing &&
-        (listing.status === 'published' || Number(listing.ownerId || 0) === requesterUserId);
+      const listingIsOwn = Number(listing?.ownerId || 0) === requesterUserId;
+      const listingAccessible = isServiceLeadLinkAllowed({
+        record: listing,
+        requesterUserId,
+        kind: 'listing',
+        publiclyEligible:
+          !!listing && !listingIsOwn
+            ? (await resolvePublicPropertyEligibilitiesBySourceListingIds([listingId])).has(
+                listingId,
+              )
+            : false,
+      });
       if (!listingAccessible) throw new Error(contextUnavailable);
     }
 

@@ -443,6 +443,46 @@ export default function PropertyDetailPage({ propertyId: propPropertyId }: Prope
     );
   }
 
+  const closedNotice = (
+    data as
+      | {
+          closedNotice?: {
+            status: 'sold' | 'let';
+            title: string;
+            location: string;
+            listingIntent: 'sale' | 'rent';
+          };
+        }
+      | undefined
+  )?.closedNotice;
+  if (!data?.property && closedNotice) {
+    const closedLabel = closedNotice.status === 'sold' ? 'Sold' : 'Let';
+    return (
+      <div className="min-h-screen bg-background">
+        <ListingNavbar />
+        <main id="main-content" tabIndex={-1} className="outline-none">
+          <div className="container py-fluid-xl text-center">
+            <Badge
+              data-testid="listing-closed-banner"
+              className="mb-4 bg-slate-900 px-4 py-1 text-base text-white"
+            >
+              {closedLabel}
+            </Badge>
+            <h2 className="mb-2 text-2xl font-semibold">{closedNotice.title}</h2>
+            {closedNotice.location && <p className="mb-4 text-slate-500">{closedNotice.location}</p>}
+            <p className="mb-6 text-slate-500">
+              {closedNotice.status === 'sold'
+                ? 'This home has been sold and is no longer available.'
+                : 'This home has been let and is no longer available to rent.'}{' '}
+              Return to your results to see homes that are available now.
+            </p>
+            <Button onClick={handleUnavailableReturn}>Return to results</Button>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   if (!data?.property) {
     return (
       <div className="min-h-screen bg-background">
