@@ -23,7 +23,7 @@ import {
   buildProviderBusinessStructuredData,
   buildServiceBreadcrumbStructuredData,
 } from '@/features/services/seoStructuredData';
-import { StarRating } from '@/components/services/ProviderShowcaseCard';
+import { ProviderRating, StarRating } from '@/components/services/ProviderShowcaseCard';
 import { EnhancedNavbar } from '@/components/EnhancedNavbar';
 import { ServicesSiteFooter } from '@/components/services/ServicesSiteFooter';
 import { trpc, type RouterOutputs } from '@/lib/trpc';
@@ -310,6 +310,11 @@ export default function ServiceProviderProfilePage({
               <h1 className="mt-0 max-w-[620px] whitespace-pre-line text-[25px] font-bold leading-[1.1] tracking-[-0.035em] sm:text-[32px] lg:text-[36px]">
                 {heroHeadline}
               </h1>
+              <ProviderRating
+                averageRating={profile.averageRating}
+                reviewCount={profile.reviewCount}
+                className="mt-2 !text-white/80"
+              />
               <p className="mt-3 max-w-[560px] text-sm font-medium leading-6 text-white/90 sm:text-base sm:leading-7">
                 Reliable. Experienced. Local.
               </p>
