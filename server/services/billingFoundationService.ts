@@ -1189,6 +1189,36 @@ export async function requestPaidLaunchAccessInvoice(input: {
         .where(eq(subscriptions.id, lockedSubscription.id));
     }
 
+    // One Launch Access order at a time: while finance is reviewing a submitted
+    // payment notice no second order may be created, and the subscription must
+    // not be rolled back from payment_under_review to pending_payment.
+    if (lockedSubscription) {
+      const [underReview] = await tx
+        .select()
+        .from(billingInvoices)
+        .where(
+          and(
+            eq(billingInvoices.subscriptionId, lockedSubscription.id),
+            eq(billingInvoices.status, 'submitted'),
+          ),
+        )
+        .limit(1);
+      if (underReview) {
+        // Idempotent: hand back the order already under review so the client
+        // shows Finance review. No second order, no subscription rewrite.
+        return {
+          ownerType: owner.ownerType,
+          ownerId: owner.ownerId,
+          plan,
+          subscription: lockedSubscription,
+          invoice: underReview,
+          bankDetails,
+          paymentReference: underReview.paymentReference,
+          reused: true,
+        };
+      }
+    }
+
     const productKey = getCommercialProductKey(plan);
     const subscriptionResult = await upsertPendingSubscription(tx, {
       ownerType: owner.ownerType,

@@ -1,4 +1,5 @@
 import type {
+  AgentLaunchAccess,
   AgentRecommendedNextStep,
   AgentSubscriptionDisplayStatus,
 } from '@shared/agentJourney';
@@ -217,17 +218,46 @@ export function isAgentPlanEntitled(
     | {
         fullFeaturesUnlocked?: boolean;
         subscriptionStatus?: string | null;
+        launchAccess?: Pick<AgentLaunchAccess, 'paid'> | null;
       }
     | null
     | undefined,
 ) {
+  // The server's launchAccess.paid is the single source of truth (canonical
+  // Launch Access entitlement; independent of profile completion). The older
+  // fullFeaturesUnlocked rule only applies to payloads without it.
+  if (status?.launchAccess) return status.launchAccess.paid === true;
   return (
     Boolean(status?.fullFeaturesUnlocked) &&
     PAID_SUBSCRIPTION_STATUSES.includes(String(status?.subscriptionStatus))
   );
 }
 
+/** The Launch Access order finance is still reviewing, if any. */
+export function getAgentPendingOrder(
+  status:
+    | { launchAccess?: Pick<AgentLaunchAccess, 'state' | 'pendingOrder'> | null }
+    | null
+    | undefined,
+): { reference: string | null } | null {
+  const launchAccess = status?.launchAccess;
+  if (!launchAccess || launchAccess.state !== 'under_review') return null;
+  return { reference: launchAccess.pendingOrder?.reference ?? null };
+}
+
+export function getAgentPaymentUnderReviewCopy(reference?: string | null): {
+  title: string;
+  description: string;
+} {
+  return {
+    title: 'Payment under review',
+    description: `We'll unlock listings once finance confirms${reference ? ` (ref ${reference})` : ''}.`,
+  };
+}
+
 type PublishStatus = {
+  launchAccess?: Pick<AgentLaunchAccess, 'paid'> | null;
+  approvalStatus?: string;
   fullFeaturesUnlocked?: boolean;
   subscriptionStatus?: string | null;
   recommendedNextStep?: AgentRecommendedNextStep;
@@ -245,16 +275,37 @@ export function getPublishBlock(
   if (!status || !isAgentPlanEntitled(status) || status.entitlements?.canPublishListings) {
     return null;
   }
+  // A paid agent is never asked to choose a plan. Account-state blockers come
+  // first and name the specific reason: unverified email, rejected/suspended.
+  const step = status.recommendedNextStep;
+  if (step === 'verify_email' || step === 'contact_support') {
+    return blockFromAction(getAgentJourneyAction(status));
+  }
+  if (status.approvalStatus === 'rejected' || status.approvalStatus === 'suspended') {
+    return blockFromAction(getAgentJourneyAction({ recommendedNextStep: 'contact_support' }));
+  }
   const score = Math.round(Number(status.profileCompletionScore ?? 0));
   if (score < 70) {
     return {
       title: `Complete your profile (${score}%) to publish`,
-      description: 'Your plan is active. Finish your professional profile to start publishing listings.',
+      description:
+        'Your plan is active. Finish your professional profile to start publishing listings.',
       label: 'Complete profile',
       href: '/agent/setup',
     };
   }
   const action = getAgentJourneyAction(status);
+  // Never surface plan-purchase copy to a paid agent.
+  const planCopy =
+    action.href === '/agent/select-package' ||
+    step === 'select_package' ||
+    step === 'complete_payment';
+  return blockFromAction(
+    planCopy ? getAgentJourneyAction({ recommendedNextStep: 'publish_profile' }) : action,
+  );
+}
+
+function blockFromAction(action: AgentJourneyAction) {
   return {
     title: action.title,
     description: action.description,

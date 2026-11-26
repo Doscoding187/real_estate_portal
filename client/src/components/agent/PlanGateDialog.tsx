@@ -32,6 +32,8 @@ import {
   formatCommercialLimitValue,
 } from '@/lib/commercialCatalog';
 import { trpc } from '@/lib/trpc';
+import type { AgentInvoice } from '@/hooks/useAgentLaunchInvoiceRequest';
+import type { AgentPendingLaunchAccessOrder } from '@shared/agentJourney';
 import {
   PAID_INTAKE_CLOSED_MESSAGE,
   PAID_WAITLIST_LABEL,
@@ -52,12 +54,29 @@ function PaidPlansOpenSoon() {
   );
 }
 
+/**
+ * Minimal invoice view of a payment finance is already reviewing, built from
+ * the server onboarding status so the dialog opens on "Finance review" before
+ * (and even without) the billing workspace query.
+ */
+function pendingOrderInvoice(order: AgentPendingLaunchAccessOrder): AgentInvoice {
+  return {
+    id: order.invoiceId,
+    status: 'submitted',
+    paymentReference: order.reference,
+    amountDue: order.amountMinor,
+    currency: order.currency,
+  } as unknown as AgentInvoice;
+}
+
 function PlanGateContent({
   blockedReason,
   workspaceEnabled,
+  pendingOrder,
 }: {
   blockedReason: string | null;
   workspaceEnabled: boolean;
+  pendingOrder: AgentPendingLaunchAccessOrder | null;
 }) {
   const availability = useCommercialProductAvailability('agent_launch_access');
   const catalog = useCommercialCatalog('agent');
@@ -102,7 +121,10 @@ function PlanGateContent({
       refetchWorkspace: workspaceQuery.refetch,
     });
 
-  const activeInvoice = invoiceResponse?.invoice ?? workspaceQuery.data?.activeInvoice ?? null;
+  const activeInvoice =
+    invoiceResponse?.invoice ??
+    workspaceQuery.data?.activeInvoice ??
+    (pendingOrder ? pendingOrderInvoice(pendingOrder) : null);
   const bankDetails = invoiceResponse?.bankDetails ?? workspaceQuery.data?.bankDetails;
 
   const rejectionMessage = getRejectionMessage(activeInvoice?.id, workspaceQuery.data?.payments);
@@ -326,10 +348,12 @@ export function PlanGateDialog({
   onOpenChange,
   blockedReason = null,
   workspaceEnabled = true,
+  pendingOrder = null,
 }: {
   open: boolean;
   blockedReason?: string | null;
   workspaceEnabled?: boolean;
+  pendingOrder?: AgentPendingLaunchAccessOrder | null;
   onOpenChange: (open: boolean) => void;
 }) {
   return (
@@ -339,7 +363,11 @@ export function PlanGateDialog({
         className="top-0 left-0 flex h-dvh max-h-dvh w-full max-w-full translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-none p-0 sm:top-[50%] sm:left-[50%] sm:h-auto sm:max-h-[90vh] sm:max-w-2xl sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-lg"
       >
         {open ? (
-          <PlanGateContent blockedReason={blockedReason} workspaceEnabled={workspaceEnabled} />
+          <PlanGateContent
+            blockedReason={blockedReason}
+            workspaceEnabled={workspaceEnabled}
+            pendingOrder={pendingOrder}
+          />
         ) : (
           <PlanGateHeader earlyAccess={false} />
         )}

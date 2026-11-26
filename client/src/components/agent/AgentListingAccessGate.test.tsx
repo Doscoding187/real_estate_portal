@@ -51,6 +51,113 @@ describe('AgentListingAccessGate', () => {
     expect(gate.result.current).toBe(true);
   });
 
+  it('unlocks for a server-paid agent even before the profile is complete', () => {
+    authMock.mockReturnValue({ user: { role: 'agent' } });
+    statusMock.mockReturnValue({
+      status: {
+        recommendedNextStep: 'publish_profile',
+        fullFeaturesUnlocked: false,
+        subscriptionStatus: 'active',
+        launchAccess: { paid: true, state: 'paid', pendingOrder: null },
+        profileCompletionScore: 90,
+        entitlements: { canPublishListings: true },
+      },
+      isLoading: false,
+      error: null,
+    });
+    render(<AgentListingAccessGate>Wizard</AgentListingAccessGate>);
+    expect(screen.getByText('Wizard')).toBeInTheDocument();
+  });
+
+  it.each([
+    [
+      'suspended',
+      { approvalStatus: 'suspended', recommendedNextStep: 'contact_support' },
+      /needs support/,
+    ],
+    [
+      'rejected',
+      { approvalStatus: 'rejected', recommendedNextStep: 'contact_support' },
+      /needs support/,
+    ],
+    [
+      'rejected before profile steps',
+      { approvalStatus: 'rejected', recommendedNextStep: 'publish_profile' },
+      /needs support/,
+    ],
+    [
+      'unverified email',
+      { approvalStatus: 'pending', recommendedNextStep: 'verify_email' },
+      /Verify your email/,
+    ],
+    [
+      'profile unfinished',
+      {
+        approvalStatus: 'approved',
+        recommendedNextStep: 'publish_profile',
+        profileCompletionScore: 40,
+      },
+      /Complete your profile \(40%\)/,
+    ],
+    [
+      'awaiting approval',
+      {
+        approvalStatus: 'pending',
+        recommendedNextStep: 'await_profile_approval',
+        profileCompletionScore: 90,
+      },
+      /under review/,
+    ],
+  ])(
+    'keeps a paid but %s agent out of the wizard and never says choose a plan',
+    (_n, extra, title) => {
+      authMock.mockReturnValue({ user: { role: 'agent' } });
+      statusMock.mockReturnValue({
+        status: {
+          fullFeaturesUnlocked: false,
+          subscriptionStatus: 'active',
+          launchAccess: { paid: true, state: 'paid', pendingOrder: null },
+          profileCompletionScore: 90,
+          entitlements: { canPublishListings: false },
+          ...extra,
+        },
+        isLoading: false,
+        error: null,
+      });
+      render(<AgentListingAccessGate>Wizard</AgentListingAccessGate>);
+      expect(screen.queryByText('Wizard')).not.toBeInTheDocument();
+      expect(screen.queryByText('Listings unlock with a plan')).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(/choose a plan|Get access|Activate Launch Access/i),
+      ).not.toBeInTheDocument();
+      expect(screen.getByText(title)).toBeInTheDocument();
+    },
+  );
+
+  it('shows payment under review with the reference instead of choose-a-plan copy', () => {
+    authMock.mockReturnValue({ user: { role: 'agent' } });
+    statusMock.mockReturnValue({
+      status: {
+        recommendedNextStep: 'await_payment_review',
+        fullFeaturesUnlocked: false,
+        subscriptionStatus: 'payment_under_review',
+        launchAccess: {
+          paid: false,
+          state: 'under_review',
+          pendingOrder: { reference: 'PLAN990101-8344DC' },
+        },
+        entitlements: { canPublishListings: false },
+      },
+      isLoading: false,
+      error: null,
+    });
+    render(<AgentListingAccessGate>Wizard</AgentListingAccessGate>);
+    expect(screen.queryByText('Wizard')).not.toBeInTheDocument();
+    expect(screen.queryByText('Listings unlock with a plan')).not.toBeInTheDocument();
+    expect(screen.getByText('Payment under review')).toBeInTheDocument();
+    expect(screen.getByText(/once finance confirms \(ref PLAN990101-8344DC\)/)).toBeInTheDocument();
+  });
+
   it('fails closed with a retry when the status cannot be confirmed', async () => {
     authMock.mockReturnValue({ user: { role: 'agent' } });
     statusMock.mockReturnValue({

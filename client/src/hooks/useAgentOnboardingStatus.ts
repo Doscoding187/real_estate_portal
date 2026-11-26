@@ -4,6 +4,7 @@ import { useAuth } from '@/_core/hooks/useAuth';
 import { apiFetch } from '@/lib/api';
 import { useCommercialProductAvailability } from '@/hooks/useCommercialProductAvailability';
 import type {
+  AgentLaunchAccess,
   AgentRecommendedNextStep,
   AgentSubscriptionDisplayStatus,
 } from '@shared/agentJourney';
@@ -42,6 +43,7 @@ export type AgentOnboardingStatus = {
   recommendedNextStep: AgentRecommendedNextStep;
   subscriptionTier: string;
   subscriptionStatus: AgentSubscriptionDisplayStatus;
+  launchAccess?: AgentLaunchAccess;
   commercial?: {
     ownerType: 'agent' | 'agency' | 'developer';
     ownerId: number;

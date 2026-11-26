@@ -13,6 +13,8 @@ import {
   usePlanGateOpen,
 } from '@/lib/agentPlanGate';
 import {
+  getAgentPaymentUnderReviewCopy,
+  getAgentPendingOrder,
   getAgentStatusBannerCopy,
   isAgentPaymentBlocked,
   isAgentPlanEntitled,
@@ -33,6 +35,8 @@ export function AgentPlanGateLayer() {
   const blocked = isAgentPaymentBlocked(status);
   const statusBanner = getAgentStatusBannerCopy(status);
   const available = ready && !entitled;
+  const pendingOrder = getAgentPendingOrder(status);
+  const underReview = pendingOrder ? getAgentPaymentUnderReviewCopy(pendingOrder.reference) : null;
 
   useEffect(() => {
     // A route change or unmounting the shell must not leave a stale open flag.
@@ -67,7 +71,27 @@ export function AgentPlanGateLayer() {
           <span className="font-semibold">{statusBanner.title}.</span> {statusBanner.description}
         </div>
       ) : null}
-      {!entitled && !statusBanner ? (
+      {!entitled && !statusBanner && underReview ? (
+        <div
+          role="status"
+          data-testid="agent-payment-review-banner"
+          className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-200 bg-amber-50 px-4 py-1.5 text-[12.5px] text-amber-950 md:px-7"
+        >
+          <span>
+            <span className="font-semibold">{underReview.title}.</span> {underReview.description}
+          </span>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-7 rounded-full border-amber-300 bg-white px-3 text-xs"
+            onClick={openPlanGate}
+          >
+            View status
+          </Button>
+        </div>
+      ) : null}
+      {!entitled && !statusBanner && !underReview ? (
         <div
           role="status"
           data-testid="agent-preview-banner"
@@ -90,6 +114,7 @@ export function AgentPlanGateLayer() {
           open={open}
           blockedReason={statusBanner?.description ?? null}
           workspaceEnabled={status?.commercial?.ownerSource !== 'agency_membership'}
+          pendingOrder={status?.launchAccess?.pendingOrder ?? null}
           onOpenChange={next => {
             if (next) {
               openPlanGate();
