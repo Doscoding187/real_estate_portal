@@ -508,9 +508,9 @@ export default function PlanEditor() {
             </Button>
             <Button
               onClick={handleSave}
-              disabled={createMutation.isLoading || updateMutation.isLoading}
+              disabled={createMutation.isPending || updateMutation.isPending}
             >
-              {createMutation.isLoading || updateMutation.isLoading ? 'Saving...' : 'Save Plan'}
+              {createMutation.isPending || updateMutation.isPending ? 'Saving...' : 'Save Plan'}
             </Button>
           </DialogFooter>
         </DialogContent>

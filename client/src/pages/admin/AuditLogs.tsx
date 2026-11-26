@@ -1,9 +1,7 @@
-// @ts-nocheck
 import { useState } from 'react';
-import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
-import { useAuth } from '@/_core/hooks/useAuth';
-import { isSuperAdminRole } from '@/_core/roles';
+import { summarizeAuditDetails } from './dashboard/auditSummary';
+import { ADMIN_PAGE_CLASS } from '@/components/admin/adminPageLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -23,157 +21,202 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Shield, Search, Calendar, User, Activity, ArrowLeft, Filter } from 'lucide-react';
+import { Search } from 'lucide-react';
+
+const PAGE_SIZE = 50;
+
+const actionLabel = (action: string) => {
+  const text = action.replace(/[._]/g, ' ');
+  return text.charAt(0).toUpperCase() + text.slice(1);
+};
+
+const getActionBadgeVariant = (action: string) => {
+  if (action.includes('approve') || action.includes('verify')) return 'default';
+  if (action.includes('reject') || action.includes('delete')) return 'destructive';
+  if (action.includes('update')) return 'secondary';
+  return 'outline';
+};
 
 export default function AuditLogs() {
-  const [, setLocation] = useLocation();
-  const { user, isAuthenticated } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [actionFilter, setActionFilter] = useState<string>('all');
-  const isSuperAdmin = isSuperAdminRole(user?.role);
+  // Cursor stack: each entry is the oldest id of the previous page.
+  const [cursors, setCursors] = useState<number[]>([]);
+  const beforeId = cursors.length ? cursors[cursors.length - 1] : undefined;
 
-  const { data, isLoading, refetch } = trpc.admin.getAuditLogs.useQuery({
-    limit: 50,
+  const { data, isLoading, isError, refetch } = trpc.admin.getAuditLogs.useQuery({
+    limit: PAGE_SIZE,
     action: actionFilter !== 'all' ? actionFilter : undefined,
+    beforeId,
   });
 
-  // Redirect if not authenticated or not super admin
-  if (!isAuthenticated || !isSuperAdmin) {
-    setLocation('/login');
-    return null;
-  }
-
-  const getActionBadgeVariant = (action: string) => {
-    if (action.includes('approve') || action.includes('verify')) return 'default';
-    if (action.includes('reject') || action.includes('delete')) return 'destructive';
-    if (action.includes('update')) return 'secondary';
-    return 'outline';
-  };
-
-  const formatTimestamp = (timestamp: string) => {
-    return new Date(timestamp).toLocaleString();
-  };
+  const { data: actionOptions } = trpc.admin.getAuditActionOptions.useQuery();
+  const needle = searchTerm.trim().toLowerCase();
+  const logs = (data?.logs ?? []).filter(
+    log =>
+      !needle ||
+      log.action.toLowerCase().includes(needle) ||
+      (log.actorName ?? '').toLowerCase().includes(needle) ||
+      (log.targetType ?? '').toLowerCase().includes(needle),
+  );
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => setLocation('/admin/overview')}>
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <Shield className="h-8 w-8 text-primary" />
-            <div>
-              <h1 className="text-3xl font-bold">Audit Logs</h1>
-              <p className="text-muted-foreground">Track all super admin actions and changes</p>
-            </div>
-          </div>
-        </div>
+    <div className={`${ADMIN_PAGE_CLASS} space-y-5`}>
+      <div>
+        <h1 className="text-2xl font-bold text-slate-900">System and security</h1>
+        <p className="text-sm text-slate-600">
+          The audit trail of admin actions, newest first.
+        </p>
+      </div>
 
-        {/* Filters */}
-        <Card className="mb-6">
-          <CardContent className="pt-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by action or user..."
-                  value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <Select value={actionFilter} onValueChange={setActionFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Filter by action..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Actions</SelectItem>
-                  <SelectItem value="view_all_users">View Users</SelectItem>
-                  <SelectItem value="update_user_role">Update User Role</SelectItem>
-                  <SelectItem value="delete_user">Delete User</SelectItem>
-                  <SelectItem value="view_all_agencies">View Agencies</SelectItem>
-                  <SelectItem value="approve_property">Approve Property</SelectItem>
-                  <SelectItem value="reject_property">Reject Property</SelectItem>
-                  <SelectItem value="update_subscription">Update Subscription</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button variant="outline" className="flex items-center gap-2">
-                <Filter className="h-4 w-4" />
-                Advanced Filters
+      <Card>
+        <CardContent className="pt-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="relative">
+              <Search
+                aria-hidden="true"
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground"
+              />
+              <Input
+                aria-label="Filter this page by action, admin or target"
+                placeholder="Filter this page by action, admin or target..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Select
+              value={actionFilter}
+              onValueChange={value => {
+                setActionFilter(value);
+                setCursors([]);
+              }}
+            >
+              <SelectTrigger aria-label="Filter by action">
+                <SelectValue placeholder="Filter by action..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All actions</SelectItem>
+                {(actionOptions ?? []).map(value => (
+                  <SelectItem key={value} value={value}>
+                    {actionLabel(value)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Activity</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="space-y-3 py-2" data-testid="audit-loading">
+              {[0, 1, 2, 3].map(i => (
+                <div key={i} className="h-10 animate-pulse rounded bg-slate-100" />
+              ))}
+            </div>
+          ) : isError ? (
+            <div role="alert" className="py-8 flex items-center justify-center gap-3 text-sm text-red-800">
+              <span>Could not load the audit trail.</span>
+              <Button variant="outline" onClick={() => refetch()}>
+                Retry
               </Button>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Audit Logs Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="py-12 text-center text-muted-foreground">Loading audit logs...</div>
-            ) : !data?.logs.length ? (
-              <div className="py-12 text-center text-muted-foreground">No audit logs found.</div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Timestamp</TableHead>
-                    <TableHead>Admin</TableHead>
-                    <TableHead>Action</TableHead>
-                    <TableHead>Target</TableHead>
-                    <TableHead>Details</TableHead>
+          ) : !logs.length ? (
+            <div className="py-12 text-center text-muted-foreground">
+              No audit entries match.
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>When</TableHead>
+                  <TableHead>Admin</TableHead>
+                  <TableHead>Action</TableHead>
+                  <TableHead>Target</TableHead>
+                  <TableHead>Details</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {logs.map(log => (
+                  <TableRow key={log.id}>
+                    <TableCell className="whitespace-nowrap">
+                      {new Date(log.createdAt).toLocaleString()}
+                    </TableCell>
+                    <TableCell>{log.actorName || `User #${log.userId}`}</TableCell>
+                    <TableCell>
+                      <Badge variant={getActionBadgeVariant(log.action)}>
+                        {log.action.replace(/[._]/g, ' ')}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {log.targetType && log.targetId ? (
+                        <span className="text-sm">
+                          {log.targetType} #{log.targetId}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {log.metadata && Object.keys(log.metadata).length > 0 ? (
+                        <details className="text-sm text-slate-700 max-w-sm">
+                          <summary className="cursor-pointer truncate">
+                            {summarizeAuditDetails(log.metadata) || 'Show details'}
+                          </summary>
+                          <pre
+                            aria-label="Raw details"
+                            className="mt-1 whitespace-pre-wrap break-all rounded bg-slate-50 p-2 text-xs"
+                          >
+                            {JSON.stringify(log.metadata, null, 2)}
+                          </pre>
+                        </details>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.logs.map((log: any) => (
-                    <TableRow key={log.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-muted-foreground" />
-                          {formatTimestamp(log.createdAt)}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-muted-foreground" />
-                          Admin #{log.userId}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={getActionBadgeVariant(log.action)}>
-                          {log.action.replace(/_/g, ' ')}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {log.targetType && log.targetId ? (
-                          <span className="text-sm">
-                            {log.targetType} #{log.targetId}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {log.metadata && Object.keys(log.metadata).length > 0 ? (
-                          <div className="text-sm text-muted-foreground max-w-xs truncate">
-                            {JSON.stringify(log.metadata)}
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+
+          {data ? (
+            <div className="flex items-center justify-between gap-2 pt-4 mt-4 border-t border-slate-100">
+              <span className="text-sm text-muted-foreground">
+                Showing {data.logs.length}
+                {data.hasMore ? ' (older entries available)' : ''}
+                {needle ? ` · ${logs.length} on this page match` : ''}
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={cursors.length === 0}
+                  onClick={() => setCursors(c => c.slice(0, -1))}
+                >
+                  Newer
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!data.hasMore}
+                  onClick={() => {
+                    const oldest = data.logs[data.logs.length - 1]?.id;
+                    if (oldest) setCursors(c => [...c, oldest]);
+                  }}
+                >
+                  Older
+                </Button>
+              </div>
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
     </div>
   );
 }

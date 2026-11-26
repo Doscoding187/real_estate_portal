@@ -1,69 +1,59 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useLocation } from 'wouter';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
-import {
-  ADMIN_VISIBLE_NAV_GROUPS,
-  getAdminNavGroupForPath,
-  getAdminNavItemForPath,
-} from '@/pages/admin/adminRouteRegistry';
+import { ADMIN_VISIBLE_NAV_GROUPS, getAdminNavItemForPath } from '@/pages/admin/adminRouteRegistry';
+import { useAdminQueueCounts } from '@/pages/admin/dashboard/useAdminQueueCounts';
 
 const SidebarNavigation: React.FC = () => {
   const [location, setLocation] = useLocation();
-  const [activeSection, setActiveSection] = useState('core');
-
-  // Determine active section based on current path to auto-expand
-  useEffect(() => {
-    setActiveSection(getAdminNavGroupForPath(location));
-  }, [location]);
+  const counts = useAdminQueueCounts();
+  const activePath = getAdminNavItemForPath(location);
 
   return (
-    <div className="flex flex-col h-full bg-white/60 backdrop-blur-xl border-r border-white/40 w-full pt-4">
-      <Accordion
-        type="single"
-        collapsible
-        value={activeSection}
-        onValueChange={setActiveSection}
-        className="px-4 space-y-2"
-      >
-        {ADMIN_VISIBLE_NAV_GROUPS.map(group => (
-          <AccordionItem key={group.id} value={group.id} className="border-none">
-            <AccordionTrigger className="hover:no-underline py-2 px-3 rounded-lg hover:bg-primary/5 text-primary/70 font-medium data-[state=open]:bg-primary/10 data-[state=open]:text-primary mb-1">
-              <div className="flex items-center gap-3">
-                <group.icon className="h-4 w-4" />
-                <span className="text-xs font-bold uppercase tracking-wider">{group.title}</span>
-              </div>
-            </AccordionTrigger>
-            <AccordionContent className="pt-1 pb-2">
-              <div className="flex flex-col gap-1 ml-4 border-l border-primary/20 pl-4 mt-1">
-                {group.items.map(item => {
-                  const isActive = getAdminNavItemForPath(location) === item.path;
-                  return (
-                    <button
-                      key={item.label}
-                      onClick={() => setLocation(item.path)}
-                      className={cn(
-                        'text-sm text-left py-2 px-3 rounded-md transition-colors',
-                        isActive
-                          ? 'bg-primary text-primary-foreground font-medium shadow-sm'
-                          : 'text-primary/60 hover:text-primary hover:bg-primary/5',
-                      )}
-                    >
-                      {item.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-        ))}
-      </Accordion>
-    </div>
+    <nav
+      aria-label="Admin navigation"
+      className="flex flex-col h-full bg-white border-r border-slate-200 w-full px-3 py-4 gap-1"
+    >
+      {ADMIN_VISIBLE_NAV_GROUPS.map(group => (
+        <div key={group.id} className="flex flex-col gap-1">
+          <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 px-3 pt-4 pb-1">
+            {group.title}
+          </div>
+          {group.items.map(item => {
+            const isActive = activePath === item.path;
+            const count = item.badge ? counts[item.badge] : undefined;
+            return (
+              <button
+                key={item.label}
+                type="button"
+                aria-current={isActive ? 'page' : undefined}
+                onClick={() => setLocation(item.path)}
+                className={cn(
+                  'flex items-center gap-3 w-full min-h-[40px] px-3 rounded-md text-sm text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600',
+                  isActive
+                    ? 'bg-blue-50 text-blue-900 font-semibold'
+                    : 'text-slate-700 hover:bg-slate-100',
+                )}
+              >
+                <item.icon
+                  aria-hidden="true"
+                  className={cn('h-[18px] w-[18px] shrink-0', isActive ? 'text-blue-700' : 'text-slate-500')}
+                />
+                <span className="truncate">{item.label}</span>
+                {count && count > 0 ? (
+                  <span
+                    aria-label={`${count} waiting`}
+                    className="ml-auto min-w-[22px] h-[22px] px-1.5 rounded-full bg-orange-500 text-white text-xs font-bold inline-flex items-center justify-center"
+                  >
+                    {count}
+                  </span>
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+      ))}
+    </nav>
   );
 };
 

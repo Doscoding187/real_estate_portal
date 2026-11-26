@@ -9,6 +9,13 @@ const { approveMock, getAgentsMock, rejectMock } = vi.hoisted(() => ({
 
 vi.mock('@/lib/trpc', () => ({
   trpc: {
+    useUtils: () => ({
+      admin: {
+        getAdminActionItems: { invalidate: vi.fn() },
+        getLaunchDashboardStats: { invalidate: vi.fn() },
+        getDailyInbox: { invalidate: vi.fn() },
+      },
+    }),
     admin: {
       getPendingAgents: {
         useQuery: (...args: unknown[]) => getAgentsMock(...args),

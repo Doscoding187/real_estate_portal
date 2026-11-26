@@ -40,18 +40,41 @@ describe('adminRouteRegistry', () => {
     expect(labels).toEqual([
       'Dashboard',
       'Approvals',
-      'Listings',
-      'Developments',
-      'Publisher',
-      'Leads',
-      'Agencies',
-      'Agents',
-      'Developers',
-      'Users',
       'Finance',
+      'Publisher',
+      'Developments',
+      'Listings',
+      'Users',
+      'Agents',
+      'Agencies',
+      'Developers',
+      'Leads',
       'Settings & Integrations',
       'System & Security',
     ]);
+  });
+  it('groups the sidebar as Today, Catalogue, People, System', () => {
+    expect(ADMIN_VISIBLE_NAV_GROUPS.map(g => g.title)).toEqual([
+      'TODAY',
+      'CATALOGUE',
+      'PEOPLE',
+      'SYSTEM',
+    ]);
+  });
+  it('puts count badges only on items that have a real queue', () => {
+    const badged = ADMIN_VISIBLE_NAV_GROUPS.flatMap(g => g.items)
+      .filter(i => i.badge)
+      .map(i => [i.label, i.badge]);
+    expect(badged).toEqual([
+      ['Approvals', 'approvals'],
+      ['Finance', 'payments'],
+    ]);
+  });
+  it('keeps Dashboard active on the admin root and Publisher active on nested routes', () => {
+    expect(getAdminNavItemForPath('/admin')).toBe('/admin/overview');
+    expect(getAdminNavItemForPath('/admin/overview')).toBe('/admin/overview');
+    expect(getAdminNavItemForPath('/admin/publisher/developments/new')).toBe('/admin/publisher');
+    expect(getAdminNavItemForPath('/admin/publisher/anything/deep')).toBe('/admin/publisher');
   });
   it('has no duplicate paths in the visible sidebar', () => {
     const paths = ADMIN_VISIBLE_NAV_GROUPS.flatMap(g => g.items.map(i => i.path));
