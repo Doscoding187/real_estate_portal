@@ -3043,6 +3043,7 @@ export class ServicesEngineService {
     userId: number;
     fileName: string;
     contentType: string;
+    byteSize: number;
   }) {
     const reservation = createServiceProviderCredentialUploadReservation(input);
     const uploadUrl = getMediaStorageAdapter() === 'local'

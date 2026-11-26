@@ -1,12 +1,11 @@
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
-import { GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { DeleteObjectCommand, GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { ENV } from '../_core/env';
 
 const UPLOAD_TTL_SECONDS = 10 * 60;
 const DELIVERY_TTL_SECONDS = 5 * 60;
 const MAX_CREDENTIAL_BYTES = 25 * 1024 * 1024;
-const DEVELOPMENT_SECRET = 'services-provider-credential-dev-only';
 const MIME_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'] as const;
 
 export type ServiceProviderCredentialUploadReservation = {
@@ -17,6 +16,7 @@ export type ServiceProviderCredentialUploadReservation = {
   userId: number;
   contentType: (typeof MIME_TYPES)[number];
   fileName: string;
+  byteSize: number;
   iat: number;
   exp: number;
 };
@@ -34,10 +34,7 @@ type ServiceProviderCredentialDeliveryReservation = {
 function secret() {
   const configured = process.env.MEDIA_UPLOAD_TOKEN_SECRET ?? process.env.JWT_SECRET;
   if (configured?.trim()) return configured.trim();
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error('Private Services credential storage is not configured.');
-  }
-  return DEVELOPMENT_SECRET;
+  throw new Error('Private Services credential storage is not configured.');
 }
 
 function encode(value: unknown) {
@@ -84,7 +81,11 @@ export function createServiceProviderCredentialUploadReservation(input: {
   userId: number;
   fileName: string;
   contentType: string;
+  byteSize: number;
 }) {
+  if (!Number.isInteger(input.byteSize) || input.byteSize < 1 || input.byteSize > MAX_CREDENTIAL_BYTES) {
+    throw new Error('Credential document must be between 1 byte and 25 MB.');
+  }
   const contentType = input.contentType.trim().toLowerCase();
   if (!(MIME_TYPES as readonly string[]).includes(contentType)) {
     throw new Error('Credentials must be a PDF, JPEG, PNG, or WebP file.');
@@ -99,6 +100,7 @@ export function createServiceProviderCredentialUploadReservation(input: {
     userId: input.userId,
     contentType: contentType as ServiceProviderCredentialUploadReservation['contentType'],
     fileName,
+    byteSize: input.byteSize,
     iat: now,
     exp: now + UPLOAD_TTL_SECONDS,
   };
@@ -116,6 +118,9 @@ export function verifyServiceProviderCredentialUploadReservation(
     payload.exp <= Math.floor(Date.now() / 1000) ||
     !Number.isInteger(payload.providerId) ||
     !Number.isInteger(payload.userId) ||
+    !Number.isInteger(payload.byteSize) ||
+    payload.byteSize < 1 ||
+    payload.byteSize > MAX_CREDENTIAL_BYTES ||
     !validKey(payload.key, payload.providerId) ||
     !(MIME_TYPES as readonly string[]).includes(payload.contentType)
   ) {
@@ -182,6 +187,7 @@ export async function createServiceProviderCredentialS3UploadUrl(
       Bucket: ENV.s3BucketName,
       Key: reservation.key,
       ContentType: reservation.contentType,
+      ContentLength: reservation.byteSize,
     }),
     { expiresIn: UPLOAD_TTL_SECONDS },
   );
@@ -190,15 +196,20 @@ export async function createServiceProviderCredentialS3UploadUrl(
 export async function inspectServiceProviderCredentialS3Object(
   reservation: ServiceProviderCredentialUploadReservation,
 ) {
-  const object = await s3Client().send(
+  const client = s3Client();
+  const object = await client.send(
     new HeadObjectCommand({ Bucket: ENV.s3BucketName, Key: reservation.key }),
   );
   const contentLength = Number(object.ContentLength || 0);
   if (
     object.ContentType?.toLowerCase() !== reservation.contentType ||
     contentLength < 1 ||
-    contentLength > MAX_CREDENTIAL_BYTES
+    contentLength > MAX_CREDENTIAL_BYTES ||
+    contentLength !== reservation.byteSize
   ) {
+    await client
+      .send(new DeleteObjectCommand({ Bucket: ENV.s3BucketName, Key: reservation.key }))
+      .catch(() => undefined);
     throw new Error('Uploaded credential did not satisfy its private storage authority.');
   }
   return { contentType: reservation.contentType, contentLength };

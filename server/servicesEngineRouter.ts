@@ -489,6 +489,7 @@ export const servicesEngineRouter = router({
       z.object({
         fileName: z.string().trim().min(1).max(255),
         contentType: z.string().trim().min(1).max(100),
+        byteSize: z.number().int().min(1).max(25 * 1024 * 1024),
       }).strict(),
     )
     .mutation(async ({ ctx, input }) => {

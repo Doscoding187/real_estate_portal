@@ -130,6 +130,7 @@ export function WebsiteReviewStep({ state, onBack }: WebsiteReviewStepProps) {
       const reservation = await requestCredential.mutateAsync({
         fileName: file.name,
         contentType: file.type,
+        byteSize: file.size,
       });
       const response = await fetch(new URL(reservation.uploadUrl, window.location.origin), {
         method: 'PUT',

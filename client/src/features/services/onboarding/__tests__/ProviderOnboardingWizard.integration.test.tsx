@@ -309,20 +309,24 @@ describe('ProviderOnboardingWizard', () => {
     await clickContinue();
     await waitFor(() => expect(screen.getByText('Step 2 of 5')).toBeInTheDocument());
     expect(mockRegisterIdentity.mock.calls[0]?.[0]).not.toHaveProperty('description');
-    expect(mockUpsertProfile.mock.calls[0]?.[0]).toEqual({ headline: null, bio: null });
+    // Step 1 saves identity only; no marketing intro is collected or sent.
+    expect(mockUpsertProfile).not.toHaveBeenCalled();
     fireEvent.change(screen.getByLabelText(/contact email/i), {
       target: { value: 'hello@acme.example' },
     });
     await clickContinue();
 
     await waitFor(() => expect(screen.getByText('Step 3 of 5')).toBeInTheDocument());
+    expect(mockUpsertProfile.mock.calls[0]?.[0]).not.toHaveProperty('bio');
+    expect(mockUpsertProfile.mock.calls[0]?.[0]).not.toHaveProperty('headline');
     fireEvent.change(screen.getByPlaceholderText(/geyser replacement/i), {
       target: { value: 'Plumbing repair' },
     });
     fireEvent.change(screen.getByLabelText(/primary service category/i), {
       target: { value: 'finance_legal' },
     });
-    fireEvent.change(screen.getByLabelText(/service description/i), {
+    fireEvent.click(screen.getByText(/optional service details/i));
+    fireEvent.change(screen.getByLabelText(/factual notes/i), {
       target: { value: 'Repair leaks, taps and household pipework.' },
     });
     await clickContinue();
@@ -393,9 +397,9 @@ describe('ProviderOnboardingWizard', () => {
     });
 
     render(<ProviderOnboardingWizard />);
-    await waitFor(() =>
-      expect(screen.getByLabelText(/business introduction/i)).toHaveValue('Legacy company description'),
-    );
+    await waitFor(() => expect(screen.getByText('Step 1 of 5')).toBeInTheDocument());
+    // The marketing introduction field was intentionally removed from the wizard.
+    expect(screen.queryByLabelText(/business introduction/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/short description/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/about your business/i)).not.toBeInTheDocument();
   });
@@ -465,7 +469,7 @@ describe('ProviderOnboardingWizard', () => {
     render(<ProviderOnboardingWizard />);
     await waitFor(() => expect(screen.getByText('Step 3 of 5')).toBeInTheDocument());
     expect(screen.getByLabelText(/service name/i)).toHaveValue('Plumbing repairs');
-    const description = screen.getByLabelText('Service description');
+    const description = screen.getByLabelText('Factual notes');
     expect(description).toHaveValue('Existing description');
     expect(description).toHaveAttribute('maxLength', '2000');
     fireEvent.change(description, { target: { value: 'Updated pipe repair description.' } });

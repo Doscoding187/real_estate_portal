@@ -5,7 +5,11 @@ vi.mock('@/pages/services/ServiceProviderProfilePage', () => ({
   default: () => <main data-testid="shared-provider-site-renderer" />,
 }));
 
-import { ProviderBusinessSitePreview } from '../ProviderBusinessSitePreview';
+import { ProviderRating } from '@/components/services/ProviderShowcaseCard';
+import {
+  ProviderBusinessSitePreview,
+  buildProviderWebsitePreviewProfile,
+} from '../ProviderBusinessSitePreview';
 import { initialOnboardingState } from '../useOnboardingReducer';
 
 describe('ProviderBusinessSitePreview viewport modes', () => {
@@ -22,5 +26,21 @@ describe('ProviderBusinessSitePreview viewport modes', () => {
     expect(mobileFrame.parentElement).toHaveClass('w-[392px]');
     expect(mobileFrame).toHaveAttribute('title', 'Business website mobile preview');
     expect(screen.getByRole('button', { name: 'Preview mobile website' })).toHaveAttribute('aria-pressed', 'true');
+  });
+});
+
+describe('provider preview with no reviews', () => {
+  it('never carries a rating without reviews and renders no 0 stars', () => {
+    const built = buildProviderWebsitePreviewProfile(
+      { averageRating: 4.8, reviewCount: 0 } as never,
+      initialOnboardingState,
+    );
+    expect(built.reviewCount).toBe(0);
+    expect(built.averageRating).toBe(0);
+
+    render(<ProviderRating averageRating={built.averageRating} reviewCount={built.reviewCount} />);
+    expect(screen.getByText('No published reviews yet')).toBeInTheDocument();
+    expect(screen.queryByText('0.0')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/out of 5 stars/)).not.toBeInTheDocument();
   });
 });

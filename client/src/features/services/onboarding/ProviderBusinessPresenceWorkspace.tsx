@@ -144,7 +144,7 @@ export function ProviderBusinessPresenceWorkspace() {
     }
     setUploading(true);
     try {
-      const reservation = await requestCredential.mutateAsync({ fileName: file.name, contentType: file.type });
+      const reservation = await requestCredential.mutateAsync({ fileName: file.name, contentType: file.type, byteSize: file.size });
       const result = await fetch(new URL(reservation.uploadUrl, window.location.origin), {
         method: 'PUT',
         headers: { 'Content-Type': file.type },

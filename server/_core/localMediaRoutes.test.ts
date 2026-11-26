@@ -110,6 +110,7 @@ describe('local listing media storage boundary', () => {
       userId: 42,
       fileName: 'electrical-registration.pdf',
       contentType: 'application/pdf',
+      byteSize: 36,
     });
     const uploadResponse = await fetch(
       `${baseUrl}${mediaStorage.buildLocalMediaUploadUrl(reservation.token)}`,

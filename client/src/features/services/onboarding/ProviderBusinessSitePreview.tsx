@@ -111,7 +111,8 @@ export function buildProviderWebsitePreviewProfile(
     credentials: (profile?.credentials || [])
       .filter(credential => credential.status === 'verified')
       .map(({ status: _status, reference: _reference, originalFileName: _fileName, mimeType: _mimeType, byteSize: _byteSize, ...credential }) => credential),
-    averageRating: profile?.averageRating || 0,
+    // Rating only counts when real reviews exist; renderers show "No published reviews yet" otherwise.
+    averageRating: (profile?.reviewCount || 0) > 0 ? profile?.averageRating || 0 : 0,
     reviewCount: profile?.reviewCount || 0,
     acceptingRequests: profile?.acceptingRequests ?? null,
     gallery: profile?.gallery || [],
@@ -163,7 +164,8 @@ function buildSavedProviderWebsiteProfile(
     credentials: (profile?.credentials || [])
       .filter(credential => credential.status === 'verified')
       .map(({ status: _status, reference: _reference, originalFileName: _fileName, mimeType: _mimeType, byteSize: _byteSize, ...credential }) => credential),
-    averageRating: profile?.averageRating || 0,
+    // Rating only counts when real reviews exist; renderers show "No published reviews yet" otherwise.
+    averageRating: (profile?.reviewCount || 0) > 0 ? profile?.averageRating || 0 : 0,
     reviewCount: profile?.reviewCount || 0,
     acceptingRequests: profile?.acceptingRequests ?? null,
     gallery: profile?.gallery || [],
