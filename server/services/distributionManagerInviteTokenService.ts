@@ -25,11 +25,7 @@ function assertSecret(secret: string | null | undefined) {
     return secret.trim();
   }
 
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error('Distribution manager invite token secret is not configured.');
-  }
-
-  return 'distribution-manager-invite-dev-only';
+  throw new Error('Distribution manager invite token secret is not configured.');
 }
 
 export function createDistributionManagerInviteToken(
