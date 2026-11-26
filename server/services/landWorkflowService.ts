@@ -391,8 +391,64 @@ export async function landReviewQueue() {
     .innerJoin(listings, eq(landReviewCases.listingId, listings.id))
     .innerJoin(landListingLinks, and(eq(landListingLinks.listingId, listings.id), eq(landListingLinks.linkStatus, 'active')))
     .innerJoin(landAssets, eq(landAssets.id, landListingLinks.landAssetId))
-    .where(inArray(landReviewCases.state, ['pending', 'reviewing', 'changes_requested', 'suspended']))
+    .where(inArray(landReviewCases.state, [...LAND_REVIEW_QUEUE_STATES]))
     .orderBy(desc(landReviewCases.updatedAt));
+}
+
+/** States the Land reviewer queue lists. Shared by the queue, its count and the admin inbox. */
+export const LAND_REVIEW_QUEUE_STATES = ['pending', 'reviewing', 'changes_requested', 'suspended'] as const;
+/** Subset that is waiting on a Land reviewer (not on the author). */
+export const LAND_REVIEW_AWAITING_REVIEWER_STATES = ['pending', 'reviewing'] as const;
+
+/** Exactly the number of rows landReviewQueue() returns. */
+export async function countLandReviewQueue(): Promise<number> {
+  return (await landReviewQueue()).length;
+}
+
+/** Rows the inbox shows as "to review": the awaiting-reviewer subset of the queue. */
+export async function countLandAwaitingReviewer(): Promise<number> {
+  return (await landReviewInbox(Number.MAX_SAFE_INTEGER)).length;
+}
+
+/** Items waiting on a Land reviewer, oldest first, for the admin inbox. */
+export async function landReviewInbox(limit: number) {
+  const queue = await landReviewQueue();
+  return queue
+    .filter(item => (LAND_REVIEW_AWAITING_REVIEWER_STATES as readonly string[]).includes(String(item.state)))
+    .sort((a, b) => String(a.submittedAt ?? '').localeCompare(String(b.submittedAt ?? '')))
+    .slice(0, limit);
+}
+
+export type AgentLandListingState = 'draft' | 'submitted' | 'changes_requested' | 'approved' | 'rejected' | 'suspended';
+
+export function agentLandListingState(caseState: string | null | undefined): AgentLandListingState {
+  switch (caseState) {
+    case 'pending':
+    case 'reviewing':
+      return 'submitted';
+    case 'changes_requested':
+    case 'approved':
+    case 'rejected':
+    case 'suspended':
+      return caseState;
+    default:
+      return 'draft';
+  }
+}
+
+/** The caller's own Land listings (ownership filter is in the query, not the client). */
+export async function listAgentLandListings(userId: number) {
+  requireLandVerticalAvailable('Land listings');
+  const db = await database();
+  const rows = await db
+    .select({ listingId: listings.id, title: listings.title, city: listings.city, province: listings.province, askingPrice: listings.askingPrice, updatedAt: listings.updatedAt, caseState: landReviewCases.state, classification: landAssets.classification })
+    .from(listings)
+    .innerJoin(landListingLinks, and(eq(landListingLinks.listingId, listings.id), eq(landListingLinks.linkStatus, 'active')))
+    .innerJoin(landAssets, eq(landAssets.id, landListingLinks.landAssetId))
+    .leftJoin(landReviewCases, eq(landReviewCases.listingId, listings.id))
+    .where(eq(listings.ownerId, userId))
+    .orderBy(desc(listings.updatedAt));
+  return rows.map(({ caseState, ...row }) => ({ ...row, state: agentLandListingState(caseState) }));
 }
 
 export async function submitLandForReview(input: { listingId: number; userId: number }) {

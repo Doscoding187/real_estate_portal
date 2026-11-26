@@ -13,6 +13,7 @@ import {
   createLandDraft,
   declareMarketingAuthority,
   isLandAuthorRole,
+  listAgentLandListings,
   landWorkflowSnapshot,
   landReviewQueue,
   recordLandClaims,
@@ -101,6 +102,9 @@ export const landRouter = router({
   }),
   getWorkspace: protectedProcedure.input(z.object({ listingId: z.number().int().positive() })).query(async ({ ctx, input }) => {
     try { return await landWorkflowSnapshot(input.listingId, author(ctx).id); } catch (error) { return rethrow(error); }
+  }),
+  myListings: protectedProcedure.query(async ({ ctx }) => {
+    try { return await listAgentLandListings(author(ctx).id); } catch (error) { return rethrow(error); }
   }),
   submit: protectedProcedure.input(z.object({ listingId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
     try { await submitLandForReview({ listingId: input.listingId, userId: author(ctx).id }); return { success: true }; } catch (error) { return rethrow(error); }

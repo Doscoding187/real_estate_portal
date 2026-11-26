@@ -63,3 +63,10 @@ describe('Land authoring router boundaries', () => {
     });
   });
 });
+
+describe('Land agent listings gate', () => {
+  it('hides myListings while the Land gate is off', async () => {
+    const author = landRouter.createCaller(callerContext({ id: 7, role: 'agent' }));
+    await expect(author.myListings()).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
+  });
+});
