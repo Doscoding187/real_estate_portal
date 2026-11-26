@@ -44,9 +44,16 @@ function isValidSender(value: string): boolean {
 
 export function transactionalEmailOrigin(kind: 'app' | 'api', env: NodeJS.ProcessEnv = process.env): string {
   const deployed = ['production', 'staging'].includes(resolveAppRuntimeEnv(env));
-  const raw = kind === 'app'
-    ? readEnv(env, 'APP_URL') || readEnv(env, 'VITE_APP_URL') || readEnv(env, 'NEXT_PUBLIC_APP_URL')
-    : readEnv(env, 'VITE_API_URL') || readEnv(env, 'VITE_API_BASE_URL') || readEnv(env, 'API_URL');
+  const configuredApp =
+    readEnv(env, 'APP_URL') ||
+    readEnv(env, 'VITE_APP_URL') ||
+    readEnv(env, 'NEXT_PUBLIC_APP_URL') ||
+    readEnv(env, 'FRONTEND_URL');
+  const configuredApi =
+    readEnv(env, 'VITE_API_URL') || readEnv(env, 'VITE_API_BASE_URL') || readEnv(env, 'API_URL');
+  // Outside a deployed runtime the web origin proxies /api (local preview), so the configured
+  // app origin is a valid API origin there; deployed runtimes must configure the API origin.
+  const raw = kind === 'app' ? configuredApp : configuredApi || (deployed ? '' : configuredApp);
   if (!raw && deployed) throw new Error(`Transactional email requires a configured public ${kind} origin.`);
   const parsed = new URL(raw || (kind === 'app' ? 'http://localhost:5173' : 'http://localhost:3000'));
   if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password ||
