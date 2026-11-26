@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('wouter', () => ({
@@ -9,7 +9,9 @@ vi.mock('wouter', () => ({
   ),
 }));
 
-// Simulate a hosted build while the services journey is held.
+vi.mock('@/components/EnhancedNavbar', () => ({ EnhancedNavbar: () => null }));
+
+// Simulate a hosted build after the Services public release.
 vi.mock('@/lib/publicNavigation', async importOriginal => {
   const actual = await importOriginal<typeof import('@/lib/publicNavigation')>();
   return {
@@ -21,7 +23,6 @@ vi.mock('@/lib/publicNavigation', async importOriginal => {
 
 import AdvertiseServicesPage from '@/pages/advertise/AdvertiseServicesPage';
 import { AgentServicesReferral, AgentServicesReferralPanel } from '../agent/AgentServicesReferral';
-import { PropertyServiceActions } from '../property/PropertyServiceActions';
 import { ServicesSiteFooter } from '../services/ServicesSiteFooter';
 
 function servicesLinks(container: HTMLElement) {
@@ -30,32 +31,33 @@ function servicesLinks(container: HTMLElement) {
     .filter(href => href === '/services' || href.startsWith('/services/'));
 }
 
-describe('consumer Services entry points while the directory is held', () => {
-  it('keeps /advertise/services open but drops its link to the directory', () => {
+describe('consumer Services entry points after the public release', () => {
+  it('keeps /advertise/services open and links to the directory', () => {
     const { container } = render(<AdvertiseServicesPage />);
     expect(
-      screen.getByText('Give your service business a professional home on Property Listify.'),
+      screen.getByText('More than a listing. A digital home for your service business.'),
     ).toBeInTheDocument();
-    expect(servicesLinks(container)).toEqual([]);
+    expect(servicesLinks(container)).toContain('/services');
   });
 
-  it('hides the agent services referral panel and single referral links', () => {
+  it('shows the agent services referral panel and single referral links', () => {
     const panel = render(<AgentServicesReferralPanel />);
-    expect(panel.container).toBeEmptyDOMElement();
-    const single = render(<AgentServicesReferral category="moving" />);
-    expect(single.container).toBeEmptyDOMElement();
-  });
-
-  it('hides the listing-page property service actions', () => {
-    const { container } = render(
-      <PropertyServiceActions propertyId={1} listingType="sale" suburb="Sandton" />,
+    expect(panel.getByRole('link', { name: /browse the full services directory/i })).toHaveAttribute(
+      'href',
+      '/services',
     );
-    expect(container).toBeEmptyDOMElement();
+    const single = render(<AgentServicesReferral category="moving" />);
+    expect(
+      within(single.container).getByRole('link', { name: /find moving providers/i }),
+    ).toHaveAttribute(
+      'href',
+      expect.stringContaining('/services/moving'),
+    );
   });
 
-  it('removes consumer services links from the services footer but keeps provider onboarding', () => {
+  it('shows consumer services links in the Services footer and keeps provider onboarding', () => {
     const { container } = render(<ServicesSiteFooter />);
-    expect(servicesLinks(container)).toEqual([]);
+    expect(servicesLinks(container).length).toBeGreaterThan(5);
     expect(screen.getByRole('link', { name: 'List your business' })).toHaveAttribute(
       'href',
       '/service/profile',

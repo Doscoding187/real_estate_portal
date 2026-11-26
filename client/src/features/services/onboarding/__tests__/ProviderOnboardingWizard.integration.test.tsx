@@ -242,7 +242,9 @@ describe('ProviderOnboardingWizard', () => {
         }),
       ],
     });
-    expect(screen.getByText(/not publicly published yet/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/remains private and will appear publicly only if an\s+authorised reviewer/i),
+    ).toBeInTheDocument();
   });
 
   it('does not render editable steps before existing profile hydration completes', () => {

@@ -39,7 +39,7 @@ export function AgentServicesReferral({
   label,
   className = '',
 }: AgentServicesReferralProps) {
-  // Consumer Services directory is held until stocked (LAUNCH_HELD_JOURNEYS).
+  // A whole-market withdrawal remains available through LAUNCH_HELD_JOURNEYS.
   if (isJourneyRouteHeld('services')) return null;
   const Icon =
     category === 'inspection_compliance' ? ClipboardCheck : category === 'moving' ? Truck : Camera;

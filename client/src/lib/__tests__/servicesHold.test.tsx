@@ -28,12 +28,12 @@ function readRepoFile(relativePath: string) {
   return readFileSync(path.resolve(process.cwd(), relativePath), 'utf8');
 }
 
-describe('consumer Services directory hold (D2)', () => {
-  it('holds the services journey', () => {
-    expect(isLaunchHeldJourney('services')).toBe(true);
+describe('consumer Services directory public release', () => {
+  it('does not hold the services journey', () => {
+    expect(isLaunchHeldJourney('services')).toBe(false);
   });
 
-  it('renders the held page for consumer services routes even if the manifest lists services', () => {
+  it('renders consumer services routes in a hosted build even if a stale manifest lists services', () => {
     render(
       <HeldJourneyGate
         journey="services"
@@ -42,8 +42,8 @@ describe('consumer Services directory hold (D2)', () => {
         <p>real page</p>
       </HeldJourneyGate>,
     );
-    expect(screen.getByText('This section is not available yet')).toBeInTheDocument();
-    expect(screen.queryByText('real page')).not.toBeInTheDocument();
+    expect(screen.getByText('real page')).toBeInTheDocument();
+    expect(screen.queryByText('This section is not available yet')).not.toBeInTheDocument();
   });
 
   it('lets local development preview the services directory', () => {
@@ -77,7 +77,7 @@ describe('consumer Services directory hold (D2)', () => {
     expect(app).not.toMatch(/<Route path="\/service\/[^"]*">\s*<HeldJourneyGate journey="services"/);
   });
 
-  it('removes every consumer services navigation entry while held and keeps them locally', () => {
+  it('shows Services navigation on hosted and local builds', () => {
     const servicesHref = (href: string) => href === '/services' || href.startsWith('/services/');
     const allItems = (ctx: typeof hosted) =>
       getVisiblePublicNavigationMenus('desktop', ctx).flatMap(menu => [
@@ -85,10 +85,10 @@ describe('consumer Services directory hold (D2)', () => {
         ...getVisiblePublicNavigationGroups(menu, 'desktop', ctx).flatMap(group => group.items),
       ]);
 
-    expect(allItems(hosted).filter(item => servicesHref(item.href))).toEqual([]);
+    expect(allItems(hosted).filter(item => servicesHref(item.href)).length).toBeGreaterThan(5);
     expect(
       getVisiblePublicNavigationMenus('mobile', hosted).some(menu => menu.id === 'services'),
-    ).toBe(false);
+    ).toBe(true);
     expect(allItems(local).filter(item => servicesHref(item.href)).length).toBeGreaterThan(5);
     expect(PUBLIC_NAVIGATION_MENUS.some(menu => menu.id === 'services')).toBe(true);
   });

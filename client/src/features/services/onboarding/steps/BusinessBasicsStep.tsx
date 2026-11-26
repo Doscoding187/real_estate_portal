@@ -7,8 +7,6 @@ import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { CategoryTileGrid } from '@/components/services/CategoryTileGrid';
 import { trpc } from '@/lib/trpc';
 import { type OnboardingState, type OnboardingAction } from '../useOnboardingReducer';
 
@@ -42,15 +40,17 @@ export function BusinessBasicsStep({ state, dispatch, onNext }: BusinessBasicsSt
     dispatch({ type: 'CLEAR_ERROR', step: 1 });
     registerIdentity.mutate({
       companyName: state.companyName.trim(),
-      description: state.bio.trim() || undefined,
     });
   }
 
   return (
     <div className="space-y-6">
       <div className="space-y-1">
-        <h2 className="text-xl font-semibold text-slate-900">Tell us about your business</h2>
-        <p className="text-sm text-slate-500">Almost there — just a few more details</p>
+        <h2 className="text-xl font-semibold text-slate-900">Start with your business name</h2>
+        <p className="text-sm leading-6 text-slate-600">
+          Use the name customers know. You’ll add your public introduction, services and operating
+          areas in the next steps.
+        </p>
       </div>
 
       <div className="space-y-4">
@@ -63,26 +63,6 @@ export function BusinessBasicsStep({ state, dispatch, onNext }: BusinessBasicsSt
             placeholder="e.g. Acme Plumbing & Electrical"
             disabled={isPending}
             aria-required="true"
-          />
-        </div>
-
-        <div className="space-y-1.5">
-          <Label>Primary service category</Label>
-          <CategoryTileGrid
-            selected={state.primaryCategory}
-            onSelect={cat => dispatch({ type: 'SET_FIELD', field: 'primaryCategory', value: cat })}
-          />
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="bio">Short description</Label>
-          <Textarea
-            id="bio"
-            value={state.bio}
-            onChange={e => dispatch({ type: 'SET_FIELD', field: 'bio', value: e.target.value })}
-            placeholder="Briefly describe what your business does and who you serve"
-            rows={3}
-            disabled={isPending}
           />
         </div>
       </div>

@@ -10,6 +10,7 @@ import {
   Paintbrush,
   ShieldCheck,
   Sparkles,
+  Sun,
   Truck,
   Wrench,
   Zap,
@@ -31,6 +32,9 @@ import {
 export const SERVICES_IMAGES = {
   hero: '/images/services/hero-services.jpg',
   ecosystem: '/images/services/ecosystem-property.jpg',
+  plumbingHero: '/images/services/plumbing-hero-kitchen-sink.jpg',
+  plumbingProfessional: '/images/services/plumbing-professional.jpg',
+  providerNetworkCta: '/images/services/provider-network-cta.jpg',
   categories: {
     home_improvement: '/images/services/category-home-improvement.jpg',
     finance_legal: '/images/services/category-finance-legal.jpg',
@@ -94,7 +98,18 @@ export const POPULAR_SERVICE_GROUPS: PopularServiceGroup[] = [
     category: 'home_improvement',
     query: 'electrical',
     demandWeight: 9,
-    keywords: ['electric', 'wiring', 'coc', 'solar', 'inverter', 'lighting'],
+    keywords: ['electric', 'wiring', 'coc', 'lighting'],
+  },
+  {
+    key: 'solar',
+    label: 'Solar & Backup Power',
+    shortLabel: 'Solar & Backup Power',
+    image: '/images/services/trade-electrical.jpg',
+    icon: Sun,
+    category: 'home_improvement',
+    query: 'solar',
+    demandWeight: 7,
+    keywords: ['solar', 'inverter', 'backup power', 'battery', 'photovoltaic', 'pv system'],
   },
   {
     key: 'roofing',

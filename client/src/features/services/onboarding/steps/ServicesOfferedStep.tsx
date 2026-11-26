@@ -84,8 +84,9 @@ export function ServicesOfferedStep({ state, dispatch, onNext, onBack }: Service
     <div className="space-y-6">
       <div className="space-y-1">
         <h2 className="text-xl font-semibold text-slate-900">What services do you offer?</h2>
-        <p className="text-sm text-slate-500">
-          Add the services you provide and set your pricing in ZAR
+        <p className="text-sm leading-6 text-slate-600">
+          Add each service under the right category. Descriptions help customers understand the work;
+          price ranges are optional and use South African rand.
         </p>
       </div>
 

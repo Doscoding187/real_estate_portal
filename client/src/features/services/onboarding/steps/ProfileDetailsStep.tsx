@@ -91,8 +91,11 @@ export function ProfileDetailsStep({ state, dispatch, onNext, onBack }: ProfileD
   return (
     <div className="space-y-6">
       <div className="space-y-1">
-        <h2 className="text-xl font-semibold text-slate-900">Complete your profile</h2>
-        <p className="text-sm text-slate-500">Help customers know who they're hiring</p>
+        <h2 className="text-xl font-semibold text-slate-900">Introduce your business</h2>
+        <p className="text-sm leading-6 text-slate-600">
+          Add the details that help customers understand your experience and decide whether your
+          business is a good fit.
+        </p>
       </div>
 
       <div className="space-y-4">

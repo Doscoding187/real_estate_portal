@@ -2,13 +2,18 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 
 const mockProfileData = vi.fn();
+const mockProfileError = vi.fn();
 const mockSetLocation = vi.fn();
 
 vi.mock('@/lib/trpc', () => ({
   trpc: {
     servicesEngine: {
       getProviderPublicProfile: {
-        useQuery: () => ({ data: mockProfileData(), isLoading: false, error: null }),
+        useQuery: () => ({
+          data: mockProfileData(),
+          isLoading: false,
+          error: mockProfileError(),
+        }),
       },
     },
   },
@@ -57,8 +62,10 @@ function makeProfile(overrides: Record<string, unknown> = {}) {
 describe('ServiceProviderProfilePage', () => {
   beforeEach(() => {
     mockProfileData.mockReset();
+    mockProfileError.mockReset();
     mockSetLocation.mockReset();
     mockProfileData.mockReturnValue(makeProfile());
+    mockProfileError.mockReturnValue(null);
     window.history.pushState({}, '', '/services/provider/test-provider--123');
   });
 
@@ -219,6 +226,20 @@ describe('ServiceProviderProfilePage', () => {
       screen.getByRole('heading', { name: /provider profile unavailable/i }),
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /browse services/i })).toBeInTheDocument();
+  });
+
+  it('does not mistake a temporary query failure for an unpublished provider', () => {
+    mockProfileData.mockReturnValue(undefined);
+    mockProfileError.mockReturnValue(new Error('temporary upstream failure'));
+
+    render(<ServiceProviderProfilePage />);
+
+    expect(
+      screen.getByRole('heading', { name: /provider profile temporarily unavailable/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/does not confirm whether the provider is published/i),
+    ).toBeInTheDocument();
   });
 
   it('presents measured response performance only when the sample gate passes', () => {

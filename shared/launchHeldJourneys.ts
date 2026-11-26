@@ -7,7 +7,6 @@ export const LAUNCH_HELD_JOURNEYS: readonly string[] = [
   'shared_living',
   'plot_land',
   'commercial',
-  'services',
 ];
 
 export function isLaunchHeldJourney(key: string): boolean {

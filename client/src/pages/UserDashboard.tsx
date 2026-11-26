@@ -524,7 +524,7 @@ export default function UserDashboard() {
     [watchAreas],
   );
 
-  // Consumer Services directory is held until stocked (LAUNCH_HELD_JOURNEYS).
+  // A whole-market Services withdrawal remains available through LAUNCH_HELD_JOURNEYS.
   const servicesHeld = isJourneyRouteHeld('services');
 
   const bridgePlan = useMemo(() => {

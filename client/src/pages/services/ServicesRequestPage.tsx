@@ -21,6 +21,7 @@ import { applySeo } from '@/lib/seo';
 import { useServicesLocation } from '@/features/services/useServicesLocation';
 import { isCanonicalPlaceId } from '@shared/placeAuthority';
 import { canonicalPlaceSelectionFromResolved } from '@/lib/canonicalPlaceSelection';
+import { useApiAvailability } from '@/components/ApiAvailabilityBoundary';
 
 const INTENT_STAGES: IntentStage[] = [
   'seller_valuation',
@@ -98,6 +99,7 @@ export default function ServicesRequestPage() {
   const [, params] = useRoute('/services/request/:category');
   const { search, setLocation } = useServicesLocation();
   const auth = useAuth();
+  const { isUnavailable } = useApiAvailability();
 
   const categoryParam = String(params?.category || '').trim();
   const parsedCategory = serviceCategoryFromSlug(categoryParam);
@@ -122,7 +124,7 @@ export default function ServicesRequestPage() {
   const journeyContext = serviceJourneyContextFromSearch(search);
   const selectedPlaceQuery = trpc.placeAuthority.resolveSearchPlace.useQuery(
     { placeId: initialCanonicalPlaceId },
-    { enabled: Boolean(initialCanonicalPlaceId), refetchOnWindowFocus: false },
+    { enabled: Boolean(initialCanonicalPlaceId) && !isUnavailable, refetchOnWindowFocus: false },
   );
   const defaultPlace = useMemo(
     () => canonicalPlaceSelectionFromResolved(selectedPlaceQuery.data),
@@ -155,7 +157,7 @@ export default function ServicesRequestPage() {
 
   const selectedProviderQuery = trpc.servicesEngine.getProviderPublicProfile.useQuery(
     { providerId: providerId || 0 },
-    { enabled: Boolean(providerId && parsedCategory) },
+    { enabled: Boolean(providerId && parsedCategory) && !isUnavailable },
   );
   const selectedProvider = selectedProviderQuery.data;
 
@@ -255,6 +257,27 @@ export default function ServicesRequestPage() {
             </p>
             <Button onClick={() => setLocation(buildServiceCategoryPath(category, journeyContext))}>
               Browse {formatCategoryLabel(category)} providers
+            </Button>
+          </CardContent>
+        </Card>
+      </main>
+    );
+  }
+
+  if (isUnavailable) {
+    return (
+      <main className="min-h-screen bg-[#f7f4ec] px-4 py-12 md:px-6">
+        <Card className="mx-auto max-w-3xl border-amber-200 bg-white shadow-sm">
+          <CardContent className="space-y-4 p-8" role="status">
+            <h1 className="text-2xl font-semibold text-slate-950">
+              Service requests temporarily unavailable
+            </h1>
+            <p className="text-sm leading-6 text-slate-600">
+              The application service is reconnecting. No request has been sent or saved. Please
+              return once availability is restored, then choose the provider and service again.
+            </p>
+            <Button onClick={() => setLocation(buildServiceCategoryPath(category, journeyContext))}>
+              Back to providers
             </Button>
           </CardContent>
         </Card>
@@ -443,6 +466,12 @@ export default function ServicesRequestPage() {
               submitting={createLead.isPending}
               error={createLead.error?.message ?? null}
               onSubmit={payload => {
+                if (isUnavailable) {
+                  toast.error(
+                    'Service requests are temporarily unavailable. No request has been sent.',
+                  );
+                  return;
+                }
                 latestSubmissionRef.current = {
                   category: payload.category,
                   sourceSurface: payload.sourceSurface,

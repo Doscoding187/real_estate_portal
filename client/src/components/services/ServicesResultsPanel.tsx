@@ -287,7 +287,8 @@ export function ServicesResultsPanel({
 
           {!isLoading && error && (
             <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-800">
-              We could not load the provider directory. Please try again.
+              Provider availability is temporarily unavailable. No provider or coverage information
+              could be confirmed. Please try again after the application service reconnects.
             </div>
           )}
 

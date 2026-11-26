@@ -4,7 +4,7 @@ import { SERVICE_CATEGORIES } from '@/features/services/catalog';
 import { toServiceCategorySlug } from '@/features/services/catalog';
 import { isHomepageHeroJourneyEnabled, isJourneyRouteHeld } from '@/lib/publicNavigation';
 
-// The consumer Services directory is held until stocked (LAUNCH_HELD_JOURNEYS).
+// Services remains withdrawable through LAUNCH_HELD_JOURNEYS if an incident requires it.
 const servicesHeld = isJourneyRouteHeld('services');
 
 const platformLinks = [

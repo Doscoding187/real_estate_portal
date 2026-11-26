@@ -6,17 +6,25 @@ Merges, production changes and irreversible steps still need Edward's written GO
 | # | Decision | How it is enforced |
 |---|---|---|
 | D1 | **Admission route: public provider applications.** Anyone can register as `service_provider` and complete a private profile. Registering never publishes anything; every profile stays private until a super-admin publication review approves it. | S2 PR (registration allow-list plus copy). The existing reviewed publication gate is unchanged. |
-| D2 | **Consumer directory held until stocked.** All consumer `/services*` routes and every consumer entry point (nav, footer, landing CTAs, listing service actions, dashboard injections, agent referral) are held through the existing `LAUNCH_HELD_JOURNEYS` mechanism. Provider-facing pages (`/advertise/services`, registration, onboarding, provider workspace) stay open. | S3 PR (card 71). Release means removing `services` from `LAUNCH_HELD_JOURNEYS` in a PR that Edward merges once D3 and the release checks are met. |
-| D3 | **Supply bar:** at least 2 independent, approved, contactable providers with an active service and valid coverage per advertised category × Place cell. Single-provider cells are not advertised in the pilot. | Operational: checked at publication review and before the D2 release. No code. |
+| D2 | **Superseded on 2026-11-21 — public discovery is accessible, not a claim of stocked supply.** Consumer `/services*` routes and provider-acquisition information are no longer blanket-held. Empty category/Place cells and confirmed API outages must be described honestly. The `LAUNCH_HELD_JOURNEYS` mechanism remains the emergency withdrawal path. | `feat/services-public-marketplace-readiness-20261120` removes only `services` from the held list and retains server-side provider eligibility and reviewer publication. This does not approve advertising, deployment or provider promotion. |
+| D3 | **Supply bar for advertising:** at least 2 independent, approved, contactable providers with an active service and valid coverage per advertised category × Place cell. Single-provider cells are not advertised in the pilot. | Operational: checked at publication review and before consumer advertising or availability claims. It is not a reason to hide an honest public directory or provider application route. |
 | D4 | **Initial pilot market (recruitment target, revisable at the cohort review):** categories conveyancing, inspection/compliance certificates and moving; Places City of Johannesburg and City of Tshwane (Gauteng). | Guides recruitment and the D2 release decision. The canonical category keys and Place ids are recorded by the S0 builder. |
 | D5 | **Owners:** Edward covers provider admission, publication review, new-request monitoring, review/report triage and customer support. Cadence: one daily check of new applications, new requests and review reports. | Ops runbook section in S0. |
 | D6 | **Provider response expectation: 1 business day.** This is told privately to providers (onboarding/workspace copy and the admission message). It is never shown to consumers as a claim. | S2 copy where a natural provider-facing spot exists, plus the runbook. |
 | D7 | **No automated provider alerts in the pilot.** Edward checks new requests daily and contacts the provider directly if a request is unanswered after 1 business day. DELTA-8 (a new-request email to the provider with no requester PII; the retired phase-0 system is not revived) is the first post-pilot workstream. It is pulled forward if any request goes 2 business days unanswered. | Runbook, plus the register queue order. |
 | D8 | **Out of scope for the pilot:** payments, bookings, scheduling, quotes, paid placement, subscriptions, lead fees, campaigns, export (V2 §3.1). | Register. |
-| D9 | **The homepage Services depth work** (worktree services-homepage-depth-20261113) is parked until the D2 release. | Not merged before D2. |
+| D9 | **Homepage Services depth work delivered on the 2026-11-21 readiness branch.** The public homepage now has a balanced nine-card category presentation and additional truthful discovery, provider-acquisition and journey guidance. | Included in `1dc2502bd`; release remains subject to normal review and release gates. |
 | D10 | **Withdrawal path:** unpublish a provider through the admin action. Re-hold the whole consumer journey by re-adding `services` to `LAUNCH_HELD_JOURNEYS`. | Runbook. |
 
-Release order: S3 hold -> S0 docs -> S1 editor (after a local preview for Edward) -> S2 applications (after the Stage-3 rehearsal on a fresh disposable DB) -> recruit and publish the cohort -> release PR removing `services` from the held list (Edward GO).
+Historical release order: S3 hold -> S0 docs -> S1 editor (after a local preview for Edward) -> S2 applications (after the Stage-3 rehearsal on a fresh disposable DB) -> recruit and publish the cohort -> release PR removing `services` from the held list (Edward GO).
+
+**2026-11-21 amendment:** the public route-release step has been moved ahead of
+cohort stocking by Edward's Services public-readiness directive. The current
+order is: review/merge the truthful public-discovery branch -> recruit and
+review the founding cohort -> publish only eligible providers -> verify the
+advertised category × Place cells meet D3 -> conduct consumer advertising only
+after the operational and production release gates pass. No merge, deployment,
+provider promotion or advertising is authorized by this record.
 
 ## D4 reference: canonical keys and Place ids (recorded from source on `origin/main` 14696b8e2)
 
