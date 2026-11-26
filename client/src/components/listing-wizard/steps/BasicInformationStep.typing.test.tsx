@@ -1,5 +1,5 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import BasicInformationStep from './BasicInformationStep';
 import { useListingWizardStore } from '@/hooks/useListingWizard';
 
@@ -56,6 +56,20 @@ describe('BasicInformationStep typing is never overwritten while focused', () =>
     expect(description.value).toBe('with a garden');
   });
 
+  it('keeps restored text when hydration lands after focus and the user never typed', () => {
+    render(<BasicInformationStep />);
+    const title = screen.getByLabelText(/Property Title/) as HTMLInputElement;
+    title.focus();
+    fireEvent.focus(title);
+    act(() => {
+      useListingWizardStore.getState().setTitle('Restored title');
+    });
+    expect(title.value).toBe('Restored title');
+    fireEvent.blur(title);
+    expect(useListingWizardStore.getState().title).toBe('Restored title');
+    expect(title.value).toBe('Restored title');
+  });
+
   it('follows external changes when the field is not focused', () => {
     render(<BasicInformationStep />);
     const title = screen.getByLabelText(/Property Title/) as HTMLInputElement;
@@ -63,5 +77,43 @@ describe('BasicInformationStep typing is never overwritten while focused', () =>
       useListingWizardStore.getState().setTitle('Restored title');
     });
     expect(title.value).toBe('Restored title');
+  });
+
+  it('keeps every keystroke of a long description typed fast, with store churn and validation active', () => {
+    vi.useFakeTimers();
+    try {
+      render(<BasicInformationStep />);
+      const description = screen.getByLabelText(/Property Description/) as HTMLTextAreaElement;
+      description.focus();
+      const text =
+        'Three-bedroom family home with an open-plan kitchen and lounge, a double garage, a garden and a pool, close to schools and shops. Quiet street in a secure neighbourhood.';
+      expect(text.length).toBeGreaterThan(150);
+
+      let writes = 0;
+      const unsubscribe = useListingWizardStore.subscribe(() => {
+        writes += 1;
+      });
+      let typed = '';
+      for (const [index, ch] of [...text].entries()) {
+        typed += ch;
+        fireEvent.change(description, { target: { value: typed } });
+        if (index % 7 === 0) {
+          // Autosave / readiness churn and a stale restore landing between keystrokes.
+          act(() => {
+            useListingWizardStore.setState({ currentStep: 3, description: typed.slice(0, -2) });
+          });
+        }
+        if (index % 20 === 0) act(() => void vi.advanceTimersByTime(50));
+        expect(description.value).toBe(typed);
+      }
+      act(() => void vi.advanceTimersByTime(500));
+      unsubscribe();
+      expect(description.value).toBe(text);
+      expect(useListingWizardStore.getState().description).toBe(text);
+      // Keystrokes stay local; the store is not written once per character.
+      expect(writes).toBeLessThan(text.length);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

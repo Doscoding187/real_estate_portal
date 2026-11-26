@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { previewPublicLocation } from '../listingPreviewLocation';
+import { previewPublicLocation, publicDetailAddress } from '../listingPreviewLocation';
 
 const privateAddress = { streetNumber: '1', streetName: 'Test Walkthrough Road' };
 
@@ -34,5 +34,22 @@ describe('previewPublicLocation', () => {
         areaLabel: 'North Riding',
       }),
     ).toBe('North Riding');
+  });
+});
+
+describe('publicDetailAddress', () => {
+  it('shows the street name without the number, matching the wizard preview', () => {
+    const publicAddress = 'Test Walkthrough Road, North Riding, Randburg, Gauteng';
+    expect(publicDetailAddress(publicAddress)).toBe(publicAddress);
+    expect(
+      previewPublicLocation({
+        privateAddress: { streetNumber: '1', streetName: 'Test Walkthrough Road' },
+        publicLocationPrecision: 'approximate',
+        areaLabel: 'North Riding, Randburg, Gauteng',
+      }),
+    ).toBe(publicDetailAddress(publicAddress));
+  });
+  it('is empty when the projection supplies no address', () => {
+    expect(publicDetailAddress(null)).toBe('');
   });
 });

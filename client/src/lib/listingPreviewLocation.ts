@@ -26,3 +26,11 @@ export function previewPublicLocation(input: {
   const streetPart = street || (exact ? clean(input.fallbackAddress) : '');
   return [streetPart, area].filter(Boolean).join(', ');
 }
+
+/**
+ * The detail-page address line. The server projection's publicAddress already follows the
+ * chosen privacy option (street name and area, or full address), so the page shows it as is.
+ */
+export function publicDetailAddress(publicAddress: unknown): string {
+  return typeof publicAddress === 'string' ? publicAddress.trim() : '';
+}

@@ -89,6 +89,69 @@ const CoreFactStatus = ({ id, label, value, onChange, help }: any) => (
   </div>
 );
 
+const TYPING_COMMIT_DEBOUNCE_MS = 200;
+
+type TextFieldProps = {
+  value: string;
+  onCommit: (next: string) => void;
+  onUserInput: () => void;
+  onBlurValidate: () => void;
+  invalid: boolean;
+};
+
+// Own their typing state so a keystroke re-renders only the field, not the whole step/wizard.
+const TitleField = ({ value, onCommit, onUserInput, onBlurValidate, invalid }: TextFieldProps) => {
+  const field = useFocusSafeText(value, onCommit, { debounceMs: TYPING_COMMIT_DEBOUNCE_MS });
+  return (
+    <Input
+      id="title"
+      value={field.value}
+      onChange={e => {
+        field.onChange(e);
+        onUserInput();
+      }}
+      onFocus={field.onFocus}
+      onBlur={() => {
+        field.onBlur();
+        onBlurValidate();
+      }}
+      placeholder="e.g., 2-Bed Apartment in Sandton"
+      className="mt-1"
+      maxLength={LISTING_TITLE_MAX_LENGTH}
+      aria-invalid={invalid}
+    />
+  );
+};
+
+const DescriptionField = ({
+  value,
+  onCommit,
+  onUserInput,
+  onBlurValidate,
+  invalid,
+}: TextFieldProps) => {
+  const field = useFocusSafeText(value, onCommit, { debounceMs: TYPING_COMMIT_DEBOUNCE_MS });
+  return (
+    <Textarea
+      id="description"
+      value={field.value}
+      onChange={e => {
+        field.onChange(e);
+        onUserInput();
+      }}
+      onFocus={field.onFocus}
+      onBlur={() => {
+        field.onBlur();
+        onBlurValidate();
+      }}
+      placeholder="Describe the property (50 characters to continue; 100+ to submit)"
+      className="mt-1 min-h-[120px]"
+      maxLength={5000}
+      aria-invalid={invalid}
+    />
+  );
+};
+
 const BasicInformationStep: React.FC = () => {
   const store: any = useListingWizardStore();
   const action: ListingAction | undefined = store.action;
@@ -101,8 +164,6 @@ const BasicInformationStep: React.FC = () => {
   const core = readCorePropertyInformation(propertyType, propertyDetails, basicInfo);
   const coreFieldDefinitions = getCorePropertyFieldDefinitions(propertyType, core);
   const definition = getPropertyTypeDefinition(propertyType);
-  const titleField = useFocusSafeText(title, next => store.setTitle(next));
-  const descriptionField = useFocusSafeText(description, next => store.setDescription(next));
   const [numericDrafts, setNumericDrafts] = React.useState<Record<string, string>>({});
 
   React.useEffect(() => {
@@ -255,22 +316,12 @@ const BasicInformationStep: React.FC = () => {
             <Label htmlFor="title" className="text-slate-700">
               Property Title *
             </Label>
-            <Input
-              id="title"
-              value={titleField.value}
-              onChange={e => {
-                titleField.onChange(e);
-                titleValidation.clearError();
-              }}
-              onFocus={titleField.onFocus}
-              onBlur={() => {
-                titleField.onBlur();
-                titleValidation.onBlur();
-              }}
-              placeholder="e.g., 2-Bed Apartment in Sandton"
-              className="mt-1"
-              maxLength={LISTING_TITLE_MAX_LENGTH}
-              aria-invalid={!!titleValidation.error}
+            <TitleField
+              value={title}
+              onCommit={next => store.setTitle(next)}
+              onUserInput={titleValidation.clearError}
+              onBlurValidate={titleValidation.onBlur}
+              invalid={!!titleValidation.error}
             />
             <div className="flex items-center justify-between mt-1">
               <InlineError error={titleValidation.error} show={!!titleValidation.error} size="sm" />
@@ -283,22 +334,12 @@ const BasicInformationStep: React.FC = () => {
             <Label htmlFor="description" className="text-slate-700">
               Property Description *
             </Label>
-            <Textarea
-              id="description"
-              value={descriptionField.value}
-              onChange={e => {
-                descriptionField.onChange(e);
-                descriptionValidation.clearError();
-              }}
-              onFocus={descriptionField.onFocus}
-              onBlur={() => {
-                descriptionField.onBlur();
-                descriptionValidation.onBlur();
-              }}
-              placeholder="Describe the property (50 characters to continue; 100+ to submit)"
-              className="mt-1 min-h-[120px]"
-              maxLength={5000}
-              aria-invalid={!!descriptionValidation.error}
+            <DescriptionField
+              value={description}
+              onCommit={next => store.setDescription(next)}
+              onUserInput={descriptionValidation.clearError}
+              onBlurValidate={descriptionValidation.onBlur}
+              invalid={!!descriptionValidation.error}
             />
             <div className="flex items-center justify-between mt-1">
               <InlineError
