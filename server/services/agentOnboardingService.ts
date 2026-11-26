@@ -10,8 +10,10 @@ import { getPlanAccessProjectionForUserId, type PlanAccessProjection } from './p
 import { nowAsDbTimestamp } from '../utils/dbTypeUtils';
 import {
   deriveAgentJourneyAccessState,
+  deriveAgentLaunchAccess,
   normalizeAgentSubscriptionStatus,
 } from '../../shared/agentJourney';
+import { getPendingLaunchAccessOrder } from './launchAccessOrderService';
 import { resolveCurrentAgencyMembershipForAgent } from './agencyMembershipService';
 import {
   parseAgentCoverageAreas,
@@ -163,6 +165,17 @@ export class AgentOnboardingService {
     }
 
     const entitlements = await getAgentEntitlementsForUserId(userId);
+    // Paid state and the pending order come from the canonical subscription /
+    // invoice records finance review writes, never from profile completion.
+    const pendingOrder =
+      planAccess.ownerSource === 'individual_agent'
+        ? await getPendingLaunchAccessOrder('agent', userId)
+        : null;
+    const launchAccess = deriveAgentLaunchAccess({
+      hasCommercialAccess: Boolean(entitlements?.hasCommercialAccess),
+      subscriptionStatus: onboardingState.subscriptionStatus,
+      pendingOrder,
+    });
 
     return {
       role: user.role,
@@ -175,6 +188,7 @@ export class AgentOnboardingService {
       recommendedNextStep: onboardingState.recommendedNextStep,
       subscriptionTier: planAccess.currentPlan?.name || 'unassigned',
       subscriptionStatus: onboardingState.subscriptionStatus,
+      launchAccess,
       trialStartedAt:
         planAccess.subscription && planAccess.trialStatus !== 'none'
           ? planAccess.subscription.createdAt

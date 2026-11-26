@@ -20,6 +20,7 @@ import { CanonicalListingPlaceError } from './services/canonicalListingPlaceReso
 import { calculateListingReadiness } from './lib/readiness';
 import { calculateListingQualityScore } from './lib/quality';
 import { requireUser } from './_core/requireUser';
+import type { TrpcContext } from './_core/context';
 import { recordAgentOsEvent } from './services/agentOsEventService';
 import { resolvePropertyForListing } from './services/inventoryLinkResolver';
 import { prepareSellerProspectListingConversion } from './services/sellerProspectAccessService';
@@ -80,6 +81,13 @@ import './_core/landRuntime';
 import { isLandVerticalAvailable } from '../shared/landLaunchPolicy';
 import { LandLaunchContainmentError } from './services/landLaunchContainmentService';
 import { safeErrorSummary } from './_core/safeError';
+import { logAudit } from './_core/auditLog';
+import {
+  isValidPastOrTodayDate,
+  ListingLifecycleError,
+  resolveListingLifecycleTransition,
+} from './services/listingLifecycleTransition';
+import { isListingTakenDownByModerator } from './services/listingTakedownGuard';
 
 function rejectGenericCommercialWorkflow(propertyType: unknown): void {
   if (!isCommercialMarketingPropertyType(propertyType)) return;
@@ -507,6 +515,282 @@ function remapRevisionPropertyDetails(
       })),
     },
   };
+}
+
+/**
+ * The one submission flow for a listing: readiness, location, pricing, rental,
+ * feature and core validation, entitlement, WhatsApp contact, then fast-track
+ * approval or the manual review queue. Used by listing.submitForReview and by
+ * Republish, so an unpublished listing is held to exactly the same rules.
+ */
+type ListingSubmissionOptions = {
+  /** submitForReview is owner-only; Republish applies custody in setLifecycle. */
+  requireOwner: boolean;
+  /** Runs after validation and before the status-changing submission step. */
+  beforeSubmit?: () => Promise<void>;
+  /** Undo beforeSubmit if the submission step itself fails. */
+  revert?: () => Promise<void>;
+};
+
+export async function submitListingForReviewFlow(
+  ctx: TrpcContext,
+  listingId: number,
+  options: ListingSubmissionOptions = { requireOwner: true },
+) {
+  const input = { listingId };
+  let preparedForSubmit = false;
+      const currentUser = requireUser(ctx);
+      const recordSubmitFailure = async (
+        reasonCode: string,
+        message: string,
+        details?: Record<string, unknown>,
+      ) => {
+        await recordAgentOsEvent({
+          userId: currentUser.id,
+          eventType: 'agent_listing_submit_failed',
+          eventData: {
+            listingId: input.listingId,
+            reasonCode,
+            message,
+            ...(details || {}),
+          },
+          req: ctx.req,
+          requestId: ctx.requestId,
+        });
+      };
+
+      try {
+        // Verify ownership
+        const listing = await db.getListingById(input.listingId);
+        if (!listing || (options.requireOwner && listing.userId !== currentUser.id)) {
+          await recordSubmitFailure(
+            'not_authorized_or_listing_missing',
+            'Not authorized to submit this listing',
+          );
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Not authorized to submit this listing',
+          });
+        }
+        await assertListingContentCustody(
+          listing,
+          currentUser,
+          'Not authorized to submit this listing',
+        );
+        if (isCommercialMarketingPropertyType(listing.propertyType)) {
+          await recordSubmitFailure(
+            'commercial_inventory_authority',
+            COMMERCIAL_INVENTORY_MANAGEMENT_MESSAGE,
+          );
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: COMMERCIAL_INVENTORY_MANAGEMENT_MESSAGE,
+          });
+        }
+        await assertGenericListingRouteAvailable(
+          input.listingId,
+          listing as Record<string, unknown>,
+        );
+
+        // Check readiness before allowing submission
+        const fullListing = await db.getListingById(input.listingId);
+        const media = await db.getListingMedia(input.listingId);
+
+        if (fullListing.action === 'sell' || fullListing.action === 'rent') {
+          const locationIssues = validateCanonicalListingRecordLocation(
+            fullListing as Record<string, unknown>,
+          );
+          if (locationIssues.length > 0) {
+            const message = locationIssues.join(' ');
+            await recordSubmitFailure('invalid_location', message, {
+              fields: ['location'],
+            });
+            throw new TRPCError({ code: 'BAD_REQUEST', message });
+          }
+
+          const pricingIssues = validatePricingContract(
+            fullListing.action,
+            fullListing.pricing as Record<string, unknown>,
+            fullListing.propertyDetails as Record<string, unknown>,
+            { mode: 'publish', enforceInputShape: false },
+          );
+          if (pricingIssues.length > 0) {
+            const message = pricingIssues.map(issue => issue.message).join(' ');
+            await recordSubmitFailure('invalid_pricing', message, {
+              fields: pricingIssues.map(issue => issue.field),
+            });
+            throw new TRPCError({ code: 'BAD_REQUEST', message });
+          }
+
+          if (fullListing.action === 'rent') {
+            const rentalTermsIssues = validateRentalTerms(
+              (fullListing.propertyDetails as Record<string, unknown>)?.rentalTerms,
+              { mode: 'publish' },
+            );
+            if (rentalTermsIssues.length > 0) {
+              const message = rentalTermsIssues.map(issue => issue.message).join(' ');
+              await recordSubmitFailure('invalid_rental_terms', message, {
+                fields: rentalTermsIssues.map(issue => issue.field),
+              });
+              throw new TRPCError({ code: 'BAD_REQUEST', message });
+            }
+          }
+
+          const featureIssues = validateFeaturesContext(
+            (fullListing.propertyDetails as any)?.featuresContext,
+            fullListing.action === 'sell' ? 'sale' : 'rent',
+            fullListing.propertyType,
+            (fullListing.propertyDetails as any)?.corePropertyInformation,
+          );
+          if (featureIssues.length > 0) {
+            const message = featureIssues.map(issue => issue.message).join(' ');
+            await recordSubmitFailure('invalid_features_context', message, {
+              fields: featureIssues.map(issue => issue.field),
+            });
+            throw new TRPCError({ code: 'BAD_REQUEST', message });
+          }
+
+          const coreIssues = validateCorePropertyInformation(
+            fullListing.action === 'sell' ? 'sale' : 'rent',
+            fullListing.propertyType,
+            fullListing.propertyDetails,
+          );
+          if (coreIssues.length > 0) {
+            const message = coreIssues.map(issue => issue.message).join(' ');
+            await recordSubmitFailure('invalid_core_property_information', message, {
+              fields: coreIssues.map(issue => issue.field),
+            });
+            throw new TRPCError({ code: 'BAD_REQUEST', message });
+          }
+        }
+
+        const readiness = calculateListingReadiness({ ...fullListing, media });
+
+        if (readiness.score < LISTING_SUBMISSION_READINESS_THRESHOLD) {
+          await recordSubmitFailure(
+            'readiness_below_threshold',
+            `Listing readiness ${readiness.score}% is below required ${LISTING_SUBMISSION_READINESS_THRESHOLD}%`,
+            {
+              readinessScore: readiness.score,
+              missing: Array.isArray((readiness as any).missing) ? (readiness as any).missing : [],
+            },
+          );
+          throw new TRPCError({
+            code: 'PRECONDITION_FAILED',
+            message: `Listing is not ready for submission (${readiness.score}%). Reach ${LISTING_SUBMISSION_READINESS_THRESHOLD}% and complete the remaining required fields.`,
+          });
+        }
+
+        const database = await db.getDb();
+        if (!database) {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+        }
+        const originalListingId = Number((fullListing as any).revisionOfListingId || 0);
+        await assertListingPublicationEntitled(database, {
+          listingId: input.listingId,
+          operation: 'submit',
+          ...(originalListingId > 0 ? { excludeListingIds: [originalListingId] } : {}),
+        });
+
+        const agent = await db.getAgentByUserId(currentUser.id);
+        const owner = await db.getUserById(currentUser.id);
+        const whatsappContact =
+          String(agent?.whatsapp || '').trim() ||
+          String(agent?.phone || '').trim() ||
+          String(owner?.phone || '').trim();
+
+        if (!whatsappContact) {
+          await recordSubmitFailure(
+            'missing_whatsapp_contact',
+            'WhatsApp contact number is required before listing submission',
+            {
+              agentId: agent?.id || null,
+            },
+          );
+          throw new TRPCError({
+            code: 'PRECONDITION_FAILED',
+            message:
+              'A WhatsApp contact number is required before this listing can go live. Add a WhatsApp-ready number to your profile and try again.',
+          });
+        }
+
+        await options.beforeSubmit?.();
+        preparedForSubmit = true;
+
+        // --- Fast-Track Approval Logic (Phase 5) ---
+        // Criteria: Readiness 100%, Quality >= 85, Trusted/Verified Agent
+        const quality = calculateListingQualityScore({ ...fullListing, media });
+
+        // Check if agent is verified (assuming isVerified is 1 or true)
+        const isTrusted = agent?.isVerified === 1;
+
+        if (readiness.score === 100 && quality.score >= 85 && isTrusted) {
+          // Auto-Approve
+          await db.approveListing(
+            input.listingId,
+            requireUser(ctx).id,
+            'Fast-Track Auto Approval (High Quality & Trusted)',
+            'fast_track',
+          );
+          await recordAgentOsEvent({
+            userId: requireUser(ctx).id,
+            eventType: 'agent_listing_submitted',
+            eventData: {
+              listingId: input.listingId,
+              status: 'approved',
+              fastTracked: true,
+            },
+            req: ctx.req,
+            requestId: ctx.requestId,
+          });
+          await recordAgentOsEvent({
+            userId: requireUser(ctx).id,
+            eventType: 'agent_listing_live',
+            eventData: {
+              listingId: input.listingId,
+              source: 'fast_track_approval',
+            },
+            req: ctx.req,
+            requestId: ctx.requestId,
+          });
+          return { success: true, status: 'approved', fastTracked: true };
+        }
+
+        // Otherwise, add to manual review queue
+        await db.submitListingForReview(input.listingId);
+        await recordAgentOsEvent({
+          userId: requireUser(ctx).id,
+          eventType: 'agent_listing_submitted',
+          eventData: {
+            listingId: input.listingId,
+            status: 'pending_review',
+            fastTracked: false,
+          },
+          req: ctx.req,
+          requestId: ctx.requestId,
+        });
+
+        return { success: true, status: 'pending_review' };
+      } catch (error) {
+        console.error('Error submitting for review:', safeErrorSummary(error));
+        if (preparedForSubmit) await options.revert?.();
+
+        if (!(error instanceof TRPCError)) {
+          await recordSubmitFailure(
+            'unexpected_submission_error',
+            error instanceof Error ? error.message : 'Failed to submit for review',
+          );
+        }
+
+        if (error instanceof TRPCError) throw error;
+        if (error instanceof ListingPublicationEntitlementError) {
+          throw mapListingLifecycleError(error, 'Failed to submit for review');
+        }
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to submit for review',
+        });
+      }
 }
 
 export const listingRouter = router({
@@ -1039,6 +1323,98 @@ export const listingRouter = router({
       } catch (error) {
         console.error('Error fetching user listings:', safeErrorSummary(error));
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to fetch listings' });
+      }
+    }),
+
+  /**
+   * Lister-driven lifecycle: mark a published listing Sold or Let, unpublish
+   * it, or republish an unpublished one. Custody is the same rule as editing
+   * (owner, assigned agent, agency admin of the owning agency, super admin).
+   * Republish goes through the ordinary submission and admin approval rule.
+   */
+  setLifecycle: protectedProcedure
+    .input(
+      z.object({
+        id: z.number().int().positive(),
+        change: z.enum(['sold', 'let', 'unpublish', 'republish']),
+        /** Optional completion date (YYYY-MM-DD); defaults to today. Recorded in the audit log. */
+        effectiveDate: z
+          .string()
+          .refine(value => isValidPastOrTodayDate(value), {
+            message: 'Enter a real date that is not in the future (YYYY-MM-DD).',
+          })
+          .optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const user = requireUser(ctx);
+      const listing = await db.getListingById(input.id);
+      if (!listing) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Listing not found' });
+      }
+      await assertListingContentCustody(
+        listing,
+        user,
+        'Not authorized to change the status of this listing',
+      );
+      rejectGenericCommercialWorkflow(listing.propertyType);
+      await assertGenericListingRouteAvailable(input.id, listing as Record<string, unknown>);
+
+      const effectiveDate = input.effectiveDate ?? new Date().toISOString().slice(0, 10);
+      const previousStatus = String(listing.status);
+      try {
+        let status: string;
+        let changed = true;
+        if (input.change === 'republish') {
+          resolveListingLifecycleTransition('republish', listing as any);
+          if (user.role !== 'super_admin' && (await isListingTakenDownByModerator(input.id))) {
+            throw new TRPCError({
+              code: 'FORBIDDEN',
+              message:
+                'This listing was unpublished by a moderator. Contact support; only an administrator can republish it.',
+            });
+          }
+          // Same validation, entitlement, contact and fast-track / review rules
+          // as a first submission; the listing only becomes a draft once they pass.
+          const submission = await submitListingForReviewFlow(ctx, input.id, {
+            requireOwner: false,
+            beforeSubmit: () => db.reopenArchivedListingAsDraft(input.id),
+            revert: () => db.restoreListingToArchived(input.id),
+          });
+          status = submission.status;
+        } else {
+          const result = await db.setListingLifecycleStatus(input.id, input.change);
+          status = result.status;
+          changed = result.changed;
+        }
+
+        if (changed) {
+          await logAudit({
+            userId: user.id,
+            action: `listing.${input.change}`,
+            targetType: 'listing',
+            targetId: input.id,
+            metadata: { previousStatus, status, effectiveDate },
+            req: ctx.req,
+          });
+        }
+        return { success: true, status, changed };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        if (error instanceof ListingLifecycleError) {
+          throw new TRPCError({
+            code: error.kind === 'not_found' ? 'NOT_FOUND' : 'BAD_REQUEST',
+            message: error.message,
+          });
+        }
+        if (error instanceof ListingPublicationEntitlementError) {
+          throw new TRPCError({ code: 'PRECONDITION_FAILED', message: error.message });
+        }
+        console.error('Error changing listing lifecycle:', safeErrorSummary(error));
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: error instanceof Error ? error.message : 'Failed to change listing status',
+        });
       }
     }),
 
@@ -1651,256 +2027,7 @@ export const listingRouter = router({
    */
   submitForReview: protectedProcedure
     .input(z.object({ listingId: z.number() }))
-    .mutation(async ({ ctx, input }) => {
-      const currentUser = requireUser(ctx);
-      const recordSubmitFailure = async (
-        reasonCode: string,
-        message: string,
-        details?: Record<string, unknown>,
-      ) => {
-        await recordAgentOsEvent({
-          userId: currentUser.id,
-          eventType: 'agent_listing_submit_failed',
-          eventData: {
-            listingId: input.listingId,
-            reasonCode,
-            message,
-            ...(details || {}),
-          },
-          req: ctx.req,
-          requestId: ctx.requestId,
-        });
-      };
-
-      try {
-        // Verify ownership
-        const listing = await db.getListingById(input.listingId);
-        if (!listing || listing.userId !== currentUser.id) {
-          await recordSubmitFailure(
-            'not_authorized_or_listing_missing',
-            'Not authorized to submit this listing',
-          );
-          throw new TRPCError({
-            code: 'FORBIDDEN',
-            message: 'Not authorized to submit this listing',
-          });
-        }
-        await assertListingContentCustody(
-          listing,
-          currentUser,
-          'Not authorized to submit this listing',
-        );
-        if (isCommercialMarketingPropertyType(listing.propertyType)) {
-          await recordSubmitFailure(
-            'commercial_inventory_authority',
-            COMMERCIAL_INVENTORY_MANAGEMENT_MESSAGE,
-          );
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: COMMERCIAL_INVENTORY_MANAGEMENT_MESSAGE,
-          });
-        }
-        await assertGenericListingRouteAvailable(
-          input.listingId,
-          listing as Record<string, unknown>,
-        );
-
-        // Check readiness before allowing submission
-        const fullListing = await db.getListingById(input.listingId);
-        const media = await db.getListingMedia(input.listingId);
-
-        if (fullListing.action === 'sell' || fullListing.action === 'rent') {
-          const locationIssues = validateCanonicalListingRecordLocation(
-            fullListing as Record<string, unknown>,
-          );
-          if (locationIssues.length > 0) {
-            const message = locationIssues.join(' ');
-            await recordSubmitFailure('invalid_location', message, {
-              fields: ['location'],
-            });
-            throw new TRPCError({ code: 'BAD_REQUEST', message });
-          }
-
-          const pricingIssues = validatePricingContract(
-            fullListing.action,
-            fullListing.pricing as Record<string, unknown>,
-            fullListing.propertyDetails as Record<string, unknown>,
-            { mode: 'publish', enforceInputShape: false },
-          );
-          if (pricingIssues.length > 0) {
-            const message = pricingIssues.map(issue => issue.message).join(' ');
-            await recordSubmitFailure('invalid_pricing', message, {
-              fields: pricingIssues.map(issue => issue.field),
-            });
-            throw new TRPCError({ code: 'BAD_REQUEST', message });
-          }
-
-          if (fullListing.action === 'rent') {
-            const rentalTermsIssues = validateRentalTerms(
-              (fullListing.propertyDetails as Record<string, unknown>)?.rentalTerms,
-              { mode: 'publish' },
-            );
-            if (rentalTermsIssues.length > 0) {
-              const message = rentalTermsIssues.map(issue => issue.message).join(' ');
-              await recordSubmitFailure('invalid_rental_terms', message, {
-                fields: rentalTermsIssues.map(issue => issue.field),
-              });
-              throw new TRPCError({ code: 'BAD_REQUEST', message });
-            }
-          }
-
-          const featureIssues = validateFeaturesContext(
-            (fullListing.propertyDetails as any)?.featuresContext,
-            fullListing.action === 'sell' ? 'sale' : 'rent',
-            fullListing.propertyType,
-            (fullListing.propertyDetails as any)?.corePropertyInformation,
-          );
-          if (featureIssues.length > 0) {
-            const message = featureIssues.map(issue => issue.message).join(' ');
-            await recordSubmitFailure('invalid_features_context', message, {
-              fields: featureIssues.map(issue => issue.field),
-            });
-            throw new TRPCError({ code: 'BAD_REQUEST', message });
-          }
-
-          const coreIssues = validateCorePropertyInformation(
-            fullListing.action === 'sell' ? 'sale' : 'rent',
-            fullListing.propertyType,
-            fullListing.propertyDetails,
-          );
-          if (coreIssues.length > 0) {
-            const message = coreIssues.map(issue => issue.message).join(' ');
-            await recordSubmitFailure('invalid_core_property_information', message, {
-              fields: coreIssues.map(issue => issue.field),
-            });
-            throw new TRPCError({ code: 'BAD_REQUEST', message });
-          }
-        }
-
-        const readiness = calculateListingReadiness({ ...fullListing, media });
-
-        if (readiness.score < LISTING_SUBMISSION_READINESS_THRESHOLD) {
-          await recordSubmitFailure(
-            'readiness_below_threshold',
-            `Listing readiness ${readiness.score}% is below required ${LISTING_SUBMISSION_READINESS_THRESHOLD}%`,
-            {
-              readinessScore: readiness.score,
-              missing: Array.isArray((readiness as any).missing) ? (readiness as any).missing : [],
-            },
-          );
-          throw new TRPCError({
-            code: 'PRECONDITION_FAILED',
-            message: `Listing is not ready for submission (${readiness.score}%). Reach ${LISTING_SUBMISSION_READINESS_THRESHOLD}% and complete the remaining required fields.`,
-          });
-        }
-
-        const database = await db.getDb();
-        if (!database) {
-          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
-        }
-        const originalListingId = Number((fullListing as any).revisionOfListingId || 0);
-        await assertListingPublicationEntitled(database, {
-          listingId: input.listingId,
-          operation: 'submit',
-          ...(originalListingId > 0 ? { excludeListingIds: [originalListingId] } : {}),
-        });
-
-        const agent = await db.getAgentByUserId(currentUser.id);
-        const owner = await db.getUserById(currentUser.id);
-        const whatsappContact =
-          String(agent?.whatsapp || '').trim() ||
-          String(agent?.phone || '').trim() ||
-          String(owner?.phone || '').trim();
-
-        if (!whatsappContact) {
-          await recordSubmitFailure(
-            'missing_whatsapp_contact',
-            'WhatsApp contact number is required before listing submission',
-            {
-              agentId: agent?.id || null,
-            },
-          );
-          throw new TRPCError({
-            code: 'PRECONDITION_FAILED',
-            message:
-              'A WhatsApp contact number is required before this listing can go live. Add a WhatsApp-ready number to your profile and try again.',
-          });
-        }
-
-        // --- Fast-Track Approval Logic (Phase 5) ---
-        // Criteria: Readiness 100%, Quality >= 85, Trusted/Verified Agent
-        const quality = calculateListingQualityScore({ ...fullListing, media });
-
-        // Check if agent is verified (assuming isVerified is 1 or true)
-        const isTrusted = agent?.isVerified === 1;
-
-        if (readiness.score === 100 && quality.score >= 85 && isTrusted) {
-          // Auto-Approve
-          await db.approveListing(
-            input.listingId,
-            requireUser(ctx).id,
-            'Fast-Track Auto Approval (High Quality & Trusted)',
-            'fast_track',
-          );
-          await recordAgentOsEvent({
-            userId: requireUser(ctx).id,
-            eventType: 'agent_listing_submitted',
-            eventData: {
-              listingId: input.listingId,
-              status: 'approved',
-              fastTracked: true,
-            },
-            req: ctx.req,
-            requestId: ctx.requestId,
-          });
-          await recordAgentOsEvent({
-            userId: requireUser(ctx).id,
-            eventType: 'agent_listing_live',
-            eventData: {
-              listingId: input.listingId,
-              source: 'fast_track_approval',
-            },
-            req: ctx.req,
-            requestId: ctx.requestId,
-          });
-          return { success: true, status: 'approved', fastTracked: true };
-        }
-
-        // Otherwise, add to manual review queue
-        await db.submitListingForReview(input.listingId);
-        await recordAgentOsEvent({
-          userId: requireUser(ctx).id,
-          eventType: 'agent_listing_submitted',
-          eventData: {
-            listingId: input.listingId,
-            status: 'pending_review',
-            fastTracked: false,
-          },
-          req: ctx.req,
-          requestId: ctx.requestId,
-        });
-
-        return { success: true, status: 'pending_review' };
-      } catch (error) {
-        console.error('Error submitting for review:', safeErrorSummary(error));
-
-        if (!(error instanceof TRPCError)) {
-          await recordSubmitFailure(
-            'unexpected_submission_error',
-            error instanceof Error ? error.message : 'Failed to submit for review',
-          );
-        }
-
-        if (error instanceof TRPCError) throw error;
-        if (error instanceof ListingPublicationEntitlementError) {
-          throw mapListingLifecycleError(error, 'Failed to submit for review');
-        }
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to submit for review',
-        });
-      }
-    }),
+    .mutation(async ({ ctx, input }) => submitListingForReviewFlow(ctx, input.listingId)),
 
   /**
    * Promote/Feature a listing (Soft Monetization Hook)

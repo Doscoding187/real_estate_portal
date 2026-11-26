@@ -591,13 +591,17 @@ export function AgentSetupWizard() {
               </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <Label>License Number</Label>
+                  <Label>PPRA FFC number (optional)</Label>
                   <Input
                     value={formData.licenseNumber}
                     onChange={e =>
                       setFormData(prev => ({ ...prev, licenseNumber: e.target.value }))
                     }
                   />
+                  <p className="mt-1 text-xs text-slate-500">
+                    Your Property Practitioners Regulatory Authority Fidelity Fund Certificate
+                    number, if you have one. You can add it later.
+                  </p>
                 </div>
                 <div>
                   <Label>Years Experience</Label>

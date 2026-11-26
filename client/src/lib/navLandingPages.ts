@@ -98,7 +98,7 @@ export const landingPages: Record<string, LandingPageConfig> = {
       },
       {
         title: 'Move from shortlist to offer',
-        body: 'Track saved listings, compare homes, and speak to verified agents.',
+        body: 'Track saved listings, compare homes, and speak to agents.',
       },
     ],
   },

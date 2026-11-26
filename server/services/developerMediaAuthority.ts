@@ -17,7 +17,6 @@ import { assertUploadedMediaObject, generatePresignedUploadUrl } from '../_core/
 import { assertSupportedListingMediaContentType } from './listingMediaAuthority';
 
 const TOKEN_TTL_SECONDS = 60 * 60;
-const DEVELOPMENT_SECRET = 'developer-media-upload-dev-only';
 
 export const DEVELOPER_MEDIA_CATEGORIES = [
   'development_image',
@@ -80,7 +79,7 @@ function getSecret(secret?: string | null): string {
 
   const configured = secret ?? process.env.MEDIA_UPLOAD_TOKEN_SECRET ?? process.env.JWT_SECRET;
   if (configured && configured.trim()) return configured.trim();
-  return DEVELOPMENT_SECRET;
+  throw new Error('Developer media upload token secret is not configured.');
 }
 
 function encode(value: string): string {

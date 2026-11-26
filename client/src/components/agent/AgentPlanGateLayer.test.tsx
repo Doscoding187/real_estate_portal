@@ -66,6 +66,33 @@ describe('AgentPlanGateLayer', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
+  it('shows the payment-under-review banner instead of the preview banner', () => {
+    setStatus(false, {
+      recommendedNextStep: 'await_payment_review',
+      subscriptionStatus: 'payment_under_review',
+      launchAccess: {
+        paid: false,
+        state: 'under_review',
+        pendingOrder: { reference: 'PLAN990101-8344DC' },
+      },
+    });
+    render(<AgentPlanGateLayer />);
+    expect(screen.queryByTestId('agent-preview-banner')).not.toBeInTheDocument();
+    expect(screen.getByTestId('agent-payment-review-banner')).toHaveTextContent(
+      "Payment under review. We'll unlock listings once finance confirms (ref PLAN990101-8344DC).",
+    );
+  });
+
+  it('shows no banner for a server-paid agent', () => {
+    setStatus(false, {
+      subscriptionStatus: 'active',
+      launchAccess: { paid: true, state: 'paid', pendingOrder: null },
+    });
+    render(<AgentPlanGateLayer />);
+    expect(screen.queryByTestId('agent-preview-banner')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('agent-payment-review-banner')).not.toBeInTheDocument();
+  });
+
   it('opens from the banner and closing it does not navigate', async () => {
     setStatus(false);
     const user = userEvent.setup();

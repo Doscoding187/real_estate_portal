@@ -20,7 +20,6 @@ describe('B08 integration preserves established objects without granting rehears
     const registration = JSON.parse(
       readFileSync('docs/database-authority/disposable-rehearsal-authorization.json', 'utf8'),
     );
-    const manifest = JSON.parse(readFileSync('server/migrations/manifest.json', 'utf8'));
     expect(registration.status).toBe('revoked');
     expect(registration.authorizationLive).toBe(false);
     expect(registration.acceptedOldHead).toBe('0111_properties_canonical_place_reference_fk.sql');
@@ -28,9 +27,34 @@ describe('B08 integration preserves established objects without granting rehears
     expect(registration.manifestDigest).toBe(
       '4995e36715e60856bb87d925dd0eff03bcdccfcc50e1180648684c3bd2787e41',
     );
-    expect(manifest.expectedHead).toBe(registration.expectedHead);
     expect(registration.modelDigest).toBe(
       'a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9',
+    );
+    // The closed 0197 head is still tied to the frozen 0197-release manifest.
+    const frozenManifestSource = readFileSync(
+      'docs/database-authority/evidence/rehearsal-source-20261105/server/migrations/manifest.json',
+      'utf8',
+    );
+    expect(JSON.parse(frozenManifestSource).expectedHead).toBe(registration.expectedHead);
+    expect(createHash('sha256').update(frozenManifestSource).digest('hex')).toBe(
+      registration.manifestDigest,
+    );
+  });
+  it('keeps the current registration revoked and pending while binding the declared 0197-to-0200 window', () => {
+    const registration = JSON.parse(
+      readFileSync('docs/database-authority/disposable-rehearsal-authorization-20261126.json', 'utf8'),
+    );
+    const manifest = JSON.parse(readFileSync('server/migrations/manifest.json', 'utf8'));
+    expect(registration.status).toBe('revoked');
+    expect(registration.authorizationLive).toBe(false);
+    expect(registration.acceptedOldHead).toBe('0197_drop_seller_prospects_province.sql');
+    expect(registration.expectedHead).toBe('0200_services_provider_credentials.sql');
+    expect(manifest.expectedHead).toBe(registration.expectedHead);
+    expect(registration.manifestDigest).toBe(
+      '19c5a60156f850cca36567ad47f00938d544070d89c309d870fd135289b0acc2',
+    );
+    expect(registration.modelDigest).toBe(
+      '4bf6f12700b27b86b5b38119223be245681a3c4ff1c1c1eccf555a65f49df23d',
     );
   });
   it('preserves the four established migration byte identities and lineage', () => {

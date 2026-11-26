@@ -34,6 +34,8 @@ import {
   type DevelopmentUnitTypeCard,
 } from './developmentUnitTypeCards';
 import { propertySearchService, type ManualPropertySortOption } from './propertySearchService';
+import { developmentSearchPlaceIds, ROLLUP_MAX_PLACE_IDS } from './placeLocalityRollupService';
+import { getDb } from '../db-connection';
 
 /** Unit-type results read at most this many eligible developments per search (50 per read). */
 export const UNIT_TYPE_DEVELOPMENT_BOUND = 200;
@@ -322,6 +324,28 @@ function sourceSort(sortOption: PublicInventorySortOption): ManualPropertySortOp
   return sortOption === 'relevance' ? 'date_desc' : sortOption;
 }
 
+/**
+ * Place IDs a resale/agent-listing search for one selected Place covers. A metro city includes the
+ * localities beneath it (the same rollup, cache and bound as development search); a locality stays
+ * an exact match; a province keeps its own member rule.
+ */
+async function manualSearchPlaceIds(
+  execution: Parameters<typeof canonicalPlaceSearchMembers>[0],
+  projection: CanonicalPlaceSearchProjection,
+): Promise<{ placeIds: string[]; rolledUp: boolean }> {
+  if (execution.scope !== 'metro_city') {
+    return { placeIds: canonicalPlaceSearchMembers(execution, projection), rolledUp: false };
+  }
+  const database = await getDb();
+  if (!database) {
+    return { placeIds: canonicalPlaceSearchMembers(execution, projection), rolledUp: false };
+  }
+  return {
+    placeIds: await developmentSearchPlaceIds(database as any, execution.placeId),
+    rolledUp: true,
+  };
+}
+
 export class PublicSearchService {
   async searchInventory(
     requestedInput: PublicSearchInventoryInput,
@@ -375,6 +399,7 @@ export class PublicSearchService {
     let placeMemberIds: string[] | undefined;
     let provincePlaceId: string | undefined;
     let canonicalPlaceContexts: PublicSearchInventoryResult['canonicalPlaceContexts'];
+    let placeSetRolledUp = false;
 
     if (multiPlaceIds !== undefined) {
       placeProjection = await loadCanonicalPlaceSearchProjection(undefined, {
@@ -398,11 +423,17 @@ export class PublicSearchService {
           'A province cannot be combined with other Places. Choose cities or suburbs.',
         );
       }
-      placeMemberIds = [
-        ...new Set(
-          selected.flatMap(item => canonicalPlaceSearchMembers(item.execution!, placeProjection!)),
-        ),
-      ];
+      const memberSets = await Promise.all(
+        selected.map(item => manualSearchPlaceIds(item.execution!, placeProjection!)),
+      );
+      placeSetRolledUp = memberSets.some(item => item.rolledUp);
+      const unionIds = [...new Set(memberSets.flatMap(item => item.placeIds))];
+      if (unionIds.length > ROLLUP_MAX_PLACE_IDS) {
+        console.warn(
+          `[publicSearch] ${multiPlaceIds.length} searched places roll up to ${unionIds.length}; cut to ${ROLLUP_MAX_PLACE_IDS}`,
+        );
+      }
+      placeMemberIds = unionIds.slice(0, ROLLUP_MAX_PLACE_IDS);
       canonicalPlaceContexts = selected.map(item => ({
         ...item.label!,
         scopePolicy: PLACE_INVENTORY_SCOPE_POLICY,
@@ -431,7 +462,9 @@ export class PublicSearchService {
       if (execution.scope === 'province') {
         provincePlaceId = execution.placeId;
       } else {
-        placeMemberIds = canonicalPlaceSearchMembers(execution, placeProjection);
+        const members = await manualSearchPlaceIds(execution, placeProjection);
+        placeMemberIds = members.placeIds;
+        placeSetRolledUp = members.rolledUp;
       }
       canonicalPlaceContext = { ...label, scopePolicy: PLACE_INVENTORY_SCOPE_POLICY };
     }
@@ -467,7 +500,9 @@ export class PublicSearchService {
               {
                 publicOnly: true,
                 ...(input.requirePhoto ? { requirePhoto: true } : {}),
-                ...(placeProjection ? { placeProjection } : {}),
+                // A rolled-up city search covers more Places than the projection loaded for the
+                // selected ones, so let the search load labels for the Places it actually finds.
+                ...(placeProjection && !placeSetRolledUp ? { placeProjection } : {}),
                 provincePlaceId,
               },
             )

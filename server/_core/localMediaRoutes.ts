@@ -1,6 +1,7 @@
 import type { Express, Request, Response } from 'express';
 
 import {
+  deleteLocalMediaObject,
   getLocalMediaMaxBytes,
   getLocalMediaObjectForDelivery,
   isLocalMediaStorage,
@@ -12,6 +13,11 @@ import {
   verifyLandEvidenceDeliveryToken,
   verifyLandEvidenceUploadReservation,
 } from '../services/landEvidenceStorage';
+import {
+  SERVICE_PROVIDER_CREDENTIAL_MAX_BYTES,
+  verifyServiceProviderCredentialDeliveryToken,
+  verifyServiceProviderCredentialUploadReservation,
+} from '../services/serviceProviderCredentialStorage';
 
 function queryString(value: unknown): string | null {
   return typeof value === 'string' && value.trim() ? value : null;
@@ -37,18 +43,34 @@ async function handleLocalMediaUpload(req: Request, res: Response): Promise<void
   }
 
   try {
-    let reservation: { key: string; contentType: string; mediaType: 'image' | 'video' | 'floorplan' | 'pdf' };
+    let reservation: {
+      key: string;
+      contentType: string;
+      mediaType: 'image' | 'video' | 'floorplan' | 'pdf';
+      maxBytes?: number;
+      exactBytes?: number;
+    };
     try {
       reservation = verifyListingMediaUploadToken(token, { requireConfirmed: false });
     } catch {
       try {
         reservation = verifyDeveloperMediaUploadReceipt(token, { requireConfirmed: false });
       } catch {
-        const privateReservation = verifyLandEvidenceUploadReservation(token);
-        reservation = {
-          ...privateReservation,
-          mediaType: privateReservation.contentType === 'application/pdf' ? 'pdf' : 'image',
-        };
+        try {
+          const privateReservation = verifyLandEvidenceUploadReservation(token);
+          reservation = {
+            ...privateReservation,
+            mediaType: privateReservation.contentType === 'application/pdf' ? 'pdf' : 'image',
+          };
+        } catch {
+          const credentialReservation = verifyServiceProviderCredentialUploadReservation(token);
+          reservation = {
+            ...credentialReservation,
+            mediaType: credentialReservation.contentType === 'application/pdf' ? 'pdf' : 'image',
+            maxBytes: SERVICE_PROVIDER_CREDENTIAL_MAX_BYTES,
+            exactBytes: credentialReservation.byteSize,
+          };
+        }
       }
     }
     const requestContentType = String(req.headers['content-type'] || '')
@@ -65,7 +87,7 @@ async function handleLocalMediaUpload(req: Request, res: Response): Promise<void
       if (!Number.isSafeInteger(declaredLength) || declaredLength < 0) {
         throw new Error('Uploaded media content length is invalid.');
       }
-      if (declaredLength > getLocalMediaMaxBytes(reservation.mediaType)) {
+      if (declaredLength > (reservation.maxBytes ?? getLocalMediaMaxBytes(reservation.mediaType))) {
         throw new Error('Uploaded media exceeds the permitted size.');
       }
     }
@@ -74,8 +96,12 @@ async function handleLocalMediaUpload(req: Request, res: Response): Promise<void
       reservation.key,
       reservation.contentType,
       req,
-      getLocalMediaMaxBytes(reservation.mediaType),
+      reservation.maxBytes ?? getLocalMediaMaxBytes(reservation.mediaType),
     );
+    if (reservation.exactBytes !== undefined && result.contentLength !== reservation.exactBytes) {
+      await deleteLocalMediaObject(reservation.key).catch(() => undefined);
+      throw new Error('Uploaded media size does not match its upload authority.');
+    }
     res.status(200).json({ key: reservation.key, contentLength: result.contentLength });
   } catch (error) {
     sendError(res, error, 'Unable to store local media.');
@@ -115,8 +141,13 @@ async function handlePrivateEvidenceDelivery(req: Request, res: Response): Promi
   const token = queryString(req.query.deliveryToken);
   if (!token) { res.status(400).json({ error: 'A private evidence delivery token is required.' }); return; }
   try {
-    const reservation = verifyLandEvidenceDeliveryToken(token);
-    const object = await getLocalMediaObjectForDelivery(reservation.key);
+    let key: string;
+    try {
+      key = verifyLandEvidenceDeliveryToken(token).key;
+    } catch {
+      key = verifyServiceProviderCredentialDeliveryToken(token).key;
+    }
+    const object = await getLocalMediaObjectForDelivery(key);
     res.setHeader('Content-Type', object.contentType);
     res.setHeader('Content-Length', String(object.contentLength));
     res.setHeader('Cache-Control', 'private, no-store');

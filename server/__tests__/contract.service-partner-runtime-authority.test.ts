@@ -76,7 +76,13 @@ describe('canonical Service Partner server runtime authority', () => {
     expect(router).toContain('{16,120}');
     expect(service).toContain('requestId,');
 
-    expect(service).toContain("property.status === 'published'");
+    // The published/eligible property rule now lives in one helper that the
+    // service calls for both property and listing links.
+    const linkRule = read('server/services/serviceLeadPropertyLink.ts');
+    expect(service).toContain('isServiceLeadLinkAllowed({');
+    expect(service).toContain('resolvePublicPropertyEligibility(propertyId)');
+    expect(linkRule).toContain("const PUBLIC_PROPERTY_STATUSES = ['published', 'available'];");
+    expect(linkRule).toContain('publicStatuses.includes(status) && input.publiclyEligible');
     expect(router).toContain('getLead: protectedProcedure');
 
     expect(router).toContain('serviceCode: serviceCodeSchema');
@@ -182,7 +188,7 @@ describe('canonical Service Partner publication authority', () => {
     expect(service).toContain('reviewProviderPublication');
     expect(service).toContain('Provider is not ready for publication');
     expect(service).toMatch(
-      /update\(partners\)\s*\.set\(\{ verificationStatus: 'verified' \}\)[\s\S]{0,400}update\(serviceProviderProfiles\)\s*\.set\(\{ directoryActive: 1 \}\)/,
+      /return db\.transaction\(async tx => \{[\s\S]{0,4000}update\(partners\)\s*\.set\(\{ verificationStatus: 'verified' \}\)[\s\S]{0,400}update\(serviceProviderProfiles\)\s*\.set\(\{[\s\S]{0,200}directoryActive: 1,[\s\S]{0,100}submissionStatus: 'approved'/,
     );
     expect(service).toContain('publicationDriftDetected');
   });

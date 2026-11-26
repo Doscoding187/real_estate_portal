@@ -6,6 +6,8 @@ import { AgentFeatureLockedState } from '@/components/agent/AgentFeatureLockedSt
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
 import {
   getAgentJourneyAction,
+  getAgentPaymentUnderReviewCopy,
+  getAgentPendingOrder,
   getPublishBlock,
   isAgentPaymentBlocked,
   isAgentPlanEntitled,
@@ -30,6 +32,8 @@ export function AgentListingAccessGate({ children }: { children: ReactNode }) {
   const publishBlock = error ? null : getPublishBlock(status);
   if (!error && isAgentPlanEntitled(status) && !publishBlock) return <>{children}</>;
 
+  const pendingOrder = error ? null : getAgentPendingOrder(status);
+  const underReview = pendingOrder ? getAgentPaymentUnderReviewCopy(pendingOrder.reference) : null;
   const journeyAction = getAgentJourneyAction(status, { agentLaunchAccessAvailable });
   const workspaceOpen = !error && isAgentWorkspaceOpen(status) && !isAgentPaymentBlocked(status);
 
@@ -49,6 +53,13 @@ export function AgentListingAccessGate({ children }: { children: ReactNode }) {
             description="Listings stay locked until your workspace status can be confirmed. Please try again."
             actionLabel="Retry"
             onAction={retry}
+          />
+        ) : underReview ? (
+          <AgentFeatureLockedState
+            title={underReview.title}
+            description={underReview.description}
+            actionLabel="View payment status"
+            onAction={openPlanGate}
           />
         ) : workspaceOpen ? (
           <AgentFeatureLockedState

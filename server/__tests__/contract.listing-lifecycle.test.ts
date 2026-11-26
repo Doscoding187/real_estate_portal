@@ -183,6 +183,7 @@ const withSilencedConsoleError = async (run: () => Promise<void>) => {
 
 describe('listing lifecycle — canonical identity contract', () => {
   beforeEach(() => {
+    vi.stubEnv('MEDIA_UPLOAD_TOKEN_SECRET', 'test-only-media-secret-value-0123456789');
     vi.clearAllMocks();
     mockResolveCurrentMembership.mockResolvedValue(null);
     vi.mocked(mockAssertListingPublicationEntitled).mockResolvedValue({

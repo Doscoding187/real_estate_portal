@@ -30,11 +30,7 @@ function assertSecret(secret: string | null | undefined) {
     return secret.trim();
   }
 
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error('Saved search delivery action token secret is not configured.');
-  }
-
-  return 'saved-search-delivery-action-dev-only';
+  throw new Error('Saved search delivery action token secret is not configured.');
 }
 
 export function createSavedSearchDeliveryActionToken(

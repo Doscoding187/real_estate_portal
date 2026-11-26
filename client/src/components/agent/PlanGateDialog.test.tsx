@@ -184,6 +184,30 @@ describe('PlanGateDialog', () => {
     });
   });
 
+  it('opens on Finance review from the server pending order before the workspace loads', () => {
+    workspaceMock.mockReturnValue({ data: undefined, refetch: vi.fn() });
+    render(
+      <PlanGateDialog
+        open
+        onOpenChange={vi.fn()}
+        pendingOrder={{
+          invoiceId: 9,
+          reference: 'PLAN990101-8344DC',
+          amountMinor: 49900,
+          currency: 'ZAR',
+          submittedAt: '2026-11-18 10:00:00',
+          state: 'under_review',
+        }}
+      />,
+    );
+    expect(screen.getByTestId('agent-access-panel')).toHaveAttribute('data-step', '3');
+    expect(screen.getByRole('heading', { name: 'Finance review' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Next' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /I.ve paid/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /proof|upload|submit/i })).not.toBeInTheDocument();
+    expect(submitMock).not.toHaveBeenCalled();
+  });
+
   it('shows a rejected payment reason at step 2', () => {
     workspaceMock.mockReturnValue({
       data: {

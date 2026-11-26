@@ -38,6 +38,7 @@ import {
   resolvePublicPropertyEligibility,
 } from './services/publicPropertyEligibilityService';
 import { toPublicPropertyDetailDto, toPublicPropertyImage } from './services/publicPropertyDto';
+import { resolveClosedPublicPropertyNotice } from './services/closedPublicPropertyNotice';
 
 function getUserId(ctx: { user: { id: number } | null }) {
   return requireUser(ctx).id;
@@ -409,7 +410,8 @@ const appRouterConfig = {
       .query(async ({ input }) => {
         const publicResolution = await resolvePublicPropertyEligibility(input.id);
         if (!publicResolution) {
-          return { property: null, images: [] };
+          const closedNotice = await resolveClosedPublicPropertyNotice(input.id);
+          return { property: null, images: [], ...(closedNotice ? { closedNotice } : {}) };
         }
 
         await db.incrementPropertyViews(input.id);

@@ -1531,6 +1531,57 @@ async function recoverExistingLead(
   return resultForExistingLead(database, durableLead);
 }
 
+export const OWN_LISTING_ENQUIRY_MESSAGE =
+  'This is your own listing, so you cannot send yourself an enquiry. Use a different account to try the buyer journey.';
+
+/** A signed-in agent, or a member of the listing's agency, cannot enquire on their own listing. */
+async function assertNotOwnListingEnquiry(
+  database: any,
+  authenticatedUserId: number | undefined,
+  resolved: ResolvedLeadOwnership,
+): Promise<void> {
+  const userId = positiveId(authenticatedUserId);
+  const listingAgentId = positiveId(resolved.agentId);
+  const listingAgencyId = positiveId(resolved.agencyId);
+  if (!userId || (!listingAgentId && !listingAgencyId)) return;
+
+  const rows = ((await database
+    .select({ id: agents.id, userId: agents.userId, agencyId: agents.agencyId })
+    .from(agents)
+    .where(eq(agents.userId, userId))
+    .limit(5)) || []) as Array<{ id: number; userId: number | null; agencyId: number | null }>;
+  const ownAgents = rows.filter(row => Number(row.userId) === userId);
+  let isOwn = ownAgents.some(
+    row =>
+      (listingAgentId && Number(row.id) === listingAgentId) ||
+      (listingAgencyId && Number(row.agencyId) === listingAgencyId),
+  );
+  if (!isOwn && listingAgencyId && ownAgents.length) {
+    // Canonical agency membership, not only the mutable agent profile affiliation.
+    const memberships = await listCurrentActiveAgencyMembershipsByAgentId(
+      database,
+      ownAgents.map(row => Number(row.id)),
+    );
+    isOwn = [...memberships.values()].some(
+      membership => Number(membership.agencyId) === listingAgencyId,
+    );
+  }
+  if (!isOwn && listingAgencyId) {
+    // Agency admins / owners of the listing's agency.
+    const [account] = (await database
+      .select({ role: users.role, agencyId: users.agencyId })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1)) as Array<{ role: string | null; agencyId: number | null }>;
+    isOwn = Boolean(
+      account && account.role === 'agency_admin' && Number(account.agencyId) === listingAgencyId,
+    );
+  }
+  if (isOwn) {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: OWN_LISTING_ENQUIRY_MESSAGE });
+  }
+}
+
 export async function capturePublicLead(
   input: PublicLeadCaptureInput,
 ): Promise<PublicLeadCaptureResult> {
@@ -1553,6 +1604,7 @@ export async function capturePublicLead(
   }
 
   const resolved = await resolveLeadOwnership(input);
+  await assertNotOwnListingEnquiry(database, input.authenticatedUserId, resolved);
   const leadType = coerceLeadType(input.leadType);
   const deliveryStatus = initialDeliveryStatus(resolved);
   const route: PublicLeadCaptureResult['route'] =

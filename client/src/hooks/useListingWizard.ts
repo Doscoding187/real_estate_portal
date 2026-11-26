@@ -331,6 +331,24 @@ export const canAdvanceFromStep = (state: WizardNavigationState, step: number): 
   }
 };
 
+/**
+ * A step ahead of the current one can be opened when every earlier step was completed and its data
+ * is still valid. The final Preview step is never "completed" (nothing advances from it), so it is
+ * openable on the same terms; this lets an author jump back to fix a field and return to Preview.
+ */
+export const canOpenWizardStep = (
+  state: WizardNavigationState & { completedSteps: number[]; currentStep: number },
+  step: number,
+): boolean => {
+  if (step < 1 || step > 8) return false;
+  if (step <= state.currentStep) return true;
+  const prerequisitesValid = Array.from({ length: step - 1 }, (_, index) => index + 1).every(
+    prerequisite =>
+      state.completedSteps.includes(prerequisite) && canAdvanceFromStep(state, prerequisite),
+  );
+  return prerequisitesValid && (state.completedSteps.includes(step) || step === 8);
+};
+
 export const useListingWizardStore = create<ListingWizardStore>()(
   persist(
     (set, get) => ({
@@ -350,11 +368,7 @@ export const useListingWizardStore = create<ListingWizardStore>()(
           return;
         }
 
-        const completedPrerequisites = Array.from(
-          { length: step - 1 },
-          (_, index) => index + 1,
-        ).every(prerequisite => state.completedSteps.includes(prerequisite));
-        const canOpenCompletedStep = state.completedSteps.includes(step) && completedPrerequisites;
+        const canOpenCompletedStep = canOpenWizardStep(state, step);
         const canOpenNextStep = step === current + 1 && canAdvanceFromStep(state, current);
 
         if (canOpenCompletedStep || canOpenNextStep) {

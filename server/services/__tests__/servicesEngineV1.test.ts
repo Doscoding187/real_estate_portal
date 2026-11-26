@@ -83,6 +83,11 @@ function makeQuery(rows: unknown[] = []) {
   return query;
 }
 
+function makeLockedSelectQueue(rowSets: unknown[][]) {
+  const pending = [...rowSets];
+  return vi.fn(() => makeSelectQuery(pending.shift() ?? [], true));
+}
+
 function makeUpdateMock() {
   const where = vi.fn().mockResolvedValue({ affectedRows: 1 });
   const set = vi.fn(() => ({ where }));
@@ -333,11 +338,7 @@ describe('Services V1 provider edit preservation', () => {
     const update = vi.fn(() => ({ set: updateSet }));
     const insert = vi.fn();
     const tx = {
-      select: vi.fn(() => ({
-        from: vi.fn(() => ({
-          where: vi.fn(() => ({ for: vi.fn().mockResolvedValue(existing) })),
-        })),
-      })),
+      select: makeLockedSelectQueue([[{ id: 20 }], [], existing]),
       update,
       insert,
     };
@@ -387,20 +388,19 @@ describe('Services V1 provider edit preservation', () => {
       dashboardActive: 0,
       metadata: null,
     };
-    const selectQuery = {
-      from: vi.fn(),
-      where: vi.fn(),
-      limit: vi.fn(),
-    };
-    selectQuery.from.mockReturnValue(selectQuery);
-    selectQuery.where.mockReturnValue(selectQuery);
-    selectQuery.limit.mockResolvedValue([existingProfile]);
     const onDuplicateKeyUpdate = vi.fn().mockResolvedValue({ affectedRows: 1 });
     const values = vi.fn(() => ({ onDuplicateKeyUpdate }));
     const insert = vi.fn(() => ({ values }));
-    mockGetDb.mockResolvedValue({
-      select: vi.fn(() => selectQuery),
+    const tx = {
+      select: vi
+        .fn()
+        .mockReturnValueOnce(makeSelectQuery([{ id: 20 }], true))
+        .mockReturnValueOnce(makeSelectQuery([existingProfile], true))
+        .mockReturnValueOnce(makeQuery([existingProfile])),
       insert,
+    };
+    mockGetDb.mockResolvedValue({
+      transaction: vi.fn(async callback => callback(tx)),
     });
 
     await servicesEngineService.upsertProviderProfile(20, { headline: 'Updated headline' });
@@ -422,6 +422,7 @@ describe('Services V1 provider edit preservation', () => {
       select: vi
         .fn()
         .mockReturnValueOnce(makeSelectQuery([{ id: 20 }], true))
+        .mockReturnValueOnce(makeSelectQuery([], true))
         .mockReturnValueOnce(makeSelectQuery(existing, true)),
       update,
       insert,
@@ -476,6 +477,7 @@ describe('Services V1 provider edit preservation', () => {
       select: vi
         .fn()
         .mockReturnValueOnce(makeSelectQuery([{ id: 20 }], true))
+        .mockReturnValueOnce(makeSelectQuery([], true))
         .mockReturnValueOnce(makeSelectQuery(existing, true)),
       update,
       delete: deleteFn,
@@ -516,6 +518,7 @@ describe('Services V1 provider edit preservation', () => {
       select: vi
         .fn()
         .mockReturnValueOnce(makeSelectQuery([{ id: 20 }], true))
+        .mockReturnValueOnce(makeSelectQuery([], true))
         .mockReturnValueOnce(makeSelectQuery(existing, true)),
       update,
       delete: deleteFn,
@@ -1068,6 +1071,22 @@ describe('Services V1 reviewed publication authority', () => {
         .mockReturnValueOnce(makeQuery([{ id: 20 }]))
         .mockReturnValueOnce(makeQuery([READY_PUBLICATION_BASE_ROW]))
         .mockReturnValueOnce(makeQuery([{ isActive: 0 }]))
+        .mockReturnValueOnce(makeQuery([{ canonicalPlaceId: PLACE_SANDTON }]))
+        .mockReturnValueOnce(makeQuery([{ submissionStatus: 'submitted' }]))
+        .mockReturnValueOnce(makeQuery([{ companyName: 'Provider Company', logoUrl: '/logo.png' }]))
+        .mockReturnValueOnce(
+          makeQuery([
+            {
+              businessType: 'registered_company',
+              headline: 'Property service provider',
+              bio: 'A truthful provider biography with sufficient detail for a business website.',
+              contactEmail: 'provider@example.com',
+              contactPhone: null,
+              websiteTemplate: 'corporate_brand',
+            },
+          ]),
+        )
+        .mockReturnValueOnce(makeQuery([]))
         .mockReturnValueOnce(makeQuery([{ canonicalPlaceId: PLACE_SANDTON }])),
       update,
       insert: vi.fn(() => ({ values: insertValues })),
@@ -1082,7 +1101,7 @@ describe('Services V1 reviewed publication authority', () => {
         decision: 'publish',
         actorUserId: 5,
       }),
-    ).rejects.toThrow('Provider is not ready for publication: no_active_service');
+    ).rejects.toThrow('Provider website is not ready for publication');
 
     expect(update).not.toHaveBeenCalled();
     expect(insertValues).not.toHaveBeenCalled();
@@ -1098,6 +1117,30 @@ describe('Services V1 reviewed publication authority', () => {
         .mockReturnValueOnce(makeQuery([{ id: 20 }]))
         .mockReturnValueOnce(makeQuery([READY_PUBLICATION_BASE_ROW]))
         .mockReturnValueOnce(makeQuery([{ isActive: 1 }]))
+        .mockReturnValueOnce(makeQuery([{ canonicalPlaceId: PLACE_SANDTON }]))
+        .mockReturnValueOnce(makeQuery([{ submissionStatus: 'submitted' }]))
+        .mockReturnValueOnce(makeQuery([{ companyName: 'Provider Company', logoUrl: '/logo.png' }]))
+        .mockReturnValueOnce(
+          makeQuery([
+            {
+              businessType: 'registered_company',
+              headline: 'Property service provider',
+              bio: 'A truthful provider biography with sufficient detail for a business website.',
+              contactEmail: 'provider@example.com',
+              contactPhone: null,
+              websiteTemplate: 'corporate_brand',
+            },
+          ]),
+        )
+        .mockReturnValueOnce(
+          makeQuery([
+            {
+              displayName: 'Plumbing',
+              description: 'Clear information about the plumbing services available.',
+              isActive: 1,
+            },
+          ]),
+        )
         .mockReturnValueOnce(makeQuery([{ canonicalPlaceId: PLACE_SANDTON }])),
       update,
       insert: vi.fn(() => ({ values: insertValues })),
@@ -1122,7 +1165,10 @@ describe('Services V1 reviewed publication authority', () => {
       isPublished: true,
     });
     expect(set).toHaveBeenNthCalledWith(1, { verificationStatus: 'verified' });
-    expect(set).toHaveBeenNthCalledWith(2, { directoryActive: 1 });
+    expect(set).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ directoryActive: 1, submissionStatus: 'approved' }),
+    );
     expect(insertValues).toHaveBeenCalledTimes(1);
     const auditEntry = insertValues.mock.calls[0][0];
     expect(auditEntry).toMatchObject({
@@ -1154,7 +1200,8 @@ describe('Services V1 reviewed publication authority', () => {
           ]),
         )
         .mockReturnValueOnce(makeQuery([{ isActive: 1 }]))
-        .mockReturnValueOnce(makeQuery([{ canonicalPlaceId: PLACE_SANDTON }])),
+        .mockReturnValueOnce(makeQuery([{ canonicalPlaceId: PLACE_SANDTON }]))
+        .mockReturnValueOnce(makeQuery([{ submissionStatus: 'approved' }])),
       update,
       insert: vi.fn(() => ({ values: insertValues })),
     };
@@ -1191,7 +1238,8 @@ describe('Services V1 reviewed publication authority', () => {
           ]),
         )
         .mockReturnValueOnce(makeQuery([{ isActive: 1 }]))
-        .mockReturnValueOnce(makeQuery([{ canonicalPlaceId: PLACE_SANDTON }])),
+        .mockReturnValueOnce(makeQuery([{ canonicalPlaceId: PLACE_SANDTON }]))
+        .mockReturnValueOnce(makeQuery([{ submissionStatus: 'approved' }])),
       update,
       insert: vi.fn(() => ({ values: insertValues })),
     };
@@ -1269,6 +1317,8 @@ describe('Services V1 reviewed publication authority', () => {
             },
           ]),
         )
+        .mockReturnValueOnce(makeQuery([]))
+        .mockReturnValueOnce(makeQuery([]))
         .mockReturnValueOnce(makeQuery([]))
         .mockReturnValueOnce(makeQuery([])),
     };
@@ -1431,11 +1481,7 @@ describe('Services V1 authoritative service replacement', () => {
     const { update, set, where } = makeUpdateMock();
     const insert = vi.fn();
     const tx = {
-      select: vi.fn(() => ({
-        from: vi.fn(() => ({
-          where: vi.fn(() => ({ for: vi.fn().mockResolvedValue(existing) })),
-        })),
-      })),
+      select: makeLockedSelectQueue([[{ id: 20 }], [], existing]),
       update,
       insert,
     };
@@ -1479,11 +1525,7 @@ describe('Services V1 authoritative service replacement', () => {
       };
     });
     const tx = {
-      select: vi.fn(() => ({
-        from: vi.fn(() => ({
-          where: vi.fn(() => ({ for: vi.fn().mockResolvedValue(rows) })),
-        })),
-      })),
+      select: makeLockedSelectQueue([[{ id: 20 }], [], rows]),
       update,
       insert: vi.fn(),
     };
@@ -1599,6 +1641,7 @@ describe('Services V1 authoritative coverage replacement', () => {
       select: vi
         .fn()
         .mockReturnValueOnce(makeQuery([{ id: 20 }]))
+        .mockReturnValueOnce(makeQuery([]))
         .mockReturnValueOnce(makeQuery(existing)),
       update,
       delete: deleteFn,

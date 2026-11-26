@@ -22,10 +22,7 @@ function decode(value: string) {
 function getSecret(secret?: string | null) {
   const configured = secret ?? process.env.DISTRIBUTION_SEARCH_CONTEXT_SECRET ?? process.env.JWT_SECRET;
   if (configured?.trim()) return configured.trim();
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error('Distribution search context token secret is not configured.');
-  }
-  return 'distribution-search-context-dev-only';
+  throw new Error('Distribution search context token secret is not configured.');
 }
 
 function signature(encodedPayload: string, secret: string) {

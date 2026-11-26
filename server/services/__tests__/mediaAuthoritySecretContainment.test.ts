@@ -55,12 +55,16 @@ describe('launch media signing-secret containment', () => {
     expect(() => developerReceipt()).toThrow(/not configured securely/i);
   });
 
-  it('preserves the governed local fallback only in development/test', () => {
+  it('fails closed without a configured secret even in development/test', () => {
     vi.stubEnv('NODE_ENV', 'test');
     vi.stubEnv('APP_ENV', 'test');
     vi.stubEnv('JWT_SECRET', '');
     vi.stubEnv('MEDIA_UPLOAD_TOKEN_SECRET', '');
 
+    expect(() => listingToken()).toThrow(/not configured/i);
+    expect(() => developerReceipt()).toThrow(/not configured/i);
+
+    vi.stubEnv('MEDIA_UPLOAD_TOKEN_SECRET', 'test-only-media-secret-value-0123456789');
     expect(listingToken()).toContain('.');
     expect(developerReceipt()).toContain('.');
   });

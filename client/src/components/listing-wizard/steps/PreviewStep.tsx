@@ -33,6 +33,7 @@ import {
   normalizeFeaturesContext,
 } from '@shared/features-context';
 import { readCorePropertyInformation } from '@shared/core-property-information';
+import { previewPublicLocation } from '@/lib/listingPreviewLocation';
 import { normalizeWizardPhotoOrder } from '@/lib/listingPhotoOrder';
 
 const PreviewStep: React.FC = () => {
@@ -159,7 +160,12 @@ const PreviewStep: React.FC = () => {
           id="preview"
           title={state.title || 'Untitled Property'}
           price={getPrice()}
-          location={[state.location?.address, selectedAreaLabel].filter(Boolean).join(', ')}
+          location={previewPublicLocation({
+            privateAddress: state.location?.privateAddress,
+            fallbackAddress: state.location?.address,
+            publicLocationPrecision: state.location?.publicLocationPrecision,
+            areaLabel: selectedAreaLabel,
+          })}
           image={primaryMedia?.url || '/assets/placeholder.jpg'}
           description={state.description}
           bedrooms={knownNumericValue(corePropertyInformation.bedrooms)}

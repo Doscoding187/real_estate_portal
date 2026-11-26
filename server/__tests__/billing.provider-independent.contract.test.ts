@@ -160,7 +160,17 @@ describe('provider-independent billing foundation contract', () => {
     );
 
     expect(submitForReviewPath).toMatch(/assertListingPublicationEntitled\s*\(/);
-    expect(genericSubmitForReviewPath).toMatch(/assertListingPublicationEntitled\s*\(/);
+    // Generic submission and Republish share one flow, and that flow owns the
+    // entitlement boundary.
+    const sharedFlowStart = listingRouter.indexOf('export async function submitListingForReviewFlow');
+    const sharedFlow = listingRouter.slice(
+      sharedFlowStart,
+      listingRouter.indexOf('export const listingRouter'),
+    );
+    expect(sharedFlowStart).toBeGreaterThan(-1);
+    expect(sharedFlow).toMatch(/assertListingPublicationEntitled\s*\(/);
+    expect(genericSubmitForReviewPath).toContain('submitListingForReviewFlow(ctx, input.listingId)');
+    expect(listingRouter).toContain('submitListingForReviewFlow(ctx, input.id');
     expect(listingPublicationEntitlementService).toContain("ownerType: 'agency'");
     expect(listingPublicationEntitlementService).toContain("plan.segment !== 'agency'");
     expect(listingPublicationEntitlementService).toContain("'max_active_listings'");
