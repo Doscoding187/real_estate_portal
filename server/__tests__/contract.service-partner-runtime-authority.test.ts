@@ -76,7 +76,13 @@ describe('canonical Service Partner server runtime authority', () => {
     expect(router).toContain('{16,120}');
     expect(service).toContain('requestId,');
 
-    expect(service).toContain("property.status === 'published'");
+    // The published/eligible property rule now lives in one helper that the
+    // service calls for both property and listing links.
+    const linkRule = read('server/services/serviceLeadPropertyLink.ts');
+    expect(service).toContain('isServiceLeadLinkAllowed({');
+    expect(service).toContain('resolvePublicPropertyEligibility(propertyId)');
+    expect(linkRule).toContain("const PUBLIC_PROPERTY_STATUSES = ['published', 'available'];");
+    expect(linkRule).toContain('publicStatuses.includes(status) && input.publiclyEligible');
     expect(router).toContain('getLead: protectedProcedure');
 
     expect(router).toContain('serviceCode: serviceCodeSchema');
