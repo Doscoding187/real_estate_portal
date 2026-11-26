@@ -9,6 +9,8 @@ vi.mock('wouter', () => ({
   ),
 }));
 
+vi.mock('@/components/EnhancedNavbar', () => ({ EnhancedNavbar: () => null }));
+
 import AdvertiseServicesPage from '@/pages/advertise/AdvertiseServicesPage';
 import { RegisterRoleCta } from '../RegisterRoleCta';
 import { PartnerSelectionSection } from '../PartnerSelectionSection';
