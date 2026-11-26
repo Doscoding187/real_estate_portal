@@ -155,13 +155,7 @@ export function AgentListingInventoryCard({
           ? ['republish']
           : [];
   const badge = statuses[status] ?? {
-    label:
-      (
-        { draft: 'Draft', sold: 'Sold', rented: 'Rented', archived: 'Archived' } as Record<
-          string,
-          string
-        >
-      )[status] ?? 'Status unavailable',
+    label: status === 'draft' ? 'Draft' : 'Status unavailable',
     style: 'bg-slate-50 text-slate-600 border-slate-200',
   };
   const location = [

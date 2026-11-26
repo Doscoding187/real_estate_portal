@@ -3599,6 +3599,10 @@ export async function approveListing(
   // the original canonical listing/projection; the revision itself never becomes public.
   if ((listing as any).revisionOfListingId) {
     const originalListingId = Number((listing as any).revisionOfListingId);
+    // Serialize with Sold / Let / Unpublish: hold the original's row lock for
+    // the rest of this transaction so the mirror below is never written as
+    // public for a listing that was closed in between.
+    await lockListingTransitionRow(db, originalListingId);
     const [original] = await db
       .select()
       .from(listings)
@@ -3958,11 +3962,11 @@ export async function setListingLifecycleStatus(
 }
 
 /**
- * Republish an unpublished listing. It returns to a private draft and is then
- * submitted through the ordinary submission boundary, so entitlement, location,
- * pricing and the admin approval queue all apply exactly as for a new listing.
+ * Republish step 1: return an unpublished listing to a private draft so the
+ * shared submission flow (listingRouter) can submit it. Called only after that
+ * flow has passed every validation, entitlement and contact check.
  */
-export async function republishListing(id: number): Promise<void> {
+export async function reopenArchivedListingAsDraft(id: number): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
@@ -3975,15 +3979,17 @@ export async function republishListing(id: number): Promise<void> {
     .update(listings)
     .set({ status: 'draft' as any, archivedAt: null, updatedAt: changedAt })
     .where(and(eq(listings.id, id), eq(listings.status, 'archived' as any)));
-  try {
-    await submitListingForReview(id);
-  } catch (error) {
-    await db
-      .update(listings)
-      .set({ status: 'archived' as any, archivedAt: changedAt, updatedAt: changedAt })
-      .where(and(eq(listings.id, id), eq(listings.status, 'draft' as any)));
-    throw error;
-  }
+}
+
+/** Undo reopenArchivedListingAsDraft if the submission step failed. */
+export async function restoreListingToArchived(id: number): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const changedAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
+  await db
+    .update(listings)
+    .set({ status: 'archived' as any, archivedAt: changedAt, updatedAt: changedAt })
+    .where(and(eq(listings.id, id), eq(listings.status, 'draft' as any)));
 }
 
 /**

@@ -178,7 +178,7 @@ describe('setLifecycle router contract', () => {
     expect(body).toContain('assertListingContentCustody');
     expect(body).toContain('Not authorized to change the status of this listing');
     expect(body).toContain("action: `listing.${input.change}`");
-    expect(body).toContain('db.republishListing');
+    expect(body).toContain('submitListingForReviewFlow(ctx, input.id');
     expect(body).toContain('db.setListingLifecycleStatus');
   });
 });
