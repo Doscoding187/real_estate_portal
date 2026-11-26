@@ -5,7 +5,11 @@
  */
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { hydrateListingWizardForUser, useListingWizardStore } from '@/hooks/useListingWizard';
+import {
+  canOpenWizardStep,
+  hydrateListingWizardForUser,
+  useListingWizardStore,
+} from '@/hooks/useListingWizard';
 import { isReviewableListingEdit, loadedListingNavigation } from '@/lib/listingEditorNavigation';
 import { useAutoSave } from '@/hooks/useAutoSave';
 import { markPlanPromptTrigger } from '@/lib/agentPlanGate';
@@ -998,13 +1002,19 @@ const ListingWizard: React.FC = () => {
       undefined,
       canAdvanceFromCurrentStep,
     );
+    const generatedStepsWithJumps = generatedSteps.map(step => ({
+      ...step,
+      isAccessible:
+        step.isAccessible ||
+        canOpenWizardStep(store, step.number),
+    }));
     const steps = canReviewLoadedListing
-      ? generatedSteps.map(step => ({
+      ? generatedStepsWithJumps.map(step => ({
           ...step,
           isAccessible: true,
           isComplete: step.number < 8 && store.canAdvanceFromStep(step.number),
         }))
-      : generatedSteps;
+      : generatedStepsWithJumps;
 
     // Add error counts if validation errors exist
     if (validationErrors && validationErrors.affectedSteps.length > 0) {

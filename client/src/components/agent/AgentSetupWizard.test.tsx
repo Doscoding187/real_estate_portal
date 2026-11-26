@@ -132,6 +132,14 @@ beforeEach(() => {
 });
 
 describe('AgentSetupWizard completion', () => {
+  it('labels the licence field as the optional PPRA FFC number', async () => {
+    render(<AgentSetupWizard />);
+    for (let step = 0; step < 3; step += 1) {
+      fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
+    }
+    expect(await screen.findByText('PPRA FFC number (optional)')).toBeDefined();
+    expect(screen.queryByText('License Number')).toBeNull();
+  });
   it('opens the preparation workspace after profile completion without forcing payment', async () => {
     apiFetchMock.mockResolvedValue({ recommendedNextStep: 'select_package' });
     render(<AgentSetupWizard />);
