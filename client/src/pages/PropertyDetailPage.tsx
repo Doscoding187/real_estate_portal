@@ -1,3 +1,4 @@
+import { publicDetailAddress } from '@/lib/listingPreviewLocation';
 import React, { useState } from 'react';
 import { Link, useLocation, useRoute } from 'wouter';
 import {
@@ -537,10 +538,9 @@ export default function PropertyDetailPage({ propertyId: propPropertyId }: Prope
   const canonicalPlace = canonicalPlaceQuery.data;
   const canonicalPlaceLabel = canonicalPlace?.label;
   const marketGuide = marketGuideQuery.data ?? null;
-  const displayAddress =
-    presentation.location.precision === 'exact' && typeof property.publicAddress === 'string'
-      ? property.publicAddress.trim()
-      : '';
+  // The projection's publicAddress already follows the chosen privacy option: street name and
+  // area for "Street location" (no house number), full address for "Full address".
+  const displayAddress = publicDetailAddress(property.publicAddress);
   const displayLocationLabel =
     displayAddress || canonicalPlaceLabel || 'Location available on enquiry';
   const displayLocation = { ...presentation.location, label: displayLocationLabel };

@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
+  canOpenWizardStep,
   getLocationEvidenceValidationIssues,
   getLocationValidationIssues,
   useListingWizardStore,
@@ -69,6 +70,69 @@ describe('useListingWizardStore navigation contract', () => {
     });
 
     expect(result.current.currentStep).toBe(2);
+  });
+
+  it('lets an author jump back and return to Preview without clicking through every step', () => {
+    const { result } = renderHook(() => useListingWizardStore());
+    const place = {
+      canonicalPlaceId: 'pl-place-01-000000000000000000000001',
+      label: 'Selected Locality',
+      scope: 'locality' as const,
+      placeType: 'suburb',
+      administrativeContext: 'Gauteng',
+    };
+    act(() => {
+      result.current.setListingIntent('sale');
+      result.current.setPropertyType('house');
+      result.current.setTitle('A lovely family home');
+      result.current.setDescription(
+        'A lovely family home with a garden, three bedrooms and a double garage close to schools.',
+      );
+      result.current.setPropertyDetails({ bedrooms: 3, bathrooms: 2, houseAreaM2: 210, erfSizeM2: 500 });
+      result.current.setPricing({ askingPrice: 1500000 });
+      result.current.setLocation({
+        address: '',
+        latitude: null,
+        longitude: null,
+        canonicalPlace: place,
+        privateAddress: { streetName: 'Example Street' },
+        coordinateSource: 'manual_confirmed',
+        locationConfirmationState: 'confirmed',
+        publicLocationPrecision: 'approximate',
+      });
+      result.current.addMedia({
+        id: 'm1',
+        url: '/api/media/fixture.png',
+        type: 'image',
+        displayOrder: 0,
+        isPrimary: true,
+        processingStatus: 'completed',
+      });
+      for (let step = 1; step <= 7; step += 1) result.current.nextStep();
+    });
+    expect(result.current.currentStep).toBe(8);
+
+    act(() => {
+      result.current.goToStep(3);
+    });
+    expect(result.current.currentStep).toBe(3);
+    expect(canOpenWizardStep(result.current, 8)).toBe(true);
+
+    act(() => {
+      result.current.goToStep(8);
+    });
+    expect(result.current.currentStep).toBe(8);
+
+    // Once the data is no longer valid the jump is refused.
+    act(() => {
+      result.current.goToStep(3);
+      result.current.setTitle('short');
+    });
+    expect(canOpenWizardStep(result.current, 8)).toBe(false);
+    act(() => {
+      result.current.goToStep(8);
+    });
+    expect(result.current.currentStep).toBe(3);
   });
 
   it('initializes rental terms explicitly and never carries them into a sale', () => {

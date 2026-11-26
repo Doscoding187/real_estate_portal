@@ -16,6 +16,7 @@ import {
 import { InlineError } from '@/components/ui/InlineError';
 import { useFieldValidation } from '@/hooks/useFieldValidation';
 import type { ListingAction, PropertyType } from '@/../../shared/listing-types';
+import { useFocusSafeText } from '@/hooks/useFocusSafeText';
 import { LISTING_TITLE_MAX_LENGTH } from '@/lib/listingTitleLimit';
 import {
   FARM_LAND_AREA_UNITS,
@@ -87,6 +88,69 @@ const CoreFactStatus = ({ id, label, value, onChange, help }: any) => (
     {help ? <p className="mt-1 text-xs text-slate-500">{help}</p> : null}
   </div>
 );
+
+const TYPING_COMMIT_DEBOUNCE_MS = 200;
+
+type TextFieldProps = {
+  value: string;
+  onCommit: (next: string) => void;
+  onUserInput: () => void;
+  onBlurValidate: () => void;
+  invalid: boolean;
+};
+
+// Own their typing state so a keystroke re-renders only the field, not the whole step/wizard.
+const TitleField = ({ value, onCommit, onUserInput, onBlurValidate, invalid }: TextFieldProps) => {
+  const field = useFocusSafeText(value, onCommit, { debounceMs: TYPING_COMMIT_DEBOUNCE_MS });
+  return (
+    <Input
+      id="title"
+      value={field.value}
+      onChange={e => {
+        field.onChange(e);
+        onUserInput();
+      }}
+      onFocus={field.onFocus}
+      onBlur={() => {
+        field.onBlur();
+        onBlurValidate();
+      }}
+      placeholder="e.g., 2-Bed Apartment in Sandton"
+      className="mt-1"
+      maxLength={LISTING_TITLE_MAX_LENGTH}
+      aria-invalid={invalid}
+    />
+  );
+};
+
+const DescriptionField = ({
+  value,
+  onCommit,
+  onUserInput,
+  onBlurValidate,
+  invalid,
+}: TextFieldProps) => {
+  const field = useFocusSafeText(value, onCommit, { debounceMs: TYPING_COMMIT_DEBOUNCE_MS });
+  return (
+    <Textarea
+      id="description"
+      value={field.value}
+      onChange={e => {
+        field.onChange(e);
+        onUserInput();
+      }}
+      onFocus={field.onFocus}
+      onBlur={() => {
+        field.onBlur();
+        onBlurValidate();
+      }}
+      placeholder="Describe the property (50 characters to continue; 100+ to submit)"
+      className="mt-1 min-h-[120px]"
+      maxLength={5000}
+      aria-invalid={invalid}
+    />
+  );
+};
 
 const BasicInformationStep: React.FC = () => {
   const store: any = useListingWizardStore();
@@ -252,18 +316,12 @@ const BasicInformationStep: React.FC = () => {
             <Label htmlFor="title" className="text-slate-700">
               Property Title *
             </Label>
-            <Input
-              id="title"
+            <TitleField
               value={title}
-              onChange={e => {
-                store.setTitle(e.target.value);
-                titleValidation.clearError();
-              }}
-              onBlur={titleValidation.onBlur}
-              placeholder="e.g., 2-Bed Apartment in Sandton"
-              className="mt-1"
-              maxLength={LISTING_TITLE_MAX_LENGTH}
-              aria-invalid={!!titleValidation.error}
+              onCommit={next => store.setTitle(next)}
+              onUserInput={titleValidation.clearError}
+              onBlurValidate={titleValidation.onBlur}
+              invalid={!!titleValidation.error}
             />
             <div className="flex items-center justify-between mt-1">
               <InlineError error={titleValidation.error} show={!!titleValidation.error} size="sm" />
@@ -276,18 +334,12 @@ const BasicInformationStep: React.FC = () => {
             <Label htmlFor="description" className="text-slate-700">
               Property Description *
             </Label>
-            <Textarea
-              id="description"
+            <DescriptionField
               value={description}
-              onChange={e => {
-                store.setDescription(e.target.value);
-                descriptionValidation.clearError();
-              }}
-              onBlur={descriptionValidation.onBlur}
-              placeholder="Describe the property (50 characters to continue; 100+ to submit)"
-              className="mt-1 min-h-[120px]"
-              maxLength={5000}
-              aria-invalid={!!descriptionValidation.error}
+              onCommit={next => store.setDescription(next)}
+              onUserInput={descriptionValidation.clearError}
+              onBlurValidate={descriptionValidation.onBlur}
+              invalid={!!descriptionValidation.error}
             />
             <div className="flex items-center justify-between mt-1">
               <InlineError

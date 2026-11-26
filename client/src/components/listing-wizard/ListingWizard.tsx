@@ -5,7 +5,11 @@
  */
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { hydrateListingWizardForUser, useListingWizardStore } from '@/hooks/useListingWizard';
+import {
+  canOpenWizardStep,
+  hydrateListingWizardForUser,
+  useListingWizardStore,
+} from '@/hooks/useListingWizard';
 import { isReviewableListingEdit, loadedListingNavigation } from '@/lib/listingEditorNavigation';
 import { useAutoSave } from '@/hooks/useAutoSave';
 import { markPlanPromptTrigger } from '@/lib/agentPlanGate';
@@ -126,13 +130,10 @@ const ListingWizard: React.FC = () => {
   const isDraftIdentityCurrent =
     !authLoading && user?.id != null && draftIdentityReady && store.persistedOwnerId === user.id;
 
-  // Auto-save hook - saves draft to localStorage automatically
-  const {
-    lastSaved,
-    isSaving: isAutoSaving,
-    error: autoSaveError,
-  } = useAutoSave(
-    {
+  // Memoised so autosave's own status updates (isSaving/lastSaved) do not look like
+  // new draft data and restart the debounce in a loop.
+  const autoSaveData = useMemo(
+    () => ({
       action: store.action,
       propertyType: store.propertyType,
       title: store.title,
@@ -154,7 +155,32 @@ const ListingWizard: React.FC = () => {
       currentStep: store.currentStep,
       completedSteps: store.completedSteps,
       mainMediaId: store.mainMediaId,
-    },
+    }),
+    [
+      store.action,
+      store.propertyType,
+      store.title,
+      store.description,
+      store.pricing,
+      store.propertyDetails,
+      store.location,
+      store.media,
+      store.badges,
+      store.basicInfo,
+      store.additionalInfo,
+      store.currentStep,
+      store.completedSteps,
+      store.mainMediaId,
+    ],
+  );
+
+  // Auto-save hook - saves draft to localStorage automatically
+  const {
+    lastSaved,
+    isSaving: isAutoSaving,
+    error: autoSaveError,
+  } = useAutoSave(
+    autoSaveData,
     {
       // storageKey: 'listing-wizard-storage', // Don't use this, it conflicts with Zustand persist
       onSave: async () => {
@@ -976,13 +1002,19 @@ const ListingWizard: React.FC = () => {
       undefined,
       canAdvanceFromCurrentStep,
     );
+    const generatedStepsWithJumps = generatedSteps.map(step => ({
+      ...step,
+      isAccessible:
+        step.isAccessible ||
+        canOpenWizardStep(store, step.number),
+    }));
     const steps = canReviewLoadedListing
-      ? generatedSteps.map(step => ({
+      ? generatedStepsWithJumps.map(step => ({
           ...step,
           isAccessible: true,
           isComplete: step.number < 8 && store.canAdvanceFromStep(step.number),
         }))
-      : generatedSteps;
+      : generatedStepsWithJumps;
 
     // Add error counts if validation errors exist
     if (validationErrors && validationErrors.affectedSteps.length > 0) {
