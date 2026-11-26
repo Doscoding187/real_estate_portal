@@ -1,10 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useDevelopmentWizard } from '@/hooks/useDevelopmentWizard';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   Dialog,
   DialogContent,
@@ -23,25 +20,21 @@ import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { usePublisherContext } from '@/hooks/usePublisherContext';
 import { buildDevelopmentSubmitPayload } from '@/lib/developmentSubmitPayload';
-import {
-  CheckCircle2,
-  AlertCircle,
-  AlertTriangle,
-  Edit2,
-  MapPin,
-  Clock,
-  Home,
-  Layers,
-  Image as ImageIcon,
-  Upload,
-  Share2,
-  Calendar,
-  Smartphone,
-  Monitor,
-  Maximize,
-} from 'lucide-react';
+import { CheckCircle2, AlertCircle, AlertTriangle, Edit2, Upload, Calendar } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { HouseMeasureIcon } from '@/components/icons/HouseMeasureIcon';
+import {
+  REVIEW_SECTION_STEP,
+  REVIEW_SECTION_TITLES,
+  buildReviewModel,
+  describePublishFailure,
+  publishConfirmText,
+  type PublishFailure,
+  stepForIssue,
+  stepTitle,
+  type ReviewRow,
+  type ReviewSectionId,
+} from '@/lib/wizardReview';
+import { iconForAmenity, iconForStep } from '../../wizard/wizardIcons';
 
 interface FinalisationPhaseProps {
   onSaveDraft?: () => Promise<void> | void;
@@ -65,8 +58,6 @@ export function FinalisationPhase({
 
   // Canonical data source (Phase 2I)
   const wizardData = store.getWizardData();
-  const isRent = wizardData.transactionType === 'for_rent';
-  const isAuction = wizardData.transactionType === 'auction';
 
   const normalizeAmenitiesPayload = (value: unknown): string[] | undefined => {
     if (!value) return undefined;
@@ -97,9 +88,7 @@ export function FinalisationPhase({
 
   // Keep only UI-needed refs
   const {
-    classification,
     listingIdentity,
-    setPhase,
     setWorkflowStep,
     reset,
     validateForPublish,
@@ -109,6 +98,8 @@ export function FinalisationPhase({
 
   // Get editingId from store for edit mode detection
   const editingId = (store as any).editingId as number | undefined;
+  // The development a previous attempt created from this draft (survives a reload).
+  const draftCreatedId = (store as any).createdDevelopmentId as number | undefined;
 
   const reviewAmenities = (() => {
     if (stepAmenities && stepAmenities.length > 0) return stepAmenities;
@@ -120,7 +111,10 @@ export function FinalisationPhase({
 
   const [showConfirmPublish, setShowConfirmPublish] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
-  const [activePreviewTab, setActivePreviewTab] = useState<'desktop' | 'mobile'>('desktop');
+  const [publishError, setPublishError] = useState<PublishFailure | null>(null);
+  // The development a first attempt created: a retry after a refused publish updates it
+  // instead of creating a second copy.
+  const createdIdRef = useRef<number | null>(null);
   const utils = trpc.useUtils();
 
   // Backend mutations
@@ -182,100 +176,7 @@ export function FinalisationPhase({
         validationErrorTitle: 'Cannot submit development for review:',
       };
 
-  const formatDate = (value?: string | Date) => {
-    if (!value) return 'TBD';
-    if (value instanceof Date) return value.toLocaleDateString();
-    const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) return 'TBD';
-    return parsed.toLocaleDateString();
-  };
-
-  const ownershipDisplay = useMemo(() => {
-    const fromArray = Array.isArray((wizardData as any).ownershipTypes)
-      ? ((wizardData as any).ownershipTypes as unknown[])
-      : [];
-    const fromLegacy = (wizardData as any).ownershipType
-      ? [String((wizardData as any).ownershipType)]
-      : [];
-    const values = (fromArray.length ? fromArray : fromLegacy)
-      .map(value => (typeof value === 'string' ? value.trim() : ''))
-      .filter(Boolean);
-
-    if (values.length === 0) return 'N/A';
-    return values.map(value => value.replace(/-/g, ' ')).join(', ');
-  }, [wizardData]);
-
-  const toInt = (v: any, fallback: number) => {
-    const n = typeof v === 'number' ? v : Number(String(v ?? '').trim());
-    if (!Number.isFinite(n)) return fallback;
-    return Math.trunc(n);
-  };
-
-  const toNumber = (v: any, fallback: number) => {
-    const n = typeof v === 'number' ? v : Number(String(v ?? '').trim());
-    if (!Number.isFinite(n)) return fallback;
-    return n;
-  };
-
-  const computeExtrasTotal = (extras: any): number => {
-    if (!Array.isArray(extras)) return 0;
-    return extras.reduce((sum, e) => {
-      const p = toNumber(e?.price, 0);
-      return sum + (p > 0 ? p : 0);
-    }, 0);
-  };
-
-  const computeUnitTotalFrom = (u: any): number => {
-    const base = toNumber(u?.basePriceFrom ?? u?.priceFrom, 0);
-    const extrasTotal = computeExtrasTotal(u?.extras);
-    const total = base + extrasTotal;
-    return Number.isFinite(total) ? total : 0;
-  };
-
-  const getUnitRentFrom = (u: any): number => {
-    return toNumber(u?.monthlyRentFrom ?? u?.monthlyRent ?? 0, 0);
-  };
-
-  const getUnitRentTo = (u: any): number => {
-    const rentTo = toNumber(u?.monthlyRentTo ?? 0, 0);
-    const rentFrom = getUnitRentFrom(u);
-    return rentTo > 0 ? rentTo : rentFrom;
-  };
-
-  const canonicalUnitTypesRaw = (wizardData.unitTypes ?? []) as any[];
   const isLand = wizardData.developmentType === 'land';
-
-  const computedDevAuctionRange = useMemo(() => {
-    if (isLand)
-      return {
-        auctionStartDate: undefined as Date | undefined,
-        auctionEndDate: undefined as Date | undefined,
-        startingBidFrom: undefined as number | undefined,
-        reservePriceFrom: undefined as number | undefined,
-      };
-
-    const starts = canonicalUnitTypesRaw
-      .map(u => (u?.auctionStartDate ? new Date(u.auctionStartDate) : null))
-      .filter((d: Date | null) => d && !Number.isNaN(d.getTime())) as Date[];
-    const ends = canonicalUnitTypesRaw
-      .map(u => (u?.auctionEndDate ? new Date(u.auctionEndDate) : null))
-      .filter((d: Date | null) => d && !Number.isNaN(d.getTime())) as Date[];
-    const startingBids = canonicalUnitTypesRaw
-      .map(u => Number(u?.startingBid ?? 0))
-      .filter(n => Number.isFinite(n) && n > 0);
-    const reservePrices = canonicalUnitTypesRaw
-      .map(u => Number(u?.reservePrice ?? 0))
-      .filter(n => Number.isFinite(n) && n > 0);
-
-    return {
-      auctionStartDate: starts.length
-        ? new Date(Math.min(...starts.map(d => d.getTime())))
-        : undefined,
-      auctionEndDate: ends.length ? new Date(Math.max(...ends.map(d => d.getTime()))) : undefined,
-      startingBidFrom: startingBids.length ? Math.min(...startingBids) : undefined,
-      reservePriceFrom: reservePrices.length ? Math.min(...reservePrices) : undefined,
-    };
-  }, [isLand, canonicalUnitTypesRaw]);
 
   const handlePublish = async () => {
     const amenitiesPayload = reviewAmenities;
@@ -290,11 +191,14 @@ export function FinalisationPhase({
     }
 
     if (isSuperAdmin && !publisherContext?.cataloguePublisherId) {
-      toast.error('Select a publisher brand context before publishing.');
+      const message = 'Select a publisher brand context before publishing.';
+      setPublishError({ message, details: [] });
+      toast.error(message);
       return;
     }
 
     if (isPublishing) return;
+    setPublishError(null);
     setIsPublishing(true);
 
     try {
@@ -310,24 +214,27 @@ export function FinalisationPhase({
       });
 
       let developmentId: number;
-      if (editingId && shouldUseSuperAdminFlow) {
+      // Editing an existing development, or retrying after a refused first attempt that
+      // already created one (never create a second copy).
+      const existingId = editingId ?? draftCreatedId ?? createdIdRef.current ?? undefined;
+      if (existingId && shouldUseSuperAdminFlow) {
         await updatePublisherDevelopment.mutateAsync({
           cataloguePublisherId: publisherId,
-          developmentId: editingId,
+          developmentId: existingId,
           data: {
             ...payload,
             cataloguePublisherId: publisherId,
           },
         });
-        developmentId = editingId;
+        developmentId = existingId;
         toast.success('Development saved successfully!');
-      } else if (editingId) {
+      } else if (existingId) {
         // UPDATE OPERATION
         await updateDevelopment.mutateAsync({
-          id: editingId,
+          id: existingId,
           data: payload,
         });
-        developmentId = editingId;
+        developmentId = existingId;
         toast.success('Development saved successfully!');
       } else {
         // CREATE OPERATION
@@ -352,6 +259,15 @@ export function FinalisationPhase({
           const result = await createDevelopment.mutateAsync(createPayload);
           developmentId = result.development.id;
         }
+        createdIdRef.current = developmentId;
+        // Remember it on the draft itself (store, local copy and the server draft), so a
+        // retry after a refusal or a reload updates this development, never a second one.
+        (store as any).setCreatedDevelopmentId?.(developmentId);
+        try {
+          await onSaveDraft?.();
+        } catch (draftError) {
+          console.warn('[FinalisationPhase] Could not save the created development id on the draft:', draftError);
+        }
       }
 
       // Curated records use the privileged platform publication transition;
@@ -361,6 +277,8 @@ export function FinalisationPhase({
           cataloguePublisherId: publisherId,
           developmentId,
         });
+        // The suburb chosen in the Location step travels in estateSpecs and is
+        // recorded by the server in the same transaction as publication.
       } else {
         await publishDevelopment.mutateAsync({ id: developmentId });
       }
@@ -406,597 +324,366 @@ export function FinalisationPhase({
     } catch (error: any) {
       console.error('[FinalisationPhase] Publish failed:', error);
 
-      const cause = error?.data?.cause ?? error?.shape?.data?.cause;
-
-      const validationErrors = cause?.validationErrors;
-      const legacyErrors = cause?.errors;
-      const primaryMessage = error?.message || finalisationCopy.fallbackError;
-
-      const focusField = (fieldKey: string) => {
-        const base = fieldKey.split('[')[0];
-        const root = base.split('.')[0];
-
-        const fieldToPhase: Record<string, number> = {
-          name: 4,
-          developmentName: 4,
-          nature: 4,
-          status: 4,
-          launchDate: 4,
-          completionDate: 4,
-          expectedFirstHandoverDate: 4,
-          handoverDuringConstruction: 4,
-          ownershipType: 4,
-          ownershipTypes: 4,
-          transactionType: 4,
-
-          address: 5,
-          postalCode: 5,
-          latitude: 5,
-          longitude: 5,
-          location: 5,
-          'location.address': 5,
-          'location.latitude': 5,
-          'location.longitude': 5,
-
-          media: 9,
-          images: 9,
-          heroImage: 9,
-          'media.heroImage': 9,
-          'media.heroImage.url': 9,
-
-          unitTypes: 10,
-          parkingType: 10,
-          parkingBays: 10,
-          bedrooms: 10,
-          bathrooms: 10,
-          basePriceFrom: 10,
-        };
-
-        const targetPhase = fieldToPhase[fieldKey] ?? fieldToPhase[base] ?? fieldToPhase[root];
-
-        if (targetPhase) setPhase(targetPhase);
-
-        setTimeout(() => {
-          const el =
-            document.querySelector(`[data-field="${fieldKey}"]`) ||
-            document.querySelector(`[data-field="${base}"]`) ||
-            document.querySelector(`[name="${fieldKey}"]`) ||
-            document.querySelector(`[name="${base}"]`);
-          el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          (el as HTMLElement | null)?.focus?.();
-        }, 250);
-      };
-
-      if (Array.isArray(validationErrors) && validationErrors.length > 0) {
-        toast.error(
-          <div className="max-w-md">
-            <p className="font-semibold mb-2">{finalisationCopy.validationErrorTitle}</p>
-            <ul className="space-y-1 text-sm">
-              {validationErrors.map((err: { field: string; message: string }, idx: number) => (
-                <li key={idx} className="flex items-start gap-2">
-                  <span className="text-red-500 mt-0.5">•</span>
-                  <span>{err.message}</span>
-                </li>
-              ))}
-            </ul>
-          </div>,
-          { duration: 10000 },
-        );
-
-        if (validationErrors[0]?.field) focusField(validationErrors[0].field);
-        return;
-      }
-
-      if (Array.isArray(legacyErrors) && legacyErrors.length > 0) {
-        toast.error(
-          <div className="max-w-md">
-            <p className="font-semibold mb-2">{finalisationCopy.validationErrorTitle}</p>
-            <ul className="space-y-1 text-sm">
-              {legacyErrors.map((msg: string, idx: number) => (
-                <li key={idx} className="flex items-start gap-2">
-                  <span className="text-red-500 mt-0.5">•</span>
-                  <span>{msg}</span>
-                </li>
-              ))}
-            </ul>
-          </div>,
-          { duration: 10000 },
-        );
-        return;
-      }
-
-      toast.error(primaryMessage, {
-        description: 'Please check your connection and try again.',
+      // Never swallow a refusal: the reason is shown inside the confirm dialog (which
+      // stays open so it can be cancelled or retried) and as a toast.
+      const failure = describePublishFailure(error, finalisationCopy.fallbackError);
+      setPublishError(failure);
+      toast.error(failure.message, {
+        description: failure.details.length > 0 ? failure.details.join(' · ') : undefined,
+        duration: 10000,
       });
     } finally {
       setIsPublishing(false);
     }
   };
 
-  // Render Section Helper
-  const ReviewSection = ({
-    title,
-    icon: Icon,
-    step: _step,
-    data,
-    onEdit,
+  const model = buildReviewModel(
+    wizardData as any,
+    reviewAmenities,
+    String((wizardData as any).transactionType ?? 'for_sale'),
+  );
+  const unitCount = (wizardData.unitTypes ?? []).length;
+  const confirmText = publishConfirmText({
+    name: String(wizardData.name ?? ''),
+    publisherName: (publisherContext as any)?.publisherName ?? null,
+    houseTypeCount: unitCount,
+    curated: shouldUseSuperAdminFlow,
+  });
+  const goToStep = (stepId: string) => setWorkflowStep(stepId as any);
+
+  const Section = ({
+    id,
+    children,
   }: {
-    title: string;
-    icon: any;
-    step: number;
-    data: React.ReactNode;
-    onEdit: () => void;
-  }) => (
-    <div className="border border-slate-200 rounded-lg overflow-hidden mb-4">
-      <div className="bg-slate-50 px-4 py-3 flex justify-between items-center border-b border-slate-100">
-        <div className="flex items-center gap-2">
-          <Icon className="w-4 h-4 text-slate-500" />
-          <h3 className="font-semibold text-sm text-slate-800">{title}</h3>
-        </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onEdit}
-          className="h-7 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-        >
-          <Edit2 className="w-3 h-3 mr-1" /> Edit
-        </Button>
-      </div>
-      <div className="p-4 text-sm text-slate-600">{data}</div>
-    </div>
+    id: ReviewSectionId;
+    children: React.ReactNode;
+  }) => {
+    const stepId = REVIEW_SECTION_STEP[id];
+    const Icon = iconForStep(stepId);
+    return (
+      <section
+        data-testid={`review-${id}`}
+        className="overflow-hidden rounded-lg border border-slate-200 bg-white"
+      >
+        <header className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-4 py-3">
+          <div className="flex items-center gap-2">
+            <span className="flex h-7 w-7 items-center justify-center rounded-md bg-blue-50 text-blue-700">
+              <Icon className="h-4 w-4" aria-hidden="true" />
+            </span>
+            <h3 className="text-sm font-semibold text-slate-900">{REVIEW_SECTION_TITLES[id]}</h3>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-label={`Edit ${REVIEW_SECTION_TITLES[id]}`}
+            onClick={() => goToStep(stepId)}
+            className="h-8 text-xs text-blue-700 hover:bg-blue-50"
+          >
+            <Edit2 className="mr-1 h-3 w-3" /> Edit
+          </Button>
+        </header>
+        <div className="p-4 text-sm text-slate-700">{children}</div>
+      </section>
+    );
+  };
+
+  const Rows = ({ rows }: { rows: ReviewRow[] }) => (
+    <dl className="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-[160px_1fr]">
+      {rows.map(row => (
+        <React.Fragment key={row.label}>
+          <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            {row.label}
+          </dt>
+          <dd
+            className={
+              row.value === 'Not given' || row.value === 'Not added' || row.value === 'None'
+                ? 'text-slate-500'
+                : 'font-medium text-slate-900'
+            }
+          >
+            {row.value}
+          </dd>
+        </React.Fragment>
+      ))}
+    </dl>
   );
 
-  const renderUnitPriceLabel = (u: any) => {
-    if (isRent) {
-      const rentFrom = getUnitRentFrom(u);
-      const rentTo = getUnitRentTo(u);
-      const value = rentFrom > 0 ? rentFrom : rentTo;
-      if (!value || value <= 0) return '---';
-      return value.toLocaleString();
-    }
-    if (isAuction) {
-      const startingBid = Number(u?.startingBid ?? 0);
-      if (!startingBid || startingBid <= 0) return '---';
-      return `${startingBid.toLocaleString()} (starting bid)`;
-    }
-    const total = computeUnitTotalFrom(u);
-    if (!total || total <= 0) return '---';
-    return total.toLocaleString();
-  };
-
-  const renderUnitSizeLabel = (u: any) => {
-    const unitSize = toInt(u?.unitSize, 0);
-    if (unitSize > 0) return `${unitSize}m²`;
-    return '—';
-  };
-
   return (
-    <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500 pb-12">
-      {/* Header */}
+    <div className="flex flex-col gap-5">
       <div>
-        <h2 className="text-3xl font-bold text-slate-900">{finalisationCopy.heading}</h2>
-        <p className="text-slate-600">{finalisationCopy.description}</p>
+        <h2 className="text-xl font-semibold text-slate-900">{finalisationCopy.heading}</h2>
+        <p className="mt-1 text-sm text-slate-600">{finalisationCopy.description}</p>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-8">
-        {/* Left Col: Validation & Summary */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Validation Dashboard */}
-          <Card className={!canPublish ? 'border-red-200 shadow-sm' : 'border-green-200 shadow-sm'}>
-            <CardHeader className={!canPublish ? 'bg-red-50/50 pb-4' : 'bg-green-50/50 pb-4'}>
-              <div className="flex items-start gap-4">
-                <div
-                  className={
-                    !canPublish
-                      ? 'p-2 bg-red-100 rounded-full text-red-600'
-                      : 'p-2 bg-green-100 rounded-full text-green-600'
-                  }
-                >
-                  {!canPublish ? (
-                    <AlertTriangle className="w-6 h-6" />
-                  ) : (
-                    <CheckCircle2 className="w-6 h-6" />
-                  )}
-                </div>
-                <div>
-                  <CardTitle className={!canPublish ? 'text-red-900' : 'text-green-900'}>
-                    {!canPublish ? 'Action Required' : finalisationCopy.readinessTitle}
-                  </CardTitle>
-                  <CardDescription className={!canPublish ? 'text-red-700' : 'text-green-700'}>
-                    {!canPublish
-                      ? `Please resolve ${errors.length} error${errors.length > 1 ? 's' : ''} to continue.`
-                      : finalisationCopy.readinessDescription}
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            {(!canPublish || warnings.length > 0) && (
-              <CardContent className="pt-4 space-y-3">
-                {errors.map((err, idx) => (
-                  <Alert key={`err-${idx}`} variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Missing Requirement</AlertTitle>
-                    <AlertDescription>{err}</AlertDescription>
-                  </Alert>
-                ))}
-                {warnings.map((warn: string, idx: number) => (
-                  <Alert
-                    key={`warn-${idx}`}
-                    className="bg-amber-50 border-amber-200 text-amber-800"
-                  >
-                    <AlertTriangle className="h-4 w-4 text-amber-600" />
-                    <AlertTitle className="text-amber-900">Recommendation</AlertTitle>
-                    <AlertDescription>{warn}</AlertDescription>
-                  </Alert>
-                ))}
-              </CardContent>
+      {draftCreatedId && !editingId ? (
+        <p
+          data-testid="review-created-note"
+          className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-900"
+        >
+          This draft already created development #{draftCreatedId} — publishing updates it.
+        </p>
+      ) : null}
+
+      {/* Readiness: ready, or exactly what is missing, each linking to its step */}
+      <section
+        data-testid="review-readiness"
+        className={`rounded-lg border p-4 sm:p-6 ${
+          canPublish ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50'
+        }`}
+      >
+        <div className="flex items-start gap-3">
+          <span
+            className={`flex h-10 w-10 flex-none items-center justify-center rounded-lg ${
+              canPublish ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+            }`}
+          >
+            {canPublish ? (
+              <CheckCircle2 className="h-5 w-5" />
+            ) : (
+              <AlertTriangle className="h-5 w-5" />
             )}
-          </Card>
-
-          {/* Detailed Summary */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-slate-900">Listing Details</h3>
-
-            <ReviewSection
-              title="Identity & Type"
-              icon={Home}
-              step={1}
-              onEdit={() => setWorkflowStep('identity_market')}
-              data={
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <span className="block text-xs uppercase text-slate-400 font-semibold tracking-wider">
-                      Name
-                    </span>
-                    <span className="font-medium text-slate-900">
-                      {wizardData.name || 'Untitled'}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="block text-xs uppercase text-slate-400 font-semibold tracking-wider">
-                      Type
-                    </span>
-                    <span className="font-medium text-slate-900 capitalize">
-                      {classification?.type?.replace('_', ' ')} | {ownershipDisplay}
-                    </span>
-                  </div>
-                </div>
-              }
-            />
-
-            <ReviewSection
-              title="Location"
-              icon={MapPin}
-              step={2}
-              onEdit={() => setWorkflowStep('location')}
-              data={
-                <div>
-                  <span className="block text-xs uppercase text-slate-400 font-semibold tracking-wider">
-                    Address
-                  </span>
-                  <span className="font-medium text-slate-900">
-                    {wizardData.location?.address || 'Address not set'}
-                  </span>
-                  <div className="mt-2 h-24 bg-slate-100 rounded border border-slate-200 flex items-center justify-center text-xs text-slate-400">
-                    Map Preview
-                  </div>
-                </div>
-              }
-            />
-
-            <ReviewSection
-              title="Amenities & Features"
-              icon={Share2}
-              step={6}
-              onEdit={() => setWorkflowStep('amenities_features')}
-              data={
-                <div className="flex flex-wrap gap-2">
-                  {reviewAmenities.map((a: string) => (
-                    <Badge key={a} variant="secondary" className="bg-slate-100 text-slate-700">
-                      {a}
-                    </Badge>
-                  ))}
-                  {reviewAmenities.length === 0 && (
-                    <span className="text-slate-400 italic">No amenities selected</span>
-                  )}
-                </div>
-              }
-            />
-
-            <ReviewSection
-              title="Marketing & Media"
-              icon={ImageIcon}
-              step={8}
-              onEdit={() => setWorkflowStep('marketing_summary')}
-              data={
-                <div className="space-y-3">
-                  <p className="line-clamp-2 italic text-slate-500">
-                    "{wizardData.description || 'No description provided'}"
-                  </p>
-                  <div className="flex gap-4 text-xs font-medium text-slate-700 border-t pt-2">
-                    <span>{wizardData.heroImage ? '✅ Hero Image' : '❌ No Hero'}</span>
-                    <span>{(wizardData.media as any)?.photos?.length || 0} Photos</span>
-                    <span>{(wizardData.media as any)?.videos?.length || 0} Videos</span>
-                    <span>{(wizardData.media as any)?.documents?.length || 0} Docs</span>
-                  </div>
-
-                  {((wizardData as any).transferCostsIncluded ||
-                    (wizardData as any).reservePriceIncluded) && (
-                    <div className="flex gap-2 mt-2 pt-2 border-t">
-                      {(wizardData as any).transferCostsIncluded && (
-                        <Badge
-                          variant="outline"
-                          className="text-emerald-700 bg-emerald-50 border-emerald-200"
-                        >
-                          Transfer Costs Included
-                        </Badge>
-                      )}
-                      {(wizardData as any).reservePriceIncluded && (
-                        <Badge
-                          variant="outline"
-                          className="text-amber-700 bg-amber-50 border-amber-200"
-                        >
-                          Reserve: R{' '}
-                          {(wizardData as any).reservePriceAmount?.toLocaleString() || '---'}
-                        </Badge>
-                      )}
-                    </div>
-                  )}
-
-                  {wizardData.highlights && wizardData.highlights.length > 0 && (
-                    <div className="pt-3 mt-3 border-t border-slate-100">
-                      <span className="text-xs font-semibold text-slate-800 uppercase tracking-wider block mb-2">
-                        Key Selling Points
+          </span>
+          <div className="min-w-0 flex-1">
+            <h2 className="text-lg font-semibold text-slate-900">
+              {canPublish ? finalisationCopy.readinessTitle : 'Action Required'}
+            </h2>
+            <p className="mt-1 text-sm text-slate-700">
+              {canPublish
+                ? finalisationCopy.readinessDescription
+                : `${errors.length} thing${errors.length === 1 ? ' is' : 's are'} still missing. Each one links to its step.`}
+            </p>
+            {errors.length > 0 && (
+              <ul className="mt-3 flex flex-col gap-2" data-testid="review-missing">
+                {errors.map((err, idx) => {
+                  const stepId = stepForIssue(err);
+                  return (
+                    <li
+                      key={`err-${idx}`}
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-red-200 bg-white px-3 py-2 text-sm text-red-900"
+                    >
+                      <span className="flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4 flex-none text-red-600" />
+                        {err}
                       </span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {wizardData.highlights.map((h: string, i: number) => (
-                          <Badge
-                            key={i}
-                            variant="secondary"
-                            className="text-[10px] font-normal px-2 py-0.5 bg-slate-100 text-slate-600 border-slate-200"
-                          >
-                            {h}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              }
-            />
-
-            <ReviewSection
-              title="Unit Configuration"
-              icon={Layers}
-              step={9}
-              onEdit={() => setWorkflowStep('unit_types')}
-              data={
-                <div className="space-y-2">
-                  {(wizardData.unitTypes ?? []).length === 0 ? (
-                    <span className="text-red-500 italic">No unit types defined</span>
-                  ) : (
-                    (wizardData.unitTypes ?? []).map((u: any) => (
-                      <div
-                        key={u.id}
-                        className="flex justify-between items-center bg-slate-50 p-2 rounded"
-                      >
-                        <span className="font-medium">{u.name}</span>
-                        <div className="flex gap-3 text-xs text-slate-500">
-                          <span>{u.bedrooms} Bed</span>
-                          <span>{u.bathrooms} Bath</span>
-                          <span>
-                            R {renderUnitPriceLabel(u)}
-                            {isRent ? ' / month' : ''}
-                          </span>
-                          <Badge
-                            variant="outline"
-                            className={
-                              u?.availabilityNotProvided === true
-                                ? 'text-slate-600 border-slate-200'
-                                : (toInt(u?.availableUnits, 0) ?? 0) > 0
-                                  ? 'text-green-600 border-green-200'
-                                  : 'text-red-600 border-red-200'
-                            }
-                          >
-                            {u?.availabilityNotProvided === true
-                              ? 'Counts not supplied'
-                              : `${toInt(u?.availableUnits, 0)} Avail`}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              }
-            />
+                      {stepId ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => goToStep(stepId)}
+                          className="h-8 text-xs"
+                        >
+                          Fix in {stepTitle(stepId)}
+                        </Button>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            {warnings.length > 0 && (
+              <ul className="mt-3 flex flex-col gap-2">
+                {warnings.map((warn: string, idx: number) => {
+                  const stepId = stepForIssue(warn);
+                  return (
+                    <li
+                      key={`warn-${idx}`}
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+                    >
+                      <span className="flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4 flex-none text-amber-600" />
+                        {warn}
+                      </span>
+                      {stepId ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => goToStep(stepId)}
+                          className="h-8 text-xs"
+                        >
+                          Open {stepTitle(stepId)}
+                        </Button>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </div>
         </div>
+      </section>
 
-        {/* Right Col: Preview & Actions */}
-        <div className="space-y-6">
-          {/* Control Panel */}
-          <Card className="sticky top-6 border-slate-200 shadow-md">
-            <CardHeader className="bg-slate-50 border-b pb-4">
-              <CardTitle className="text-lg">{finalisationCopy.controlTitle}</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6 space-y-4">
-              <div className="grid grid-cols-2 gap-2">
-                <Button variant="outline" className="w-full text-xs">
-                  <Calendar className="w-3.5 h-3.5 mr-2" /> Schedule
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full text-xs"
-                  disabled={isSavingDraft}
-                  onClick={async () => {
-                    if (!onSaveDraft) {
-                      toast.error('Draft save is unavailable');
-                      return;
-                    }
+      <Section id="basics">
+        <Rows rows={model.basics} />
+      </Section>
 
-                    try {
-                      await onSaveDraft();
-                    } catch {
-                      // Parent handler surfaces the save failure to the user.
-                    }
-                  }}
+      <Section id="about">
+        <Rows rows={model.about} />
+      </Section>
+
+      <Section id="location">
+        <Rows rows={model.location} />
+      </Section>
+
+      <Section id="costs">
+        <Rows rows={model.costs} />
+      </Section>
+
+      <Section id="amenities">
+        {model.amenities.length === 0 ? (
+          <span className="text-slate-500">No amenities selected</span>
+        ) : (
+          <div className="flex flex-wrap gap-2" data-testid="review-amenity-chips">
+            {model.amenities.map(label => {
+              const Icon = iconForAmenity(label);
+              return (
+                <span
+                  key={label}
+                  className="inline-flex min-h-8 items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 text-sm text-slate-800"
                 >
-                  {isSavingDraft ? 'Saving...' : 'Save Draft'}
-                </Button>
-              </div>
+                  <Icon className="h-4 w-4 text-slate-600" aria-hidden="true" />
+                  {label}
+                </span>
+              );
+            })}
+          </div>
+        )}
+      </Section>
 
-              <Separator />
-
-              <div className="space-y-2">
-                <Button
-                  className="w-full h-12 text-base bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg"
-                  disabled={!canPublish}
-                  onClick={() => setShowConfirmPublish(true)}
-                >
-                  <Upload className="w-4 h-4 mr-2" />
-                  {finalisationCopy.action}
-                </Button>
-                {!canPublish && (
-                  <p className="text-xs text-center text-red-500">
-                    {finalisationCopy.disabledHelper}
-                  </p>
-                )}
-                <p className="text-xs text-center text-slate-400">{finalisationCopy.terms}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Preview Widget */}
-          <Card>
-            <CardHeader className="pb-2 border-b">
-              <div className="flex justify-between items-center">
-                <CardTitle className="text-sm font-medium uppercase tracking-wide text-slate-500">
-                  Public Listing Preview
-                </CardTitle>
-                <div className="flex bg-slate-100 rounded-lg p-1">
-                  <button
-                    onClick={() => setActivePreviewTab('desktop')}
-                    className={`p-1.5 rounded ${
-                      activePreviewTab === 'desktop'
-                        ? 'bg-white shadow-sm text-blue-600'
-                        : 'text-slate-400 hover:text-slate-600'
-                    }`}
-                  >
-                    <Monitor className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => setActivePreviewTab('mobile')}
-                    className={`p-1.5 rounded ${
-                      activePreviewTab === 'mobile'
-                        ? 'bg-white shadow-sm text-blue-600'
-                        : 'text-slate-400 hover:text-slate-600'
-                    }`}
-                  >
-                    <Smartphone className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div
-                className={`mx-auto bg-slate-100 overflow-hidden transition-all duration-300 ${
-                  activePreviewTab === 'mobile'
-                    ? 'w-[280px] h-[500px] my-4 rounded-[2rem] border-4 border-slate-800 shadow-xl'
-                    : 'w-full h-[400px]'
-                }`}
+      <Section id="highlights">
+        {model.highlights.shown.length === 0 ? (
+          <span className="text-slate-500">No highlights added</span>
+        ) : (
+          <div className="flex flex-wrap items-center gap-1.5">
+            {model.highlights.shown.map(label => (
+              <span
+                key={label}
+                className="inline-flex h-6 items-center rounded bg-orange-50 px-2 text-xs font-semibold text-orange-800"
               >
-                <div className="bg-white w-full h-full flex flex-col overflow-y-auto">
-                  <div className="h-1/3 bg-slate-200 relative">
-                    {wizardData.heroImage ? (
-                      <img
-                        src={wizardData.heroImage as string}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex items-center justify-center h-full text-slate-400">
-                        <ImageIcon />
-                      </div>
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-4">
-                      <h1 className="text-white font-bold text-sm leading-tight">
-                        {wizardData.name || 'Development Name'}
-                      </h1>
-                    </div>
-                  </div>
+                {label}
+              </span>
+            ))}
+            {model.highlights.more > 0 && (
+              <span className="text-xs text-slate-600">+{model.highlights.more} more</span>
+            )}
+          </div>
+        )}
+      </Section>
 
-                  <div className="p-4 space-y-3">
-                    <div className="space-y-1">
-                      <h3 className="text-xs font-bold text-slate-700 uppercase">
-                        From R {renderUnitPriceLabel((wizardData.unitTypes ?? [])[0])}
-                        {isRent ? ' / month' : ''}
-                      </h3>
-                      <p className="text-[10px] text-slate-500 line-clamp-2">
-                        {wizardData.description || 'Description...'}
-                      </p>
-                    </div>
+      <Section id="media">
+        <Rows rows={model.media} />
+      </Section>
 
-                    {isAuction && (
-                      <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                        <div className="flex items-center gap-2 text-[10px] text-amber-800">
-                          <Clock className="w-3 h-3 text-amber-600" />
-                          <span className="font-medium text-amber-900">
-                            Auction: {formatDate(computedDevAuctionRange.auctionStartDate)} -{' '}
-                            {formatDate(computedDevAuctionRange.auctionEndDate)}
-                          </span>
-                        </div>
-                        <p className="text-[10px] text-amber-700 mt-1">
-                          Starting from R
-                          {computedDevAuctionRange.startingBidFrom
-                            ? computedDevAuctionRange.startingBidFrom.toLocaleString()
-                            : '---'}
-                        </p>
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-2 gap-2">
-                      {(wizardData.unitTypes ?? []).slice(0, 2).map((u: any) => (
-                        <div key={u.id} className="bg-slate-50 p-2 rounded border border-slate-100">
-                          <div className="text-[10px] font-bold">{u.name}</div>
-                          <div className="text-[9px] text-slate-500 flex items-center gap-2">
-                            <span className="flex items-center gap-1">
-                              {u.bedrooms} Bed &bull; <HouseMeasureIcon className="w-3 h-3" />{' '}
-                              {renderUnitSizeLabel(u)}
-                            </span>
-                            {u.yardSize && u.yardSize > 0 && (
-                              <span className="text-green-600 flex items-center gap-0.5">
-                                <Maximize className="w-2 h-2" /> {u.yardSize}m²
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+      <Section id="house_types">
+        {model.houseTypes.length === 0 ? (
+          <span className="text-red-600">No house types yet</span>
+        ) : (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {model.houseTypes.map(h => (
+              <div
+                key={h.id}
+                data-testid="review-house-type"
+                className="flex flex-col gap-1 rounded-lg border border-slate-200 bg-white p-3"
+              >
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="font-semibold text-slate-900">{h.name}</span>
+                  <span className="whitespace-nowrap font-semibold text-slate-900">{h.price}</span>
                 </div>
+                <span className="text-xs text-slate-700">{h.facts}</span>
+                <span className="text-xs text-slate-700">{h.parking}</span>
+                <span className="text-xs text-slate-600">
+                  {[h.availability, h.media].filter(Boolean).join(' · ')}
+                </span>
               </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+            ))}
+          </div>
+        )}
+      </Section>
 
-      {/* Confirmation Modal */}
-      <Dialog open={showConfirmPublish} onOpenChange={setShowConfirmPublish}>
+      {/* Actions */}
+      <section className="rounded-lg border border-slate-200 bg-white p-4 sm:p-6">
+        <h3 className="text-base font-semibold text-slate-900">{finalisationCopy.controlTitle}</h3>
+        <div className="mt-4 flex flex-col gap-3">
+          <div className="grid grid-cols-2 gap-2">
+            <Button variant="outline" className="w-full text-xs">
+              <Calendar className="w-3.5 h-3.5 mr-2" /> Schedule
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full text-xs"
+              disabled={isSavingDraft}
+              onClick={async () => {
+                if (!onSaveDraft) {
+                  toast.error('Draft save is unavailable');
+                  return;
+                }
+
+                try {
+                  await onSaveDraft();
+                } catch {
+                  // Parent handler surfaces the save failure to the user.
+                }
+              }}
+            >
+              {isSavingDraft ? 'Saving...' : 'Save Draft'}
+            </Button>
+          </div>
+
+          <Separator />
+
+          <div className="space-y-2">
+            <Button
+              className="h-12 w-full bg-blue-700 text-base hover:bg-blue-800"
+              disabled={!canPublish}
+              onClick={() => setShowConfirmPublish(true)}
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              {finalisationCopy.action}
+            </Button>
+            {!canPublish && (
+              <p className="text-xs text-center text-red-600">{finalisationCopy.disabledHelper}</p>
+            )}
+            <p className="text-xs text-center text-slate-500">{finalisationCopy.terms}</p>
+          </div>
+        </div>
+      </section>
+
+      {/* Confirmation: states exactly what happens */}
+      <Dialog
+        open={showConfirmPublish}
+        onOpenChange={open => {
+          setShowConfirmPublish(open);
+          if (!open) setPublishError(null);
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{finalisationCopy.confirmTitle}</DialogTitle>
-            <DialogDescription>
-              {finalisationCopy.confirmDescription} <strong>{wizardData.name}</strong>
-            </DialogDescription>
+            <DialogDescription data-testid="publish-confirm-text">{confirmText}</DialogDescription>
           </DialogHeader>
-          <div className="py-4">
-            <Alert className="bg-blue-50 border-blue-200 text-blue-800">
-              <CheckCircle2 className="w-4 h-4 text-blue-600" />
-              <AlertTitle className="text-blue-900">Passed Validation</AlertTitle>
-              <AlertDescription>{finalisationCopy.validationDescription}</AlertDescription>
-            </Alert>
-          </div>
+          {publishError ? (
+            <div
+              role="alert"
+              data-testid="publish-error"
+              className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-900"
+            >
+              <p className="font-semibold">{publishError.message}</p>
+              {publishError.details.length > 0 ? (
+                <ul className="mt-1 list-disc pl-5">
+                  {publishError.details.map(detail => (
+                    <li key={detail}>{detail}</li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+          ) : null}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowConfirmPublish(false)}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowConfirmPublish(false);
+                setPublishError(null);
+              }}
+            >
               Cancel
             </Button>
             <Button

@@ -35,4 +35,27 @@ describe('tRPC error formatter', () => {
     expect(formatted.data).not.toHaveProperty('cause');
     expect(JSON.stringify(formatted)).not.toContain('synthetic-private-driver-detail');
   });
+
+  it('exposes only the readiness blockers (field + message) from a refused publication', () => {
+    const error = new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Development is not ready for submission.',
+      cause: {
+        validationErrors: [
+          { field: 'suburb', message: 'Choose the suburb from the list.', secret: 'x' },
+          { field: 7, message: 'ignored' },
+        ],
+        driver: 'synthetic-private-driver-detail',
+      } as any,
+    });
+    const formatted = formatTrpcError({
+      shape: { message: error.message, code: -32600, data: { code: 'BAD_REQUEST', httpStatus: 400 } },
+      error,
+    });
+    expect(formatted.data.validationErrors).toEqual([
+      { field: 'suburb', message: 'Choose the suburb from the list.' },
+    ]);
+    expect(JSON.stringify(formatted)).not.toContain('synthetic-private-driver-detail');
+    expect(JSON.stringify(formatted)).not.toContain('secret');
+  });
 });

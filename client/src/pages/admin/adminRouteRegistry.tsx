@@ -49,6 +49,7 @@ const PartnerNetworkPage = lazy(() => import('./PartnerNetworkPage'));
 const ServicesReviewWorkspace = lazy(() => import('./ServicesReviewWorkspace'));
 const DistributionNetworkPage = lazy(() => import('./DistributionNetworkPage'));
 const SuperAdminPublisher = lazy(() => import('./publisher/SuperAdminPublisher'));
+const PublisherDevelopmentWizard = lazy(() => import('./publisher/PublisherDevelopmentWizard'));
 const PlanEditor = lazy(() => import('./PlanEditor'));
 const PlatformSettings = lazy(() => import('./PlatformSettings'));
 const AuditLogs = lazy(() => import('./AuditLogs'));
@@ -151,6 +152,11 @@ const ROUTES = {
   },
   publisher: { path: '/admin/publisher', render: () => <SuperAdminPublisher /> },
 
+  publisherDevelopmentWizard: {
+    path: '/admin/publisher/developments/new',
+    render: () => <PublisherDevelopmentWizard />,
+  },
+
   content: {
     path: '/admin/content',
     render: () => <ComingSoonModule title="Content Manager" />,
@@ -203,6 +209,7 @@ export const ADMIN_DASHBOARD_ROUTES: AdminDashboardRoute[] = [
   ROUTES.distribution,
   ROUTES.distributionSubmodule,
   ROUTES.publisher,
+  ROUTES.publisherDevelopmentWizard,
 ];
 
 export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [

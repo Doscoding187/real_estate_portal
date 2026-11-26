@@ -9,6 +9,8 @@ import {
   getCanonicalDevelopmentUnitTypes,
 } from '../../../shared/developmentCanonicalSelectors';
 import { communityTypesForSetting } from './wizardBasicsAbout';
+import { SERVER_UNIT_OWNERSHIP_VALUES } from './wizardHouseTypes';
+import { submitAddress } from './wizardLocationCostsAmenities';
 import {
   CANONICAL_PARTIAL_UPDATE_MODE,
   CANONICAL_UPDATE_MODE_FIELD,
@@ -50,6 +52,7 @@ export type SubmitUnitType = {
   availabilityNotProvided?: boolean;
   isActive?: boolean;
   structuralType?: string;
+  ownershipType?: string;
   unitCategory?: 'house' | 'apartment';
   unitSubType?: string;
   specifications?: Record<string, any>;
@@ -224,7 +227,7 @@ export function extractSubmitDocumentUrls(wizardData: Record<string, any>): stri
     .filter(Boolean) as string[];
 }
 
-function extractConfirmedMediaItems(value: unknown): Array<string | Record<string, unknown>> {
+export function extractConfirmedMediaItems(value: unknown): Array<string | Record<string, unknown>> {
   if (!Array.isArray(value)) return [];
   return value
     .map(item => {
@@ -234,9 +237,22 @@ function extractConfirmedMediaItems(value: unknown): Array<string | Record<strin
       const hasAuthority = ['uploadReceipt', 'mediaReceipt', 'storageKey', 'key'].some(
         field => source[field] !== undefined,
       );
-      if (!hasAuthority) return source.url as string;
+      // Which buyer document this is (brochure, site plan, ...) must survive save and reopen.
+      const documentFields = ['documentType', 'title', 'label'].filter(
+        field => typeof source[field] === 'string' && source[field] !== '',
+      );
+      if (!hasAuthority && documentFields.length === 0) return source.url as string;
       const result: Record<string, unknown> = { url: source.url };
-      for (const field of ['uploadReceipt', 'mediaReceipt', 'storageKey', 'key', 'fileName', 'fileSize', 'type']) {
+      for (const field of [
+        'uploadReceipt',
+        'mediaReceipt',
+        'storageKey',
+        'key',
+        'fileName',
+        'fileSize',
+        'type',
+        ...documentFields,
+      ]) {
         if (source[field] !== undefined) result[field] = source[field];
       }
       return result;
@@ -432,6 +448,12 @@ export function normalizeSubmitUnitTypes(
       availabilityNotProvided: unit?.availabilityNotProvided === true,
       isActive: typeof unit?.isActive === 'boolean' ? unit.isActive : undefined,
       structuralType: unit?.structuralType,
+      // Per-house-type ownership (only asked when the development says "Varies by house type").
+      ownershipType: (SERVER_UNIT_OWNERSHIP_VALUES as readonly string[]).includes(
+        unit?.ownershipType,
+      )
+        ? unit.ownershipType
+        : undefined,
       unitCategory,
       unitSubType,
       specifications,
@@ -526,6 +548,9 @@ function buildBasicsAboutEstateSpecs(canonical: Record<string, any>): Record<str
     phaseLabel,
     handoverInPhases: phased,
     firstHandoverDate: phased ? asOptionalString(canonical.expectedFirstHandoverDate) : undefined,
+    noStreetAddress: canonical.location?.noOfficialStreet === true ? true : undefined,
+    suburbPlaceId: asOptionalString(canonical.location?.suburbPlaceId),
+    suburbLabel: asOptionalString(canonical.location?.suburbLabel),
   };
   return Object.fromEntries(Object.entries(facts).filter(([, value]) => value !== undefined));
 }
@@ -711,16 +736,24 @@ export function buildDevelopmentSubmitPayload(input: DevelopmentSubmitPayloadInp
           ...(hasGovernanceSpecs
             ? {
                 hasHOA: submitSource.hasGoverningBody,
+                // Explicit levy answer, so "No levy" is only ever published when it was chosen.
+                ...(submitSource.hasGoverningBody === false
+                  ? { levyChoice: 'none' }
+                  : submitSource.hasGoverningBody === true &&
+                      (submitSource.governanceType === 'hoa' ||
+                        submitSource.governanceType === 'body_corporate')
+                    ? { levyChoice: submitSource.governanceType }
+                    : {}),
                 governanceType: submitSource.governanceType,
                 architecturalGuidelines: submitSource.architecturalGuidelines,
                 guidelinesSummary: submitSource.guidelinesSummary,
                 levyRange: {
-                  min: canonicalDevelopmentData.monthlyLevyFrom ?? 0,
-                  max: canonicalDevelopmentData.monthlyLevyTo ?? 0,
+                  min: canonicalDevelopmentData.monthlyLevyFrom ?? null,
+                  max: canonicalDevelopmentData.monthlyLevyTo ?? null,
                 },
                 rightsAndTaxes: {
-                  min: canonicalDevelopmentData.ratesFrom ?? 0,
-                  max: canonicalDevelopmentData.ratesTo ?? 0,
+                  min: canonicalDevelopmentData.ratesFrom ?? null,
+                  max: canonicalDevelopmentData.ratesTo ?? null,
                 },
               }
             : {}),
@@ -792,7 +825,10 @@ export function buildDevelopmentSubmitPayload(input: DevelopmentSubmitPayloadInp
     developmentType,
     transactionType,
     ownershipType: normalizeSubmitOwnershipType(ownershipSource),
-    address: canonicalDevelopmentData.location?.address,
+    address: submitAddress({
+      ...canonicalDevelopmentData.location,
+      noOfficialStreet: (submitSource.location as any)?.noOfficialStreet,
+    }),
     postalCode: canonicalDevelopmentData.location?.postalCode,
     latitude: canonicalDevelopmentData.location?.latitude,
     longitude: canonicalDevelopmentData.location?.longitude,

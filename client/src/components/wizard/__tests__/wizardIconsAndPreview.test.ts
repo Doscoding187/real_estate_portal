@@ -45,6 +45,25 @@ describe('iconForAmenity', () => {
 });
 
 describe('buildPreviewModel', () => {
+  it('shows each label once: a fact badge equal to a visible highlight is dropped', () => {
+    const base = {
+      ownershipTypes: ['full-title'],
+      communityTypes: ['security_estate'],
+    };
+    const withTags = buildPreviewModel({ ...base, highlights: ['Pool'] });
+    expect(withTags.tags.length).toBeGreaterThan(0);
+    const [first, second] = withTags.tags;
+    const deduped = buildPreviewModel({
+      ...base,
+      highlights: [first.toUpperCase(), 'Pool', 'Gym'],
+    });
+    expect(deduped.tags).not.toContain(first);
+    if (second) expect(deduped.tags).toContain(second);
+    // A highlight hidden behind "+N more" does not remove the badge.
+    const hidden = buildPreviewModel({ ...base, highlights: ['A', 'B', 'C', first] });
+    expect(hidden.tags).toContain(first);
+  });
+
   it('is safe on an empty wizard', () => {
     const model = buildPreviewModel({});
     expect(model.name).toBe('');

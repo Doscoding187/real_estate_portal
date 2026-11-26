@@ -82,7 +82,7 @@ export default function PublisherDevelopments() {
 
   const handleCreateDevelopment = () => {
     if (!selectedBrandId) return;
-    setLocation('/developer/create-development');
+    setLocation('/admin/publisher/developments/new');
   };
 
   const handleUnpublish = (developmentId: number, name: string) => {
@@ -191,7 +191,7 @@ export default function PublisherDevelopments() {
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => setLocation(`/developer/create-development?draftId=${draft.id}`)}
+                  onClick={() => setLocation(`/admin/publisher/developments/new?draftId=${draft.id}`)}
                 >
                   Resume draft
                 </Button>
@@ -251,7 +251,7 @@ export default function PublisherDevelopments() {
                     variant="outline"
                     onClick={() =>
                       setLocation(
-                        `/developer/create-development?id=${development.identity.id}&cataloguePublisherId=${selectedBrandId}`,
+                        `/admin/publisher/developments/new?id=${development.identity.id}&cataloguePublisherId=${selectedBrandId}`,
                       )
                     }
                   >

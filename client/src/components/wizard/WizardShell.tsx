@@ -14,6 +14,8 @@ export interface WizardShellStep {
   title: string;
   /** Done steps show a tick. */
   done: boolean;
+  /** Visited but failing validation: amber dot. */
+  issues?: boolean;
   /** Visited steps can be jumped to. */
   visited: boolean;
 }
@@ -208,6 +210,7 @@ export function WizardShell({
                       className={cn(
                         'flex h-[26px] w-[26px] flex-none items-center justify-center rounded-full border-[1.5px] border-slate-400 bg-white text-slate-600',
                         step.done && !isCurrent && 'border-green-700 bg-green-700 text-white',
+                        step.issues && !isCurrent && 'border-amber-500 bg-amber-50 text-amber-700',
                         isCurrent && 'border-blue-700 bg-blue-700 text-white',
                       )}
                     >
@@ -217,6 +220,9 @@ export function WizardShell({
                         <Icon className="h-3.5 w-3.5" strokeWidth={1.8} aria-hidden="true" />
                       )}
                     </span>
+                    {step.issues && !isCurrent ? (
+                      <span className="sr-only">Needs attention:</span>
+                    ) : null}
                     <span className="hidden lg:inline">{step.title}</span>
                     <span className="sr-only lg:hidden">{step.title}</span>
                   </button>

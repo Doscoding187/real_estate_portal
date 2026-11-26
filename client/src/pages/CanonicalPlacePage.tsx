@@ -8,6 +8,7 @@ import NotFound from '@/pages/NotFound';
 import { isLandPublicDiscoveryAvailable } from '@shared/landLaunchPolicy';
 import { useSearch } from 'wouter';
 import SuburbGuidePage from '@/pages/SuburbGuidePage';
+import { PlaceDevelopmentsSection } from '@/components/location/PlaceDevelopmentsSection';
 
 type PropertyGuideMode = 'sale' | 'rent';
 
@@ -169,6 +170,10 @@ export default function CanonicalPlacePage() {
               </div>
             )}
           </section>
+        ) : null}
+
+        {isBroadPlace ? (
+          <PlaceDevelopmentsSection placeId={place.placeId} placeLabel={place.label} />
         ) : null}
 
         {landDiscoveryAvailable && isBroadPlace ? (
