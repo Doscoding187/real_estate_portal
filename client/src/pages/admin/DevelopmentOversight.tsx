@@ -390,6 +390,20 @@ function DevelopmentReviewContent({
   });
   const [showHistory, setShowHistory] = useState(false);
   const [assignmentPlace, setAssignmentPlace] = useState<CanonicalPlaceSelection | null>(null);
+  // The suburb the publisher chose in the wizard is only a suggestion: the reviewer
+  // confirms it (and records the assignment) here.
+  const suggestedSuburb = (() => {
+    let specs: any = development?.estateSpecs;
+    if (typeof specs === 'string') {
+      try {
+        specs = JSON.parse(specs);
+      } catch {
+        specs = null;
+      }
+    }
+    const placeId = String(specs?.suburbPlaceId ?? '').trim();
+    return placeId ? { placeId, label: String(specs?.suburbLabel ?? placeId) } : null;
+  })();
   const [assignmentPhaseId, setAssignmentPhaseId] = useState('');
   const [assignmentEvidenceReference, setAssignmentEvidenceReference] = useState('');
   const [assignmentWithdrawalNotes, setAssignmentWithdrawalNotes] = useState<Record<number, string>>({});
@@ -665,6 +679,27 @@ function DevelopmentReviewContent({
             </select>
           </label>
           <div>
+            {suggestedSuburb && !assignmentPlace ? (
+              <p className="mb-2 text-sm text-slate-700" data-testid="suggested-suburb">
+                Suggested by the publisher: <b>{suggestedSuburb.label}</b>.{' '}
+                <button
+                  type="button"
+                  className="font-medium text-blue-700 underline"
+                  onClick={() =>
+                    setAssignmentPlace({
+                      canonicalPlaceId: suggestedSuburb.placeId,
+                      label: suggestedSuburb.label,
+                      placeType: 'suburb',
+                      scope: 'locality',
+                      administrativeContext: null,
+                    })
+                  }
+                >
+                  Use this suggestion
+                </button>{' '}
+                (you still record the review below).
+              </p>
+            ) : null}
             <CanonicalPlaceSelector
               value={assignmentPlace}
               onChange={setAssignmentPlace}

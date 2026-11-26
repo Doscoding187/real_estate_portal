@@ -73,7 +73,10 @@ import {
   type DeveloperOperatingHomeScope,
 } from './services/developerOperatingHome';
 import { getDeveloperPublicationAccess } from './services/developerPublicationAccess';
-import { getDevelopmentPlaceGeography } from './services/developmentPlaceAssignmentService';
+import {
+  getDevelopmentPlaceGeography,
+  suburbReadinessContextFromGeography,
+} from './services/developmentPlaceAssignmentService';
 import { isPlaceId } from '../drizzle/schema/placeAuthority';
 import type { SearchCardResult } from '../shared/types';
 import { AuditActions } from './_core/auditLog';
@@ -181,6 +184,9 @@ type DevelopmentHomeIdentityRow = Pick<
   | 'name'
   | 'slug'
   | 'address'
+  | 'latitude'
+  | 'longitude'
+  | 'estateSpecs'
   | 'transactionType'
   | 'approvalStatus'
   | 'isPublished'
@@ -1584,6 +1590,9 @@ export const developerRouter = router({
         name: developments.name,
         slug: developments.slug,
         address: developments.address,
+        latitude: developments.latitude,
+        longitude: developments.longitude,
+        estateSpecs: developments.estateSpecs,
         transactionType: developments.transactionType,
         approvalStatus: developments.approvalStatus,
         isPublished: developments.isPublished,
@@ -1663,6 +1672,7 @@ export const developerRouter = router({
       const blockers: DevelopmentHomeReadinessBlocker[] = validatePersistedSubmissionReadiness(
         row,
         persistedUnitTypes,
+        suburbReadinessContextFromGeography(row, geography),
       ).map(blocker => ({ ...blocker, severity: 'critical' }));
       const inventory = buildDevelopmentHomeInventory(row, persistedUnitTypes, blockers);
       const reviewRows: DevelopmentHomeReviewRow[] = await dbConn

@@ -101,7 +101,7 @@ export function iconForSalesChoice(value: string | null | undefined): LucideIcon
 
 /** Ordered rules; first match wins. Patterns run on the lower-cased label. */
 const AMENITY_RULES: Array<{ icon: LucideIcon; pattern: RegExp }> = [
-  { icon: Fence, pattern: /fence|perimeter wall|boundary wall/ },
+  { icon: Fence, pattern: /fenc(e|ing)|perimeter wall|boundary wall/ },
   { icon: Waves, pattern: /\bpools?\b|swimming/ },
   { icon: Landmark, pattern: /club[\s-]?house/ },
   { icon: LayoutGrid, pattern: /\bcourts?\b|tennis|squash|padel|basketball/ },

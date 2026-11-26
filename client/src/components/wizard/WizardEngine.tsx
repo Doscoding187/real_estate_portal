@@ -15,6 +15,7 @@ import { WizardData } from '@/lib/types/wizard-workflows';
 import { computeWizardProgress } from '@/lib/wizardProgress';
 import { WizardShell, type WizardSaveInput, type WizardShellStep } from './WizardShell';
 import { buildPreviewModel } from './previewModel';
+import { stepStatus } from '@/lib/wizardStepStatus';
 
 /**
  * The eight residential steps, in order: Basics, About, Location, Monthly
@@ -128,7 +129,10 @@ export function WizardEngine({
     : visibleSteps.map((step, index) => ({
         id: step.id,
         title: step.title,
-        done: Boolean(completedSteps?.includes(step.id)),
+        ...stepStatus({
+          visited: Boolean(completedSteps?.includes(step.id)),
+          valid: step.validate ? step.validate(baseData as WizardData).valid : true,
+        }),
         visited: index <= maxVisitedIndex,
       }));
 
@@ -175,7 +179,7 @@ export function WizardEngine({
 
   const goNext = () => {
     ensureResidentialWorkflow();
-    goWorkflowNext();
+    goWorkflowNext(activeStepId ?? undefined);
   };
 
   if (onStartScreen) {

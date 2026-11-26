@@ -1,0 +1,26 @@
+{
+  "version": "0.1",
+  "source": {
+    "name": "GeoNames",
+    "licence": "CC-BY-4.0",
+    "url": "https://www.geonames.org",
+    "retrievedAt": "2026-11-20",
+    "attribution": "Contains place data from GeoNames (geonames.org), CC BY 4.0"
+  },
+  "note": "Hand-reviewed centre points for Gauteng localities our own data and Wikidata could not supply. naturalKey is the canonical URL path without the leading slash. Read by scripts/build-place-centroids.ts after the internal tiers and after Wikidata. Reviewed entries bypass the sibling rule but still obey the Gauteng box and the 40 km parent check.",
+  "entries": [
+    { "naturalKey": "gauteng/city-of-tshwane/mooikloof", "lat": -25.839722, "lng": 28.338889, "geonameId": 8063767, "label": "Mooikloof", "note": "", "reviewed": true },
+    { "naturalKey": "gauteng/city-of-tshwane/waverley", "lat": -25.702222, "lng": 28.259167, "geonameId": 941376, "label": "Waverley", "note": "Tshwane Waverley only", "reviewed": true },
+    { "naturalKey": "gauteng/city-of-tshwane/zwartkop", "lat": -25.869722, "lng": 28.180278, "geonameId": 8063471, "label": "Zwartkop", "note": "Agrees with one of the two Wikidata coordinates", "reviewed": true },
+    { "naturalKey": "gauteng/city-of-tshwane/kaalfontein-landbouhoewes", "lat": -25.988056, "lng": 28.173889, "geonameId": 11203913, "label": "Kaalfontein Landbouhoewes", "note": "", "reviewed": true },
+    { "naturalKey": "gauteng/ekurhuleni/brackenhurst", "lat": -26.318889, "lng": 28.103889, "geonameId": 11352144, "label": "Brackenhurst", "note": "", "reviewed": true },
+    { "naturalKey": "gauteng/ekurhuleni/randhart", "lat": -26.290833, "lng": 28.11, "geonameId": 8063461, "label": "Randhart", "note": "", "reviewed": true },
+    { "naturalKey": "gauteng/ekurhuleni/rondebult", "lat": -26.309722, "lng": 28.232222, "geonameId": 960748, "label": "Rondebult", "note": "Confirms our runtime row", "reviewed": true },
+    { "naturalKey": "gauteng/johannesburg/eikenhof", "lat": -26.332778, "lng": 27.973889, "geonameId": 1006491, "label": "Eikenhof", "note": "", "reviewed": true },
+    { "naturalKey": "gauteng/localities/eikenhof", "lat": -26.332778, "lng": 27.973889, "geonameId": 1006491, "label": "Eikenhof", "note": "", "reviewed": true },
+    { "naturalKey": "gauteng/johannesburg/lakeside", "lat": -26.099444, "lng": 28.146944, "geonameId": 984939, "label": "Lakeside", "note": "", "reviewed": true },
+    { "naturalKey": "gauteng/localities/lakeside", "lat": -26.099444, "lng": 28.146944, "geonameId": 984939, "label": "Lakeside", "note": "", "reviewed": true },
+    { "naturalKey": "gauteng/localities/west-wits", "lat": -26.35, "lng": 27.5, "geonameId": 940290, "label": "West Wits", "note": "locality, coarse", "reviewed": true },
+    { "naturalKey": "gauteng/localities/mogale-city", "lat": -26.085833, "lng": 27.775278, "geonameId": 986822, "label": "Mogale City", "note": "municipal seat (Krugersdorp)", "reviewed": true }
+  ]
+}

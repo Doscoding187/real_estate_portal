@@ -49,6 +49,8 @@ export interface PublicDevelopmentSearchItem {
   slug: string | null;
   canonicalRoute: string;
   description: string | null;
+  /** The publisher's own one-line description, shown on cards instead of the long description. */
+  tagline?: string | null;
   images: string[];
   canonicalPlaceId: string | null;
   /** Preferred active Place names for display only; never a search key. */
@@ -109,6 +111,9 @@ export interface PublicDevelopmentDetail extends PublicDevelopmentSearchItem {
   publicFacts: PublicDevelopmentSearchItem;
   /** Safe image metadata for category-specific detail-page gallery tiles. */
   imageMedia?: PublicDevelopmentImageMedia[];
+  /** The publisher's own one-line description (the wizard tagline), shown under the name. */
+  subtitle?: string | null;
+  tagline?: string | null;
   address: string | null;
   showHouseAddress: boolean;
   canonicalPlaceId: string | null;
@@ -157,6 +162,8 @@ export interface PublicDevelopmentProjectionDevelopment {
   name: string;
   slug: string | null;
   description: string | null;
+  tagline?: string | null;
+  subtitle?: string | null;
   images: unknown;
   canonicalPlaceId: string | null;
   locationLabels: string[];
@@ -438,6 +445,7 @@ export function projectPublicDevelopmentFacts(
     slug: development.slug,
     canonicalRoute: development.canonicalRoute,
     description: development.description,
+    tagline: String(development.tagline ?? '').trim() || String(development.subtitle ?? '').trim() || null,
     images: projectionImages(development.images),
     canonicalPlaceId: development.canonicalPlaceId,
     locationLabels: [...new Set(development.locationLabels.map(label => label.trim()).filter(Boolean))],

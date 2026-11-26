@@ -31,9 +31,11 @@ import { buildDevelopmentRootPath } from './developmentRouteAuthority';
 import { publicDevelopmentEligibilityConditions } from './publicDevelopmentEligibility';
 import {
   listDevelopmentIdsForCanonicalPlace,
+  listDevelopmentIdsForCanonicalPlaces,
   listDevelopmentPlaceGeography,
   type DevelopmentPlaceGeography,
 } from './developmentPlaceAssignmentService';
+import { developmentSearchPlaceIds } from './placeLocalityRollupService';
 import {
   COMMERCIAL_PUBLIC_JOURNEY_HANDOFF_MESSAGE,
   isCommercialMarketingPropertyType,
@@ -89,6 +91,8 @@ type DevelopmentRow = {
   name: string;
   slug: string | null;
   description: string | null;
+  tagline?: string | null;
+  subtitle?: string | null;
   images: unknown;
   canonicalPlaceId: string | null;
   locationLabels: string[];
@@ -328,9 +332,14 @@ export class PublicDevelopmentSearchService {
 
     const conditions: SQL[] = [publicDevelopmentEligibilityConditions()];
     if (location.canonicalPlaceId) {
-      const matchingDevelopmentIds = await listDevelopmentIdsForCanonicalPlace(
-        location.canonicalPlaceId,
-      );
+      // A city or province search includes the developments assigned to the
+      // localities beneath it (same child rules as the area guides); a suburb
+      // search stays an exact match.
+      const searchPlaceIds = await developmentSearchPlaceIds(db as any, location.canonicalPlaceId);
+      const matchingDevelopmentIds =
+        searchPlaceIds.length === 1
+          ? await listDevelopmentIdsForCanonicalPlace(location.canonicalPlaceId)
+          : await listDevelopmentIdsForCanonicalPlaces(searchPlaceIds);
       conditions.push(
         matchingDevelopmentIds.length
           ? inArray(developments.id, matchingDevelopmentIds)
@@ -350,6 +359,8 @@ export class PublicDevelopmentSearchService {
         name: developments.name,
         slug: developments.slug,
         description: developments.description,
+        tagline: developments.tagline,
+        subtitle: developments.subtitle,
         images: developments.images,
         developmentType: developments.developmentType,
         transactionType: developments.transactionType,

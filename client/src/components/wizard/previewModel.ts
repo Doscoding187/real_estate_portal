@@ -4,6 +4,7 @@
  */
 
 import { COMMUNITY_TYPE_OPTIONS } from '@/types/wizardTypes';
+import { resolveCover } from '@/lib/wizardMedia';
 import {
   buildTimelineLine,
   ownershipTagLabel,
@@ -98,11 +99,11 @@ export function buildPreviewModel(
       ? d.unitTypes
       : [];
 
+  // Same single cover rule as the Media step; an explicit null means "no cover".
   const coverUrl =
-    mediaUrl(d.media?.heroImage) ??
-    mediaUrl(d.heroImage) ??
-    mediaUrl(d.media?.photos?.find((p: any) => p?.isPrimary)) ??
-    mediaUrl(d.media?.photos?.[0]);
+    d.media?.heroImage === null
+      ? null
+      : (mediaUrl(resolveCover(d.media)) ?? mediaUrl(d.heroImage));
 
   const prices = unitTypes.map(u => toNumber(u?.priceFrom)).filter((n): n is number => n != null);
   const beds = unitTypes.map(u => Number(u?.bedrooms)).filter(n => Number.isFinite(n) && n >= 0);
@@ -112,7 +113,10 @@ export function buildPreviewModel(
   const highlights = rawHighlights.map(asString).filter(Boolean);
 
   const locationLabel =
-    asString(d.location?.suburb) || asString(d.location?.city) || asString(d.location?.address);
+    asString(d.location?.suburbLabel) ||
+    asString(d.location?.suburb) ||
+    asString(d.location?.city) ||
+    asString(d.location?.address);
 
   const communityKey = asString(d.communityTypes?.[0]);
   const settingLabel =
@@ -158,7 +162,13 @@ export function buildPreviewModel(
     unitTypeCount: unitTypes.length,
     highlights: highlights.slice(0, PREVIEW_CARD_HIGHLIGHTS),
     moreHighlights: Math.max(0, highlights.length - PREVIEW_CARD_HIGHLIGHTS),
-    tags,
+    // Each label once: a fact badge is dropped when a visible highlight chip says the same.
+    tags: tags.filter(
+      tag =>
+        !highlights
+          .slice(0, PREVIEW_CARD_HIGHLIGHTS)
+          .some(h => h.trim().toLowerCase() === tag.trim().toLowerCase()),
+    ),
     transactionLabel:
       d.transactionType === 'for_sale' || d.transactionType === 'sale'
         ? 'For sale'

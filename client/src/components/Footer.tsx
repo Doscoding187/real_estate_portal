@@ -1,4 +1,5 @@
 import { Link } from 'wouter';
+import { PlaceDataAttribution } from '@/components/PlaceDataAttribution';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -178,6 +179,8 @@ export function Footer() {
             </div>
           </div>
         </div>
+
+        <PlaceDataAttribution className="mb-4 text-center md:text-left" />
 
         <div className="pt-8 border-t border-slate-800 text-center md:text-left flex flex-col md:flex-row justify-between items-center gap-4">
           <p>© 2026 Property Listify. All rights reserved.</p>

@@ -27,6 +27,7 @@ import {
   getDevelopmentSearchReturn,
 } from '@/lib/developmentJourneyContinuity';
 import { trpc } from '@/lib/trpc';
+import { pickBrochureUrl } from '@/lib/developmentDocuments';
 
 const DEFAULT_BOND_TERM_YEARS = 20;
 const QUICK_QUALIFICATION_PAYMENT_RATIO = 3;
@@ -326,7 +327,7 @@ export default function DevelopmentUnitDetailPage() {
     })();
 
     const brochureItems = Array.isArray((dev as any).brochures) ? (dev as any).brochures : [];
-    const brochureUrl = brochureItems.map(resolveDocumentUrl).find(Boolean) || null;
+    const brochureUrl = pickBrochureUrl(brochureItems, resolveDocumentUrl);
 
     return {
       id: publicFacts.id,

@@ -1,15 +1,18 @@
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import { type Request, type Response, Router } from 'express';
 
 import {
   agents,
   cataloguePublishers,
+  developments,
   properties,
   SERVICE_CATEGORY_VALUES,
 } from '../../drizzle/schema';
 import { ENV } from '../_core/env';
 import { getDb } from '../db-connection';
 import { APPROVED_AGENT, buildAgentPublicSlug } from '../services/agentPublicProfileService';
+import { buildDevelopmentRootPath } from '../services/developmentRouteAuthority';
+import { publicDevelopmentEligibilityConditions } from '../services/publicDevelopmentEligibility';
 import { resolvePublicPropertyEligibilityIds } from '../services/publicPropertyEligibilityService';
 import { servicesEngineService } from '../services/servicesEngineService';
 
@@ -336,8 +339,51 @@ router.get('/sitemap-listings.xml', async (_req, res, next) => {
   }
 });
 
-router.get('/sitemap-developments.xml', (_req, res) => {
-  sendXml(res, buildUrlSet([]));
+const SITEMAP_DEVELOPMENT_LIMIT = 5000;
+
+router.get('/sitemap-developments.xml', async (req, res, next) => {
+  try {
+    const baseUrl = resolveBaseUrl(req);
+    const db = await getDb();
+    if (!db) {
+      throw new Error('Database not available');
+    }
+
+    // Only publicly eligible developments, by the same authority public search and
+    // the development page use: never drafts, unpublished, held or ineligible ones.
+    const rows = await db
+      .select({
+        id: developments.id,
+        slug: developments.slug,
+        updatedAt: developments.updatedAt,
+      })
+      .from(developments)
+      .where(publicDevelopmentEligibilityConditions())
+      .orderBy(desc(developments.updatedAt))
+      .limit(SITEMAP_DEVELOPMENT_LIMIT + 1);
+    if (rows.length > SITEMAP_DEVELOPMENT_LIMIT) {
+      // Like the other sitemaps this one is a single file; say so loudly rather than
+      // silently dropping developments. Paging into an index is the next step.
+      console.warn(
+        `[sitemap-developments] more than ${SITEMAP_DEVELOPMENT_LIMIT} eligible developments; the newest ${SITEMAP_DEVELOPMENT_LIMIT} are listed`,
+      );
+      rows.length = SITEMAP_DEVELOPMENT_LIMIT;
+    }
+
+    sendXml(
+      res,
+      buildUrlSet(
+        rows.map(row => ({
+          loc: toAbsoluteUrl(buildDevelopmentRootPath(row), baseUrl),
+          lastmod: row.updatedAt as string | null,
+          changefreq: 'weekly',
+          priority: 0.8,
+        })),
+      ),
+    );
+  } catch (error) {
+    next(error);
+  }
 });
 
 router.get('/sitemap-static.xml', async (_req, res, next) => {

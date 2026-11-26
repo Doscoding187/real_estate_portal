@@ -1,12 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useDevelopmentWizard } from '@/hooks/useDevelopmentWizard';
 import { cn } from '@/lib/utils';
 import { AUCTION_TYPE_OPTIONS } from '@/types/wizardTypes';
 import {
   DESCRIPTION_MIN_LENGTH,
-  HIGHLIGHTS_MAX,
-  HIGHLIGHTS_MIN,
-  HIGHLIGHT_MAX_LENGTH,
   OWNERSHIP_OPTIONS,
   SALES_STATUS_OPTIONS,
   TAGLINE_MAX_LENGTH,
@@ -17,7 +14,7 @@ import {
   type SalesChoice,
 } from '@/lib/wizardBasicsAbout';
 import { iconForSalesChoice } from '../../wizard/wizardIcons';
-import { ChipButton, OptionCard, WizardSection } from '../../wizard/ui/WizardUi';
+import { ChipButton, OptionCard } from '../../wizard/ui/WizardUi';
 import { wizardTokens as t } from '../../wizard/ui/wizardTokens';
 
 const TEXTAREA_CLASS = cn(t.input, 'min-h-[120px] resize-y py-2.5 leading-relaxed');
@@ -46,7 +43,6 @@ export function AboutPhase() {
   } = useDevelopmentWizard();
 
   const data = getWizardData() as Record<string, any>;
-  const [highlightDraft, setHighlightDraft] = useState('');
 
   const errors = (currentStepId && stepErrors?.[currentStepId]) || [];
   const errorFor = (field: string): string | undefined =>
@@ -59,7 +55,7 @@ export function AboutPhase() {
     saveWorkflowStepData('identity_market', patch);
   };
 
-  /** Marketing answers (tagline, description, highlights). Highlights are saved as keySellingPoints. */
+  /** Marketing answers (tagline, description). Highlights are chosen in the Amenities step. */
   const writeMarketing = (patch: Record<string, any>) => {
     ensureResidentialWorkflow();
     const { highlights, ...rest } = patch;
@@ -79,7 +75,6 @@ export function AboutPhase() {
   const choice = salesChoiceOf(data);
   const phased = data.handoverDuringConstruction === true;
   const ownership: string = Array.isArray(data.ownershipTypes) ? (data.ownershipTypes[0] ?? '') : '';
-  const highlights: string[] = Array.isArray(data.highlights) ? data.highlights : [];
   const isAuction = data.transactionType === 'auction';
 
   const pickStatus = (next: SalesChoice) => {
@@ -102,20 +97,6 @@ export function AboutPhase() {
       handoverDuringConstruction: value,
       expectedFirstHandoverDate: value ? (data.expectedFirstHandoverDate ?? null) : null,
     });
-
-  const addHighlight = () => {
-    const text = highlightDraft.trim().slice(0, HIGHLIGHT_MAX_LENGTH);
-    if (!text || highlights.length >= HIGHLIGHTS_MAX) return;
-    if (highlights.some(item => item.toLowerCase() === text.toLowerCase())) {
-      setHighlightDraft('');
-      return;
-    }
-    writeMarketing({ highlights: [...highlights, text] });
-    setHighlightDraft('');
-  };
-
-  const removeHighlight = (label: string) =>
-    writeMarketing({ highlights: highlights.filter(item => item !== label) });
 
   return (
     <div className={cn(t.card, 'flex flex-col gap-5')}>
@@ -343,52 +324,6 @@ export function AboutPhase() {
         </div>
         <FieldError message={errorFor('description')} />
       </div>
-
-      <WizardSection
-        label="Highlights (temporary)"
-        hint={`Short tags, 1 to 3 words, e.g. “Near schools”. Add ${HIGHLIGHTS_MIN} to ${HIGHLIGHTS_MAX}; tap a chosen tag to remove it. This moves to the Amenities step soon.`}
-      >
-        <div className="flex flex-wrap gap-2">
-          {highlights.map(label => (
-            <ChipButton
-              key={label}
-              tone="highlight"
-              label={label}
-              selected
-              onClick={() => removeHighlight(label)}
-            />
-          ))}
-        </div>
-        <div className="mt-3.5 flex max-w-[520px] items-center gap-2">
-          <input
-            className={t.input}
-            maxLength={HIGHLIGHT_MAX_LENGTH}
-            aria-label="Add your own highlight"
-            placeholder={`Add a highlight (max ${HIGHLIGHT_MAX_LENGTH} characters)`}
-            value={highlightDraft}
-            disabled={highlights.length >= HIGHLIGHTS_MAX}
-            onChange={e => setHighlightDraft(e.target.value)}
-            onKeyDown={e => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                addHighlight();
-              }
-            }}
-          />
-          <span className="w-10 flex-none text-xs text-slate-600">
-            {highlightDraft.length}/{HIGHLIGHT_MAX_LENGTH}
-          </span>
-          <button
-            type="button"
-            className={t.button}
-            onClick={addHighlight}
-            disabled={highlights.length >= HIGHLIGHTS_MAX}
-          >
-            Add
-          </button>
-        </div>
-        <FieldError message={errorFor('highlights')} />
-      </WizardSection>
     </div>
   );
 }
