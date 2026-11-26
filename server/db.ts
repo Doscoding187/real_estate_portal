@@ -411,6 +411,10 @@ async function validateCommercialListingPricing(
 export { getDb } from './db-connection';
 import { getDb, _db } from './db-connection';
 import { developerIdentityService } from './services/developerIdentityService';
+import {
+  ListingLifecycleError,
+  resolveListingLifecycleTransition,
+} from './services/listingLifecycleTransition';
 
 export type User = InferSelectModel<typeof users>;
 export type InsertUser = InferInsertModel<typeof users>;
@@ -3911,6 +3915,75 @@ export async function archiveListing(id: number) {
       })
       .where(eq(properties.sourceListingId, id));
   });
+}
+
+/**
+ * Change a published listing to sold, let or unpublished, and keep its public
+ * projection in the same transaction. Returns the previous status.
+ */
+export async function setListingLifecycleStatus(
+  id: number,
+  change: 'sold' | 'let' | 'unpublish',
+): Promise<{ previousStatus: string; status: string; changed: boolean }> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const result = await db.transaction(async (tx: any) => {
+    await lockListingTransitionRow(tx, id);
+    const listing = await getListingById(id, tx);
+    if (!listing) throw new ListingLifecycleError('Listing not found', 'not_found');
+    await assertNotDedicatedLandWorkflowListing(tx, id, listing);
+    const transition = resolveListingLifecycleTransition(change, listing as any);
+    const previousStatus = String(listing.status);
+    if (transition.noop) {
+      return { previousStatus, status: transition.nextStatus, changed: false };
+    }
+    const changedAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    await tx
+      .update(listings)
+      .set({
+        status: transition.nextStatus as any,
+        ...(transition.nextStatus === 'archived' ? { archivedAt: changedAt } : {}),
+        updatedAt: changedAt,
+      })
+      .where(eq(listings.id, id));
+    await tx
+      .update(properties)
+      .set({ status: transition.nextStatus as any, updatedAt: changedAt })
+      .where(eq(properties.sourceListingId, id));
+    return { previousStatus, status: transition.nextStatus, changed: true };
+  });
+  await invalidateApprovedPropertySearchCacheAfterCommit();
+  return result;
+}
+
+/**
+ * Republish an unpublished listing. It returns to a private draft and is then
+ * submitted through the ordinary submission boundary, so entitlement, location,
+ * pricing and the admin approval queue all apply exactly as for a new listing.
+ */
+export async function republishListing(id: number): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const listing = await getListingById(id, db);
+  if (!listing) throw new ListingLifecycleError('Listing not found', 'not_found');
+  resolveListingLifecycleTransition('republish', listing as any);
+
+  const changedAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
+  await db
+    .update(listings)
+    .set({ status: 'draft' as any, archivedAt: null, updatedAt: changedAt })
+    .where(and(eq(listings.id, id), eq(listings.status, 'archived' as any)));
+  try {
+    await submitListingForReview(id);
+  } catch (error) {
+    await db
+      .update(listings)
+      .set({ status: 'archived' as any, archivedAt: changedAt, updatedAt: changedAt })
+      .where(and(eq(listings.id, id), eq(listings.status, 'draft' as any)));
+    throw error;
+  }
 }
 
 /**

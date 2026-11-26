@@ -78,6 +78,8 @@ import {
 import { resolveCurrentAgencyMembershipForAgent } from './services/agencyMembershipService';
 import { LandLaunchContainmentError } from './services/landLaunchContainmentService';
 import { safeErrorSummary } from './_core/safeError';
+import { logAudit } from './_core/auditLog';
+import { ListingLifecycleError } from './services/listingLifecycleTransition';
 
 function rejectGenericCommercialWorkflow(propertyType: unknown): void {
   if (!isCommercialMarketingPropertyType(propertyType)) return;
@@ -1030,6 +1032,81 @@ export const listingRouter = router({
       } catch (error) {
         console.error('Error fetching user listings:', safeErrorSummary(error));
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to fetch listings' });
+      }
+    }),
+
+  /**
+   * Lister-driven lifecycle: mark a published listing Sold or Let, unpublish
+   * it, or republish an unpublished one. Custody is the same rule as editing
+   * (owner, assigned agent, agency admin of the owning agency, super admin).
+   * Republish goes through the ordinary submission and admin approval rule.
+   */
+  setLifecycle: protectedProcedure
+    .input(
+      z.object({
+        id: z.number().int().positive(),
+        change: z.enum(['sold', 'let', 'unpublish', 'republish']),
+        /** Optional completion date (YYYY-MM-DD); defaults to today. Recorded in the audit log. */
+        effectiveDate: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/)
+          .optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const user = requireUser(ctx);
+      const listing = await db.getListingById(input.id);
+      if (!listing) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Listing not found' });
+      }
+      await assertListingContentCustody(
+        listing,
+        user,
+        'Not authorized to change the status of this listing',
+      );
+      rejectGenericCommercialWorkflow(listing.propertyType);
+      await assertGenericListingRouteAvailable(input.id, listing as Record<string, unknown>);
+
+      const effectiveDate = input.effectiveDate ?? new Date().toISOString().slice(0, 10);
+      const previousStatus = String(listing.status);
+      try {
+        let status: string;
+        let changed = true;
+        if (input.change === 'republish') {
+          await db.republishListing(input.id);
+          status = 'pending_review';
+        } else {
+          const result = await db.setListingLifecycleStatus(input.id, input.change);
+          status = result.status;
+          changed = result.changed;
+        }
+
+        if (changed) {
+          await logAudit({
+            userId: user.id,
+            action: `listing.${input.change}`,
+            targetType: 'listing',
+            targetId: input.id,
+            metadata: { previousStatus, status, effectiveDate },
+            req: ctx.req,
+          });
+        }
+        return { success: true, status, changed };
+      } catch (error) {
+        if (error instanceof ListingLifecycleError) {
+          throw new TRPCError({
+            code: error.kind === 'not_found' ? 'NOT_FOUND' : 'BAD_REQUEST',
+            message: error.message,
+          });
+        }
+        if (error instanceof ListingPublicationEntitlementError) {
+          throw new TRPCError({ code: 'PRECONDITION_FAILED', message: error.message });
+        }
+        console.error('Error changing listing lifecycle:', safeErrorSummary(error));
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: error instanceof Error ? error.message : 'Failed to change listing status',
+        });
       }
     }),
 

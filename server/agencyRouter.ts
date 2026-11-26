@@ -1832,6 +1832,8 @@ const listingInventoryFiltersSchema = z.object({
       'approved',
       'published',
       'private_pending_edits',
+      'sold',
+      'rented',
       'archived',
     ])
     .default('all'),

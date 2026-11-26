@@ -1,6 +1,16 @@
 import { useState } from 'react';
 import { Clock3, Edit, Eye, Home, MapPin, MoreHorizontal, Trash2 } from 'lucide-react';
 import { PROPERTY_FACT_ICONS } from '@/components/icons/propertyFactIcons';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -47,6 +57,45 @@ const statuses: Record<string, { label: string; style: string }> = {
   active: { label: 'Live', style: 'bg-emerald-50 text-emerald-800 border-emerald-200' },
   approved: { label: 'Approved · unpublished', style: 'bg-blue-50 text-blue-800 border-blue-200' },
   rejected: { label: 'Changes needed', style: 'bg-rose-50 text-rose-800 border-rose-200' },
+  sold: { label: 'Sold', style: 'bg-slate-100 text-slate-700 border-slate-300' },
+  rented: { label: 'Let', style: 'bg-slate-100 text-slate-700 border-slate-300' },
+  archived: { label: 'Unpublished', style: 'bg-slate-50 text-slate-600 border-slate-200' },
+};
+
+export type ListingLifecycleAction = 'sold' | 'let' | 'unpublish' | 'republish';
+
+export const lifecycleCopy: Record<
+  ListingLifecycleAction,
+  { menu: string; title: string; description: string; confirm: string }
+> = {
+  sold: {
+    menu: 'Mark as sold',
+    title: 'Mark this listing as sold?',
+    description:
+      'It will be removed from search and public pages and will no longer accept enquiries. Its link will show that the home is sold.',
+    confirm: 'Mark as sold',
+  },
+  let: {
+    menu: 'Mark as let',
+    title: 'Mark this listing as let?',
+    description:
+      'It will be removed from search and public pages and will no longer accept enquiries. Its link will show that the home is let.',
+    confirm: 'Mark as let',
+  },
+  unpublish: {
+    menu: 'Unpublish',
+    title: 'Unpublish this listing?',
+    description:
+      'It will be hidden everywhere publicly and will no longer accept enquiries. You can republish it later; it then goes through review again.',
+    confirm: 'Unpublish',
+  },
+  republish: {
+    menu: 'Republish',
+    title: 'Republish this listing?',
+    description:
+      'It will be submitted for review again and stays private until it is approved.',
+    confirm: 'Republish',
+  },
 };
 
 function rejectionMessages(listing: InventoryListing): string[] {
@@ -71,12 +120,15 @@ export function AgentListingInventoryCard({
   onView,
   editUnavailableLabel,
   servicesReferral,
+  onLifecycle,
 }: {
   listing: InventoryListing;
   view: 'list' | 'grid';
   onEdit?: () => void;
   onDelete?: () => void;
   onView?: () => void;
+  /** Called after the lister confirms Sold / Let / Unpublish / Republish. */
+  onLifecycle?: (action: ListingLifecycleAction) => void;
   editUnavailableLabel?: string;
   /**
    * The agent-to-Services referral for this listing. It is supplied by the
@@ -91,6 +143,17 @@ export function AgentListingInventoryCard({
   const isRejected = status === 'rejected' || listing.approvalStatus === 'rejected';
   const isDraft = status === 'draft';
   const isLive = ['available', 'published', 'active'].includes(status);
+  const [pendingAction, setPendingAction] = useState<ListingLifecycleAction | null>(null);
+  const isRentListing = listing.action === 'rent' || listing.listingType === 'rent';
+  const lifecycleActions: ListingLifecycleAction[] = !onLifecycle
+    ? []
+    : isLive
+      ? [isRentListing ? 'let' : 'sold', 'unpublish']
+      : status === 'sold' || status === 'rented'
+        ? ['unpublish']
+        : status === 'archived'
+          ? ['republish']
+          : [];
   const badge = statuses[status] ?? {
     label:
       (
@@ -300,6 +363,11 @@ export function AgentListingInventoryCard({
                   View public listing
                 </DropdownMenuItem>
               )}
+              {lifecycleActions.map(action => (
+                <DropdownMenuItem key={action} onSelect={() => setPendingAction(action)}>
+                  {lifecycleCopy[action].menu}
+                </DropdownMenuItem>
+              ))}
               <DropdownMenuItem disabled={!onDelete} onSelect={onDelete} variant="destructive">
                 <Trash2 className="h-4 w-4" />
                 Delete listing
@@ -308,6 +376,34 @@ export function AgentListingInventoryCard({
           </DropdownMenu>
         </div>
       </div>
+      <AlertDialog
+        open={pendingAction !== null}
+        onOpenChange={open => {
+          if (!open) setPendingAction(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {pendingAction ? lifecycleCopy[pendingAction].title : ''}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingAction ? lifecycleCopy[pendingAction].description : ''}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingAction) onLifecycle?.(pendingAction);
+                setPendingAction(null);
+              }}
+            >
+              {pendingAction ? lifecycleCopy[pendingAction].confirm : 'Confirm'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       {isPending && grid && (
         <p className="flex items-center gap-1.5 border-t border-amber-100 bg-amber-50/50 px-4 py-2 text-[11px] text-amber-800">
           <Clock3 className="h-3.5 w-3.5" />

@@ -1,4 +1,19 @@
+import { useState } from 'react';
 import { Archive, ArrowUpRight, ClipboardCheck, Eye, MoreHorizontal, Pencil } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  lifecycleCopy,
+  type ListingLifecycleAction,
+} from '@/components/agent/AgentListingInventoryCard';
 import { Badge } from '@/components/ui/badge';
 import { FallbackImage } from '@/components/FallbackImage';
 import { withApiBase } from '@/lib/mediaUtils';
@@ -151,6 +166,8 @@ export function AgencyListingActions({
   onSubmit,
   onArchive,
   onPublic,
+  lifecycleActions = [],
+  onLifecycle,
 }: {
   title: string;
   busy: boolean;
@@ -163,8 +180,14 @@ export function AgencyListingActions({
   onSubmit: () => void;
   onArchive: () => void;
   onPublic: () => void;
+  /** Sold / Let / Unpublish / Republish actions valid for this listing. */
+  lifecycleActions?: ListingLifecycleAction[];
+  onLifecycle?: (action: ListingLifecycleAction) => void;
 }) {
-  const hasMenu = canEdit || canSubmit || canArchive || hasPublicPage;
+  const [pendingAction, setPendingAction] = useState<ListingLifecycleAction | null>(null);
+  const shownLifecycle = onLifecycle ? lifecycleActions : [];
+  const hasMenu =
+    canEdit || canSubmit || canArchive || hasPublicPage || shownLifecycle.length > 0;
   return (
     <div className="flex items-center gap-1.5 xl:justify-end">
       <Button variant="outline" size="sm" onClick={onOpen} aria-label={`View ${title}`}>
@@ -198,9 +221,20 @@ export function AgencyListingActions({
                 <ClipboardCheck /> Submit for review
               </DropdownMenuItem>
             )}
+            {shownLifecycle.map(action => (
+              <DropdownMenuItem
+                key={action}
+                onSelect={() => setPendingAction(action)}
+                disabled={busy}
+              >
+                {lifecycleCopy[action].menu}
+              </DropdownMenuItem>
+            ))}
             {canArchive && (
               <>
-                {(hasPublicPage || canEdit || canSubmit) && <DropdownMenuSeparator />}
+                {(hasPublicPage || canEdit || canSubmit || shownLifecycle.length > 0) && (
+                  <DropdownMenuSeparator />
+                )}
                 <DropdownMenuItem variant="destructive" onSelect={onArchive} disabled={busy}>
                   <Archive /> Archive listing
                 </DropdownMenuItem>
@@ -209,6 +243,34 @@ export function AgencyListingActions({
           </DropdownMenuContent>
         </DropdownMenu>
       )}
+      <AlertDialog
+        open={pendingAction !== null}
+        onOpenChange={open => {
+          if (!open) setPendingAction(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {pendingAction ? lifecycleCopy[pendingAction].title : ''}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingAction ? lifecycleCopy[pendingAction].description : ''}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingAction) onLifecycle?.(pendingAction);
+                setPendingAction(null);
+              }}
+            >
+              {pendingAction ? lifecycleCopy[pendingAction].confirm : 'Confirm'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

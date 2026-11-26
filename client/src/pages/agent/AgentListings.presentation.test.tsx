@@ -67,6 +67,7 @@ vi.mock('@/lib/trpc', () => ({
         useQuery: () => ({ data: privateListings, isLoading: false, refetch: vi.fn() }),
       },
       delete: { useMutation: () => ({ mutate: vi.fn() }) },
+      setLifecycle: { useMutation: () => ({ mutate: vi.fn() }) },
     },
     agent: {
       getMyListings: {
