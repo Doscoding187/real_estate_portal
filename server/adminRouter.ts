@@ -62,6 +62,8 @@ import {
 import { resolvePropertiesForListings } from './services/inventoryLinkResolver';
 import { getDiscoveryOpsReport } from './services/discoveryOpsReportService';
 import { excludeLandFromGenericListingWorkflow } from './services/landLaunchContainmentService';
+import { isLandVerticalAvailable } from '../shared/landLaunchPolicy';
+import './_core/landRuntime';
 import { reconcileUnknownTransactionalEmail, transactionalEmailBacklog } from './services/transactionalEmailDeliveryService';
 import { getCommercialActivationOperatorStatus } from './services/commercialActivationPolicy';
 import { updateUserRoleWithAudit } from './services/superAdminRoleAuthority';
@@ -482,18 +484,24 @@ export const adminRouter = router({
       pendingAgentApprovals: number;
       pendingListingApprovals: number;
       pendingDevelopmentApprovals: number;
+      pendingLandApprovals: number;
       flaggedItems: number;
     }> => {
-      const [agents, listings, developments] = await Promise.all([
+      const [agents, listings, developments, land] = await Promise.all([
         countPendingAgents(),
         countPendingListings(),
         countPendingDevelopments(),
+        // Land stays invisible (count 0, no query) while the Land gate is off.
+        isLandVerticalAvailable()
+          ? import('./services/landWorkflowService').then(m => m.countLandReviewQueue())
+          : Promise.resolve(0),
       ]);
 
       return {
         pendingAgentApprovals: agents,
         pendingListingApprovals: listings,
         pendingDevelopmentApprovals: developments,
+        pendingLandApprovals: land,
         flaggedItems: 0, // Placeholder
       };
     },

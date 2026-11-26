@@ -3,6 +3,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AgentApprovals from './AgentApprovals';
 import ListingOversight from './ListingOversight';
 import DevelopmentOversight from './DevelopmentOversight';
+import LandReviewWorkspace from './LandReviewWorkspace';
+import { isLandVerticalAvailable } from '@shared/landLaunchPolicy';
 import { CheckCircle } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 
@@ -16,8 +18,14 @@ const CountPill = ({ count }: { count: number | undefined }) =>
 const UnifiedApprovalsPage = () => {
   const [, setLocation] = useLocation();
   const requestedTab = new URLSearchParams(useSearch()).get('tab');
+  // Land is hidden entirely (tab, count, deep link) while the Land gate is off.
+  const landOn = isLandVerticalAvailable();
   const activeTab =
-    requestedTab === 'agents' || requestedTab === 'developments' ? requestedTab : 'listings';
+    requestedTab === 'agents' ||
+    requestedTab === 'developments' ||
+    (requestedTab === 'land' && landOn)
+      ? requestedTab
+      : 'listings';
   // Same counts as the sidebar badge, so the tab and the badge always agree.
   const { data: counts } = trpc.admin.getAdminActionItems.useQuery(undefined, {
     refetchInterval: 30000,
@@ -39,7 +47,7 @@ const UnifiedApprovalsPage = () => {
         onValueChange={tab => setLocation(`/admin/approvals?tab=${tab}`)}
         className="w-full"
       >
-        <TabsList className="grid w-full grid-cols-3 max-w-2xl">
+        <TabsList className={`grid w-full max-w-3xl ${landOn ? 'grid-cols-4' : 'grid-cols-3 max-w-2xl'}`}>
           <TabsTrigger value="agents" aria-label="Agent Approvals">
             Agent Approvals
             <CountPill count={counts?.pendingAgentApprovals} />
@@ -52,6 +60,12 @@ const UnifiedApprovalsPage = () => {
             Development Approvals
             <CountPill count={counts?.pendingDevelopmentApprovals} />
           </TabsTrigger>
+          {landOn && (
+            <TabsTrigger value="land" aria-label="Land Approvals">
+              Land Approvals
+              <CountPill count={counts?.pendingLandApprovals} />
+            </TabsTrigger>
+          )}
         </TabsList>
         <TabsContent value="agents" className="mt-6">
           <AgentApprovals />
@@ -62,6 +76,11 @@ const UnifiedApprovalsPage = () => {
         <TabsContent value="developments" className="mt-6">
           <DevelopmentOversight />
         </TabsContent>
+        {landOn && (
+          <TabsContent value="land" className="mt-6">
+            <LandReviewWorkspace embedded />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

@@ -14,8 +14,11 @@ import {
   users,
 } from '../../drizzle/schema';
 import { getDb } from '../db';
+import { isLandVerticalAvailable } from '../../shared/landLaunchPolicy';
+import { excludeLandFromGenericListingWorkflow } from './landLaunchContainmentService';
+import '../_core/landRuntime';
 
-export type AdminInboxKind = 'payment' | 'listing' | 'development' | 'agent';
+export type AdminInboxKind = 'payment' | 'listing' | 'land' | 'development' | 'agent';
 
 export type AdminInboxItem = {
   id: string;
@@ -122,7 +125,7 @@ export async function loadAdminInbox(): Promise<AdminInboxResult> {
       db
         .select({ count: sql<number>`COUNT(*)` })
         .from(listings)
-        .where(eq(listings.status, 'pending_review')),
+        .where(and(eq(listings.status, 'pending_review'), excludeLandFromGenericListingWorkflow())),
     ),
     countOf(
       db
@@ -137,7 +140,10 @@ export async function loadAdminInbox(): Promise<AdminInboxResult> {
         .where(eq(agents.status, 'pending')),
     ),
   ]);
-  const [payments, pendingListings, pendingDevelopments, pendingAgents] = await Promise.all([
+  // Land is invisible here while the Land gate is off.
+  const landEnabled = isLandVerticalAvailable();
+  const landService = landEnabled ? await import('./landWorkflowService') : null;
+  const [payments, pendingListings, pendingDevelopments, pendingAgents, pendingLand] = await Promise.all([
     db
       .select({
         id: billingPayments.id,
@@ -155,7 +161,7 @@ export async function loadAdminInbox(): Promise<AdminInboxResult> {
     db
       .select({ id: listings.id, title: listings.title, updatedAt: listings.updatedAt })
       .from(listings)
-      .where(eq(listings.status, 'pending_review'))
+      .where(and(eq(listings.status, 'pending_review'), excludeLandFromGenericListingWorkflow()))
       .orderBy(listings.updatedAt)
       .limit(PER_SOURCE_LIMIT),
     db
@@ -176,6 +182,7 @@ export async function loadAdminInbox(): Promise<AdminInboxResult> {
       .where(eq(agents.status, 'pending'))
       .orderBy(agents.createdAt)
       .limit(PER_SOURCE_LIMIT),
+    landService ? landService.landReviewInbox(PER_SOURCE_LIMIT) : Promise.resolve([]),
   ]);
 
   const items: AdminInboxItem[] = [];
@@ -207,6 +214,16 @@ export async function loadAdminInbox(): Promise<AdminInboxResult> {
       href: '/admin/approvals?tab=listings',
     });
   }
+  for (const l of pendingLand) {
+    push({
+      id: `land-${l.listingId}`,
+      kind: 'land',
+      title: `Land to review: ${l.title}`,
+      subtitle: l.state === 'reviewing' ? 'Review in progress' : 'Submitted for Land review',
+      at: l.submittedAt ?? null,
+      href: '/admin/approvals?tab=land',
+    });
+  }
   for (const d of pendingDevelopments) {
     push({
       id: `development-${d.id}`,
@@ -229,9 +246,10 @@ export async function loadAdminInbox(): Promise<AdminInboxResult> {
     });
   }
   const [tPay, tListing, tDev, tAgent] = await totalsPromise;
+  const tLand = landService ? await landService.countLandAwaitingReviewer() : 0;
   return {
     items: sortInbox(items),
-    totals: { payment: tPay, listing: tListing, development: tDev, agent: tAgent },
+    totals: { payment: tPay, listing: tListing, land: tLand, development: tDev, agent: tAgent },
     cap: PER_SOURCE_LIMIT,
   };
 }
