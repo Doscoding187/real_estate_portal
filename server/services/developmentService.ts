@@ -278,6 +278,15 @@ type DeveloperMediaWriteContext = {
   developmentId: number | null;
 };
 
+/**
+ * The one tagline value to store in both `tagline` and `subtitle`: the tagline when it was
+ * sent, else the subtitle. undefined when neither was sent (leave the stored values alone).
+ */
+export function mirrorTagline(tagline: unknown, subtitle: unknown): string | null | undefined {
+  const source = tagline !== undefined ? tagline : subtitle;
+  return source === undefined ? undefined : sanitizeString(source);
+}
+
 /** The estateSpecs JSON as stored: a string, as the update path writes it; null when empty. */
 export function serializeEstateSpecsForCreate(value: unknown): string | null {
   if (value === null || value === undefined || value === '') return null;
@@ -1361,9 +1370,9 @@ export async function createDevelopment(
       ['exclusive', 'joint', 'open'],
       null,
     ),
-    tagline: sanitizeString((developmentData as any).tagline),
-    // The wizard mirrors its tagline to subtitle; keep both on create as update does.
-    subtitle: sanitizeString((developmentData as any).subtitle ?? (developmentData as any).tagline),
+    // The wizard mirrors its tagline to subtitle; keep both equal on create as on update.
+    tagline: mirrorTagline((developmentData as any).tagline, (developmentData as any).subtitle) ?? null,
+    subtitle: mirrorTagline((developmentData as any).tagline, (developmentData as any).subtitle) ?? null,
     description: sanitizeString((developmentData as any).description),
     address: sanitizeString((developmentData as any).address),
     postalCode: sanitizeString((developmentData as any).postalCode),
@@ -1648,10 +1657,13 @@ export async function updateDevelopment(
   }
   if (developmentData.description !== undefined)
     updatePayload.description = sanitizeString(developmentData.description);
-  if (developmentData.tagline !== undefined)
-    updatePayload.tagline = sanitizeString(developmentData.tagline);
-  if (developmentData.subtitle !== undefined)
-    updatePayload.subtitle = sanitizeString(developmentData.subtitle);
+  // The tagline and subtitle are one value stored twice: an edit to either rewrites both,
+  // so a stale copy can never win on a public page.
+  const mirroredTagline = mirrorTagline(developmentData.tagline, developmentData.subtitle);
+  if (mirroredTagline !== undefined) {
+    updatePayload.tagline = mirroredTagline;
+    updatePayload.subtitle = mirroredTagline;
+  }
 
   // ---------------------------------------------------------------------------
   // Categorization / types

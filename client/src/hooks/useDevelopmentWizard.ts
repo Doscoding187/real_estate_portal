@@ -2072,13 +2072,11 @@ const createActions = (
           console.warn('[hydrateDevelopment] No unitTypes array found');
         }
         // An existing development opens with its house types cheapest first, then smaller
-        // (as the public page shows them), not in insertion or id order. A draft keeps the
-        // order the publisher left.
+        // (as the public page shows them), not in insertion or id order. This is for DISPLAY
+        // only: each type keeps its stored displayOrder, so merely opening a development
+        // never rewrites the saved order. A draft keeps the order the publisher left.
         if (!isDraft && hydratedUnitTypes.length > 1) {
-          hydratedUnitTypes = sortHouseTypes(hydratedUnitTypes).map((unit: any, index: number) => ({
-            ...unit,
-            displayOrder: index,
-          }));
+          hydratedUnitTypes = sortHouseTypes(hydratedUnitTypes);
         }
 
         // ============================================================================
@@ -2181,7 +2179,12 @@ const createActions = (
               : {}),
           },
           governance_finances: {
-            hasGoverningBody: estateSpecs?.hasHOA ?? false,
+            // Tri-state: only an answer that was actually saved. Never default to "no levy".
+            hasGoverningBody:
+              typeof estateSpecs?.hasHOA === 'boolean' &&
+              (estateSpecs.hasHOA === true || estateSpecs.levyChoice === 'none')
+                ? estateSpecs.hasHOA
+                : undefined,
             governanceType: estateSpecs?.governanceType ?? '',
             levyRange: resolvedLevyRange,
             architecturalGuidelines: estateSpecs?.architecturalGuidelines ?? false,

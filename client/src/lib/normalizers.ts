@@ -256,14 +256,31 @@ export function normalizePropertyForUI(raw: any): PropertyCardProps | null {
     hasVirtualTour,
     hasPublicDocuments,
     highlights: (() => {
-      // Only highlights that were actually stored. Never invented from amenities or
-      // features, and never re-cased: they are shown exactly as the publisher wrote them.
-      const source = raw.highlights;
+      // Only highlights the publisher actually entered (development highlights, or a
+      // property's own highlight list). Amenities and features are NEVER turned into
+      // highlights. Text written normally is shown as written; machine keys such as
+      // "24_hour_security" are made readable.
+      const source = raw.highlights || raw.propertyHighlights || details.propertyHighlights;
+      const readable = (text: string) =>
+        /^[a-z0-9]+([_-][a-z0-9]+)+$/i.test(text)
+          ? text
+              .split(/[_-]+/)
+              .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+              .join(' ')
+          : text;
       const clean = (list: unknown[]): string[] =>
         list
-          .filter((item): item is string => typeof item === 'string')
+          .map(item => {
+            if (typeof item === 'string') return item;
+            if (item && typeof item === 'object') {
+              const candidate = item as { label?: unknown; name?: unknown; title?: unknown };
+              return String(candidate.label || candidate.name || candidate.title || '');
+            }
+            return '';
+          })
           .map(item => item.trim())
-          .filter(Boolean);
+          .filter(Boolean)
+          .map(readable);
 
       if (Array.isArray(source)) {
         return source.length ? clean(source) : undefined;

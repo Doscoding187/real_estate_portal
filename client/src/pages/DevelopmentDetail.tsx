@@ -1310,7 +1310,7 @@ export default function DevelopmentDetail() {
   };
 
   const publishedTagline =
-    String((dev as any).subtitle ?? '').trim() || String((dev as any).tagline ?? '').trim() || null;
+    String((dev as any).tagline ?? '').trim() || String((dev as any).subtitle ?? '').trim() || null;
   const publishedFacts = buildPublishedFacts({
     estateSpecs: (dev as any).estateSpecs,
     highlights: (publicFacts as any).highlights,

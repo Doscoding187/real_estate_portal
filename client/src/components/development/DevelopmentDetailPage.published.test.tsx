@@ -122,8 +122,9 @@ describe('the public development page shows what was published', () => {
     });
     render(<DevelopmentDetailPage {...baseProps} publishedFacts={given} />);
     expect(screen.getByText('Body corporate levy')).toBeInTheDocument();
-    expect(screen.getByTestId('cost-levy').textContent).toMatch(/R\s?1[\s ]?500 \(estimate\)/);
-    expect(screen.getByTestId('cost-rates').textContent).toMatch(/R\s?2[\s ]?000 \(estimate\)/);
+    // \s also matches the non-breaking spaces locale-formatted currency uses.
+    expect(screen.getByTestId('cost-levy').textContent).toMatch(/R\s?1\s?500 \(estimate\)/);
+    expect(screen.getByTestId('cost-rates').textContent).toMatch(/R\s?2\s?000 \(estimate\)/);
     expect(screen.queryByText('Monthly levy pending')).toBeNull();
     expect(screen.getByTestId('cost-total').textContent).not.toMatch(/levy|rates/);
   });

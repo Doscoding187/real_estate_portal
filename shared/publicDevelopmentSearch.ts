@@ -445,7 +445,7 @@ export function projectPublicDevelopmentFacts(
     slug: development.slug,
     canonicalRoute: development.canonicalRoute,
     description: development.description,
-    tagline: String(development.subtitle ?? '').trim() || String(development.tagline ?? '').trim() || null,
+    tagline: String(development.tagline ?? '').trim() || String(development.subtitle ?? '').trim() || null,
     images: projectionImages(development.images),
     canonicalPlaceId: development.canonicalPlaceId,
     locationLabels: [...new Set(development.locationLabels.map(label => label.trim()).filter(Boolean))],
