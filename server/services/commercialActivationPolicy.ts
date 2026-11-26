@@ -1,6 +1,7 @@
 import { TRPCError } from '@trpc/server';
 
 import { isGovernedContainedScenarioFixtureActive } from '../_core/databaseAuthority/governedContainedScenarioFixture';
+import { isLocalParityPilotActive } from '../_core/localParityPreview';
 import { resolveAppRuntimeEnv, type AppRuntimeEnv } from '../_core/runtimeBootstrap';
 import {
   COMMERCIAL_ACTIVATION_STATE,
@@ -99,7 +100,10 @@ export function resolveCommercialActivationConfiguration(
   if (rawSalesPause !== undefined && rawSalesPause !== 'true' && rawSalesPause !== 'false') {
     throw new Error(`${PAID_MVP_SALES_PAUSED_ENV} must be exactly true or false.`);
   }
-  if (runtimeEnv === 'development' || runtimeEnv === 'test') {
+  // Dev-only local preview pilot: honour the PAID_MVP_* keys below, exactly as
+  // a hosted release would. Never true in test, production or staging.
+  const localPilot = runtimeEnv === 'development' && isLocalParityPilotActive(environment);
+  if ((runtimeEnv === 'development' || runtimeEnv === 'test') && !localPilot) {
     if (!isControlledFixture(environment)) return preparationConfiguration();
 
     const configured = environment[CONTROLLED_PRODUCT_KEYS_ENV];

@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # Local parity preview: real server code + national place data from the local
 # Database Authority MySQL (127.0.0.1:3307). Place data only, no user data.
-# Usage: scripts/preview/local-parity.sh start|stop|status
+# Usage: scripts/preview/local-parity.sh start|stop|status|outbox [email]
+# PARITY_LAUNCH_MODE=pilot (default) | reactivation. pilot = after pilot start:
+# agent/agency/developer launch access honoured (dev-only opt-in, local DB only);
+# reactivation = paid access off (preparation_only). Production is unaffected.
 # Prerequisite: the documented DB sequence in docs/local-development-setup.md
 # ("Local parity preview: place search and place pages") has been run.
 # Local-only: binds 127.0.0.1, reads no env files itself (JWT_SECRET comes from
@@ -22,6 +25,13 @@ WEB_URL="http://127.0.0.1:${WEB_PORT}"
 
 mkdir -p "$STATE_DIR"
 chmod 700 "$STATE_DIR"
+
+LAUNCH_MODE="${PARITY_LAUNCH_MODE:-pilot}"
+case "$LAUNCH_MODE" in
+  pilot | reactivation) ;;
+  *) echo "PARITY_LAUNCH_MODE must be pilot or reactivation" >&2; exit 2 ;;
+esac
+OUTBOX_FILE="$STATE_DIR/outbox.jsonl"
 
 alive() { [ -f "$1" ] && kill -0 "$(cat "$1")" 2>/dev/null; }
 
@@ -64,9 +74,17 @@ case "${1:-status}" in
       }
       export JWT_SECRET
     fi
+    # Dev-only opt-ins, honoured by the server only for NODE_ENV=APP_ENV=development
+    # against the local 127.0.0.1:3307 database. Names only; placeholder values.
+    MODE_ENV=(PROPERTY_LISTIFY_LOCAL_PARITY_PREVIEW=1)
+    if [ "$LAUNCH_MODE" = "pilot" ]; then
+      MODE_ENV+=(PROPERTY_LISTIFY_LOCAL_PARITY_PILOT=1
+        PAID_MVP_ENABLED_PRODUCT_KEYS=agent_launch_access,agency_launch_access,developer_launch_access
+        PAID_MVP_RELEASE_ID=local-parity-pilot PAID_MVP_APPROVAL_REF=local-parity-only)
+    fi
     start_one api "$API_PID_FILE" "$API_PORT" \
       env NODE_ENV=development APP_ENV=development SKIP_FRONTEND=true PORT="$API_PORT" \
-      APP_URL="$WEB_URL" FRONTEND_URL="$WEB_URL" \
+      APP_URL="$WEB_URL" FRONTEND_URL="$WEB_URL" "${MODE_ENV[@]}" \
       pnpm exec tsx server/_core/start.ts || exit 1
     start_one web "$WEB_PID_FILE" "$WEB_PORT" \
       env VITE_API_URL="$API_URL" VITE_API_BASE_URL="$API_URL" VITE_DEPLOY_ENV=development \
@@ -98,10 +116,32 @@ case "${1:-status}" in
       if alive "$f"; then echo "$n running (pid $(cat "$f"))"; else echo "$n stopped"; fi
     done
     (cd "$ROOT" && pnpm exec tsx scripts/preview/parityLoginSecret.ts --status)
+    echo "launch mode (for next start): $LAUNCH_MODE"
     echo "API: $API_URL   WEB: $WEB_URL"
     ;;
+  outbox)
+    # Local-only: newest captured auth link(s) for an address (this file only).
+    if [ ! -f "$OUTBOX_FILE" ]; then echo "outbox is empty"; exit 0; fi
+    python3 -I - "$OUTBOX_FILE" "${2:-}" <<'PY'
+import json, sys
+path, who = sys.argv[1], sys.argv[2].strip().lower()
+rows = []
+for line in open(path, encoding="utf8"):
+    try:
+        r = json.loads(line)
+    except ValueError:
+        continue
+    if not who or str(r.get("to", "")).lower() == who:
+        rows.append(r)
+if not rows:
+    print("no captured message" + (" for " + who if who else ""))
+for r in rows[-3:]:
+    print(r.get("capturedAt"), r.get("kind"), r.get("to"))
+    print("  " + str(r.get("url")))
+PY
+    ;;
   *)
-    echo "usage: $0 start|stop|status" >&2
+    echo "usage: $0 start|stop|status|outbox [email]" >&2
     exit 2
     ;;
 esac

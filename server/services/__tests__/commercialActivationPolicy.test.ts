@@ -463,3 +463,55 @@ describe('commercial activation containment', () => {
     });
   });
 });
+
+describe('local preview pilot opt-in', () => {
+  const KEYS = 'agent_launch_access,agency_launch_access,developer_launch_access';
+  const pilot = {
+    NODE_ENV: 'development',
+    APP_ENV: 'development',
+    PROPERTY_LISTIFY_LOCAL_PARITY_PREVIEW: '1',
+    PROPERTY_LISTIFY_LOCAL_PARITY_PILOT: '1',
+    DATABASE_URL: 'mysql://u:p@127.0.0.1:3307/db',
+    PAID_MVP_ENABLED_PRODUCT_KEYS: KEYS,
+    PAID_MVP_RELEASE_ID: 'local-parity-pilot',
+    PAID_MVP_APPROVAL_REF: 'local-parity-only',
+  };
+
+  it('honours the PAID_MVP keys in the gated local development preview', () => {
+    expect(resolveCommercialActivationConfiguration(pilot)).toMatchObject({
+      mode: 'paid_mvp_release',
+      enabled: true,
+      releaseId: 'local-parity-pilot',
+    });
+  });
+
+  it('stays in preparation_only in development without the pilot opt-in or local target', () => {
+    const noOptIn = { ...pilot, PROPERTY_LISTIFY_LOCAL_PARITY_PILOT: undefined };
+    expect(resolveCommercialActivationConfiguration(noOptIn).mode).toBe('preparation_only');
+    const remote = { ...pilot, DATABASE_URL: 'mysql://u:p@db.example.com:3306/db' };
+    expect(resolveCommercialActivationConfiguration(remote).mode).toBe('preparation_only');
+  });
+
+  it('is refused in test: the opt-in grants nothing there', () => {
+    const config = resolveCommercialActivationConfiguration({
+      ...pilot,
+      NODE_ENV: 'test',
+      APP_ENV: 'test',
+    });
+    expect(config.mode).toBe('preparation_only');
+    expect(config.enabled).toBe(false);
+  });
+
+  it('is refused in production: hosted rules still apply unchanged', () => {
+    const base = { ...pilot, NODE_ENV: 'production', APP_ENV: 'production' };
+    expect(() =>
+      resolveCommercialActivationConfiguration({ ...base, PAID_MVP_ENABLED_PRODUCT_KEYS: 'agent_launch_access' }),
+    ).toThrow(/exactly the three approved/);
+    expect(resolveCommercialActivationConfiguration({
+      NODE_ENV: 'production',
+      APP_ENV: 'production',
+      PROPERTY_LISTIFY_LOCAL_PARITY_PREVIEW: '1',
+      PROPERTY_LISTIFY_LOCAL_PARITY_PILOT: '1',
+    }).mode).toBe('preparation_only');
+  });
+});

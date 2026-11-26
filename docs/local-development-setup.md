@@ -425,6 +425,18 @@ Port 3020 is in the local development CORS list in
 127.0.0.1) is in the development-only allowed backends in
 `client/src/lib/env.contract.ts`; production and staging rules are unchanged.
 
+Pilot kit (local preview only). With no mail key, sign-up and password-reset
+links are written to a private file (`/var/tmp/property-listify-parity-<uid>/outbox.jsonl`,
+mode 0600) instead of being lost; read the newest with
+`bash scripts/preview/local-parity.sh outbox person@example.com`. Launch mode:
+`PARITY_LAUNCH_MODE=pilot` (default) emulates after pilot start (agent, agency
+and developer launch access honoured; payment still needs EFT proof plus admin
+approval) and `PARITY_LAUNCH_MODE=reactivation` keeps paid access off;
+`status` prints the mode for the next `start`. Both are dev-only: honoured only
+when `NODE_ENV` and `APP_ENV` are `development`, the database is the local
+`127.0.0.1:3307` service and the script's opt-in is set. They are inert in test
+and production, whose commercial policy and email rules are unchanged.
+
 ## Seed packs
 
 A seed pack is a reviewable, text-only description of one launch development
