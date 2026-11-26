@@ -127,6 +127,9 @@ describe('registration legal choice', () => {
         'New account registration is temporarily unavailable. Please try again later.',
       ),
     ).toBeInTheDocument();
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('New account registration is temporarily unavailable.');
+    expect(alert.className).toContain('text-amber-950');
     expect(screen.getByRole('button', { name: /Create free account/ })).toBeDisabled();
     expect(screen.queryByRole('checkbox', { name: /I agree/ })).not.toBeInTheDocument();
   });
