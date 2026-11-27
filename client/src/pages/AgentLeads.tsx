@@ -98,6 +98,8 @@ const SOURCE_LABELS: Record<string, string> = {
   demand: 'Demand',
   demand_engine: 'Demand Engine',
   referral: 'Referral',
+  plots_and_land: 'Plots & Land',
+  land_detail: 'Plots & Land',
 };
 
 function formatRelativeTime(value: string | Date | null | undefined) {

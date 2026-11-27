@@ -88,6 +88,7 @@ interface Lead {
     city: string;
     price: number;
   } | null;
+  land?: { listingId: number; title: string; city: string | null; price: number; href: string } | null;
   commercial?: {
     listingId: number;
     listingSlug: string;
@@ -175,6 +176,8 @@ const SOURCE_LABELS: Record<string, string> = {
   demand: 'Demand',
   demand_engine: 'Demand Engine',
   referral: 'Referral',
+  plots_and_land: 'Plots & Land',
+  land_detail: 'Plots & Land',
 };
 
 function getLeadAgeDays(lead: Lead) {
@@ -575,6 +578,7 @@ export function LeadPipeline({ className, propertyId, selectedLeadId }: LeadPipe
         lead.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         lead.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         lead.property?.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        lead.land?.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         lead.commercial?.listingTitle?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         lead.commercial?.assetName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         lead.commercial?.spaceIdentifier?.toLowerCase().includes(searchQuery.toLowerCase()),
@@ -1155,6 +1159,38 @@ export function LeadPipeline({ className, propertyId, selectedLeadId }: LeadPipe
                         <span className="font-medium text-slate-700">
                           R{selectedLead.property.price.toLocaleString()}
                         </span>
+                      </div>
+                    </div>
+                  </div>
+                ) : selectedLead.land ? (
+                  <div className="relative mt-5 flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50/90 p-4 text-sm">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-[var(--primary)] shadow-sm">
+                      <Home className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                        Land enquiry about
+                      </p>
+                      <a
+                        href={selectedLead.land.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-1 block truncate font-semibold text-slate-950 underline-offset-2 hover:underline"
+                      >
+                        {selectedLead.land.title}
+                      </a>
+                      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-slate-600">
+                        {selectedLead.land.city ? (
+                          <span className="inline-flex items-center gap-1">
+                            <MapPin className="h-3.5 w-3.5 text-slate-400" />
+                            {selectedLead.land.city}
+                          </span>
+                        ) : null}
+                        {selectedLead.land.price > 0 ? (
+                          <span className="font-medium text-slate-700">
+                            R{selectedLead.land.price.toLocaleString()}
+                          </span>
+                        ) : null}
                       </div>
                     </div>
                   </div>
@@ -1792,6 +1828,27 @@ function LeadCard({
                   </p>
                   <p className="mt-0.5 truncate text-slate-500">
                     {[lead.property.city, `R${lead.property.price.toLocaleString()}`]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </p>
+                </div>
+              </div>
+            ) : lead.land ? (
+              <div className="flex min-w-0 items-start gap-2 rounded-xl border border-slate-100 bg-slate-50/80 p-3 text-xs">
+                <Home className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
+                <div className="min-w-0">
+                  <a
+                    href={lead.land.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={event => event.stopPropagation()}
+                    className="line-clamp-3 font-medium leading-5 text-slate-900 underline-offset-2 hover:underline"
+                    title={lead.land.title}
+                  >
+                    {lead.land.title}
+                  </a>
+                  <p className="mt-0.5 truncate text-slate-500">
+                    {[lead.land.city, lead.land.price > 0 ? `R${lead.land.price.toLocaleString()}` : null]
                       .filter(Boolean)
                       .join(' · ')}
                   </p>

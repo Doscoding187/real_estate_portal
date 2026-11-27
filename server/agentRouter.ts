@@ -15,6 +15,7 @@ import {
   users,
   notifications,
   analyticsEvents,
+  landListingLinks,
 } from '../drizzle/schema';
 import {
   asc,
@@ -1017,9 +1018,23 @@ export const agentRouter = router({
         .select({
           lead: leads,
           property: properties,
+          landListing: {
+            id: listings.id,
+            slug: listings.slug,
+            title: listings.title,
+            city: listings.city,
+            askingPrice: listings.askingPrice,
+          },
+          landLinkId: landListingLinks.id,
         })
         .from(leads)
         .leftJoin(properties, eq(leads.propertyId, properties.id))
+        // Land enquiries carry the Land listing in the existing leads.listingId column.
+        .leftJoin(listings, eq(leads.listingId, listings.id))
+        .leftJoin(
+          landListingLinks,
+          and(eq(landListingLinks.listingId, listings.id), eq(landListingLinks.linkStatus, 'active')),
+        )
         .where(and(...conditions))
         .orderBy(desc(leads.createdAt));
 
@@ -1064,6 +1079,7 @@ export const agentRouter = router({
           city: string;
           price: number;
         } | null;
+        land: { listingId: number; title: string; city: string | null; price: number; href: string } | null;
         commercial: CommercialLeadOperationalContext | null;
       }
 
@@ -1078,7 +1094,7 @@ export const agentRouter = router({
         lost: [],
       };
 
-      leadsList.forEach(({ lead, property }) => {
+      leadsList.forEach(({ lead, property, landListing, landLinkId }) => {
         const deliverySnapshot = deliverySnapshots.get(lead.id);
         const currentDelivery = deliverySnapshot?.current || null;
         const latestAttempt =
@@ -1144,6 +1160,16 @@ export const agentRouter = router({
                 price: Number(property.price),
               }
             : null,
+          land:
+            !property && landLinkId && landListing?.id
+              ? {
+                  listingId: landListing.id,
+                  title: landListing.title,
+                  city: landListing.city ?? null,
+                  price: Number(landListing.askingPrice ?? 0),
+                  href: `/land/${landListing.slug}`,
+                }
+              : null,
           commercial: commercialContexts.get(lead.id) || null,
         });
       });

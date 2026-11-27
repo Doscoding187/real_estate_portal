@@ -1,6 +1,16 @@
 import { useState } from 'react';
 import { useLocation, useParams } from 'wouter';
 import { AgentAppShell } from '@/components/agent/AgentAppShell';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -117,9 +127,9 @@ export default function LandAuthoringWorkspace() {
   const isLive = reviewState === 'approved' && ['approved', 'published'].includes(listingStatus);
   // Authoring is open only while drafting or after changes were requested (the server enforces the same rule).
   const editLocked = Boolean(listingId) && !['draft', 'changes_requested'].includes(reviewState);
+  const [pendingClose, setPendingClose] = useState<'sold' | 'withdrawn' | null>(null);
   const closeListing = async (outcome: 'sold' | 'withdrawn') => {
     if (!listingId) return;
-    if (!window.confirm(outcome === 'sold' ? 'Mark this land as sold? It will be removed from Plots & Land.' : 'Withdraw this land listing? It will be removed from Plots & Land.')) return;
     try { await close.mutateAsync({ listingId, outcome }); await workspace.refetch(); toast.success(outcome === 'sold' ? 'Marked as sold.' : 'Listing withdrawn.'); } catch (error) { toast.error(error instanceof Error ? error.message : 'Unable to update this listing.'); }
   };
   const lastChangesEvent = workspace.data?.reviewEvents?.find((event: any) => event.eventType === 'changes_requested');
@@ -135,7 +145,7 @@ export default function LandAuthoringWorkspace() {
     {!listingId ? <Card><CardHeader><CardTitle>What are you listing?</CardTitle></CardHeader><CardContent className="grid gap-4 md:grid-cols-2"><div><Label>Land type</Label><Select value={form.classification} onValueChange={classification => setForm({ ...form, classification: classification as LandClassification })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{Object.entries(labels).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent></Select></div><div><Label>Asking price</Label><Input type="number" value={form.askingPrice} onChange={e => setForm({ ...form, askingPrice: e.target.value })} />{formatLandAskingPrice(form.askingPrice) && <p className="mt-1 text-sm text-slate-600" data-testid="land-asking-price-preview">{formatLandAskingPrice(form.askingPrice)}</p>}</div><div className="md:col-span-2"><Label>Listing title</Label><Input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Serviced stand in…" /></div><div className="md:col-span-2"><Label>Describe the opportunity</Label><Textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} /></div><div className="md:col-span-2"><CanonicalPlaceSelector value={canonicalPlace} onChange={setCanonicalPlace} label="Land locality" purpose="authoring" hint="Select a searchable locality. Its canonical Place ID is saved with the parcel." />{canonicalPlace && canonicalPlace.scope !== 'locality' && <p role="status" className="mt-1 text-sm text-amber-700">Choose a locality to save a Land draft.</p>}</div><div><Label>Parcel reference</Label><Input value={form.parcelReference} onChange={e => setForm({ ...form, parcelReference: e.target.value })} placeholder="Erf 123" /></div><div><Label>Site extent (m²)</Label><Input type="number" value={form.extentM2} onChange={e => setForm({ ...form, extentM2: e.target.value })} /></div><div className="md:col-span-2"><Label>Intended use</Label><Input value={form.intendedUse} onChange={e => setForm({ ...form, intendedUse: e.target.value })} placeholder="Residential development" /></div><div className="md:col-span-2"><Button onClick={createDraft} disabled={create.isPending || canonicalPlace?.scope !== 'locality'}>Save Land draft</Button></div></CardContent></Card> : <>
       {workspace.error && <Card className="border-red-300"><CardContent className="pt-6 text-sm text-red-700">This Land listing could not be opened. It may not exist or may belong to another account.</CardContent></Card>}
       {locked && <Card className="border-sky-300 bg-sky-50"><CardHeader><CardTitle>Submitted for Land review — awaiting decision</CardTitle></CardHeader><CardContent className="text-sm text-slate-700">The Land review team has this listing. It is read-only until they approve it or ask for changes.</CardContent></Card>}
-      {reviewState === 'approved' && <Card className="border-emerald-300 bg-emerald-50"><CardHeader><CardTitle>{closedOut ? (listingStatus === 'sold' ? 'Sold' : 'Withdrawn') : 'Approved'}</CardTitle></CardHeader><CardContent className="space-y-3 text-sm text-slate-700"><p>{closedOut ? 'This Land listing is no longer public.' : 'This Land listing passed Land review. Its details are now read-only.'}</p>{isLive && <div className="flex gap-3"><Button variant="outline" onClick={() => closeListing('sold')} disabled={close.isPending}>Mark as sold</Button><Button variant="outline" onClick={() => closeListing('withdrawn')} disabled={close.isPending}>Withdraw</Button></div>}</CardContent></Card>}
+      {reviewState === 'approved' && <Card className="border-emerald-300 bg-emerald-50"><CardHeader><CardTitle>{closedOut ? (listingStatus === 'sold' ? 'Sold' : 'Withdrawn') : 'Approved'}</CardTitle></CardHeader><CardContent className="space-y-3 text-sm text-slate-700"><p>{closedOut ? 'This Land listing is no longer public.' : 'This Land listing passed Land review. Its details are now read-only.'}</p>{isLive && <div className="flex gap-3"><Button variant="outline" onClick={() => setPendingClose('sold')} disabled={close.isPending}>Mark as sold</Button><Button variant="outline" onClick={() => setPendingClose('withdrawn')} disabled={close.isPending}>Withdraw</Button></div>}</CardContent></Card>}
       {rejection && <Card className="border-red-300"><CardHeader><CardTitle>Rejected</CardTitle></CardHeader><CardContent className="text-sm text-slate-700">{rejection.comment || 'The Land review team rejected this listing.'}</CardContent></Card>}
       <Card><CardHeader><CardTitle>Readiness</CardTitle></CardHeader><CardContent><p className="text-sm text-slate-600">{readiness?.submissionReady ? 'Ready to submit for Land review.' : 'Complete the items below before submission.'}</p><ul className="mt-3 list-disc pl-5 text-sm text-slate-700">{[...(readiness?.blockers?.draft ?? []), ...(readiness?.blockers?.submission ?? [])].map((item: string) => <li key={item}>{item.replace(/_/g, ' ')}</li>)}</ul></CardContent></Card>
       {changes.length > 0 && <Card className="border-amber-300"><CardHeader><CardTitle>Changes requested</CardTitle></CardHeader><CardContent className="space-y-1"><p className="text-sm font-medium text-slate-800">Update the items below, then submit again. Reviewer's reasons:</p>{changes.map((event: any) => <p key={event.id} className="text-sm text-slate-700">{event.comment}</p>)}</CardContent></Card>}
@@ -147,5 +157,17 @@ export default function LandAuthoringWorkspace() {
       </fieldset>
       <div className="flex gap-3"><Button onClick={requestSubmission} disabled={editLocked || submit.isPending}>{locked ? 'Awaiting Land review' : 'Submit for Land review'}</Button><Button variant="outline" onClick={() => setLocation('/agent/listings')}>Back to listings</Button></div>
     </>}
+    <AlertDialog open={pendingClose !== null} onOpenChange={open => { if (!open) setPendingClose(null); }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{pendingClose === 'sold' ? 'Mark this land as sold?' : 'Withdraw this land listing?'}</AlertDialogTitle>
+          <AlertDialogDescription>It will be removed from Plots &amp; Land straight away. This cannot be undone from this screen.</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={() => { const outcome = pendingClose; setPendingClose(null); if (outcome) void closeListing(outcome); }}>{pendingClose === 'sold' ? 'Mark as sold' : 'Withdraw'}</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </main></AgentAppShell>;
 }
