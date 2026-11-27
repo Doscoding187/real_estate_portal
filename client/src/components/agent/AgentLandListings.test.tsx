@@ -22,6 +22,16 @@ describe('AgentLandListings', () => {
     expect(harness.navigate).toHaveBeenCalledWith('/agent/land/11');
   });
 
+  it('shows Sold and Withdrawn states', () => {
+    harness.rows = [
+      { listingId: 21, title: 'Stand C', city: 'Pretoria', province: 'Gauteng', askingPrice: '1', state: 'sold' },
+      { listingId: 22, title: 'Stand D', city: 'Pretoria', province: 'Gauteng', askingPrice: '1', state: 'withdrawn' },
+    ];
+    render(<AgentLandListings />);
+    expect(screen.getByTestId('land-state-21').textContent).toBe('Sold');
+    expect(screen.getByTestId('land-state-22').textContent).toBe('Withdrawn');
+  });
+
   it('has an empty state', () => {
     harness.rows = [];
     render(<AgentLandListings />);

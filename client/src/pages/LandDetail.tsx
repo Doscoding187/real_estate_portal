@@ -23,7 +23,7 @@ export default function LandDetail() {
   const enquiry = trpc.leads.create.useMutation();
   const phoneError = agentProfilePhoneError(phone);
   const land = detail.data;
-  if (!land) return <main className="p-8">Land listing unavailable.</main>;
+  if (!land) return <main className="mx-auto max-w-2xl p-8 text-center"><h2 className="mb-4 text-2xl font-semibold">Land listing no longer available</h2><p className="mb-6 text-slate-500">This listing may have been sold, withdrawn, removed or unpublished. Return to Plots &amp; Land to keep browsing.</p><Link href="/plots-and-land">← Plots &amp; Land</Link></main>;
 
   return <main className="mx-auto max-w-4xl space-y-6 p-6">
     <Link href="/plots-and-land">← Plots &amp; Land</Link>

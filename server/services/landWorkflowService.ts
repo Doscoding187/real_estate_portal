@@ -419,9 +419,12 @@ export async function landReviewInbox(limit: number) {
     .slice(0, limit);
 }
 
-export type AgentLandListingState = 'draft' | 'submitted' | 'changes_requested' | 'approved' | 'rejected' | 'suspended';
+export type AgentLandListingState = 'draft' | 'submitted' | 'changes_requested' | 'approved' | 'rejected' | 'suspended' | 'sold' | 'withdrawn';
 
-export function agentLandListingState(caseState: string | null | undefined): AgentLandListingState {
+export function agentLandListingState(caseState: string | null | undefined, listingStatus?: string | null): AgentLandListingState {
+  // An approved listing the agent has closed out is shown as Sold / Withdrawn.
+  if (caseState === 'approved' && listingStatus === 'sold') return 'sold';
+  if (caseState === 'approved' && listingStatus === 'archived') return 'withdrawn';
   switch (caseState) {
     case 'pending':
     case 'reviewing':
@@ -441,14 +444,14 @@ export async function listAgentLandListings(userId: number) {
   requireLandVerticalAvailable('Land listings');
   const db = await database();
   const rows = await db
-    .select({ listingId: listings.id, title: listings.title, city: listings.city, province: listings.province, askingPrice: listings.askingPrice, updatedAt: listings.updatedAt, caseState: landReviewCases.state, classification: landAssets.classification })
+    .select({ listingId: listings.id, title: listings.title, city: listings.city, province: listings.province, askingPrice: listings.askingPrice, updatedAt: listings.updatedAt, listingStatus: listings.status, caseState: landReviewCases.state, classification: landAssets.classification })
     .from(listings)
     .innerJoin(landListingLinks, and(eq(landListingLinks.listingId, listings.id), eq(landListingLinks.linkStatus, 'active')))
     .innerJoin(landAssets, eq(landAssets.id, landListingLinks.landAssetId))
     .leftJoin(landReviewCases, eq(landReviewCases.listingId, listings.id))
     .where(eq(listings.ownerId, userId))
     .orderBy(desc(listings.updatedAt));
-  return rows.map(({ caseState, ...row }) => ({ ...row, state: agentLandListingState(caseState) }));
+  return rows.map(({ caseState, listingStatus, ...row }) => ({ ...row, state: agentLandListingState(caseState, listingStatus) }));
 }
 
 export async function submitLandForReview(input: { listingId: number; userId: number }) {
@@ -462,6 +465,23 @@ export async function submitLandForReview(input: { listingId: number; userId: nu
     await tx.update(landReviewCases).set({ state: 'pending', submissionSequence: nextSequence, submittedAt: now, currentReviewerUserId: null, decisionByUserId: null, decidedAt: null, updatedAt: now }).where(eq(landReviewCases.id, reviewCase.id));
     await tx.insert(landReviewEvents).values({ reviewCaseId: reviewCase.id, submissionSequence: nextSequence, actorUserId: input.userId, eventType, previousState: String(reviewCase.state), nextState: 'pending', occurredAt: now });
     await tx.update(listings).set({ status: 'pending_review', approvalStatus: 'pending', updatedAt: now } as any).where(eq(listings.id, input.listingId));
+  });
+}
+
+/** The agent closes out their own approved, live Land listing as sold or withdrawn; it leaves public discovery at once. */
+export async function closeLandListing(input: { listingId: number; userId: number; outcome: 'sold' | 'withdrawn' }) {
+  requireLandVerticalAvailable('Land listing close-out');
+  const db = await database();
+  const snapshot = await landWorkflowSnapshot(input.listingId, input.userId);
+  if (snapshot.reviewCase?.state !== 'approved' || !['approved', 'published'].includes(String(snapshot.listing.status))) {
+    throw new Error('Only an approved, live Land listing can be marked as sold or withdrawn.');
+  }
+  const now = timestamp();
+  await db.transaction(async tx => {
+    await tx.update(listings).set({ status: input.outcome === 'sold' ? 'sold' : 'archived', updatedAt: now } as any).where(eq(listings.id, input.listingId));
+    if (input.outcome === 'withdrawn' && snapshot.authority) {
+      await tx.update(landMarketingAuthorities).set({ authorityStatus: 'withdrawn', updatedAt: now }).where(eq(landMarketingAuthorities.id, snapshot.authority.id));
+    }
   });
 }
 

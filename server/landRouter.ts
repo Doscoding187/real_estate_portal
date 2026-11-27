@@ -9,6 +9,7 @@ import './_core/landRuntime';
 import {
   accessPrivateLandEvidence,
   attachLandMarketingMedia,
+  closeLandListing,
   addPrivateEvidence,
   createLandDraft,
   declareMarketingAuthority,
@@ -108,6 +109,9 @@ export const landRouter = router({
   }),
   submit: protectedProcedure.input(z.object({ listingId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
     try { await submitLandForReview({ listingId: input.listingId, userId: author(ctx).id }); return { success: true }; } catch (error) { return rethrow(error); }
+  }),
+  close: protectedProcedure.input(z.object({ listingId: z.number().int().positive(), outcome: z.enum(['sold', 'withdrawn']) })).mutation(async ({ ctx, input }) => {
+    try { await closeLandListing({ ...input, userId: author(ctx).id }); return { success: true }; } catch (error) { return rethrow(error); }
   }),
   reviewerWorkspace: superAdminProcedure.input(z.object({ listingId: z.number().int().positive() })).query(async ({ input }) => { requireLandRoute(); return landWorkflowSnapshot(input.listingId); }),
   reviewerQueue: superAdminProcedure.query(() => { requireLandRoute(); return landReviewQueue(); }),

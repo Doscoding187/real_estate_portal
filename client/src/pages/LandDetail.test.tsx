@@ -133,4 +133,12 @@ describe('LandDetail', () => {
 
     expect(mutate).toHaveBeenCalledWith(expect.objectContaining({ phone: '082 123 4567' }));
   });
+
+  it('shows the no-longer-available state for sold, withdrawn or unpublished land', () => {
+    leadMutation.mockReturnValue({ mutate: vi.fn(), isPending: false, isSuccess: false, error: null });
+    landDetail.mockReturnValue({ data: null, isLoading: false, error: null });
+    render(<LandDetail />);
+    expect(screen.getByText('Land listing no longer available')).toBeInTheDocument();
+    expect(screen.queryByText('Enquire')).toBeNull();
+  });
 });

@@ -10,6 +10,8 @@ export const AGENT_LAND_STATE_LABELS: Record<string, string> = {
   approved: 'Approved / Live',
   rejected: 'Rejected',
   suspended: 'Suspended',
+  sold: 'Sold',
+  withdrawn: 'Withdrawn',
 };
 
 /** The agent's own Land listings. Rendered only when the Land gate is on (caller checks). */
