@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import {
   agents,
   landAssetParcels,
@@ -116,6 +116,19 @@ async function ownedLandListing(db: Database, listingId: number, userId: number)
   const [link] = await db.select().from(landListingLinks).where(and(eq(landListingLinks.listingId, listingId), eq(landListingLinks.linkStatus, 'active'))).limit(1);
   if (!link) throw new Error('Listing is not a Land listing.');
   return { listing: row, link };
+}
+
+/** Review-state lock for any route a Land listing can reach: only draft / changes_requested may change. */
+export async function assertLandListingEditable(listingId: number) {
+  const db = await database();
+  const [reviewCase] = await db
+    .select({ state: landReviewCases.state })
+    .from(landReviewCases)
+    .where(eq(landReviewCases.listingId, listingId))
+    .limit(1);
+  if (!reviewCase || !['draft', 'changes_requested'].includes(String(reviewCase.state))) {
+    throw new Error('Land authoring is locked while this listing is in review or public.');
+  }
 }
 
 async function ownedEditableLandListing(db: Database, listingId: number, userId: number) {
@@ -478,8 +491,12 @@ export async function closeLandListing(input: { listingId: number; userId: numbe
   }
   const now = timestamp();
   await db.transaction(async tx => {
-    await tx.update(listings).set({ status: input.outcome === 'sold' ? 'sold' : 'archived', updatedAt: now } as any).where(eq(listings.id, input.listingId));
-    if (input.outcome === 'withdrawn' && snapshot.authority) {
+    // The state predicate makes a double close or a race with suspend a no-op that we then reject.
+    const closeResult: any = await tx.update(listings).set({ status: input.outcome === 'sold' ? 'sold' : 'archived', updatedAt: now } as any)
+      .where(and(eq(listings.id, input.listingId), inArray(listings.status, ['approved', 'published']), sql`EXISTS (SELECT 1 FROM land_review_cases lrc WHERE lrc.listing_id = ${input.listingId} AND lrc.state = 'approved')`));
+    const closed = Array.isArray(closeResult) ? closeResult[0] : closeResult;
+    if (Number(closed?.affectedRows ?? 0) < 1) throw new Error('Only an approved, live Land listing can be marked as sold or withdrawn.');
+    if (snapshot.authority) {
       await tx.update(landMarketingAuthorities).set({ authorityStatus: 'withdrawn', updatedAt: now }).where(eq(landMarketingAuthorities.id, snapshot.authority.id));
     }
   });

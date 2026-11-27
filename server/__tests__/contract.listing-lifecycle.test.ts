@@ -15,7 +15,12 @@ import { setLandRuntimeOverride } from '../../shared/landLaunchPolicy';
 // Use vi.hoisted() to avoid hoisting issues with vi.mock factory functions.
 // ---------------------------------------------------------------------------
 
-const { mockDb, mockAssertListingPublicationEntitled, mockResolveCurrentMembership } = vi.hoisted(
+const {
+  mockDb,
+  mockAssertListingPublicationEntitled,
+  mockResolveCurrentMembership,
+  mockAssertLandListingEditable,
+} = vi.hoisted(
   () => ({
     mockDb: {
       getListingById: vi.fn(),
@@ -41,10 +46,15 @@ const { mockDb, mockAssertListingPublicationEntitled, mockResolveCurrentMembersh
     },
     mockAssertListingPublicationEntitled: vi.fn(),
     mockResolveCurrentMembership: vi.fn(),
+    mockAssertLandListingEditable: vi.fn(),
   }),
 );
 
 vi.mock('../db', () => mockDb);
+vi.mock('../services/landWorkflowService', async importOriginal => ({
+  ...(await importOriginal<typeof import('../services/landWorkflowService')>()),
+  assertLandListingEditable: mockAssertLandListingEditable,
+}));
 vi.mock('../services/agencyMembershipService', async importOriginal => ({
   ...(await importOriginal<typeof import('../services/agencyMembershipService')>()),
   resolveCurrentAgencyMembershipForAgent: mockResolveCurrentMembership,
@@ -905,6 +915,38 @@ describe('listing lifecycle — canonical identity contract', () => {
         });
       } finally {
         setLandRuntimeOverride(() => false);
+      }
+    });
+  });
+
+  describe('Land media review-state lock', () => {
+    const LOCKED = 'Land authoring is locked while this listing is in review or public.';
+    const landListing = () => mockListing({ propertyDetails: { landEngine: true } } as never);
+
+    it('refuses media reservation and confirmation on approved or in-review land', async () => {
+      setLandRuntimeOverride(() => true);
+      try {
+        mockAssertLandListingEditable.mockRejectedValue(new Error(LOCKED));
+        vi.mocked(mockDb.getListingById).mockResolvedValue(landListing());
+        const caller = makeCaller(ownerUser);
+        await expect(
+          caller.listing.uploadMedia({ listingId: 1001, type: 'image', filename: 'plot.jpg', contentType: 'image/jpeg' }),
+        ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED', message: LOCKED });
+        const uploadToken = createListingMediaUploadToken({
+          key: 'properties/1001/plot.jpg',
+          mediaType: 'image',
+          contentType: 'image/jpeg',
+          fileName: 'plot.jpg',
+          userId: ownerUser.id,
+          listingId: 1001,
+        });
+        await expect(caller.listing.confirmMediaUpload({ uploadToken })).rejects.toMatchObject({
+          code: 'PRECONDITION_FAILED',
+          message: LOCKED,
+        });
+      } finally {
+        setLandRuntimeOverride(() => false);
+        mockAssertLandListingEditable.mockReset();
       }
     });
   });

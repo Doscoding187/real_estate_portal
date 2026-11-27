@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const h = vi.hoisted(() => ({ executePlace: vi.fn(), rollup: vi.fn() }));
 vi.mock('../../db-connection', () => ({ getDb: vi.fn() }));
 vi.mock('../placeDiscoveryService', async importOriginal => ({ ...(await importOriginal<object>()), executePlace: h.executePlace }));
-vi.mock('../placeLocalityRollupService', () => ({ developmentSearchPlaceIds: h.rollup }));
+vi.mock('../placeLocalityRollupService', () => ({ developmentSearchPlaceIds: h.rollup, ROLLUP_MAX_PLACE_IDS: 3 }));
 
 import { resolveCanonicalPlaceIds } from '../landPublicService';
 
@@ -19,6 +19,15 @@ describe('Land search city rollup', () => {
     const ids = await resolveCanonicalPlaceIds({ canonicalPlaceId: CITY } as any, {} as any);
     expect(ids).toContain(SUBURB);
     expect(h.rollup).toHaveBeenCalledWith(expect.anything(), CITY);
+  });
+
+  it('flags a rollup that hit the cap instead of dropping silently', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    h.executePlace.mockResolvedValue({ ok: true, execution: { scope: 'metro_city' } });
+    h.rollup.mockResolvedValue([CITY, SUBURB, 'pl-place-01-00000000000000000000000a']);
+    await resolveCanonicalPlaceIds({ canonicalPlaceId: CITY } as any, {} as any);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('cap'));
+    warn.mockRestore();
   });
 
   it('keeps a locality exact with no rollup', async () => {

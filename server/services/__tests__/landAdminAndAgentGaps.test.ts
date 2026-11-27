@@ -5,6 +5,7 @@ vi.mock('../../db-connection', () => ({ getDb: mockGetDb }));
 
 import {
   agentLandListingState,
+  countLandAwaitingReviewer,
   countLandReviewQueue,
   landReviewInbox,
   landReviewQueue,
@@ -55,6 +56,18 @@ describe('Land admin queue and agent listing gaps', () => {
     mockGetDb.mockResolvedValue(dbReturning(rows));
     expect(await countLandReviewQueue()).toBe((await landReviewQueue()).length);
     expect(await countLandReviewQueue()).toBe(3);
+  });
+
+  it('badge count (awaiting reviewer) agrees with the inbox: pending and reviewing only', async () => {
+    const rows = [
+      { listingId: 1, state: 'pending', submittedAt: '2026-11-02 10:00:00', title: 'A' },
+      { listingId: 2, state: 'reviewing', submittedAt: '2026-11-01 10:00:00', title: 'B' },
+      { listingId: 3, state: 'changes_requested', submittedAt: '2026-11-03 10:00:00', title: 'C' },
+      { listingId: 4, state: 'suspended', submittedAt: '2026-11-04 10:00:00', title: 'D' },
+    ];
+    mockGetDb.mockResolvedValue(dbReturning(rows));
+    expect(await countLandAwaitingReviewer()).toBe(2);
+    expect(await countLandAwaitingReviewer()).toBe((await landReviewInbox(100)).length);
   });
 
   it('puts only reviewer-awaiting Land in the inbox, oldest first', async () => {

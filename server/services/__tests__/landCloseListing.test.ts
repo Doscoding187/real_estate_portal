@@ -6,7 +6,7 @@ vi.mock('../../db-connection', () => ({ getDb: mockGetDb }));
 import { agentLandListingState, closeLandListing } from '../landWorkflowService';
 import { LAND_VERTICAL_LAUNCH_STATE } from '../../../shared/landLaunchPolicy';
 
-function db(options: { caseState: string; listingStatus: string; ownerId?: number }) {
+function db(options: { caseState: string; listingStatus: string; ownerId?: number; affectedRows?: number }) {
   const selections: unknown[][] = [
     [{ listingId: 9, landAssetId: 41, linkStatus: 'active' }],
     [{ id: 9, ownerId: options.ownerId ?? 77, status: options.listingStatus, askingPrice: '950000', title: 'Stand', description: 'Stand' }],
@@ -20,7 +20,7 @@ function db(options: { caseState: string; listingStatus: string; ownerId?: numbe
     update: vi.fn((table: any) => ({
       set: vi.fn((values: Record<string, unknown>) => {
         updates.push({ table: table[Symbol.for('drizzle:Name')], values });
-        return { where: vi.fn().mockResolvedValue({ affectedRows: 1 }) };
+        return { where: vi.fn().mockResolvedValue([{ affectedRows: table[Symbol.for('drizzle:Name')] === 'listings' ? (options.affectedRows ?? 1) : 1 }]) };
       }),
     })),
   };
@@ -59,7 +59,10 @@ describe('closeLandListing', () => {
       const database = db({ caseState: 'approved', listingStatus: 'approved' });
       mockGetDb.mockResolvedValue(database);
       await closeLandListing({ listingId: 9, userId: 77, outcome: 'sold' });
-      expect(database.updates).toEqual([expect.objectContaining({ values: expect.objectContaining({ status: 'sold' }) })]);
+      expect(database.updates.map(update => update.values)).toEqual([
+        expect.objectContaining({ status: 'sold' }),
+        expect.objectContaining({ authorityStatus: 'withdrawn' }),
+      ]);
     });
   });
 
@@ -81,6 +84,15 @@ describe('closeLandListing', () => {
       mockGetDb.mockResolvedValue(database);
       await expect(closeLandListing({ listingId: 9, userId: 77, outcome: 'sold' })).rejects.toThrow(/Only an approved, live Land listing/);
       expect(database.updates).toEqual([]);
+    });
+  });
+
+  it('rejects a double close or a race with suspend when the guarded update changes no row', async () => {
+    await landOn(async () => {
+      const database = db({ caseState: 'approved', listingStatus: 'approved', affectedRows: 0 });
+      mockGetDb.mockResolvedValue(database);
+      await expect(closeLandListing({ listingId: 9, userId: 77, outcome: 'sold' })).rejects.toThrow(/Only an approved, live Land listing/);
+      expect(database.updates.map(update => update.values)).toEqual([expect.objectContaining({ status: 'sold' })]);
     });
   });
 

@@ -79,6 +79,7 @@ import {
 import { resolveCurrentAgencyMembershipForAgent } from './services/agencyMembershipService';
 import './_core/landRuntime';
 import { isLandVerticalAvailable } from '../shared/landLaunchPolicy';
+import { assertLandListingEditable } from './services/landWorkflowService';
 import { LandLaunchContainmentError } from './services/landLaunchContainmentService';
 import { safeErrorSummary } from './_core/safeError';
 import { logAudit } from './_core/auditLog';
@@ -209,6 +210,16 @@ async function assertListingMediaCustody(
     isLandVerticalAvailable() && isDedicatedLandWorkflowListingRecord(listing as Record<string, unknown>);
   if (!landMediaAllowed) {
     await assertGenericListingRouteAvailable(listingId, listing as Record<string, unknown>);
+  } else {
+    // Same review-state lock as Land authoring: approved/live land cannot change media without re-review.
+    try {
+      await assertLandListingEditable(listingId);
+    } catch (error) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: error instanceof Error ? error.message : 'Land authoring is locked.',
+      });
+    }
   }
   await assertListingContentCustody(listing, user, message);
   return listing;

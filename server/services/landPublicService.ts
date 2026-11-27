@@ -42,7 +42,8 @@ import { getCompletedListingImages, getListingMediaUrl } from '../../shared/list
 import { resolveMediaDeliveryUrl } from '../_core/mediaStorage';
 import { loadCanonicalPlaceSearchProjection } from './canonicalPlaceSearchService';
 import { executePlace } from './placeDiscoveryService';
-import { developmentSearchPlaceIds } from './placeLocalityRollupService';
+import { listCurrentActiveAgencyMembershipsByAgentId } from './agencyMembershipService';
+import { developmentSearchPlaceIds, ROLLUP_MAX_PLACE_IDS } from './placeLocalityRollupService';
 
 export type LandPublicSearchInput = {
   classification?: LandPublicClassification;
@@ -161,7 +162,11 @@ export async function resolveCanonicalPlaceIds(input: LandPublicSearchInput, db:
   if (placeIds.length === 1 && input.canonicalPlaceId) {
     const only = resolutions[0];
     if (only.ok && (only.execution.scope === 'metro_city' || only.execution.scope === 'province')) {
-      return developmentSearchPlaceIds(db as any, input.canonicalPlaceId);
+      const rolled = await developmentSearchPlaceIds(db as any, input.canonicalPlaceId);
+      if (rolled.length >= ROLLUP_MAX_PLACE_IDS) {
+        console.warn(`[landSearch] ${input.canonicalPlaceId} rollup reached the ${ROLLUP_MAX_PLACE_IDS}-place cap; results may omit some localities`);
+      }
+      return rolled;
     }
   }
   if (resolutions.some(result => !result.ok || result.execution.scope !== 'locality')) {
@@ -306,6 +311,15 @@ async function publicLandMedia(db: Database, listingId: number) {
   return projectPublicLandMedia(rows);
 }
 
+/** Public seller-declared text is capped, like other public free text. */
+export const PUBLIC_DECLARED_DETAIL_MAX = 280;
+
+export function publicDeclaredDetail(valueState: string, claimedValue: unknown): string | null {
+  if (valueState !== 'asserted' || typeof claimedValue !== 'string') return null;
+  const text = claimedValue.trim();
+  return text ? text.slice(0, PUBLIC_DECLARED_DETAIL_MAX) : null;
+}
+
 async function passport(db: Database, assetId: number) {
   const claims = await db
     .select()
@@ -363,10 +377,7 @@ async function passport(db: Database, assetId: number) {
       code: claim.claimCode,
       state: claim.valueState,
       // Seller-declared text, never verified. Only plain declared text is exposed.
-      declaredDetail:
-        claim.valueState === 'asserted' && typeof claim.claimedValue === 'string' && claim.claimedValue.trim()
-          ? claim.claimedValue.trim()
-          : null,
+      declaredDetail: publicDeclaredDetail(claim.valueState, claim.claimedValue),
     })),
     assertions: toPublicLandPassportAssertions(assertions as any),
   };
@@ -606,12 +617,14 @@ export async function publicLandDetail(slug: string) {
 export async function publicLandRepresentative(db: Database, agentId: number | null, agencyId: number | null) {
   if (!agentId) return null;
   const [agent] = await db
-    .select({ firstName: agents.firstName, lastName: agents.lastName, displayName: agents.displayName, slug: agents.slug, agencyId: agents.agencyId })
+    .select({ firstName: agents.firstName, lastName: agents.lastName, displayName: agents.displayName, slug: agents.slug, agencyId: agents.agencyId, status: agents.status })
     .from(agents)
     .where(eq(agents.id, agentId))
     .limit(1);
-  if (!agent) return null;
-  const effectiveAgencyId = agencyId ?? agent.agencyId ?? null;
+  // Same rule as resale detail: only an approved agent is named publicly.
+  if (!agent || agent.status !== 'approved') return null;
+  const membership = (await listCurrentActiveAgencyMembershipsByAgentId(db as any, [Number(agentId)])).get(Number(agentId));
+  const effectiveAgencyId = membership ? Number(membership.agencyId) : (agent.agencyId ?? agencyId ?? null);
   const [agency] = effectiveAgencyId
     ? await db.select({ name: agencies.name }).from(agencies).where(eq(agencies.id, effectiveAgencyId)).limit(1)
     : [];

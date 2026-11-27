@@ -493,7 +493,7 @@ export const adminRouter = router({
         countPendingDevelopments(),
         // Land stays invisible (count 0, no query) while the Land gate is off.
         isLandVerticalAvailable()
-          ? import('./services/landWorkflowService').then(m => m.countLandReviewQueue())
+          ? import('./services/landWorkflowService').then(m => m.countLandAwaitingReviewer())
           : Promise.resolve(0),
       ]);
 
