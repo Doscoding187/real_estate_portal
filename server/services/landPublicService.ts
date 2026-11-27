@@ -12,6 +12,8 @@ import {
   type SQL,
 } from 'drizzle-orm';
 import {
+  agencies,
+  agents,
   landAssets,
   landAssetParcels,
   landClaims,
@@ -357,7 +359,15 @@ async function passport(db: Database, assetId: number) {
       hasHighSeverityOpenConflict: conflicts.length > 0,
       assertions: assertions as any,
     }),
-    claims: claims.map(claim => ({ code: claim.claimCode, state: claim.valueState })),
+    claims: claims.map(claim => ({
+      code: claim.claimCode,
+      state: claim.valueState,
+      // Seller-declared text, never verified. Only plain declared text is exposed.
+      declaredDetail:
+        claim.valueState === 'asserted' && typeof claim.claimedValue === 'string' && claim.claimedValue.trim()
+          ? claim.claimedValue.trim()
+          : null,
+    })),
     assertions: toPublicLandPassportAssertions(assertions as any),
   };
 }
@@ -587,5 +597,27 @@ export async function publicLandDetail(slug: string) {
   if (!row?.canonicalPlaceId) return null;
   const place = await executePlace(row.canonicalPlaceId, db);
   if (!place.ok || place.execution.scope !== 'locality') return null;
-  return toPublicRow(db, row);
+  const dto = await toPublicRow(db, row);
+  if (!dto) return null;
+  return { ...dto, representative: await publicLandRepresentative(db, row.agentId, row.agencyId) };
+}
+
+/** Public name and agency of the approved marketing representative; no private contact data. */
+export async function publicLandRepresentative(db: Database, agentId: number | null, agencyId: number | null) {
+  if (!agentId) return null;
+  const [agent] = await db
+    .select({ firstName: agents.firstName, lastName: agents.lastName, displayName: agents.displayName, slug: agents.slug, agencyId: agents.agencyId })
+    .from(agents)
+    .where(eq(agents.id, agentId))
+    .limit(1);
+  if (!agent) return null;
+  const effectiveAgencyId = agencyId ?? agent.agencyId ?? null;
+  const [agency] = effectiveAgencyId
+    ? await db.select({ name: agencies.name }).from(agencies).where(eq(agencies.id, effectiveAgencyId)).limit(1)
+    : [];
+  return {
+    name: agent.displayName?.trim() || `${agent.firstName} ${agent.lastName}`.trim(),
+    agency: agency?.name ?? null,
+    href: agent.slug ? `/agents/${agent.slug}` : `/agent/profile/${agentId}`,
+  };
 }

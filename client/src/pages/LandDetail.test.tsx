@@ -46,9 +46,10 @@ const land = {
   href: '/land/serviced-stand-pretoria',
   passport: {
     trustState: 'listed_with_disclosures' as const,
-    claims: [{ code: 'water', state: 'asserted' }],
+    claims: [{ code: 'water', state: 'asserted', declaredDetail: 'Municipal connection at the boundary.' }],
     assertions: [],
   },
+  representative: { name: 'Test Agent', agency: 'Test Realty', href: '/agents/test-agent' },
   media: [{ url: 'https://cdn.example.com/stand.jpg', isPrimary: true, displayOrder: 0 }],
 };
 
@@ -80,6 +81,11 @@ describe('LandDetail', () => {
       'https://cdn.example.com/stand.jpg',
     );
     expect(screen.getByText('Water: Seller declared')).toBeInTheDocument();
+    expect(screen.getByText(/Municipal connection at the boundary\./)).toBeInTheDocument();
+    expect(screen.getByText('(Seller declared, not verified)')).toBeInTheDocument();
+    expect(screen.getByText(/R\s?950[\s\u00a0,]?000/)).toBeInTheDocument();
+    expect(screen.getByText('Test Agent')).toHaveAttribute('href', '/agents/test-agent');
+    expect(screen.getByText(/Test Realty/)).toBeInTheDocument();
     expect(screen.getByText(/Newclare, Gauteng/)).toBeInTheDocument();
     expect(screen.getByText(/remains verified and deliverable/i)).toBeInTheDocument();
     expect(screen.getByRole('status')).toHaveTextContent(

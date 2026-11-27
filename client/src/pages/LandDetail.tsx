@@ -7,6 +7,7 @@ import {
   publicLeadConsent,
 } from '@/lib/leadCapture';
 import { agentProfilePhoneError } from '@shared/agentProfilePhone';
+import { formatRandAmount } from '@/lib/wizardHouseTypes';
 
 const label = (value: string) => value.replace(/_/g, ' ').replace(/^\w/, x => x.toUpperCase());
 
@@ -29,6 +30,8 @@ export default function LandDetail() {
     <section>
       <h1 className="text-3xl font-semibold">{land.title}</h1>
       <p>{label(land.classification)} · {Number(land.extentM2).toLocaleString()} m² · {land.locality}, {land.province}</p>
+      {Number(land.askingPrice) > 0 && <p className="mt-2 text-2xl font-semibold">{formatRandAmount(Number(land.askingPrice))}</p>}
+      {land.representative && <p className="mt-2 text-sm text-slate-700">Marketed by {land.representative.href ? <Link href={land.representative.href} className="font-medium underline">{land.representative.name}</Link> : <span className="font-medium">{land.representative.name}</span>}{land.representative.agency ? `, ${land.representative.agency}` : ''}</p>}
       <p className="text-sm text-slate-600">Location precision: {land.precision === 'exact' ? 'exact verified site position' : 'approximate site location'}. No cadastral boundary is implied.</p>
       {land.intendedUse && <p className="mt-3 font-medium">Intended use: {land.intendedUse}</p>}
       {land.description && <p className="mt-3 whitespace-pre-line text-slate-700">{land.description}</p>}
@@ -38,7 +41,7 @@ export default function LandDetail() {
       <h2 className="text-xl font-semibold">Land Passport</h2>
       <p>{label(land.passport.trustState || 'listed_with_disclosures')}</p>
       {land.parcelCount > 1 && <p>This site comprises {land.parcelCount} parcels.</p>}
-      {land.passport.claims.map((claim: any) => <p key={claim.code}>{label(claim.code)}: {claim.state === 'asserted' ? 'Seller declared' : label(claim.state)}</p>)}
+      {land.passport.claims.map((claim: any) => <div key={claim.code}><p>{label(claim.code)}: {claim.state === 'asserted' ? 'Seller declared' : label(claim.state)}</p>{claim.declaredDetail && <p className="ml-3 text-sm text-slate-700">{claim.declaredDetail} <span className="text-xs text-slate-500">(Seller declared, not verified)</span></p>}</div>)}
       {land.passport.assertions.map((assertion: any, index: number) => <div key={index} className="mt-2 text-sm"><p>{label(assertion.claimCode)} — {label(assertion.status)}{assertion.sourceProvider ? ` · ${assertion.sourceProvider}` : ''}{assertion.checkedAt ? ` · checked ${String(assertion.checkedAt).slice(0, 10)}` : ''}</p>{assertion.publicConclusion && <p className="text-slate-700">{assertion.publicConclusion}</p>}{assertion.limitations && <p className="text-slate-500">Limits: {assertion.limitations}</p>}</div>)}
     </section>
     <section className="rounded border p-4">
