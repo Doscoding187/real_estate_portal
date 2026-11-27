@@ -40,6 +40,7 @@ import { getCompletedListingImages, getListingMediaUrl } from '../../shared/list
 import { resolveMediaDeliveryUrl } from '../_core/mediaStorage';
 import { loadCanonicalPlaceSearchProjection } from './canonicalPlaceSearchService';
 import { executePlace } from './placeDiscoveryService';
+import { developmentSearchPlaceIds } from './placeLocalityRollupService';
 
 export type LandPublicSearchInput = {
   classification?: LandPublicClassification;
@@ -151,9 +152,16 @@ export function publicParcelComposition(parcelCount: number) {
   return parcelCount === 1 ? 'This site comprises 1 parcel.' : `This site comprises ${parcelCount} parcels.`;
 }
 
-async function resolveCanonicalPlaceIds(input: LandPublicSearchInput, db: Database): Promise<string[]> {
+export async function resolveCanonicalPlaceIds(input: LandPublicSearchInput, db: Database): Promise<string[]> {
   const placeIds = input.canonicalPlaceId ? [input.canonicalPlaceId] : input.canonicalPlaceIds || [];
   const resolutions = await Promise.all(placeIds.map(placeId => executePlace(placeId, db)));
+  // A single city or province rolls up to its admitted child localities (same rule as resale search).
+  if (placeIds.length === 1 && input.canonicalPlaceId) {
+    const only = resolutions[0];
+    if (only.ok && (only.execution.scope === 'metro_city' || only.execution.scope === 'province')) {
+      return developmentSearchPlaceIds(db as any, input.canonicalPlaceId);
+    }
+  }
   if (resolutions.some(result => !result.ok || result.execution.scope !== 'locality')) {
     throw new Error('Land search requires active, searchable canonical localities.');
   }
