@@ -56,6 +56,8 @@ import {
   COMMERCIAL_CANONICAL_ASSIGNMENT_BLOCKER,
 } from '../../shared/commercial-domain';
 import { LAND_CANONICAL_ASSIGNMENT_BLOCKER } from '../../shared/land-domain';
+import { isLandVerticalAvailable } from '../../shared/landLaunchPolicy';
+import '../_core/landRuntime';
 import { SHARED_LIVING_CANONICAL_ASSIGNMENT_BLOCKER } from '../../shared/sharedLivingDomain';
 import { safeErrorSummary } from '../_core/safeError';
 
@@ -292,6 +294,9 @@ function assertCanonicalLeadTarget(input: PublicLeadCaptureInput): void {
   }
 
   if (positiveId(input.listingId)) {
+    // Land enquiries are accepted only while the Land vertical is available; the
+    // listing itself is checked for approved, live, deliverable status in resolveLeadOwnership.
+    if (!positiveId(input.commercialAvailabilityId) && isLandVerticalAvailable()) return;
     throw new TRPCError({
       code: 'PRECONDITION_FAILED',
       message: positiveId(input.commercialAvailabilityId)
@@ -640,7 +645,7 @@ async function isRecipientCommerciallyDeliverable(
 /** Persists the in-app notification in the capture transaction. */
 async function persistAgentLeadNotification(
   database: any,
-  input: { agentId: number; leadId: number; leadName: string; propertyId?: number | null },
+  input: { agentId: number; leadId: number; leadName: string; propertyId?: number | null; listingId?: number | null },
 ): Promise<void> {
   const [agent] = await database
     .select({ userId: agents.userId })
@@ -657,6 +662,13 @@ async function persistAgentLeadNotification(
       .where(eq(properties.id, input.propertyId))
       .limit(1);
     if (property?.title) propertyTitle = property.title;
+  } else if (input.listingId) {
+    const [listing] = await database
+      .select({ title: listings.title })
+      .from(listings)
+      .where(eq(listings.id, input.listingId))
+      .limit(1);
+    if (listing?.title) propertyTitle = listing.title;
   }
 
   await database.insert(notifications).values({
@@ -664,7 +676,7 @@ async function persistAgentLeadNotification(
     type: 'lead_assigned',
     title: `New enquiry from ${input.leadName}`,
     content: `${input.leadName} enquired about ${propertyTitle}. Respond while the interest is warm.`,
-    data: JSON.stringify({ leadId: input.leadId, propertyId: input.propertyId ?? null, actionUrl: '/agent/leads' }),
+    data: JSON.stringify({ leadId: input.leadId, propertyId: input.propertyId ?? null, listingId: input.listingId ?? null, actionUrl: '/agent/leads' }),
     isRead: 0,
   });
 }
@@ -721,6 +733,128 @@ async function notifySharedLivingLister(
     }),
     isRead: 0,
   });
+}
+
+async function resolveVerifiedAgentCustody(
+  database: any,
+  agentIdToResolve: number,
+  notFoundMessage = 'Agent profile not available for enquiries.',
+): Promise<PublicLeadCustodyResolution> {
+  const [agent] = await database
+    .select({
+      id: agents.id,
+      userId: agents.userId,
+      agencyId: agents.agencyId,
+      status: agents.status,
+      isVerified: agents.isVerified,
+    })
+    .from(agents)
+    .where(eq(agents.id, agentIdToResolve))
+    .limit(1);
+
+  // Do not allow a caller to use this endpoint as an agent-directory probe.
+  if (!agent || agent.status !== 'approved') {
+    throw new TRPCError({
+      code: 'NOT_FOUND',
+      message: notFoundMessage,
+    });
+  }
+
+  // Canonical membership, rather than the mutable profile agency field,
+  // determines whether this public professional is currently agency-backed.
+  // It also supplies the only agency id permitted to affect public
+  // commercial eligibility.
+  const membership = (
+    await listCurrentActiveAgencyMembershipsByAgentId(database, [Number(agent.id)])
+  ).get(Number(agent.id));
+  const canonicalAgencyId = membership ? Number(membership.agencyId) : null;
+
+  const individualSubscriptions = agent.userId
+    ? await database
+        .select({ subscription: subscriptions, plan: plans })
+        .from(subscriptions)
+        .innerJoin(plans, eq(subscriptions.planId, plans.id))
+        .where(
+          and(
+            eq(subscriptions.ownerType, 'agent'),
+            eq(subscriptions.ownerId, Number(agent.userId)),
+            sql`EXISTS (
+              SELECT 1 FROM ${billableAccounts} account
+              WHERE account.id = ${subscriptions.billableAccountId}
+                AND account.account_kind = 'agent'
+                AND account.user_id = ${agent.userId}
+            )`,
+          ),
+        )
+    : [];
+  const agencySubscriptions = canonicalAgencyId
+    ? await database
+        .select({ subscription: subscriptions, plan: plans })
+        .from(subscriptions)
+        .innerJoin(plans, eq(subscriptions.planId, plans.id))
+        .where(
+          and(
+            eq(subscriptions.ownerType, 'agency'),
+            eq(subscriptions.ownerId, canonicalAgencyId),
+            sql`EXISTS (
+              SELECT 1 FROM ${billableAccounts} account
+              WHERE account.id = ${subscriptions.billableAccountId}
+                AND account.account_kind = 'agency'
+                AND account.agency_id = ${subscriptions.ownerId}
+            )`,
+          ),
+        )
+    : [];
+  const [agentUser] = agent.userId
+    ? await database
+        .select({ role: users.role })
+        .from(users)
+        .where(eq(users.id, agent.userId))
+        .limit(1)
+    : [];
+
+  const custody = resolvePublicAgentProfileCustody({
+    agent: {
+      id: Number(agent.id),
+      userId: agent.userId == null ? null : Number(agent.userId),
+      agencyId: canonicalAgencyId,
+      status: agent.status || null,
+      hasActivePaidEntitlement:
+        isCommercialActivationAvailable(process.env, 'agent_launch_access') &&
+        individualSubscriptions.some(subscription =>
+          isPaidMvpLaunchAccessSubscriptionEntitled(
+            subscription.subscription,
+            subscription.plan,
+            'agent',
+          ),
+        ),
+      hasActiveAgencyEntitlement:
+        isCommercialActivationAvailable(process.env, 'agency_launch_access') &&
+        agencySubscriptions.some(subscription =>
+          isPaidMvpLaunchAccessSubscriptionEntitled(
+            subscription.subscription,
+            subscription.plan,
+            'agency',
+          ),
+        ),
+      // A non-null agency id above can only originate from `membership`,
+      // so a profile's stale or forged association cannot satisfy this
+      // boundary. Independent agents are not membership-scoped.
+      hasCurrentMembership: true,
+      userRole: agentUser?.role || null,
+    },
+  });
+
+  // A public profile can remain viewable after a commercial term ends, but
+  // it cannot accept a lead that we would not deliver to that agent.
+  if (custody.leadCustody !== 'verified_customer_recipient') {
+    throw new TRPCError({
+      code: 'NOT_FOUND',
+      message: notFoundMessage,
+    });
+  }
+
+  return custody;
 }
 
 export async function resolveLeadOwnership(
@@ -795,121 +929,23 @@ export async function resolveLeadOwnership(
       });
     }
 
-    const [agent] = await database
-      .select({
-        id: agents.id,
-        userId: agents.userId,
-        agencyId: agents.agencyId,
-        status: agents.status,
-        isVerified: agents.isVerified,
-      })
-      .from(agents)
-      .where(eq(agents.id, directAgentId))
-      .limit(1);
-
-    // Do not allow a caller to use this endpoint as an agent-directory probe.
-    if (!agent || agent.status !== 'approved') {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'Agent profile not available for enquiries.',
-      });
-    }
-
-    // Canonical membership, rather than the mutable profile agency field,
-    // determines whether this public professional is currently agency-backed.
-    // It also supplies the only agency id permitted to affect public
-    // commercial eligibility.
-    const membership = (
-      await listCurrentActiveAgencyMembershipsByAgentId(database, [Number(agent.id)])
-    ).get(Number(agent.id));
-    const canonicalAgencyId = membership ? Number(membership.agencyId) : null;
-
-    const individualSubscriptions = agent.userId
-      ? await database
-          .select({ subscription: subscriptions, plan: plans })
-          .from(subscriptions)
-          .innerJoin(plans, eq(subscriptions.planId, plans.id))
-          .where(
-            and(
-              eq(subscriptions.ownerType, 'agent'),
-              eq(subscriptions.ownerId, Number(agent.userId)),
-              sql`EXISTS (
-                SELECT 1 FROM ${billableAccounts} account
-                WHERE account.id = ${subscriptions.billableAccountId}
-                  AND account.account_kind = 'agent'
-                  AND account.user_id = ${agent.userId}
-              )`,
-            ),
-          )
-      : [];
-    const agencySubscriptions = canonicalAgencyId
-      ? await database
-          .select({ subscription: subscriptions, plan: plans })
-          .from(subscriptions)
-          .innerJoin(plans, eq(subscriptions.planId, plans.id))
-          .where(
-            and(
-              eq(subscriptions.ownerType, 'agency'),
-              eq(subscriptions.ownerId, canonicalAgencyId),
-              sql`EXISTS (
-                SELECT 1 FROM ${billableAccounts} account
-                WHERE account.id = ${subscriptions.billableAccountId}
-                  AND account.account_kind = 'agency'
-                  AND account.agency_id = ${subscriptions.ownerId}
-              )`,
-            ),
-          )
-      : [];
-    const [agentUser] = agent.userId
-      ? await database
-          .select({ role: users.role })
-          .from(users)
-          .where(eq(users.id, agent.userId))
-          .limit(1)
-      : [];
-
-    const custody = resolvePublicAgentProfileCustody({
-      agent: {
-        id: Number(agent.id),
-        userId: agent.userId == null ? null : Number(agent.userId),
-        agencyId: canonicalAgencyId,
-        status: agent.status || null,
-        hasActivePaidEntitlement:
-          isCommercialActivationAvailable(process.env, 'agent_launch_access') &&
-          individualSubscriptions.some(subscription =>
-            isPaidMvpLaunchAccessSubscriptionEntitled(
-              subscription.subscription,
-              subscription.plan,
-              'agent',
-            ),
-          ),
-        hasActiveAgencyEntitlement:
-          isCommercialActivationAvailable(process.env, 'agency_launch_access') &&
-          agencySubscriptions.some(subscription =>
-            isPaidMvpLaunchAccessSubscriptionEntitled(
-              subscription.subscription,
-              subscription.plan,
-              'agency',
-            ),
-          ),
-        // A non-null agency id above can only originate from `membership`,
-        // so a profile's stale or forged association cannot satisfy this
-        // boundary. Independent agents are not membership-scoped.
-        hasCurrentMembership: true,
-        userRole: agentUser?.role || null,
-      },
-    });
-
-    // A public profile can remain viewable after a commercial term ends, but
-    // it cannot accept a lead that we would not deliver to that agent.
-    if (custody.leadCustody !== 'verified_customer_recipient') {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'Agent profile not available for enquiries.',
-      });
-    }
-
+    const custody = await resolveVerifiedAgentCustody(database, directAgentId);
     return mapCustodyResolution({}, custody);
+  }
+
+  if (listingId) {
+    // Land: custody is derived server-side from the approved, live Land listing; the client never names a recipient.
+    const { resolvePublicLandLeadCustody } = await import('./landPublicService');
+    const landCustody = await resolvePublicLandLeadCustody(listingId);
+    if (!landCustody?.agentId) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'This land listing is not available for enquiries.' });
+    }
+    const custody = await resolveVerifiedAgentCustody(
+      database,
+      Number(landCustody.agentId),
+      'This land listing is not available for enquiries.',
+    );
+    return { ...mapCustodyResolution({}, custody), listingId };
   }
 
   const targetKind: 'property' | 'development' | 'brand' = propertyId
@@ -1696,6 +1732,7 @@ export async function capturePublicLead(
           leadId: Number(insertResult.insertId),
           leadName: input.name,
           propertyId: resolved.propertyId ?? null,
+          listingId: resolved.listingId ?? null,
         });
       }
       if (resolved.sharedLivingContext?.ownerUserId) {
