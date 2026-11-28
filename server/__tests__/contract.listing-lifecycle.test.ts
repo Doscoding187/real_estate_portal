@@ -6,6 +6,7 @@
  * contract.listing-lifecycle-db.test.ts.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { setLandRuntimeOverride } from '../../shared/landLaunchPolicy';
 
 // ---------------------------------------------------------------------------
 // Mock the entire db module so we can assert what the router asks of it
@@ -14,7 +15,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // Use vi.hoisted() to avoid hoisting issues with vi.mock factory functions.
 // ---------------------------------------------------------------------------
 
-const { mockDb, mockAssertListingPublicationEntitled, mockResolveCurrentMembership } = vi.hoisted(
+const {
+  mockDb,
+  mockAssertListingPublicationEntitled,
+  mockResolveCurrentMembership,
+  mockAssertLandListingEditable,
+} = vi.hoisted(
   () => ({
     mockDb: {
       getListingById: vi.fn(),
@@ -40,10 +46,15 @@ const { mockDb, mockAssertListingPublicationEntitled, mockResolveCurrentMembersh
     },
     mockAssertListingPublicationEntitled: vi.fn(),
     mockResolveCurrentMembership: vi.fn(),
+    mockAssertLandListingEditable: vi.fn(),
   }),
 );
 
 vi.mock('../db', () => mockDb);
+vi.mock('../services/landWorkflowService', async importOriginal => ({
+  ...(await importOriginal<typeof import('../services/landWorkflowService')>()),
+  assertLandListingEditable: mockAssertLandListingEditable,
+}));
 vi.mock('../services/agencyMembershipService', async importOriginal => ({
   ...(await importOriginal<typeof import('../services/agencyMembershipService')>()),
   resolveCurrentAgencyMembershipForAgent: mockResolveCurrentMembership,
@@ -852,6 +863,91 @@ describe('listing lifecycle — canonical identity contract', () => {
 
     await expect(caller.listing.getAnalytics({ listingId: 1001 })).resolves.toMatchObject({
       totalViews: 12,
+    });
+  });
+
+  describe('Land marketing media follows the Land gate', () => {
+    const LAND_MESSAGE =
+      'Land inventory is unavailable through the generic listing workflow for this launch cohort.';
+    const landListing = () =>
+      mockListing({ propertyDetails: { landEngine: true } } as never);
+
+    it('refuses a Land image reservation when the Land vertical is unavailable', async () => {
+      const caller = makeCaller(ownerUser);
+      vi.mocked(mockDb.getListingById).mockResolvedValue(landListing());
+      vi.mocked(mockDb.assertNotDedicatedLandWorkflowListing).mockRejectedValue(
+        new LandLaunchContainmentError('Land listings use the dedicated Land workflow.'),
+      );
+      await expect(
+        caller.listing.uploadMedia({
+          listingId: 1001,
+          type: 'image',
+          filename: 'plot.jpg',
+          contentType: 'image/jpeg',
+        }),
+      ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED', message: LAND_MESSAGE });
+    });
+
+    it('does not apply the generic Land refusal to media when the Land vertical is available', async () => {
+      setLandRuntimeOverride(() => true);
+      try {
+        const caller = makeCaller(ownerUser);
+        vi.mocked(mockDb.getListingById).mockResolvedValue(landListing());
+        vi.mocked(mockDb.assertNotDedicatedLandWorkflowListing).mockRejectedValue(
+          new LandLaunchContainmentError('Land listings use the dedicated Land workflow.'),
+        );
+        const outcome = await caller.listing
+          .uploadMedia({
+            listingId: 1001,
+            type: 'image',
+            filename: 'plot.jpg',
+            contentType: 'image/jpeg',
+          })
+          .then(
+            () => 'ok',
+            (error: Error) => error.message,
+          );
+        expect(outcome).not.toBe(LAND_MESSAGE);
+        // Other generic lifecycle routes still refuse Land.
+        await expect(caller.listing.getById({ id: 1001 })).rejects.toMatchObject({
+          code: 'PRECONDITION_FAILED',
+          message: LAND_MESSAGE,
+        });
+      } finally {
+        setLandRuntimeOverride(() => false);
+      }
+    });
+  });
+
+  describe('Land media review-state lock', () => {
+    const LOCKED = 'Land authoring is locked while this listing is in review or public.';
+    const landListing = () => mockListing({ propertyDetails: { landEngine: true } } as never);
+
+    it('refuses media reservation and confirmation on approved or in-review land', async () => {
+      setLandRuntimeOverride(() => true);
+      try {
+        mockAssertLandListingEditable.mockRejectedValue(new Error(LOCKED));
+        vi.mocked(mockDb.getListingById).mockResolvedValue(landListing());
+        const caller = makeCaller(ownerUser);
+        await expect(
+          caller.listing.uploadMedia({ listingId: 1001, type: 'image', filename: 'plot.jpg', contentType: 'image/jpeg' }),
+        ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED', message: LOCKED });
+        const uploadToken = createListingMediaUploadToken({
+          key: 'properties/1001/plot.jpg',
+          mediaType: 'image',
+          contentType: 'image/jpeg',
+          fileName: 'plot.jpg',
+          userId: ownerUser.id,
+          listingId: 1001,
+        });
+        await expect(caller.listing.confirmMediaUpload({ uploadToken })).rejects.toMatchObject({
+          code: 'PRECONDITION_FAILED',
+          message: LOCKED,
+        });
+      } finally {
+        setLandRuntimeOverride(() => false);
+        mockAssertLandListingEditable.mockReset();
+      }
     });
   });
 

@@ -4902,7 +4902,8 @@ export async function countPendingListings() {
   const result = await db
     .select({ count: count() })
     .from(listings)
-    .where(eq(listings.status, 'pending_review'));
+    // Counts exactly what the generic Listing Approvals list shows: Land has its own queue.
+    .where(and(eq(listings.status, 'pending_review'), excludeLandFromGenericListingWorkflow()));
   return result[0]?.count ?? 0;
 }
 

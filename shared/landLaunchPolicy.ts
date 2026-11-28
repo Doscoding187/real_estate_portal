@@ -25,8 +25,20 @@ export function isLandPublicDiscoveryAvailable(): boolean {
   return isLandVerticalAvailable();
 }
 
+/**
+ * Runtime override, registered by the server (local preview gate + explicit
+ * opt-in) or primed on the client from the server's effective state. It can
+ * only ever ADD availability in a non-committed runtime; the committed
+ * constant above stays false. Unregistered (hosted, tests): no override.
+ */
+let landRuntimeOverride: () => boolean = () => false;
+
+export function setLandRuntimeOverride(resolver: () => boolean): void {
+  landRuntimeOverride = resolver;
+}
+
 export function isLandVerticalAvailable(): boolean {
-  return LAND_VERTICAL_LAUNCH_STATE.enabled;
+  return LAND_VERTICAL_LAUNCH_STATE.enabled || landRuntimeOverride() === true;
 }
 
 /**

@@ -318,6 +318,17 @@ function Router() {
               </AgentListingAccessGate>
             </RequireRole>
           </Route>
+          <Route path="/agent/land/:listingId">
+            <RequireRole role="agent" unauthenticatedAuthEntry="signin">
+              <AgentListingAccessGate>
+                {isLandVerticalAvailable() ? (
+                  <LandAuthoringWorkspace />
+                ) : (
+                  <LandDeferred audience="author" />
+                )}
+              </AgentListingAccessGate>
+            </RequireRole>
+          </Route>
           <Route path="/agent/commercial/create">
             <RequireRole role="agent" unauthenticatedAuthEntry="signin">
               <AgentListingAccessGate>

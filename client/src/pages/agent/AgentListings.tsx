@@ -52,8 +52,10 @@ import {
 } from '@/lib/agentListingActionIds';
 import { cn } from '@/lib/utils';
 import { readCorePropertyInformation } from '@shared/core-property-information';
+import { isLandVerticalAvailable } from '@shared/landLaunchPolicy';
+import { AgentLandListings } from '@/components/agent/AgentLandListings';
 
-type ListingTab = 'active' | 'pending' | 'draft' | 'rejected' | 'sold' | 'let' | 'archived';
+type ListingTab = 'active' | 'pending' | 'draft' | 'rejected' | 'sold' | 'let' | 'archived' | 'land';
 const PAGE_SIZE = 12;
 type SortOrder = 'newest' | 'oldest' | 'title' | 'price_low' | 'price_high';
 
@@ -75,7 +77,8 @@ function listingTabFromLocation(location: string): ListingTab {
     requestedTab === 'rejected' ||
     requestedTab === 'sold' ||
     requestedTab === 'let' ||
-    requestedTab === 'archived'
+    requestedTab === 'archived' ||
+    (requestedTab === 'land' && isLandVerticalAvailable())
     ? requestedTab
     : 'active';
 }
@@ -348,6 +351,7 @@ export default function AgentListings() {
             <Building2 className="h-4 w-4 mr-2" />
             Commercial inventory
           </Button>
+          {isLandVerticalAvailable() && (
           <Button
             variant="outline"
             onClick={() => setLocation('/agent/land/create')}
@@ -355,6 +359,7 @@ export default function AgentListings() {
           >
             Land listing
           </Button>
+          )}
           <Button
             onClick={startListing}
             disabled={statusLoading}
@@ -500,10 +505,20 @@ export default function AgentListings() {
                 <TabsTrigger value="archived" className={agentPageStyles.tabTrigger}>
                   Unpublished
                 </TabsTrigger>
+                {isLandVerticalAvailable() && (
+                  <TabsTrigger value="land" className={agentPageStyles.tabTrigger}>
+                    Land
+                  </TabsTrigger>
+                )}
               </TabsList>
 
+              {activeTab === 'land' && isLandVerticalAvailable() && (
+                <TabsContent value="land" className="space-y-4">
+                  <AgentLandListings />
+                </TabsContent>
+              )}
               <TabsContent
-                value={activeTab}
+                value={activeTab === 'land' ? '__generic-listings' : activeTab}
                 className="space-y-4 animate-in fade-in-50 duration-500 slide-in-from-bottom-2"
               >
                 {activeTab === 'pending' && (

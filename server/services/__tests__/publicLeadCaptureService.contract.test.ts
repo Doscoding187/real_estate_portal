@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TRPCError } from '@trpc/server';
 
 const {
@@ -11,6 +11,7 @@ const {
   mockCreateLeadDeliveryInTransaction,
   mockGetLeadDeliverySnapshot,
   mockGetDevelopmentPlaceGeography,
+  mockResolvePublicLandLeadCustody,
 } = vi.hoisted(() => ({
   mockGetDb: vi.fn(),
   mockRecordAgentOsEventForAgentId: vi.fn(),
@@ -21,6 +22,11 @@ const {
   mockCreateLeadDeliveryInTransaction: vi.fn(),
   mockGetLeadDeliverySnapshot: vi.fn(),
   mockGetDevelopmentPlaceGeography: vi.fn(),
+  mockResolvePublicLandLeadCustody: vi.fn(),
+}));
+
+vi.mock('../landPublicService', () => ({
+  resolvePublicLandLeadCustody: mockResolvePublicLandLeadCustody,
 }));
 
 vi.mock('../../db', () => ({
@@ -69,6 +75,7 @@ vi.mock('../leadDeliveryService', () => ({
 }));
 
 import { capturePublicLead } from '../publicLeadCaptureService';
+import { setLandRuntimeOverride } from '../../../shared/landLaunchPolicy';
 
 type FakeDatabaseOptions = {
   selectResults?: unknown[];
@@ -1189,5 +1196,64 @@ describe('publicLeadCaptureService contract', () => {
       capturePublicLead(baseInput({ propertyId: 501, ...override })),
     ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
     expect(mockGetDb).not.toHaveBeenCalled();
+  });
+});
+
+
+describe('Land enquiry capture', () => {
+  const landInput = () =>
+    baseInput({ listingId: 4, leadType: 'inquiry', source: 'plots_and_land', sourceSurface: 'land_detail', leadSource: 'plots_and_land' });
+  const agentRows = () => [
+    [],
+    [{ id: 33, userId: 70, agencyId: null, status: 'approved', isVerified: 0 }],
+    [],
+    [entitledLaunchSubscription('agent')],
+    [{ role: 'agent' }],
+  ];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    nextDeliveryId = 10_000;
+    mockCreateLeadDeliveryInTransaction.mockImplementation(async (_tx: any, input: any) => ({
+      delivery: { id: nextDeliveryId++ },
+      attempt: null,
+      input,
+    }));
+  });
+  afterEach(() => setLandRuntimeOverride(() => false));
+
+  it('is refused while Land is off, before any database access', async () => {
+    setLandRuntimeOverride(() => false);
+    await expect(capturePublicLead(landInput())).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
+    expect(mockGetDb).not.toHaveBeenCalled();
+    expect(mockResolvePublicLandLeadCustody).not.toHaveBeenCalled();
+  });
+
+  it('creates an agent CRM lead for approved, live land when Land is on', async () => {
+    setLandRuntimeOverride(() => true);
+    mockResolvePublicLandLeadCustody.mockResolvedValue({ listingId: 4, agentId: 33, agencyId: null });
+    const database = makeFakeDatabase({ selectResults: agentRows(), insertId: 920 });
+    mockGetDb.mockResolvedValue(database);
+
+    await expect(capturePublicLead(landInput())).resolves.toMatchObject({ success: true, leadId: 920, recipientType: 'agent', recipientId: 33 });
+    expect(database.insertValues).toHaveBeenCalledWith(expect.objectContaining({ listingId: 4, propertyId: null, agentId: 33, consentVersion: consent.version }));
+  });
+
+  it('refuses land that is not approved and live', async () => {
+    setLandRuntimeOverride(() => true);
+    mockResolvePublicLandLeadCustody.mockResolvedValue(null);
+    const database = makeFakeDatabase({ selectResults: [[]] });
+    mockGetDb.mockResolvedValue(database);
+
+    await expect(capturePublicLead(landInput())).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    expect(database.insertValues).not.toHaveBeenCalled();
+  });
+
+  it('still requires consent and rejects a client-selected property alongside the land listing', async () => {
+    setLandRuntimeOverride(() => true);
+    await expect(capturePublicLead({ ...landInput(), consent: undefined })).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    mockResolvePublicLandLeadCustody.mockResolvedValue({ listingId: 4, agentId: 33, agencyId: null });
+    mockGetDb.mockResolvedValue(makeFakeDatabase({ selectResults: [[]] }));
+    await expect(capturePublicLead({ ...landInput(), propertyId: 9 })).rejects.toMatchObject({ code: 'BAD_REQUEST' });
   });
 });

@@ -12,6 +12,8 @@ import {
   type SQL,
 } from 'drizzle-orm';
 import {
+  agencies,
+  agents,
   landAssets,
   landAssetParcels,
   landClaims,
@@ -40,6 +42,8 @@ import { getCompletedListingImages, getListingMediaUrl } from '../../shared/list
 import { resolveMediaDeliveryUrl } from '../_core/mediaStorage';
 import { loadCanonicalPlaceSearchProjection } from './canonicalPlaceSearchService';
 import { executePlace } from './placeDiscoveryService';
+import { listCurrentActiveAgencyMembershipsByAgentId } from './agencyMembershipService';
+import { developmentSearchPlaceIds, ROLLUP_MAX_PLACE_IDS } from './placeLocalityRollupService';
 
 export type LandPublicSearchInput = {
   classification?: LandPublicClassification;
@@ -151,9 +155,20 @@ export function publicParcelComposition(parcelCount: number) {
   return parcelCount === 1 ? 'This site comprises 1 parcel.' : `This site comprises ${parcelCount} parcels.`;
 }
 
-async function resolveCanonicalPlaceIds(input: LandPublicSearchInput, db: Database): Promise<string[]> {
+export async function resolveCanonicalPlaceIds(input: LandPublicSearchInput, db: Database): Promise<string[]> {
   const placeIds = input.canonicalPlaceId ? [input.canonicalPlaceId] : input.canonicalPlaceIds || [];
   const resolutions = await Promise.all(placeIds.map(placeId => executePlace(placeId, db)));
+  // A single city or province rolls up to its admitted child localities (same rule as resale search).
+  if (placeIds.length === 1 && input.canonicalPlaceId) {
+    const only = resolutions[0];
+    if (only.ok && (only.execution.scope === 'metro_city' || only.execution.scope === 'province')) {
+      const rolled = await developmentSearchPlaceIds(db as any, input.canonicalPlaceId);
+      if (rolled.length >= ROLLUP_MAX_PLACE_IDS) {
+        console.warn(`[landSearch] ${input.canonicalPlaceId} rollup reached the ${ROLLUP_MAX_PLACE_IDS}-place cap; results may omit some localities`);
+      }
+      return rolled;
+    }
+  }
   if (resolutions.some(result => !result.ok || result.execution.scope !== 'locality')) {
     throw new Error('Land search requires active, searchable canonical localities.');
   }
@@ -296,6 +311,15 @@ async function publicLandMedia(db: Database, listingId: number) {
   return projectPublicLandMedia(rows);
 }
 
+/** Public seller-declared text is capped, like other public free text. */
+export const PUBLIC_DECLARED_DETAIL_MAX = 280;
+
+export function publicDeclaredDetail(valueState: string, claimedValue: unknown): string | null {
+  if (valueState !== 'asserted' || typeof claimedValue !== 'string') return null;
+  const text = claimedValue.trim();
+  return text ? text.slice(0, PUBLIC_DECLARED_DETAIL_MAX) : null;
+}
+
 async function passport(db: Database, assetId: number) {
   const claims = await db
     .select()
@@ -349,7 +373,12 @@ async function passport(db: Database, assetId: number) {
       hasHighSeverityOpenConflict: conflicts.length > 0,
       assertions: assertions as any,
     }),
-    claims: claims.map(claim => ({ code: claim.claimCode, state: claim.valueState })),
+    claims: claims.map(claim => ({
+      code: claim.claimCode,
+      state: claim.valueState,
+      // Seller-declared text, never verified. Only plain declared text is exposed.
+      declaredDetail: publicDeclaredDetail(claim.valueState, claim.claimedValue),
+    })),
     assertions: toPublicLandPassportAssertions(assertions as any),
   };
 }
@@ -579,5 +608,29 @@ export async function publicLandDetail(slug: string) {
   if (!row?.canonicalPlaceId) return null;
   const place = await executePlace(row.canonicalPlaceId, db);
   if (!place.ok || place.execution.scope !== 'locality') return null;
-  return toPublicRow(db, row);
+  const dto = await toPublicRow(db, row);
+  if (!dto) return null;
+  return { ...dto, representative: await publicLandRepresentative(db, row.agentId, row.agencyId) };
+}
+
+/** Public name and agency of the approved marketing representative; no private contact data. */
+export async function publicLandRepresentative(db: Database, agentId: number | null, agencyId: number | null) {
+  if (!agentId) return null;
+  const [agent] = await db
+    .select({ firstName: agents.firstName, lastName: agents.lastName, displayName: agents.displayName, slug: agents.slug, agencyId: agents.agencyId, status: agents.status })
+    .from(agents)
+    .where(eq(agents.id, agentId))
+    .limit(1);
+  // Same rule as resale detail: only an approved agent is named publicly.
+  if (!agent || agent.status !== 'approved') return null;
+  const membership = (await listCurrentActiveAgencyMembershipsByAgentId(db as any, [Number(agentId)])).get(Number(agentId));
+  const effectiveAgencyId = membership ? Number(membership.agencyId) : (agent.agencyId ?? agencyId ?? null);
+  const [agency] = effectiveAgencyId
+    ? await db.select({ name: agencies.name }).from(agencies).where(eq(agencies.id, effectiveAgencyId)).limit(1)
+    : [];
+  return {
+    name: agent.displayName?.trim() || `${agent.firstName} ${agent.lastName}`.trim(),
+    agency: agency?.name ?? null,
+    href: agent.slug ? `/agents/${agent.slug}` : `/agent/profile/${agentId}`,
+  };
 }

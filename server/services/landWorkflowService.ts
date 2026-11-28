@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import {
   agents,
   landAssetParcels,
@@ -29,6 +29,7 @@ import {
 } from '../../shared/land-domain';
 import { isCanonicalPlaceId } from '../../shared/placeAuthority';
 import { requireLandVerticalAvailable } from '../../shared/landLaunchPolicy';
+import '../_core/landRuntime';
 import { executePlace } from './placeDiscoveryService';
 import { buildLocalMediaUploadUrl, getMediaStorageAdapter, inspectLocalMediaObject } from '../_core/mediaStorage';
 import { createLandEvidenceDeliveryToken, createLandEvidenceUploadReservation, createPrivateEvidenceS3DeliveryUrl, createPrivateEvidenceS3UploadUrl, inspectPrivateEvidenceS3Object, verifyLandEvidenceUploadReservation } from './landEvidenceStorage';
@@ -115,6 +116,19 @@ async function ownedLandListing(db: Database, listingId: number, userId: number)
   const [link] = await db.select().from(landListingLinks).where(and(eq(landListingLinks.listingId, listingId), eq(landListingLinks.linkStatus, 'active'))).limit(1);
   if (!link) throw new Error('Listing is not a Land listing.');
   return { listing: row, link };
+}
+
+/** Review-state lock for any route a Land listing can reach: only draft / changes_requested may change. */
+export async function assertLandListingEditable(listingId: number) {
+  const db = await database();
+  const [reviewCase] = await db
+    .select({ state: landReviewCases.state })
+    .from(landReviewCases)
+    .where(eq(landReviewCases.listingId, listingId))
+    .limit(1);
+  if (!reviewCase || !['draft', 'changes_requested'].includes(String(reviewCase.state))) {
+    throw new Error('Land authoring is locked while this listing is in review or public.');
+  }
 }
 
 async function ownedEditableLandListing(db: Database, listingId: number, userId: number) {
@@ -390,8 +404,67 @@ export async function landReviewQueue() {
     .innerJoin(listings, eq(landReviewCases.listingId, listings.id))
     .innerJoin(landListingLinks, and(eq(landListingLinks.listingId, listings.id), eq(landListingLinks.linkStatus, 'active')))
     .innerJoin(landAssets, eq(landAssets.id, landListingLinks.landAssetId))
-    .where(inArray(landReviewCases.state, ['pending', 'reviewing', 'changes_requested', 'suspended']))
+    .where(inArray(landReviewCases.state, [...LAND_REVIEW_QUEUE_STATES]))
     .orderBy(desc(landReviewCases.updatedAt));
+}
+
+/** States the Land reviewer queue lists. Shared by the queue, its count and the admin inbox. */
+export const LAND_REVIEW_QUEUE_STATES = ['pending', 'reviewing', 'changes_requested', 'suspended'] as const;
+/** Subset that is waiting on a Land reviewer (not on the author). */
+export const LAND_REVIEW_AWAITING_REVIEWER_STATES = ['pending', 'reviewing'] as const;
+
+/** Exactly the number of rows landReviewQueue() returns. */
+export async function countLandReviewQueue(): Promise<number> {
+  return (await landReviewQueue()).length;
+}
+
+/** Rows the inbox shows as "to review": the awaiting-reviewer subset of the queue. */
+export async function countLandAwaitingReviewer(): Promise<number> {
+  return (await landReviewInbox(Number.MAX_SAFE_INTEGER)).length;
+}
+
+/** Items waiting on a Land reviewer, oldest first, for the admin inbox. */
+export async function landReviewInbox(limit: number) {
+  const queue = await landReviewQueue();
+  return queue
+    .filter(item => (LAND_REVIEW_AWAITING_REVIEWER_STATES as readonly string[]).includes(String(item.state)))
+    .sort((a, b) => String(a.submittedAt ?? '').localeCompare(String(b.submittedAt ?? '')))
+    .slice(0, limit);
+}
+
+export type AgentLandListingState = 'draft' | 'submitted' | 'changes_requested' | 'approved' | 'rejected' | 'suspended' | 'sold' | 'withdrawn';
+
+export function agentLandListingState(caseState: string | null | undefined, listingStatus?: string | null): AgentLandListingState {
+  // An approved listing the agent has closed out is shown as Sold / Withdrawn.
+  if (caseState === 'approved' && listingStatus === 'sold') return 'sold';
+  if (caseState === 'approved' && listingStatus === 'archived') return 'withdrawn';
+  switch (caseState) {
+    case 'pending':
+    case 'reviewing':
+      return 'submitted';
+    case 'changes_requested':
+    case 'approved':
+    case 'rejected':
+    case 'suspended':
+      return caseState;
+    default:
+      return 'draft';
+  }
+}
+
+/** The caller's own Land listings (ownership filter is in the query, not the client). */
+export async function listAgentLandListings(userId: number) {
+  requireLandVerticalAvailable('Land listings');
+  const db = await database();
+  const rows = await db
+    .select({ listingId: listings.id, title: listings.title, city: listings.city, province: listings.province, askingPrice: listings.askingPrice, updatedAt: listings.updatedAt, listingStatus: listings.status, caseState: landReviewCases.state, classification: landAssets.classification })
+    .from(listings)
+    .innerJoin(landListingLinks, and(eq(landListingLinks.listingId, listings.id), eq(landListingLinks.linkStatus, 'active')))
+    .innerJoin(landAssets, eq(landAssets.id, landListingLinks.landAssetId))
+    .leftJoin(landReviewCases, eq(landReviewCases.listingId, listings.id))
+    .where(eq(listings.ownerId, userId))
+    .orderBy(desc(listings.updatedAt));
+  return rows.map(({ caseState, listingStatus, ...row }) => ({ ...row, state: agentLandListingState(caseState, listingStatus) }));
 }
 
 export async function submitLandForReview(input: { listingId: number; userId: number }) {
@@ -405,6 +478,27 @@ export async function submitLandForReview(input: { listingId: number; userId: nu
     await tx.update(landReviewCases).set({ state: 'pending', submissionSequence: nextSequence, submittedAt: now, currentReviewerUserId: null, decisionByUserId: null, decidedAt: null, updatedAt: now }).where(eq(landReviewCases.id, reviewCase.id));
     await tx.insert(landReviewEvents).values({ reviewCaseId: reviewCase.id, submissionSequence: nextSequence, actorUserId: input.userId, eventType, previousState: String(reviewCase.state), nextState: 'pending', occurredAt: now });
     await tx.update(listings).set({ status: 'pending_review', approvalStatus: 'pending', updatedAt: now } as any).where(eq(listings.id, input.listingId));
+  });
+}
+
+/** The agent closes out their own approved, live Land listing as sold or withdrawn; it leaves public discovery at once. */
+export async function closeLandListing(input: { listingId: number; userId: number; outcome: 'sold' | 'withdrawn' }) {
+  requireLandVerticalAvailable('Land listing close-out');
+  const db = await database();
+  const snapshot = await landWorkflowSnapshot(input.listingId, input.userId);
+  if (snapshot.reviewCase?.state !== 'approved' || !['approved', 'published'].includes(String(snapshot.listing.status))) {
+    throw new Error('Only an approved, live Land listing can be marked as sold or withdrawn.');
+  }
+  const now = timestamp();
+  await db.transaction(async tx => {
+    // The state predicate makes a double close or a race with suspend a no-op that we then reject.
+    const closeResult: any = await tx.update(listings).set({ status: input.outcome === 'sold' ? 'sold' : 'archived', updatedAt: now } as any)
+      .where(and(eq(listings.id, input.listingId), inArray(listings.status, ['approved', 'published']), sql`EXISTS (SELECT 1 FROM land_review_cases lrc WHERE lrc.listing_id = ${input.listingId} AND lrc.state = 'approved')`));
+    const closed = Array.isArray(closeResult) ? closeResult[0] : closeResult;
+    if (Number(closed?.affectedRows ?? 0) < 1) throw new Error('Only an approved, live Land listing can be marked as sold or withdrawn.');
+    if (snapshot.authority) {
+      await tx.update(landMarketingAuthorities).set({ authorityStatus: 'withdrawn', updatedAt: now }).where(eq(landMarketingAuthorities.id, snapshot.authority.id));
+    }
   });
 }
 

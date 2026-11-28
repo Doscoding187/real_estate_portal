@@ -14,6 +14,7 @@ import { ApiAvailabilityBoundary } from './components/ApiAvailabilityBoundary';
 import { AuthProvider } from './contexts/AuthContext';
 import { getLoginUrl } from './const';
 import { queryClient } from './lib/queryClient';
+import { primeLandAvailability } from './lib/landRuntime';
 import './index.css';
 import './styles/reduced-motion.css';
 
@@ -244,6 +245,8 @@ const trpcClient = trpc.createClient({
 
 import { EnvironmentBadge } from './components/EnvironmentBadge';
 
+// Land availability is decided by the server (off unless the local preview opts in).
+void primeLandAvailability(() => trpcClient.landPublic.status.query()).then(() =>
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <HelmetProvider>
@@ -259,7 +262,7 @@ createRoot(document.getElementById('root')!).render(
       </ApiAvailabilityBoundary>
     </HelmetProvider>
   </React.StrictMode>,
-);
+));
 
 // Debug: Ensure all providers are properly initialized
 console.log('[Main] App rendered with TRPC and QueryClient providers');

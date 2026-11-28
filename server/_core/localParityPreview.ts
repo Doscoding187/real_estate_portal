@@ -7,6 +7,7 @@ type PreviewEnvironment = Record<string, string | undefined>;
 /** Set only by scripts/preview/local-parity.sh for the API process it starts. */
 export const LOCAL_PARITY_PREVIEW_ENV = 'PROPERTY_LISTIFY_LOCAL_PARITY_PREVIEW';
 export const LOCAL_PARITY_PILOT_ENV = 'PROPERTY_LISTIFY_LOCAL_PARITY_PILOT';
+export const LOCAL_PARITY_LAND_ENV = 'PROPERTY_LISTIFY_LOCAL_PARITY_LAND';
 
 const HOSTED_MARKERS = [
   'RAILWAY_ENVIRONMENT',
@@ -95,4 +96,12 @@ export function isLocalParityPilotActive(
   resolveTarget?: (env: PreviewEnvironment) => LocalAuthorityTarget | null,
 ): boolean {
   return isLocalParityPreviewActive(environment, resolveTarget) && environment[LOCAL_PARITY_PILOT_ENV] === '1';
+}
+
+/** Land on in the local preview only: preview gate AND explicit land opt-in. */
+export function isLocalParityLandActive(
+  environment: PreviewEnvironment = process.env,
+  resolveTarget?: (env: PreviewEnvironment) => LocalAuthorityTarget | null,
+): boolean {
+  return isLocalParityPreviewActive(environment, resolveTarget) && environment[LOCAL_PARITY_LAND_ENV] === '1';
 }

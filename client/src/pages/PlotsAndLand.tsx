@@ -15,6 +15,7 @@ import {
   type LandPublicClassification,
 } from '@shared/land-domain';
 import { isCanonicalPlaceId } from '@shared/placeAuthority';
+import { formatRandAmount } from '@/lib/wizardHouseTypes';
 import { validateLandSearchGeography } from '@shared/landSearchGeography';
 
 const numberValue = (value: string) => (value.trim() ? Number(value) : undefined);
@@ -210,7 +211,7 @@ export default function PlotsAndLand() {
               <h2 className="font-semibold">{listing.title}</h2>
               <p className="mt-1 text-sm text-slate-600">{listing.locality}, {listing.province}</p>
               <p className="mt-2 text-sm">{listing.classification.replace(/_/g, ' ')} · {Number(listing.extentM2).toLocaleString()} m²</p>
-              <p className="mt-1 font-medium">R {Number(listing.askingPrice).toLocaleString()}</p>
+              <p className="mt-1 font-medium">{formatRandAmount(Number(listing.askingPrice))}</p>
             </a>
           ))}
         </section>

@@ -3,6 +3,7 @@ import {
   isDeferredLandDevelopmentDraft,
   isDeferredLandDevelopmentType,
 } from '../../shared/landLaunchPolicy';
+import '../_core/landRuntime';
 
 /**
  * S0 publication boundary for the transaction types supported by the public

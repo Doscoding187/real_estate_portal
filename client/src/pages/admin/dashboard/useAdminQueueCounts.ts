@@ -12,7 +12,8 @@ export function useAdminQueueCounts(): { payments?: number; approvals?: number }
   const approvals = actions.data
     ? actions.data.pendingAgentApprovals +
       actions.data.pendingListingApprovals +
-      actions.data.pendingDevelopmentApprovals
+      actions.data.pendingDevelopmentApprovals +
+      (actions.data.pendingLandApprovals ?? 0)
     : undefined;
   return { payments: launch.data?.eftAwaitingReview, approvals };
 }

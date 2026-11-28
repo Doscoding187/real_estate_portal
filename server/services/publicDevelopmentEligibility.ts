@@ -23,6 +23,7 @@ import {
   isDeferredLandDevelopmentType,
   isLandVerticalAvailable,
 } from '../../shared/landLaunchPolicy';
+import '../_core/landRuntime';
 import { isCommercialActivationAvailable } from './commercialActivationPolicy';
 import { isCanonicalPlaceId } from '../../shared/placeAuthority';
 

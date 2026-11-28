@@ -1,4 +1,4 @@
-export type InboxKind = 'payment' | 'listing' | 'development' | 'agent';
+export type InboxKind = 'payment' | 'listing' | 'land' | 'development' | 'agent';
 
 export type InboxItem = {
   id: string;
@@ -23,7 +23,7 @@ const HOUR_MS = 60 * 60 * 1000;
  */
 export const INBOX_TAB_SOURCES: Record<Exclude<InboxTabId, 'all'>, InboxKind[]> = {
   payments: ['payment'],
-  approvals: ['listing', 'development', 'agent'],
+  approvals: ['listing', 'land', 'development', 'agent'],
 };
 
 export function ageHours(waitingSince: string, now: Date): number {
@@ -72,6 +72,7 @@ export function buildInboxTabs(items: InboxItem[], totals?: InboxTotals): InboxT
 export const INBOX_SOURCE_PAGES: Record<InboxKind, { label: string; href: string }> = {
   payment: { label: 'Finance', href: '/admin/finance' },
   listing: { label: 'Approvals, Listings', href: '/admin/approvals?tab=listings' },
+  land: { label: 'Approvals, Land', href: '/admin/approvals?tab=land' },
   development: { label: 'Approvals, Developments', href: '/admin/approvals?tab=developments' },
   agent: { label: 'Approvals, Agents', href: '/admin/approvals?tab=agents' },
 };
